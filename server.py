@@ -325,8 +325,12 @@ class Cache:
             pend = len(self.yf.stale(need))
             self.yf.status = f"consultando {pend} de {len(need)} tickers com divergência…"
             self.reapply()
-            ok, fail, blocked, msg = tiebreak.run_fetch(self.yf, need, on_progress=self.reapply)
+            if time.time() < self.yf.blocked_until:
+                ok, fail, blocked, msg = 0, 0, True, "ao vivo pausado após bloqueio recente"
+            else:
+                ok, fail, blocked, msg = tiebreak.run_fetch(self.yf, need, on_progress=self.reapply)
             if blocked:
+                self.yf.blocked_until = max(self.yf.blocked_until, time.time() + 6 * 3600)
                 snap = self.yf.load_snapshot()
                 self.yf.status = (f"ao vivo falhou: {msg} → {snap}" if snap else f"ao vivo falhou: {msg}; sem snapshot")
             else:

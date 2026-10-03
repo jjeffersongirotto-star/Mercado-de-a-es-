@@ -85,6 +85,7 @@ class YFStore:
         self.lock = threading.Lock()
         self.status = "não iniciado"
         self.running = False
+        self.blocked_until = 0.0   # após bloqueio, não tenta ao vivo por um tempo (usa snapshot)
         try:
             with open(path, encoding="utf-8") as fh:
                 self.data = json.load(fh)
@@ -144,7 +145,7 @@ class YFStore:
         n = 0
         for t, v in (snap.get("tickers") or {}).items():
             e = self.data.get(t)
-            if only_missing and e and e.get("src") == "live":
+            if only_missing and e and e.get("src") == "live" and e.get("v"):
                 continue
             self.put(t, v, src="snapshot", when=when); n += 1
         return f"{origin} de {fmt_sp(when)} ({n} tickers)"
@@ -161,7 +162,8 @@ def fmt_sp(iso):
 def run_fetch(store, tickers, on_progress=None, delay=0.35, max_consecutive_fail=8):
     """Coleta sequencial. Retorna (ok, falhas, bloqueado:bool, msg)."""
     todo = store.stale(tickers)
-    ok = fail = consec = 0
+    ok = fail = consec = with_data = 0
+    fetched_now = []
     try:
         import yfinance  # noqa: F401
     except Exception as e:
@@ -169,8 +171,16 @@ def run_fetch(store, tickers, on_progress=None, delay=0.35, max_consecutive_fail
     for i, t in enumerate(todo, 1):
         try:
             v = fetch_one(t)
-            store.put(t, v, src="live")
+            store.put(t, v, src="live"); fetched_now.append(t)
             ok += 1; consec = 0
+            if v:
+                with_data += 1
+            elif ok >= 15 and with_data == 0:
+                # Yahoo responde, mas sem dados (bloqueio "suave" visto em IPs de datacenter)
+                for x in fetched_now:
+                    store.data.pop(x, None)
+                store.save()
+                return ok, fail, True, "Yahoo devolveu dados vazios (provável bloqueio)"
         except Exception as e:
             fail += 1; consec += 1
             log.warning("yfinance %s", e)
