@@ -177,7 +177,8 @@ def fetch_brapi_names():
     for typ in ("stock",):
         r = http_get("https://brapi.dev/api/quote/list", params={"type": typ, "limit": 2000}, tries=2, timeout=(10, 30))
         for s in r.json().get("stocks", []):
-            out[s["stock"].upper()] = {"nome": s.get("name"), "setor": s.get("sector"), "subsetor": s.get("subsector")}
+            out[s["stock"].upper()] = {"nome": s.get("name"), "setor": s.get("sector"), "subsetor": s.get("subsector"),
+                                       "var": s.get("change"), "preco_brapi": s.get("close")}
     return out
 
 def build():
@@ -232,6 +233,7 @@ def build():
             nm = {"nome": s.get("NOME"), "setor": s.get("SETOR")}
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"),
                      "subsetor": nm.get("subsetor"), "insi": bool(s),
+                     "var": names.get(t, {}).get("var"),
                      "v": vals, "src": src, "div": div})
     rows.sort(key=lambda r: -(r["v"].get("liq2m") or 0))
     now = datetime.now(timezone.utc)
@@ -331,7 +333,8 @@ def api_status():
 
 @app.get("/static/app.js")
 def app_js():
-    return FileResponse(os.path.join(BASE, "app.js"), media_type="application/javascript")
+    return FileResponse(os.path.join(BASE, "app.js"), media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache"})
 
 @app.get("/")
 def index():

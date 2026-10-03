@@ -8,69 +8,89 @@
 <script>tailwind.config = { darkMode: 'class' }</script>
 <style>
   body { font-feature-settings: "tnum"; }
-  thead th { position: sticky; top: 0; z-index: 20; }
-  .sticky-col { position: sticky; left: 0; z-index: 10; }
-  thead th.sticky-col { z-index: 30; }
-  .cell-red { background: rgba(220,38,38,.35) !important; color: #fecaca; }
-  .cell-bold { font-weight: 800; color: #fff; }
-  .tip { position: relative; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: .5rem; }
+  @media (min-width: 768px) { .cards { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); } }
+  .card { position: relative; border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .7); border-radius: .6rem;
+          padding: .45rem .6rem .5rem; min-width: 0; transition: border-color .15s, background .15s; }
+  .card:hover { border-color: rgb(71 85 105); }
+  .card .lbl { font-size: 10.5px; line-height: 1.1; color: rgb(148 163 184); text-transform: uppercase; letter-spacing: .02em;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; gap: 4px; }
+  .card .val { font-size: 1.05rem; line-height: 1.35; color: rgb(226 232 240); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.na .val { color: rgb(71 85 105); font-weight: 400; }
+  .card.neg .val { color: rgb(251 113 133); }
+  .card.si .val { font-weight: 900; color: #fff; }
+  .card.calc .val { font-style: italic; font-weight: 500; }
+  .card.red { border-color: rgb(239 68 68); background: rgb(127 29 29 / .45); }
+  .card.red .val { color: rgb(254 202 202); }
+  .card[data-tip] { cursor: help; }
+  .card .detail { display: none; margin-top: .3rem; font-size: 11px; line-height: 1.3; color: rgb(254 226 226); white-space: pre-line; }
+  .card.open .detail { display: block; }
+  .card.open { grid-column: span 2; }
+  .badge { font-size: 9px; padding: 0 4px; border-radius: 4px; }
+  .legend-red { display:inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgb(239 68 68); background: rgb(127 29 29 / .6); }
   input[type=number]::-webkit-inner-spin-button { opacity: .4; }
   #tooltip { pointer-events: none; }
 </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
-  <div class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+  <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
     <div class="flex items-center gap-2">
       <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 grid place-items-center font-black">B3</div>
       <div>
         <h1 class="text-lg font-bold leading-tight">Screener B3</h1>
-        <p class="text-xs text-slate-400 leading-tight">Fundamentus + complemento Status Invest</p>
+        <p class="hidden sm:block text-[11px] text-slate-400 leading-tight">Fundamentus + complemento Status Invest</p>
       </div>
     </div>
     <div class="ml-auto flex flex-wrap items-center gap-2 text-sm">
-      <span id="updated" class="text-slate-400">Carregando…</span>
-      <button id="btnRefresh" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700">⟳ Atualizar</button>
-      <button id="btnCsv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">⬇ Exportar CSV</button>
+      <span id="updated" class="text-slate-400 text-xs sm:text-sm">Carregando…</span>
+      <button id="btnRefresh" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700">⟳<span class="hidden sm:inline"> Atualizar</span></button>
+      <button id="btnCsv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">⬇ CSV</button>
     </div>
   </div>
 </header>
 
-<main class="max-w-[1800px] mx-auto px-4 py-4 space-y-4">
-  <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-    <div class="flex flex-wrap items-center gap-3 mb-3">
-      <h2 class="font-semibold">Filtros <span class="text-xs font-normal text-slate-400">(combinados com E; campo vazio = sem filtro; percentuais como número: 8 = 8%)</span></h2>
-      <div class="ml-auto flex flex-wrap items-center gap-3">
-        <input id="q" type="search" placeholder="Buscar ticker ou nome…" class="w-64 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
-        <label class="flex items-center gap-2 text-sm"><input id="onlyLiquid" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Só líquidas <span class="text-slate-500 text-xs">(liquidez 2m &gt; 0)</span></label>
-        <button id="btnClear" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Limpar</button>
+<main class="max-w-[1800px] mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3">
+  <!-- Barra de controle: busca, líquidas, ordenação, botão de filtros -->
+  <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 space-y-3">
+    <div class="flex flex-wrap items-center gap-2">
+      <input id="q" type="search" placeholder="Buscar ticker ou nome…" class="flex-1 min-w-[180px] px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
+      <label class="flex items-center gap-2 text-sm px-2"><input id="onlyLiquid" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Só líquidas</label>
+      <div class="flex items-center gap-1">
+        <label for="sortKey" class="text-xs text-slate-400">Ordenar</label>
+        <select id="sortKey" class="px-2 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm max-w-[170px]"></select>
+        <button id="sortDir" title="Inverter ordem" class="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">↓ Desc</button>
       </div>
+      <button id="btnFilters" aria-expanded="true" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium">
+        <span id="filtersLabel">Filtros</span> <span id="filtersChevron">▴</span></button>
+      <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Limpar</button>
     </div>
-    <div id="filters" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2"></div>
+    <div id="filtersPanel">
+      <p class="text-[11px] text-slate-400 mb-2">Combinados com E · campo vazio = sem filtro · percentuais como número (8 = 8%) ·
+        <span class="text-emerald-400 font-bold">≥</span> maior é melhor · <span class="text-sky-400 font-bold">≤</span> menor é melhor ·
+        <sup>+</sup> ao filtrar ≤, negativos são excluídos (ex.: P/L negativo = prejuízo) · Liquidez em R$ (1000000 = R$ 1 mi/dia)</p>
+      <div id="filters" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2"></div>
+    </div>
   </section>
 
-  <section class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+  <section class="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-400">
     <div><span id="count" class="text-base font-bold text-slate-100">0</span> resultados</div>
-    <div class="flex items-center gap-2"><span class="inline-block w-4 h-4 rounded cell-red"></span>
-      <span>Vermelho: divergência grosseira entre Fundamentus e Status Invest
-        <span class="tip underline decoration-dotted cursor-help" data-tip-id="rule">(regra)</span> — passe o mouse para ver os dois valores</span></div>
-    <div class="flex items-center gap-2"><span class="cell-bold text-sm">123</span><span>Negrito: valor vindo só do Status Invest (Fundamentus não tem / vazio)</span></div>
-    <div class="flex items-center gap-2"><span class="italic text-slate-300">123</span><span>Itálico: VPA/LPA calculado (cotação ÷ P/VP ou P/L)</span></div>
-    <div id="srcStatus" class="ml-auto"></div>
+    <div class="flex items-center gap-1.5"><span class="legend-red"></span>
+      <span>Divergência grosseira Fundamentus × Status Invest <span class="underline decoration-dotted cursor-help" data-tip-id="rule">(regra)</span> — passe o mouse ou toque no card</span></div>
+    <div class="flex items-center gap-1.5"><b class="text-white text-sm">123</b><span>só do Status Invest</span></div>
+    <div class="flex items-center gap-1.5"><i class="text-slate-300 text-sm">123</i><span>calculado (VPA/LPA)</span></div>
+    <div id="srcStatus" class="sm:ml-auto"></div>
   </section>
 
-  <section class="rounded-2xl border border-slate-800 overflow-hidden">
-    <div id="tableWrap" class="overflow-auto max-h-[70vh]">
-      <table class="min-w-full text-sm">
-        <thead id="thead" class="bg-slate-900 text-slate-300 text-xs uppercase tracking-wide"></thead>
-        <tbody id="tbody" class="divide-y divide-slate-800/70"></tbody>
-      </table>
-    </div>
-  </section>
-  <p class="text-xs text-slate-500">Dados de fontes públicas (Fundamentus, Status Invest; nomes/setores via brapi.dev). Não é recomendação de investimento. Atualização automática a cada 30 min.</p>
+  <section id="results" class="space-y-3"></section>
+  <div id="more" class="flex flex-col items-center gap-2 py-4">
+    <span id="shown" class="text-xs text-slate-500"></span>
+    <button id="btnMore" class="hidden px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Carregar mais</button>
+  </div>
+  <p class="text-xs text-slate-500 pb-6">Dados de fontes públicas (Fundamentus, Status Invest; nomes/setores/variação via brapi.dev). Não é recomendação de investimento. Atualização automática a cada 30 min.</p>
 </main>
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl whitespace-pre-line"></div>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=3"></script>
 </body>
 </html>
