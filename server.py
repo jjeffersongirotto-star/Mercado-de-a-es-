@@ -327,6 +327,7 @@ def finalize(base, yf_store=None):
     rows = []
     cnt = {"red": 0, "amb": 0, "adj": 0}
     src_count = {}
+    FIN = consensus.financial_tickers(base["rows"])
     for r in base["rows"]:
         S = dict(r.get("S") or {})
         if yf_store is not None:
@@ -335,8 +336,12 @@ def finalize(base, yf_store=None):
         nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur")}
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
+        if r["ticker"] in FIN: nr["fin"] = True
         consensus.apply_row(nr, CMP_FIELDS, divergente)
-        for x in nr["st"].values(): cnt[x] += 1
+        bkk = set(nr.get("bk") or [])
+        for k_, x in nr["st"].items():
+            if k_ in bkk: cnt["bank"] = cnt.get("bank", 0) + 1
+            else: cnt[x] += 1
         for s in S: src_count[s] = src_count.get(s, 0) + 1
         rows.append(nr)
     d = {k: v for k, v in base.items() if k != "rows"}

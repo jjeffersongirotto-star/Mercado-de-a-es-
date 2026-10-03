@@ -58,6 +58,10 @@
   .card.avg::after, .sw-avg::after { content: ''; position: absolute; right: 0; bottom: 0; width: 0; height: 0;
     border-style: solid; border-width: 0 0 12px 12px; border-color: transparent transparent rgb(253 224 71) transparent; border-bottom-right-radius: .5rem; }
   .sw-avg::after { border-width: 0 0 7px 7px; border-bottom-right-radius: 3px; }
+  .card.bank { border-color: rgb(30 64 175); background: rgb(23 37 84 / .75); }
+  .card.bank .val { color: rgb(191 219 254); }
+  .card.bank .detail { color: rgb(219 234 254); }
+  .hb-bank { color: rgb(191 219 254); background: rgb(23 37 84 / .8); border: 1px solid rgb(30 64 175); }
   .card.aj { box-shadow: inset 3px 0 0 rgb(56 189 248); }
   .lgi { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
   .lgc { font-weight: 700; }
@@ -154,13 +158,6 @@
     <div class="flex items-center gap-2"><span><span id="count" class="text-base font-bold text-slate-100">0</span> resultados</span>
       <button id="btnExpandAll" type="button" class="px-2 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-[11px]">Expandir todos</button>
       <button id="btnCollapseAll" type="button" class="px-2 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-[11px]">Recolher todos</button></div>
-    <div id="legendAll" class="lgd basis-full flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span class="lgi" title="Sem maioria: grupos parciais de fontes iguais — média ponderada"><span class="sw sw-red"></span>Divergência na maioria <b id="lgW" class="lgc text-red-300"></b></span>
-      <span class="lgi" title="Todas as fontes diferem — média simples (número amarelo)"><span class="sw sw-red sw-avg"></span>Divergência geral <b id="lgA" class="lgc text-yellow-300"></b></span>
-      <span class="lgi" title="Maioria (ou grupo com metade) igual, com alguma fonte discordando"><span class="sw sw-res"></span>Maioria igual <b id="lgM" class="lgc text-amber-300"></b></span>
-      <span class="lgi" title="CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado"><span class="sw sw-adj"></span>EBIT ajustado <b id="lgJ" class="lgc text-sky-300"></b></span>
-      <span class="underline decoration-dotted cursor-help text-slate-500" data-tip-id="rule">regra</span>
-    </div>
     <div class="basis-full flex flex-col gap-1"><div id="consSummary" class="text-slate-300"></div><details class="text-slate-400"><summary class="cursor-pointer select-none hover:text-slate-200">Status das fontes</summary><div id="srcStatus" class="mt-1 leading-relaxed"></div></details></div>
   </section>
 
@@ -174,6 +171,6 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=12"></script>
+<script src="/static/app.js?v=13"></script>
 </body>
 </html>

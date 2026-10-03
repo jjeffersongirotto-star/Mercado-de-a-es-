@@ -235,8 +235,10 @@ function cardsHtml(r) {
     let badge = '';
     const cmo = all ? ((r.cm || {})[f.key] || {}) : {}, cmt = cmo.t;
     if (cmo.aj) cls.push('aj');
-    if (st === 'red') { cls.push('red'); if (cmt === 'avg') cls.push('avg'); badge = `<span class="badge bg-red-600 text-white">${cmt === 'avg' ? 'média' : cmt === 'w' ? 'pond.' : '≠'}</span>`; }
-    else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${((r.ex || {})[f.key] || []).length ? '±' : ag.length + '/' + nSrc}</span>`; }
+    const isBank = all && (r.bk || []).includes(f.key);
+    if (isBank) { cls.push('bank'); badge = '<span class="badge bg-blue-900 text-blue-100 font-bold border border-blue-700" title="Banco/seguradora — indicador não comparável entre fontes">banco</span>'; }
+    else if (st === 'red') { cls.push('red'); if (cmt === 'avg') cls.push('avg'); badge = `<span class="badge bg-red-600 text-white">${cmt === 'avg' ? 'média' : cmt === 'w' ? 'pond.' : cmt === 'pri' ? '2 f.' : '≠'}</span>`; }
+    else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${((r.ex || {})[f.key] || []).length ? '±' : ag.length + '/' + (nSrc - (((r.xv || {})[f.key]) || []).length)}</span>`; }
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
     if (all && nSrc >= 1 && v != null || st) cls.push('tip');
     cards += `<div class="${cls.join(' ')}" data-key="${f.key}">
@@ -253,17 +255,22 @@ function tipHtml(r, f) {
   const exl = ((r.ex || {})[k]) || [];
   const cm = (r.cm || {})[k] || {};
   const P0 = nf(0);
-  const head = st === 'red' && cm.t === 'avg' ? '<b class="text-red-300">Sem maioria — todas as fontes diferem</b><br>Exibido: <b class="text-yellow-300">média de todas as fontes</b>'
+  const xv = ((r.xv || {})[k]) || [];
+  const isBank = (r.bk || []).includes(k);
+  const idsV = ids.filter(id => !xv.includes(id));
+  const head = isBank ? '<b class="text-blue-300">Banco/seguradora</b> — indicador baseado em EBIT/receita não é comparável entre fontes'
+    : st === 'red' && cm.t === 'pri' ? `<b class="text-red-300">Apenas 2 fontes</b> — exibido: ${esc(srcInfo(cm.src).name)} (maior prioridade)`
+    : st === 'red' && cm.t === 'avg' ? '<b class="text-red-300">Sem maioria — todas as fontes diferem</b><br>Exibido: <b class="text-yellow-300">média de todas as fontes</b>'
     : st === 'red' && cm.t === 'w' ? '<b class="text-red-300">Sem maioria — média ponderada pelos grupos</b><br>' + cm.w.map(([w, x, ids]) => `${P0.format(w * 100)}% × ${F(x)} <span class="text-slate-400">(${ids.map(id => esc(srcInfo(id).name)).join(', ')})</span>`).join('<br>+ ')
     : st === 'red' ? '<b class="text-red-300">Sem maioria entre as fontes</b>'
-    : cm.t === 'half' ? `<b class="text-amber-300">Grupo com metade das fontes (${ag.length}/${ids.length})</b> — tratado como maioria`
+    : cm.t === 'half' ? `<b class="text-amber-300">Grupo com metade das fontes (${ag.length}/${idsV.length})</b> — tratado como maioria`
     : exl.length ? `<b class="text-amber-300">Sinal conferido pela Dív.Líq/PL</b> — usado: ${ag.map(id => esc(srcInfo(id).name)).join(', ')}`
-    : st === 'amb' ? `<b class="text-amber-300">Maioria ${ag.length}/${ids.length}</b> — valor de consenso`
-    : ids.length > 1 ? `<b class="text-emerald-300">Fontes concordam (${ids.length}/${ids.length})</b>` : '<b>Fonte única</b>';
-  const ok = (id) => st === 'red' ? '' : (st ? (ag.includes(id) ? '✓' : '✗') : '✓');
+    : st === 'amb' ? `<b class="text-amber-300">Maioria ${ag.length}/${idsV.length}</b> — valor de consenso`
+    : idsV.length > 1 ? `<b class="text-emerald-300">Fontes concordam (${idsV.length}/${idsV.length})</b>` : '<b>Fonte única</b>';
+  const ok = (id) => xv.includes(id) ? '' : st === 'red' ? '' : (st ? (ag.includes(id) ? '✓' : '✗') : '✓');
   const aj = cm.aj || [], A0 = r.A || {};
   const ajm = (id) => aj.includes(id) ? ` <span class="badge bg-sky-600 text-white font-bold" title="concorda com o Fundamentus via EBIT ajustado">aj</span> <span class="text-sky-200">${F(A0[id][k + '_adj'])}</span>` : '';
-  const rows = ids.map(id => `<tr class="${st && st !== 'red' && !ag.includes(id) ? 'no' : ''}"><td>${logoImg(id)} ${esc(srcInfo(id).name)}</td><td class="text-right font-semibold">${F(S[id][k])}${ajm(id)}</td><td>${ok(id)}</td></tr>`).join('');
+  const rows = ids.map(id => `<tr class="${xv.includes(id) || st && st !== 'red' && !ag.includes(id) ? 'no' : ''}"><td>${logoImg(id)} ${esc(srcInfo(id).name)}${xv.includes(id) ? ' <span class="text-slate-400 text-[10px]">fora da votação neste indicador</span>' : ''}</td><td class="text-right font-semibold">${F(S[id][k])}${ajm(id)}</td><td>${ok(id)}</td></tr>`).join('');
   let extra = exl.length ? `<div class="mt-1 text-amber-200">Fora da votação (sinal oposto ao da Dív.Líq/PL de consenso — caixa líquido vs dívida líquida): ${exl.map(id => esc(srcInfo(id).name)).join(', ')}</div>` : '';
   const A = r.A || {};
   const adj = Object.entries(A).filter(([, d]) => d[k + '_adj'] != null);
@@ -279,9 +286,11 @@ function blockHtml(r) {
   const open = state.expanded.has(r.ticker);
   const varTxt = r.var == null ? '' : `<span class="text-sm font-semibold ${r.var >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${r.var >= 0 ? '▲' : '▼'} ${F2.format(r.var)}%</span>`;
   const stv = state.source === 'all' ? Object.values(r.st || {}) : [];
-  const nRed = stv.filter(x => x === 'red').length, nRes = stv.filter(x => x === 'amb').length, nAdj = state.source === 'all' ? Object.values(r.cm || {}).filter(m => m.aj).length : 0;
+  const bks = new Set(state.source === 'all' ? r.bk || [] : []), stE = state.source === 'all' ? Object.entries(r.st || {}).filter(([kk]) => !bks.has(kk)).map(([, x]) => x) : [];
+  const nRed = stE.filter(x => x === 'red').length, nRes = stE.filter(x => x === 'amb').length, nBank = bks.size, nAdj = state.source === 'all' ? Object.values(r.cm || {}).filter(m => m.aj).length : 0;
   const badges = (nRed ? `<span class="hb hb-red" title="${nRed} indicador(es) sem maioria entre as fontes">≠ ${nRed}</span>` : '') +
                  (nRes ? `<span class="hb hb-res" title="${nRes} indicador(es) com maioria, mas alguma fonte discorda">maioria ${nRes}</span>` : '') +
+                 (nBank ? `<span class="hb hb-bank" title="${nBank} indicador(es) baseados em EBIT/receita não comparáveis (banco/seguradora)">banco ${nBank}</span>` : '') +
                  (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) em que CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado">aj ${nAdj}</span>` : '');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head flex flex-wrap items-center gap-x-4 gap-y-1 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
@@ -428,7 +437,6 @@ function renderSource() {
   $('#btnSource').classList.toggle('border-emerald-600', !!cur);
   $('#sourceMenu').innerHTML = `<button type="button" role="option" data-src="all" class="${state.source === 'all' ? 'sel' : ''}"><span class="srclogo grid place-items-center text-[10px]">∑</span> Todos <span class="cnt">consenso</span></button>` +
     srcs.map(s => `<button type="button" role="option" data-src="${s.id}" class="${s.id === state.source ? 'sel' : ''}">${logoImg(s.id)} ${esc(s.name)}<span class="cnt">${F0.format(s.count)}</span></button>`).join('');
-  $('#legendAll').style.display = state.source === 'all' && !(state.data && state.data.single_source) ? '' : 'none';
 }
 $('#sourceMenu').addEventListener('click', (e) => {
   const b = e.target.closest('[data-src]'); if (!b) return;
@@ -450,10 +458,6 @@ async function load() {
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
     $('#srcStatus').innerHTML = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `<div><b class="text-slate-300">${n}</b>: ${esc(st[k])}</div>`).join('');
-    const ct = { avg: 0, w: 0 };
-    for (const x of d.rows) for (const m of Object.values(x.cm || {})) if (m.t in ct) ct[m.t]++;
-    $('#lgW').textContent = F0.format(ct.w); $('#lgA').textContent = F0.format(ct.avg);
-    $('#lgM').textContent = F0.format(c.amb || 0); $('#lgJ').textContent = F0.format(c.adj || 0);
     $('#consSummary').innerHTML = country === 'br' ? '' : `${F0.format(c.tickers || d.rows.length)} ações (maiores por valor de mercado) · fonte única: TradingView`;
     $('#consSummary').style.display = country === 'br' ? 'none' : '';
     $('#subtitle').textContent = country === 'br' ? 'Consenso entre ' + (d.sources || []).length + ' fontes' : 'Fonte: TradingView (scanner)';
