@@ -233,13 +233,14 @@ function cardsHtml(r) {
     if (v === null || v === undefined) cls.push('na');
     else if (v < 0) cls.push('neg');
     let badge = '';
-    const cmt = all ? ((r.cm || {})[f.key] || {}).t : null;
+    const cmo = all ? ((r.cm || {})[f.key] || {}) : {}, cmt = cmo.t;
+    if (cmo.aj) cls.push('aj');
     if (st === 'red') { cls.push('red'); if (cmt === 'avg') cls.push('avg'); badge = `<span class="badge bg-red-600 text-white">${cmt === 'avg' ? 'média' : cmt === 'w' ? 'pond.' : '≠'}</span>`; }
     else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${((r.ex || {})[f.key] || []).length ? '±' : ag.length + '/' + nSrc}</span>`; }
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
     if (all && nSrc >= 1 && v != null || st) cls.push('tip');
     cards += `<div class="${cls.join(' ')}" data-key="${f.key}">
-      <div class="lbl"><span class="truncate" title="${esc(f.label)}">${esc(f.short || f.label)}</span>${badge}</div>
+      <div class="lbl"><span class="truncate" title="${esc(f.label)}">${esc(f.short || f.label)}</span>${cmo.aj ? '<span class="badge bg-sky-600 text-white font-bold ml-auto mr-0.5" title="concordância via EBIT ajustado">aj</span>' : ''}${badge}</div>
       <div class="val">${v == null ? '—' : fmt(v, f.unit, f.key, r.cur)}</div><div class="detail"></div></div>`;
   }
   return `<div class="cards p-2.5 sm:p-3">${cards}</div>`;
@@ -427,7 +428,7 @@ function renderSource() {
   $('#btnSource').classList.toggle('border-emerald-600', !!cur);
   $('#sourceMenu').innerHTML = `<button type="button" role="option" data-src="all" class="${state.source === 'all' ? 'sel' : ''}"><span class="srclogo grid place-items-center text-[10px]">∑</span> Todos <span class="cnt">consenso</span></button>` +
     srcs.map(s => `<button type="button" role="option" data-src="${s.id}" class="${s.id === state.source ? 'sel' : ''}">${logoImg(s.id)} ${esc(s.name)}<span class="cnt">${F0.format(s.count)}</span></button>`).join('');
-  $('#legendAll').style.display = state.source === 'all' ? '' : 'none';
+  $('#legendAll').style.display = state.source === 'all' && !(state.data && state.data.single_source) ? '' : 'none';
 }
 $('#sourceMenu').addEventListener('click', (e) => {
   const b = e.target.closest('[data-src]'); if (!b) return;
@@ -449,9 +450,12 @@ async function load() {
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
     $('#srcStatus').innerHTML = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `<div><b class="text-slate-300">${n}</b>: ${esc(st[k])}</div>`).join('');
-    $('#consSummary').innerHTML = country === 'br'
-      ? `Consenso: <b class="text-red-300">${F0.format(c.red || 0)}</b> sem maioria (antes, Fundamentus × Status Invest: ${F0.format(c.red_before || 0)}) · <b class="text-amber-300">${F0.format(c.amb || 0)}</b> maioria com discordância · <b class="text-sky-300">${F0.format(c.adj || 0)}</b> concordâncias via EBIT ajustado`
-      : `${F0.format(c.tickers || d.rows.length)} ações (maiores por valor de mercado) · fonte única: TradingView`;
+    const ct = { avg: 0, w: 0 };
+    for (const x of d.rows) for (const m of Object.values(x.cm || {})) if (m.t in ct) ct[m.t]++;
+    $('#lgW').textContent = F0.format(ct.w); $('#lgA').textContent = F0.format(ct.avg);
+    $('#lgM').textContent = F0.format(c.amb || 0); $('#lgJ').textContent = F0.format(c.adj || 0);
+    $('#consSummary').innerHTML = country === 'br' ? '' : `${F0.format(c.tickers || d.rows.length)} ações (maiores por valor de mercado) · fonte única: TradingView`;
+    $('#consSummary').style.display = country === 'br' ? 'none' : '';
     $('#subtitle').textContent = country === 'br' ? 'Consenso entre ' + (d.sources || []).length + ' fontes' : 'Fonte: TradingView (scanner)';
     if (!built) { buildFilters(); buildSort(); built = true; } else { renderFilterUI(); buildSortOptions(); }
     renderSource();
