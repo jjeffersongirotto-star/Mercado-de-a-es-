@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screener B3 — Indicadores Fundamentalistas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' }</script>
+<style>
+  body { font-feature-settings: "tnum"; }
+  thead th { position: sticky; top: 0; z-index: 20; }
+  .sticky-col { position: sticky; left: 0; z-index: 10; }
+  thead th.sticky-col { z-index: 30; }
+  .cell-red { background: rgba(220,38,38,.35) !important; color: #fecaca; }
+  .cell-bold { font-weight: 800; color: #fff; }
+  .tip { position: relative; }
+  input[type=number]::-webkit-inner-spin-button { opacity: .4; }
+  #tooltip { pointer-events: none; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+<header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+  <div class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 grid place-items-center font-black">B3</div>
+      <div>
+        <h1 class="text-lg font-bold leading-tight">Screener B3</h1>
+        <p class="text-xs text-slate-400 leading-tight">Fundamentus + complemento Status Invest</p>
+      </div>
+    </div>
+    <div class="ml-auto flex flex-wrap items-center gap-2 text-sm">
+      <span id="updated" class="text-slate-400">Carregando…</span>
+      <button id="btnRefresh" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700">⟳ Atualizar</button>
+      <button id="btnCsv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">⬇ Exportar CSV</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1800px] mx-auto px-4 py-4 space-y-4">
+  <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+    <div class="flex flex-wrap items-center gap-3 mb-3">
+      <h2 class="font-semibold">Filtros <span class="text-xs font-normal text-slate-400">(combinados com E; campo vazio = sem filtro; percentuais como número: 8 = 8%)</span></h2>
+      <div class="ml-auto flex flex-wrap items-center gap-3">
+        <input id="q" type="search" placeholder="Buscar ticker ou nome…" class="w-64 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
+        <label class="flex items-center gap-2 text-sm"><input id="onlyLiquid" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Só líquidas <span class="text-slate-500 text-xs">(liquidez 2m &gt; 0)</span></label>
+        <button id="btnClear" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Limpar</button>
+      </div>
+    </div>
+    <div id="filters" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2"></div>
+  </section>
+
+  <section class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+    <div><span id="count" class="text-base font-bold text-slate-100">0</span> resultados</div>
+    <div class="flex items-center gap-2"><span class="inline-block w-4 h-4 rounded cell-red"></span>
+      <span>Vermelho: divergência grosseira entre Fundamentus e Status Invest
+        <span class="tip underline decoration-dotted cursor-help" data-tip-id="rule">(regra)</span> — passe o mouse para ver os dois valores</span></div>
+    <div class="flex items-center gap-2"><span class="cell-bold text-sm">123</span><span>Negrito: valor vindo só do Status Invest (Fundamentus não tem / vazio)</span></div>
+    <div class="flex items-center gap-2"><span class="italic text-slate-300">123</span><span>Itálico: VPA/LPA calculado (cotação ÷ P/VP ou P/L)</span></div>
+    <div id="srcStatus" class="ml-auto"></div>
+  </section>
+
+  <section class="rounded-2xl border border-slate-800 overflow-hidden">
+    <div id="tableWrap" class="overflow-auto max-h-[70vh]">
+      <table class="min-w-full text-sm">
+        <thead id="thead" class="bg-slate-900 text-slate-300 text-xs uppercase tracking-wide"></thead>
+        <tbody id="tbody" class="divide-y divide-slate-800/70"></tbody>
+      </table>
+    </div>
+  </section>
+  <p class="text-xs text-slate-500">Dados de fontes públicas (Fundamentus, Status Invest; nomes/setores via brapi.dev). Não é recomendação de investimento. Atualização automática a cada 30 min.</p>
+</main>
+
+<div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl whitespace-pre-line"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
