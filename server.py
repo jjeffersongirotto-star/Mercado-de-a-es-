@@ -343,6 +343,7 @@ def finalize(base, yf_store=None):
     d["rows"] = rows
     c = dict(base.get("counts") or {})
     c.update(cnt)
+    c["adj"] = sum(1 for r in rows for m in (r.get("cm") or {}).values() if m.get("aj"))
     c["tickers"] = len(rows)
     c["liquidas"] = sum(1 for r in rows if (r["v"].get("liq2m") or 0) > 0)
     c["sources"] = src_count
