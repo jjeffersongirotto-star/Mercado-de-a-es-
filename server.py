@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Screener B3 — backend FastAPI.
-Fonte primária: Fundamentus (resultado.php). Complemento: Status Invest (CSV export).
+Fonte primária: Fundamentus (resultado.php). Complemento: Status Invest (ao vivo; fallback snapshot diário do GitHub Actions).
 Nomes/setores (opcional): brapi.dev /api/quote/list (público, sem token).
 """
 import io, json, os, threading, time, logging, math
@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 import requests
+
+import statusinvest
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -124,21 +126,51 @@ def fetch_fundamentus():
         out[t] = rec
     return out
 
+SI_FALLBACK_URL = os.environ.get(
+    "SI_FALLBACK_URL",
+    "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data/statusinvest.csv")
+SI_LOCAL_FILE = os.path.join(BASE, "data", "statusinvest.csv")
+
+def _fmt_sp(iso):
+    try:
+        return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(TZ).strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        return iso or "?"
+
 def fetch_statusinvest():
-    params = {"search": json.dumps({"Sector": "", "SubSector": "", "Segment": "", "my_range": "-20;100"}),
-              "CategoryType": 1}
-    r = http_get("https://statusinvest.com.br/category/advancedsearchresultexport", params=params, tries=3)
-    text = r.content.decode("utf-8", errors="replace")
-    lines = [l for l in text.splitlines() if l.strip()]
-    hdr = lines[0].split(";")
-    if "TICKER" not in hdr[0].upper():
-        raise RuntimeError("CSV Status Invest inesperado")
-    out = {}
-    for l in lines[1:]:
-        p = l.split(";")
-        rec = {hdr[i]: br_num(p[i]) if i < len(p) else None for i in range(1, len(hdr))}
-        out[p[0].strip().upper()] = rec
-    return out
+    """Ordem: ao vivo (export CSV -> JSON paginado, com headers de navegador e cookies)
+    -> snapshot do GitHub Actions (raw.githubusercontent, branch data) -> arquivo local data/.
+    Retorna (dados, descrição da fonte usada)."""
+    errs = []
+    try:
+        text, method = statusinvest.fetch_live()
+        return statusinvest.parse_csv(text, br_num), f"ao vivo ({method})"
+    except Exception as e:
+        errs.append(f"ao vivo: {e}")
+        log.warning("Status Invest ao vivo falhou: %s", e)
+    try:
+        r = http_get(SI_FALLBACK_URL, tries=2, timeout=(10, 30))
+        data = statusinvest.parse_csv(r.content.decode("utf-8", errors="replace"), br_num)
+        when = "?"
+        try:
+            m = http_get(SI_FALLBACK_URL.replace("statusinvest.csv", "statusinvest.meta.json"), tries=1).json()
+            when = _fmt_sp(m.get("fetched_at"))
+        except Exception:
+            pass
+        return data, f"snapshot GitHub de {when} (ao vivo bloqueado: {errs[0][9:][:80]})"
+    except Exception as e:
+        errs.append(f"snapshot GitHub: {e}")
+    if os.path.exists(SI_LOCAL_FILE):
+        with open(SI_LOCAL_FILE, encoding="utf-8") as fh:
+            data = statusinvest.parse_csv(fh.read(), br_num)
+        when = "?"
+        try:
+            with open(SI_LOCAL_FILE.replace(".csv", ".meta.json"), encoding="utf-8") as fh:
+                when = _fmt_sp(json.load(fh).get("fetched_at"))
+        except Exception:
+            pass
+        return data, f"arquivo local de {when}"
+    raise RuntimeError(" | ".join(errs))
 
 def fetch_brapi_names():
     out = {}
@@ -154,7 +186,7 @@ def build():
     fund = fetch_fundamentus()  # obrigatório
     status["fundamentus"] = f"ok ({len(fund)} papéis)"
     try:
-        si = fetch_statusinvest(); status["statusinvest"] = f"ok ({len(si)} papéis)"
+        si, si_src = fetch_statusinvest(); status["statusinvest"] = f"ok ({len(si)} papéis) — {si_src}"
     except Exception as e:
         si = {}; status["statusinvest"] = f"falhou: {e}"; log.error("Status Invest: %s", e)
     try:
@@ -196,6 +228,8 @@ def build():
                 div[key] = [fv, sv]
         n_red += len(div); n_bold += sum(1 for v in src.values() if v == "si")
         nm = names.get(t) or names.get(t[:4] + "3") or names.get(t[:4] + "4") or {}
+        if not nm.get("nome") and (s.get("NOME") or s.get("SETOR")):
+            nm = {"nome": s.get("NOME"), "setor": s.get("SETOR")}
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"),
                      "subsetor": nm.get("subsetor"), "insi": bool(s),
                      "v": vals, "src": src, "div": div})

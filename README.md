@@ -36,3 +36,14 @@ O app tem backend em Python, então **não roda no GitHub Pages**. Para ter um l
 - Start: `uvicorn server:app --host 0.0.0.0 --port $PORT`
 
 Os dados ficam em cache e são atualizados a cada 30 minutos (ou pelo botão "Atualizar").
+
+## Status Invest bloqueado (HTTP 403) no servidor
+
+O Status Invest pode bloquear IPs de datacenter (ex.: Render). O servidor tenta, em ordem:
+1. **Ao vivo**: export CSV e depois o endpoint JSON paginado, com headers de navegador e cookies de sessão.
+2. **Snapshot do GitHub Actions**: o workflow `.github/workflows/statusinvest.yml` roda em dias úteis às 19:30 (BRT)
+   e sob demanda (`workflow_dispatch`), gravando `data/statusinvest.csv` na branch **`data`** (não na `main`,
+   para não disparar deploy no Render). O servidor lê de `raw.githubusercontent.com` (variável `SI_FALLBACK_URL`).
+3. **Arquivo local** `data/statusinvest.csv` versionado na `main`.
+
+A fonte usada e a data do snapshot aparecem em `/api/status` → `status.statusinvest`.

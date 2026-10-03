@@ -1,0 +1,48 @@
+name: Snapshot Status Invest
+
+# Grava o snapshot na branch "data" (não na main), para NÃO disparar deploy no Render.
+on:
+  schedule:
+    - cron: "30 22 * * 1-5"   # 19:30 BRT (após o fechamento), dias úteis
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: statusinvest-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: app
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Baixar Status Invest
+        run: python app/scripts/fetch_statusinvest.py out
+      - name: Publicar na branch data
+        run: |
+          set -e
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          REPO="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$REPO" data >/dev/null 2>&1; then
+            git clone --depth 1 --branch data "$REPO" databranch
+          else
+            mkdir databranch && cd databranch && git init -q -b data && git remote add origin "$REPO" && cd ..
+          fi
+          mkdir -p databranch/data
+          cp out/statusinvest.csv out/statusinvest.meta.json databranch/data/
+          cd databranch
+          git add data
+          if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
+          git commit -q -m "Snapshot Status Invest $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push origin data
