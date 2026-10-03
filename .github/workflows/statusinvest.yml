@@ -27,8 +27,18 @@ jobs:
           python-version: "3.12"
       - run: pip install requests
       - name: Baixar Status Invest
-        run: python app/scripts/fetch_statusinvest.py out
+        id: fetch
+        # O Status Invest (Cloudflare) costuma bloquear IPs de datacenter (runners do GitHub inclusive).
+        # Se bloquear, só registra um aviso (sem falhar o job / sem e-mail) e mantém o snapshot anterior.
+        run: |
+          if python app/scripts/fetch_statusinvest.py out; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Status Invest bloqueou o runner (HTTP 403?). Snapshot anterior mantido."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publicar na branch data
+        if: steps.fetch.outputs.ok == 'true'
         run: |
           set -e
           git config --global user.name "github-actions[bot]"
