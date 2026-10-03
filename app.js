@@ -233,7 +233,8 @@ function cardsHtml(r) {
     if (v === null || v === undefined) cls.push('na');
     else if (v < 0) cls.push('neg');
     let badge = '';
-    if (st === 'red') { cls.push('red'); badge = '<span class="badge bg-red-600 text-white">≠</span>'; }
+    const cmt = all ? ((r.cm || {})[f.key] || {}).t : null;
+    if (st === 'red') { cls.push('red'); if (cmt === 'avg') cls.push('avg'); badge = `<span class="badge bg-red-600 text-white">${cmt === 'avg' ? 'média' : cmt === 'w' ? 'pond.' : '≠'}</span>`; }
     else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${((r.ex || {})[f.key] || []).length ? '±' : ag.length + '/' + nSrc}</span>`; }
     else if (st === 'adj') { cls.push('adj'); badge = '<span class="badge bg-sky-600 text-white font-bold">aj</span>'; }
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
@@ -250,7 +251,12 @@ function tipHtml(r, f) {
   const S = r.S || { [state.data.single_source || 'tv']: r.v };
   const ids = (state.data.sources || []).map(s => s.id).filter(id => S[id] && S[id][k] != null);
   const exl = ((r.ex || {})[k]) || [];
-  const head = st === 'red' ? `<b class="text-red-300">Sem maioria entre as fontes</b> — exibido: ${S.fund && S.fund[k] != null ? 'Fundamentus' : 'fonte mais próxima da mediana'}`
+  const cm = (r.cm || {})[k] || {};
+  const P0 = nf(0);
+  const head = st === 'red' && cm.t === 'avg' ? '<b class="text-red-300">Sem maioria — todas as fontes diferem</b><br>Exibido: <b class="text-yellow-300">média de todas as fontes</b>'
+    : st === 'red' && cm.t === 'w' ? '<b class="text-red-300">Sem maioria — média ponderada pelos grupos</b><br>' + cm.w.map(([w, x, ids]) => `${P0.format(w * 100)}% × ${F(x)} <span class="text-slate-400">(${ids.map(id => esc(srcInfo(id).name)).join(', ')})</span>`).join('<br>+ ')
+    : st === 'red' ? '<b class="text-red-300">Sem maioria entre as fontes</b>'
+    : cm.t === 'half' ? `<b class="text-amber-300">Grupo com metade das fontes (${ag.length}/${ids.length})</b> — tratado como maioria`
     : exl.length ? `<b class="text-amber-300">Sinal conferido pela Dív.Líq/PL</b> — usado: ${ag.map(id => esc(srcInfo(id).name)).join(', ')}`
     : st === 'amb' ? `<b class="text-amber-300">Maioria ${ag.length}/${ids.length}</b> — valor de consenso`
     : st === 'adj' ? '<b class="text-sky-300">Diferença de definição de EBIT</b> — Fundamentus usa EBIT ajustado (lucro bruto − desp. vendas − desp. G&amp;A); consenso entre as fontes de EBIT padrão'
@@ -371,7 +377,7 @@ document.addEventListener('click', (e) => {
 function ruleText() {
   const r = state.data?.rule; if (!r) return '';
   const lim = Object.entries(r.abs).map(([k, a]) => `${state.fieldMap[k].label}: ${F2.format(a)}${state.fieldMap[k].unit === '%' ? ' p.p.' : ''}`).join(' · ');
-  return `Consenso entre fontes: para cada indicador, procura o maior grupo de fontes que concordam entre si (todos os pares dentro da regra abaixo). Maioria = mais da metade das fontes com valor. Exibido: Fundamentus se estiver na maioria, senão a mediana do grupo. Sem maioria = vermelho.\nRegra de concordância entre dois valores:\n• sinais opostos (ex.: + vs −) com diferença absoluta acima do limiar; OU\n• diferença relativa > ${Math.round(r.rel * 100)}% (|a−b| ÷ max(|a|,|b|)) E diferença absoluta acima do limiar.\nLimiares absolutos: ${lim}\n(Liquidez 2m não é comparada: janelas diferentes.)`;
+  return `Consenso entre fontes: para cada indicador, procura o maior grupo de fontes que concordam entre si (todos os pares dentro da regra abaixo). Maioria = mais da metade das fontes com valor (um grupo único com exatamente metade, de 2+ fontes, também vale). Exibido: Fundamentus se estiver no grupo, senão a mediana do grupo. Sem maioria = vermelho: se todas diferem, média simples (número amarelo); senão média ponderada — cada grupo repetido pesa tamanho/n e as fontes isoladas entram juntas pela média delas.\nRegra de concordância entre dois valores:\n• sinais opostos (ex.: + vs −) com diferença absoluta acima do limiar; OU\n• diferença relativa > ${Math.round(r.rel * 100)}% (|a−b| ÷ max(|a|,|b|)) E diferença absoluta acima do limiar.\nLimiares absolutos: ${lim}\n(Liquidez 2m não é comparada: janelas diferentes.)`;
 }
 
 // ---------- CSV ----------

@@ -22,6 +22,7 @@
   .card.calc .val { font-style: italic; font-weight: 500; }
   .card.red { border-color: rgb(239 68 68); background: rgb(127 29 29 / .45); }
   .card.red .val { color: rgb(254 202 202); }
+  .card.red.avg .val { color: rgb(253 224 71); }
   .card.res { border-color: rgb(245 158 11); background: rgb(120 53 15 / .35); }
   .card.res .val { color: rgb(253 230 138); }
   .card.res .detail { color: rgb(254 243 199); }
@@ -147,9 +148,9 @@
       <button id="btnCollapseAll" type="button" class="px-2 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-[11px]">Recolher todos</button></div>
     <div id="legendAll" class="contents">
     <div class="flex items-center gap-1.5"><span class="legend-red"></span>
-      <span>Sem maioria entre as fontes <span class="underline decoration-dotted cursor-help" data-tip-id="rule">(regra)</span> — passe o mouse ou toque no card</span></div>
+      <span>Sem maioria <span class="underline decoration-dotted cursor-help" data-tip-id="rule">(regra)</span>: média ponderada pelos grupos de fontes iguais; <b class="text-yellow-300">número amarelo</b> = todas diferentes (média simples) — passe o mouse ou toque no card</span></div>
     <div class="flex items-center gap-1.5"><span class="legend-res"></span>
-      <span>Maioria com discordância (<b class="text-amber-400">3/4</b> = fontes que concordam) — valor de consenso nos filtros/ordenação</span></div>
+      <span>Maioria (ou grupo com metade das fontes) com discordância (<b class="text-amber-400">3/4</b> = fontes que concordam) — valor do grupo nos filtros/ordenação</span></div>
     <div class="flex items-center gap-1.5"><span class="legend-adj"></span>
       <span><b class="text-sky-300">EBIT aj.</b>: Fundamentus usa EBIT ajustado (definição), não é erro</span></div>
     </div>
@@ -166,6 +167,6 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=9"></script>
+<script src="/static/app.js?v=10"></script>
 </body>
 </html>
