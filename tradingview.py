@@ -19,7 +19,8 @@ COLS = ["name", "description", "type", "sector", "industry", "close", "change", 
         "enterprise_value_ebitda_ttm", "enterprise_value_to_ebit_ttm", "ebit_ttm", "total_assets", "return_on_equity",
         "return_on_invested_capital", "return_on_assets", "gross_margin", "operating_margin", "net_margin", "current_ratio",
         "net_debt", "total_equity_fq", "total_revenue_cagr_5y", "net_income_cagr_5y", "book_value_per_share_fq",
-        "earnings_per_share_diluted_ttm"]
+        "earnings_per_share_diluted_ttm", "volume", "Value.Traded", "average_volume_10d_calc",
+        "average_volume_30d_calc", "average_volume_90d_calc"]
 
 def _n(x):
     try:
@@ -51,7 +52,17 @@ def to_vals(d):
          "vpa": _n(d["book_value_per_share_fq"]), "lpa": _n(d["earnings_per_share_diluted_ttm"]),
          "peg": (pl / l5) if pl and l5 and pl > 0 and l5 > 0 else None,
          "patrliq": _n(d["total_equity_fq"]), "valmerc": mc}
-    if cur == "GBP" and v["liq2m"]: v["liq2m"] /= 100
+    # volume financeiro (moeda local): dia = Value.Traded; médias = média de ações × cotação atual (aprox.)
+    # dia = volume × cotação (igual ao Value.Traded do TradingView, mas sempre na moeda local; ex.: Londres em £)
+    vq = _n(d.get("volume")); cl = _n(d["close"])
+    v["voldia"] = vq * cl if vq is not None and cl is not None else _n(d.get("Value.Traded"))
+    for k, c in (("vol10", "average_volume_10d_calc"), ("vol30", "average_volume_30d_calc"), ("vol90", "average_volume_90d_calc")):
+        q = _n(d.get(c)); v[k] = q * _n(d["close"]) if q is not None and _n(d["close"]) is not None else None
+        v["q_" + k] = round(q) if q is not None else None
+    v["q_voldia"] = round(_n(d.get("volume"))) if _n(d.get("volume")) is not None else None
+    if cur == "GBP":  # pence -> libras
+        for k in ("liq2m", "voldia", "vol10", "vol30", "vol90"):  # todos calculados com a cotação em pence
+            if v.get(k): v[k] /= 100
     v = {k: (round(x, 4) if isinstance(x, float) else x) for k, x in v.items() if x is not None}
     meta = {"nome": d.get("description"), "setor": d.get("sector"), "subsetor": d.get("industry"),
             "var": round(_n(d["change"]), 2) if _n(d["change"]) is not None else None, "cur": cur}

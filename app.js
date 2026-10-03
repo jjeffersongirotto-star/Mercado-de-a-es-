@@ -16,8 +16,18 @@ function fmtBig(v) {
   if (a >= 1e3) return F2.format(v / 1e3) + ' mil';
   return F2.format(v);
 }
-function fmt(v, unit, key) {
+const F1 = nf(1);
+function fmtMoneyBig(v, cur) {
+  const c = cur || state.data?.currency || 'BRL', sym = CUR[c] || c, a = Math.abs(v);
+  const t = a >= 1e9 ? F1.format(v / 1e9) + ' bi' : a >= 1e6 ? F1.format(v / 1e6) + ' mi' : a >= 1e3 ? F1.format(v / 1e3) + ' mil' : F0.format(v);
+  return sym + ' ' + t;
+}
+const fmtQty = (q) => q >= 1e9 ? F1.format(q / 1e9) + ' bi' : q >= 1e6 ? F1.format(q / 1e6) + ' mi' : q >= 1e3 ? F1.format(q / 1e3) + ' mil' : F0.format(q);
+const curSym = () => CUR[state.data?.currency] || state.data?.currency || 'R$';
+const qOf = (r, k) => ((r.q || (r.S && r.S.tv) || {})['q_' + k]);
+function fmt(v, unit, key, cur) {
   if (v === null || v === undefined) return '–';
+  if (unit === '$') return fmtMoneyBig(v, cur);
   if (['liq2m', 'patrliq', 'valmerc'].includes(key)) return fmtBig(v);
   if (unit === '%') return F2.format(v) + '%';
   return F2.format(v);
@@ -38,6 +48,7 @@ function val(r, k) {
   return x === undefined ? null : x;
 }
 function hint(f) {
+  if (f.scale) return { sym: '≥', txt: `Mostra ${f.label} ≥ valor, digitado em milhões de ${curSym()} (ex.: 10 = ${curSym()} 10 mi/dia). Fonte: TradingView` };
   if (f.dir === 'high') return { sym: '≥', txt: `Maior é melhor: mostra ${f.label} ≥ valor` };
   if (f.dir === 'low') return { sym: '≤', txt: `Menor é melhor: mostra ${f.label} ≤ valor` + (f.excludeNeg ? ' (exclui negativos)' : ' (negativos incluídos: caixa líquido)') };
   return null;
@@ -66,7 +77,7 @@ function computeFilters() {
   state.filters = {};
   for (const f of filterFields()) {
     const v = parseVal(prefs.values[f.key]);
-    if (v !== null && !prefs.hidden[f.key]) state.filters[f.key] = v;  // só campos existentes no país atual
+    if (v !== null && !prefs.hidden[f.key]) state.filters[f.key] = v * (f.scale || 1);  // só campos existentes no país atual
   }
 }
 
@@ -84,11 +95,11 @@ function itemHtml(f, inFolder) {
   return `<div class="fitem flex flex-col gap-1 bg-slate-950/60 border ${active ? 'border-emerald-600' : 'border-slate-800'} rounded-lg px-2 py-1.5" data-key="${k}" title="${esc(h.txt + (f.unit === '%' ? ' — digite 8 para 8%' : ''))}">
     <div class="flex items-center gap-1 text-[11px] text-slate-400">
       <span class="drag-handle cursor-grab select-none text-slate-500 text-sm leading-none px-0.5" title="Arraste para reordenar ou para 'Filtros ocultos'">⠿</span>
-      <span class="truncate flex-1">${esc(f.label)}${f.unit === '%' ? ' (%)' : ''}</span>
+      <span class="truncate flex-1">${esc(f.label)}${f.unit === '%' ? ' (%)' : f.scale ? ` (${curSym()} mi)` : ''}</span>
       ${sym}
       <button type="button" class="fav text-base leading-none ${prefs.fav[k] ? 'text-amber-400' : 'text-slate-600 hover:text-slate-300'}" data-key="${k}" title="${prefs.fav[k] ? 'Remover dos favoritos' : 'Favoritar (vai para o topo)'}">${prefs.fav[k] ? '★' : '☆'}</button>
     </div>
-    <input data-key="${k}" type="number" step="any" inputmode="decimal" placeholder="${h.sym} …" value="${esc(val)}"
+    <input data-key="${k}" type="number" step="any" inputmode="decimal" placeholder="${h.sym} …${f.scale ? ' mi' : ''}" value="${esc(val)}"
       class="fval w-full bg-transparent outline-none text-sm text-slate-100 placeholder:text-slate-600">
   </div>`;
 }
@@ -228,14 +239,14 @@ function cardsHtml(r) {
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
     if (all && nSrc >= 1 && v != null || st) cls.push('tip');
     cards += `<div class="${cls.join(' ')}" data-key="${f.key}">
-      <div class="lbl"><span class="truncate">${esc(f.label)}</span>${badge}</div>
-      <div class="val">${v == null ? '—' : fmt(v, f.unit, f.key)}</div><div class="detail"></div></div>`;
+      <div class="lbl"><span class="truncate" title="${esc(f.label)}">${esc(f.short || f.label)}</span>${badge}</div>
+      <div class="val">${v == null ? '—' : fmt(v, f.unit, f.key, r.cur)}</div><div class="detail"></div></div>`;
   }
   return `<div class="cards p-2.5 sm:p-3">${cards}</div>`;
 }
 
 function tipHtml(r, f) {
-  const k = f.key, st = (r.st || {})[k], ag = (r.ag || {})[k] || [], F = (x) => fmt(x, f.unit, k);
+  const k = f.key, st = (r.st || {})[k], ag = (r.ag || {})[k] || [], F = (x) => fmt(x, f.unit, k, r.cur);
   const S = r.S || { [state.data.single_source || 'tv']: r.v };
   const ids = (state.data.sources || []).map(s => s.id).filter(id => S[id] && S[id][k] != null);
   const head = st === 'red' ? '<b class="text-red-300">Sem maioria entre as fontes</b> — exibido: Fundamentus (ou mediana)'
@@ -248,6 +259,8 @@ function tipHtml(r, f) {
   const A = r.A || {};
   const adj = Object.entries(A).filter(([, d]) => d[k + '_adj'] != null);
   if (adj.length) extra = '<div class="mt-1 text-sky-200">EBIT ajustado: ' + adj.map(([id, d]) => `${logoImg(id)} ${esc(srcInfo(id).name)} ${F(d[k + '_adj'])}`).join(' · ') + '</div>';
+  const q = f.unit === '$' ? qOf(r, k) : null;
+  if (q != null) extra += `<div class="mt-1 text-slate-300">≈ ${fmtQty(q)} ações${k === 'voldia' ? ' negociadas no dia' : '/dia (média)'}${k !== 'voldia' ? ' · financeiro = média de ações × cotação atual' : ''}</div>`;
   return `${head}<table class="tipt">${rows}</table>${extra}<div class="mt-1 text-slate-400">Exibido e usado nos filtros: <b class="text-slate-200">${F(r.v[k])}</b></div>`;
 }
 
@@ -363,7 +376,7 @@ function ruleText() {
 function exportCsv() {
   const fields = state.data.fields;
   const q = (s) => { s = s == null ? '' : String(s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : ''))];
+  const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : f.unit === '$' ? ` (${state.data.currency})` : ''))];
   const lines = [head.map(q).join(';')];
   const n = (v) => v == null ? '' : String(v).replace('.', ',');
   for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));

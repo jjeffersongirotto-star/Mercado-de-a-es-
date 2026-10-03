@@ -55,6 +55,10 @@ FIELDS = [
     ("dlpl",     "Dív.Líq/Patrim.",    "x",  "low", False, "Dív.Líq/ Patrim.", "DIV. LIQ. / PATRI.",     True,  0.2,  True),
     ("dlebit",   "Dív.Líq/EBIT",       "x",  "low", False, None,               "DIVIDA LIQUIDA / EBIT",  False, 0.5,  True),
     ("liq2m",    "Liquidez 2 meses",   "R$", "high",False, "Liq.2meses",       " LIQUIDEZ MEDIA DIARIA", False, 0,    False),
+    ("voldia",   "Volume dia",         "$",  "high",False, None,               None,                     False, 0,    False),
+    ("vol10",    "Volume médio 10d (≈semana)", "$", "high", False, None,       None,                     False, 0,    False),
+    ("vol30",    "Volume médio 30d (≈mês)", "$", "high", False, None,          None,                     False, 0,    False),
+    ("vol90",    "Volume médio 90d",   "$",  "high",False, None,               None,                     False, 0,    False),
     ("cresc5a",  "Cresc. Receita 5a",  "%",  "high",False, "Cresc. Rec.5a",    "CAGR RECEITAS 5 ANOS",   False, 3.0,  True),
     ("lucro5a",  "Cresc. Lucro 5a",    "%",  "high",False, None,               "CAGR LUCROS 5 ANOS",     False, 3.0,  True),
     ("vpa",      "VPA",                "R$", "high",False, "__VPA",            " VPA",                   False, 0.10, True),
@@ -64,6 +68,9 @@ FIELDS = [
     ("valmerc",  "Valor de Mercado",   "R$", None,  False, None,               " VALOR DE MERCADO",      False, 0,    False),
 ]
 FIELD_KEYS = [f[0] for f in FIELDS]
+VOL_KEYS = ("voldia", "vol10", "vol30", "vol90")
+VOL_SHORT = {"voldia": "Vol. dia", "vol10": "Vol. méd. 10d", "vol30": "Vol. méd. 30d", "vol90": "Vol. méd. 90d"}
+VOL_EXTRA = {k: {"scale": 1e6, "only": "tv", "short": VOL_SHORT[k]} for k in VOL_KEYS}  # filtro digitado em milhões da moeda local
 REL_THR = 0.30  # 30%
 
 def divergente(a, b, abs_thr):
@@ -309,7 +316,7 @@ def build():
         "took_s": round(time.time() - t0, 1),
         "status": status,
         "rule": {"rel": REL_THR, "abs": {f[0]: f[8] for f in FIELDS if f[9]}},
-        "fields": [{"key": k, "label": l, "unit": u, "dir": d, "excludeNeg": e, "compared": c}
+        "fields": [{"key": k, "label": l, "unit": u, "dir": d, "excludeNeg": e, "compared": c, **VOL_EXTRA.get(k, {})}
                    for k, l, u, d, e, fc, sc, z, a, c in FIELDS],
         "counts": {"tickers": len(rows), "red_before": n_red},
         "rows": rows,
@@ -344,7 +351,7 @@ def finalize(base, yf_store=None):
     d["sources"] = [{"id": i, "name": n, "logo": f"/static/logos/{l}", "count": src_count.get(i, 0)}
                     for i, n, l, cs in SOURCES if country in cs and src_count.get(i)]
     keys_with_data = {k for r in rows for k, x in r["v"].items() if x is not None}
-    d["fields"] = [f for f in base["fields"] if f["key"] in keys_with_data]
+    d["fields"] = [{**f, **VOL_EXTRA.get(f["key"], {})} for f in base["fields"] if f["key"] in keys_with_data]
     return d
 
 def build_foreign(country):
@@ -359,12 +366,14 @@ def build_foreign(country):
     base = {"country": country, "currency": tradingview.COUNTRIES[country][2],
             "updated_at": now.isoformat(), "updated_at_sp": now.astimezone(TZ).strftime("%d/%m/%Y %H:%M:%S"),
             "status": {"tradingview": desc}, "rule": {"rel": REL_THR, "abs": {f[0]: f[8] for f in FIELDS if f[9]}},
-            "fields": [{"key": k, "label": l, "unit": ("" if u == "R$" else u), "dir": d, "excludeNeg": e, "compared": c}
+            "fields": [{"key": k, "label": l, "unit": ("" if u == "R$" else u), "dir": d, "excludeNeg": e, "compared": c, **VOL_EXTRA.get(k, {})}
                        for k, l, u, d, e, fc, sc, z, a, c in FIELDS],
             "counts": {"red_before": 0}, "rows": rows}
     d = finalize(base)
-    for r in d["rows"]:  # fonte única: não precisa repetir os valores em S
-        r.pop("S", None)
+    for r in d["rows"]:  # fonte única: não precisa repetir os valores em S (guarda só o volume em ações)
+        tvv = r.pop("S", {}).get("tv", {})
+        q = {k: x for k, x in tvv.items() if k.startswith("q_")}
+        if q: r["q"] = q
     d["single_source"] = "tv"
     return d
 
