@@ -270,6 +270,7 @@ class Cache:
             try:
                 with open(CACHE_FILE, encoding="utf-8") as fh:
                     self.base = json.load(fh)
+                self.ensure_snapshot()
                 self.reapply()
                 log.info("cache de disco carregado (%s)", self.base.get("updated_at_sp"))
             except Exception as e:
@@ -278,6 +279,20 @@ class Cache:
     def age(self):
         if not self.base: return 1e12
         return (datetime.now(timezone.utc) - datetime.fromisoformat(self.base["updated_at"])).total_seconds()
+
+    def ensure_snapshot(self):
+        """Carrega o snapshot do Yahoo JÁ (antes de tentar ao vivo) para tickers sem dado real."""
+        try:
+            need = tiebreak.tickers_needing(self.base["rows"])
+            missing = [t for t in need if not self.yf.get(t)]
+            if missing:
+                snap = self.yf.load_snapshot()
+                if snap:
+                    self.yf.snapshot_msg = snap
+                    if not self.yf.running:
+                        self.yf.status = f"{snap} — ao vivo em segundo plano"
+        except Exception as e:
+            log.warning("snapshot yfinance: %s", e)
 
     def reapply(self):
         if not self.base: return
@@ -299,6 +314,7 @@ class Cache:
                 json.dump(d, fh, ensure_ascii=False)
             os.replace(tmp, CACHE_FILE)
             self.base = d; self.last_error = None
+            self.ensure_snapshot()
             self.reapply()
             log.info("atualizado: %s", self.data["counts"])
             self.tiebreak_async()
@@ -323,15 +339,17 @@ class Cache:
         try:
             need = tiebreak.tickers_needing(self.base["rows"])
             pend = len(self.yf.stale(need))
-            self.yf.status = f"consultando {pend} de {len(need)} tickers com divergência…"
-            self.reapply()
+            snap = getattr(self.yf, "snapshot_msg", None)
+            if time.time() >= self.yf.blocked_until and pend:
+                self.yf.status = (f"{snap} — " if snap else "") + f"tentando ao vivo em segundo plano ({pend} tickers)…"
+                self.reapply()
             if time.time() < self.yf.blocked_until:
                 ok, fail, blocked, msg = 0, 0, True, "ao vivo pausado após bloqueio recente"
             else:
                 ok, fail, blocked, msg = tiebreak.run_fetch(self.yf, need, on_progress=self.reapply)
             if blocked:
                 self.yf.blocked_until = max(self.yf.blocked_until, time.time() + 6 * 3600)
-                snap = self.yf.load_snapshot()
+                snap = self.yf.load_snapshot() or snap
                 self.yf.status = (f"ao vivo falhou: {msg} → {snap}" if snap else f"ao vivo falhou: {msg}; sem snapshot")
             else:
                 live = sum(1 for t in need if (self.yf.data.get(t) or {}).get("src") == "live")

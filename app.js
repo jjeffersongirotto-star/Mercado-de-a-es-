@@ -1,5 +1,5 @@
-const PAGE = 30;
-const state = { data: null, rows: [], filtered: [], shown: 0, sortKey: 'liq2m', sortDir: -1, filters: {}, fieldMap: {} };
+const PAGE = 50;
+const state = { expanded: new Set(), rowMap: {}, data: null, rows: [], filtered: [], shown: 0, sortKey: 'liq2m', sortDir: -1, filters: {}, fieldMap: {} };
 const $ = (s) => document.querySelector(s);
 const nf = (d) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const F2 = nf(2), F0 = nf(0);
@@ -187,10 +187,8 @@ function apply() {
 }
 
 // ---------- Blocos ----------
-function blockHtml(r) {
+function cardsHtml(r) {
   const fields = state.data.fields;
-  const price = r.v.preco;
-  const varTxt = r.var == null ? '' : `<span class="text-sm font-semibold ${r.var >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${r.var >= 0 ? '▲' : '▼'} ${F2.format(r.var)}%</span>`;
   let cards = '';
   for (const f of fields) {
     if (f.key === 'preco') continue;
@@ -218,19 +216,55 @@ function blockHtml(r) {
       <div class="lbl"><span class="truncate">${esc(f.label)}</span>${badge}</div>
       <div class="val">${fmt(v, f.unit, f.key)}</div>${tip ? `<div class="detail">${esc(tip)}</div>` : ''}</div>`;
   }
-  return `<article class="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden" data-ticker="${r.ticker}">
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 border-b border-slate-800">
-      <div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>
-      <div class="min-w-0 flex-1 basis-full sm:basis-0 order-last sm:order-none">
-        <div class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</div>
-        <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
+  return `<div class="cards p-2.5 sm:p-3">${cards}</div>`;
+}
+
+function blockHtml(r) {
+  const price = r.v.preco;
+  const open = state.expanded.has(r.ticker);
+  const varTxt = r.var == null ? '' : `<span class="text-sm font-semibold ${r.var >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${r.var >= 0 ? '▲' : '▼'} ${F2.format(r.var)}%</span>`;
+  const nRed = Object.keys(r.div || {}).length, nRes = Object.keys(r.res || {}).length;
+  const badges = (nRed ? `<span class="hb hb-red" title="${nRed} divergência(s) grosseira(s) não resolvida(s)">≠ ${nRed}</span>` : '') +
+                 (nRes ? `<span class="hb hb-res" title="${nRes} divergência(s) resolvida(s) por 2 de 3 (Yahoo)">2/3 ${nRes}</span>` : '');
+  return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
+    <div class="blk-head flex flex-wrap items-center gap-x-4 gap-y-1 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
+      <div class="flex items-center gap-2">
+        <div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>${badges}
+      </div>
+      <div class="min-w-0 flex-1 basis-full sm:basis-0 order-last sm:order-none flex items-center gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</div>
+          <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
+        </div>
+        <button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
       </div>
       <div class="flex items-baseline gap-2 ml-auto">
         <span class="text-xl font-bold text-white">${price == null ? '–' : 'R$ ' + F2.format(price)}</span>${varTxt}
       </div>
     </div>
-    <div class="cards p-2.5 sm:p-3">${cards}</div>
+    <div class="collapse-wrap"><div class="collapse-inner">${open ? cardsHtml(r) : ''}</div></div>
   </article>`;
+}
+
+function setBlockOpen(art, open) {
+  const t = art.dataset.ticker, inner = art.querySelector('.collapse-inner'), btn = art.querySelector('.tgl');
+  if (open) {
+    state.expanded.add(t);
+    if (!inner.firstElementChild) { const r = state.rowMap[t]; if (r) inner.innerHTML = cardsHtml(r); }
+    requestAnimationFrame(() => art.classList.add('open'));
+  } else { state.expanded.delete(t); art.classList.remove('open'); }
+  btn.setAttribute('aria-expanded', String(open));
+  btn.setAttribute('aria-label', `${open ? 'Recolher' : 'Expandir'} indicadores de ${t}`);
+  btn.firstElementChild.textContent = open ? '−' : '+';
+}
+document.addEventListener('click', (e) => {
+  const head = e.target.closest('.blk-head'); if (!head) return;
+  if (window.getSelection && String(window.getSelection()).length) return;
+  const art = head.closest('.blk'); setBlockOpen(art, !art.classList.contains('open'));
+});
+function expandAll(open) {
+  if (open) state.filtered.forEach(r => state.expanded.add(r.ticker)); else state.expanded.clear();
+  document.querySelectorAll('#results .blk').forEach(a => setBlockOpen(a, open));
 }
 
 function renderMore() {
@@ -299,7 +333,7 @@ async function load() {
     const r = await fetch('/api/data', { cache: 'no-store' });
     if (r.status === 503) { $('#updated').textContent = 'Buscando dados nas fontes…'; setTimeout(load, 3000); return; }
     const d = await r.json(); const first = !state.data;
-    state.data = d; state.rows = d.rows; state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
+    state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {};
     $('#srcStatus').textContent = `Fundamentus: ${st.fundamentus || '?'} · Status Invest: ${st.statusinvest || '?'} · Yahoo (desempate): ${st.yfinance || '?'} · ${F0.format(d.counts.red)} divergências` + (d.counts.resolved != null ? ` (${F0.format(d.counts.resolved)} resolvidas 2 de 3 de ${F0.format(d.counts.red_before)})` : '') + ` · ${F0.format(d.counts.bold)} complementos`;
@@ -314,6 +348,8 @@ $('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTime
 $('#onlyLiquid').addEventListener('change', apply);
 $('#btnClear').addEventListener('click', () => { $('#q').value = ''; clearFilters(); });
 $('#btnCsv').addEventListener('click', exportCsv);
+$('#btnExpandAll').addEventListener('click', () => expandAll(true));
+$('#btnCollapseAll').addEventListener('click', () => expandAll(false));
 $('#btnRefresh').addEventListener('click', async () => {
   $('#btnRefresh').disabled = true; $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
   await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; }, 2500);

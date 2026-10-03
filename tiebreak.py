@@ -171,7 +171,11 @@ def run_fetch(store, tickers, on_progress=None, delay=0.35, max_consecutive_fail
     for i, t in enumerate(todo, 1):
         try:
             v = fetch_one(t)
-            store.put(t, v, src="live"); fetched_now.append(t)
+            prev = store.data.get(t)
+            if v or not (prev and prev.get("v")):   # resposta vazia não apaga dado do snapshot
+                store.put(t, v, src="live")
+                if not v:
+                    fetched_now.append(t)
             ok += 1; consec = 0
             if v:
                 with_data += 1
