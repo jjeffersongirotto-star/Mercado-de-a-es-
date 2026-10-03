@@ -43,9 +43,9 @@
   @media (prefers-reduced-motion: reduce) { .collapse-wrap, .collapse-inner, .tgl { transition: none; } }
   .legend-res { display:inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgb(245 158 11); background: rgb(120 53 15 / .6); }
   .card[data-tip] { cursor: help; }
-  .card .detail { display: none; margin-top: .3rem; font-size: 11px; line-height: 1.3; color: rgb(254 226 226); white-space: pre-line; }
+  .card .detail { display: none; margin-top: .3rem; font-size: 11px; line-height: 1.35; color: rgb(226 232 240); white-space: normal; }
   .card.open .detail { display: block; }
-  .card.open { grid-column: span 2; }
+  .card.open { grid-column: 1 / -1; }
   .badge { font-size: 9px; padding: 0 4px; border-radius: 4px; }
   .legend-red { display:inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgb(239 68 68); background: rgb(127 29 29 / .6); }
   input[type=number]::-webkit-inner-spin-button { opacity: .4; }
@@ -54,16 +54,39 @@
   #hiddenFolder.open .folder-hint { display: none; }
   .sortable-fallback { opacity: .9 !important; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   .drag-handle { touch-action: none; }
+  .card.adj { border-color: rgb(56 189 248 / .8); background: rgb(12 74 110 / .35); }
+  .card.adj .val { color: rgb(186 230 253); }
+  .card.tip { cursor: help; }
+  .hb-adj { color: rgb(186 230 253); background: rgb(12 74 110 / .5); border: 1px solid rgb(56 189 248 / .6); }
+  .legend-adj { display:inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgb(56 189 248); background: rgb(12 74 110 / .6); }
+  .srclogo { width: 14px; height: 14px; border-radius: 3px; display: inline-block; vertical-align: -2px; background: #fff1; }
+  .tipt { border-collapse: collapse; margin-top: 4px; }
+  .tipt td { padding: 1px 6px 1px 0; white-space: nowrap; }
+  .tipt tr.no td { opacity: .55; }
+  .dd { position: relative; }
+  .dd-menu { position: absolute; z-index: 60; top: calc(100% + 6px); min-width: 220px; max-width: calc(100vw - 24px); max-height: 70vh; overflow: auto;
+             background: rgb(15 23 42); border: 1px solid rgb(51 65 85); border-radius: .75rem; padding: .3rem; box-shadow: 0 12px 32px rgba(0,0,0,.55); }
+  .dd-menu button { width: 100%; display: flex; align-items: center; gap: .55rem; padding: .45rem .6rem; border-radius: .5rem; font-size: .875rem; text-align: left; color: rgb(226 232 240); }
+  .dd-menu button:hover, .dd-menu button.sel { background: rgb(30 41 59); }
+  .dd-menu button.sel { color: rgb(110 231 183); }
+  .dd-menu .cnt { margin-left: auto; font-size: 11px; color: rgb(100 116 139); }
+  .flag { width: 22px; height: 15px; border-radius: 3px; object-fit: cover; box-shadow: 0 0 0 1px #0006; }
+  .chev { transition: transform .2s; display: inline-block; }
+  .dd.open .chev { transform: rotate(180deg); }
 </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
   <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
     <div class="flex items-center gap-2">
-      <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 grid place-items-center font-black">B3</div>
+      <div id="ddCountry" class="dd">
+        <button id="btnCountry" type="button" title="País" aria-haspopup="listbox" class="h-9 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5">
+          <img id="countryFlag" class="flag" src="/static/flags/br.png" alt="Brasil"><span class="chev text-[10px] text-slate-400">▾</span></button>
+        <div id="countryMenu" class="dd-menu hidden left-0" role="listbox"></div>
+      </div>
       <div>
-        <h1 class="text-lg font-bold leading-tight">Screener B3</h1>
-        <p class="hidden sm:block text-[11px] text-slate-400 leading-tight">Fundamentus + complemento Status Invest</p>
+        <h1 class="text-lg font-bold leading-tight">Screener <span id="countryTitle">B3</span></h1>
+        <p id="subtitle" class="hidden sm:block text-[11px] text-slate-400 leading-tight">Consenso entre várias fontes</p>
       </div>
     </div>
     <div class="ml-auto flex flex-wrap items-center gap-2 text-sm">
@@ -88,13 +111,18 @@
       <label class="flex items-center gap-2 text-sm px-2 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700 cursor-pointer select-none">
         <input id="minimize" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Minimizar filtros
         <span id="activeCount" class="text-xs text-slate-400">nenhum filtro ativo</span></label>
+      <div id="ddSource" class="dd">
+        <button id="btnSource" type="button" title="Fonte dos dados" aria-haspopup="listbox" class="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm flex items-center gap-1.5">
+          <span class="text-xs text-slate-400">Fonte</span><span id="sourceLabel" class="flex items-center gap-1.5 font-medium">Todos</span><span class="chev text-[10px] text-slate-400">▾</span></button>
+        <div id="sourceMenu" class="dd-menu hidden left-0" role="listbox"></div>
+      </div>
       <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Limpar</button>
     </div>
     <div id="filtersPanel" class="hidden">
       <p class="text-[11px] text-slate-400 mb-2">Combinados com E · campo vazio = sem filtro · percentuais como número (8 = 8%) ·
         ☆ favoritar (vai para o topo) · arraste pela alça <b>⠿</b> para reordenar ou para <b>Filtros ocultos</b> ·
         <span class="text-emerald-400 font-bold">≥</span> maior é melhor · <span class="text-sky-400 font-bold">≤</span> menor é melhor ·
-        <sup>+</sup> ao filtrar ≤, negativos são excluídos (ex.: P/L negativo = prejuízo) · Liquidez em R$ (1000000 = R$ 1 mi/dia)</p>
+        <sup>+</sup> ao filtrar ≤, negativos são excluídos (ex.: P/L negativo = prejuízo) · Liquidez na moeda do país (1000000 = 1 mi/dia)</p>
       <div class="flex flex-col lg:flex-row gap-3">
         <div id="hiddenFolder" class="order-first lg:order-last lg:w-64 shrink-0 rounded-xl border border-dashed border-slate-600 bg-slate-950/40 self-start w-full">
           <button id="folderHead" type="button" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300">
@@ -117,12 +145,14 @@
     <div class="flex items-center gap-2"><span><span id="count" class="text-base font-bold text-slate-100">0</span> resultados</span>
       <button id="btnExpandAll" type="button" class="px-2 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-[11px]">Expandir todos</button>
       <button id="btnCollapseAll" type="button" class="px-2 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-[11px]">Recolher todos</button></div>
+    <div id="legendAll" class="contents">
     <div class="flex items-center gap-1.5"><span class="legend-red"></span>
-      <span>Divergência grosseira Fundamentus × Status Invest <span class="underline decoration-dotted cursor-help" data-tip-id="rule">(regra)</span> — passe o mouse ou toque no card</span></div>
+      <span>Sem maioria entre as fontes <span class="underline decoration-dotted cursor-help" data-tip-id="rule">(regra)</span> — passe o mouse ou toque no card</span></div>
     <div class="flex items-center gap-1.5"><span class="legend-res"></span>
-      <span>Resolvida <b class="text-amber-400">2/3</b>: Yahoo (yfinance) confirmou uma das fontes — valor usado nos filtros/ordenação; vermelhas restantes: sem 3ª fonte ou as três divergem</span></div>
-    <div class="flex items-center gap-1.5"><b class="text-white text-sm">123</b><span>só do Status Invest</span></div>
-    <div class="flex items-center gap-1.5"><i class="text-slate-300 text-sm">123</i><span>calculado (VPA/LPA)</span></div>
+      <span>Maioria com discordância (<b class="text-amber-400">3/4</b> = fontes que concordam) — valor de consenso nos filtros/ordenação</span></div>
+    <div class="flex items-center gap-1.5"><span class="legend-adj"></span>
+      <span><b class="text-sky-300">EBIT aj.</b>: Fundamentus usa EBIT ajustado (definição), não é erro</span></div>
+    </div>
     <div id="srcStatus" class="sm:ml-auto"></div>
   </section>
 
@@ -131,11 +161,11 @@
     <span id="shown" class="text-xs text-slate-500"></span>
     <button id="btnMore" class="hidden px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Carregar mais</button>
   </div>
-  <p class="text-xs text-slate-500 pb-6">Dados de fontes públicas (Fundamentus, Status Invest; nomes/setores/variação via brapi.dev). Não é recomendação de investimento. Atualização automática a cada 30 min.</p>
+  <p class="text-xs text-slate-500 pb-6">Dados de fontes públicas (Fundamentus, Status Invest, CVM dados abertos, Investidor10, TradingView, Dados de Mercado, Yahoo; nomes/setores/variação via brapi.dev). Não é recomendação de investimento. Atualização automática a cada 30 min.</p>
 </main>
 
-<div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl whitespace-pre-line"></div>
+<div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=6"></script>
+<script src="/static/app.js?v=7"></script>
 </body>
 </html>

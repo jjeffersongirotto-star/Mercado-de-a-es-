@@ -12,9 +12,13 @@ import requests
 
 import statusinvest
 import tiebreak
+import tradingview
+import snapshots
+import consensus
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE = os.path.join(BASE, "cache", "data.json")
@@ -182,11 +186,63 @@ def fetch_brapi_names():
                                        "var": s.get("change"), "preco_brapi": s.get("close")}
     return out
 
+SOURCES = [  # id, nome, logo, países
+    ("fund", "Fundamentus", "fundamentus.png", {"br"}),
+    ("si", "Status Invest", "statusinvest.png", {"br"}),
+    ("cvm", "CVM (oficial)", "cvm.png", {"br"}),
+    ("i10", "Investidor10", "investidor10.png", {"br"}),
+    ("tv", "TradingView", "tradingview.png", set(tradingview.COUNTRIES)),
+    ("ddm", "Dados de Mercado", "dadosdemercado.png", {"br"}),
+    ("yf", "Yahoo Finance", "yahoo.png", {"br"}),
+]
+SRC_NAME = {s[0]: s[1] for s in SOURCES}
+CMP_FIELDS = [(f[0], f[8], f[9]) for f in FIELDS]
+
+def _r4(x):
+    x = num(x)
+    return None if x is None else round(x, 4)
+
+def load_tv(country):
+    """TradingView ao vivo -> fallback snapshot. -> (dados, descrição)"""
+    try:
+        d = tradingview.fetch(country)
+        return d, f"ao vivo ({len(d)} papéis)"
+    except Exception as e:
+        log.warning("TradingView %s ao vivo falhou: %s", country, e)
+        snap, desc = snapshots.load(f"tradingview_{country}")
+        if snap and snap.get("rows"):
+            return snap["rows"], f"{desc} ({len(snap['rows'])} papéis; ao vivo falhou: {str(e)[:60]})"
+        return {}, f"falhou: {str(e)[:80]}; {desc}"
+
+def cvm_values(c, price, fund_pvp):
+    """Indicadores da CVM para um ticker; múltiplos de preço com cotação × total de ações (como o Fundamentus)."""
+    if not c: return {}, {}
+    v = {k: c[k] for k in ("roe", "roa", "mbruta", "mebit", "mliq", "liqcorr", "dlpl", "dlebit", "roic", "cresc5a", "lucro5a", "lpa", "vpa") if k in c}
+    a = {k: c[k] for k in ("mebit_adj", "roic_adj") if k in c}
+    sh = c.get("_shares")
+    # algumas empresas informam a quantidade de ações em milhares (sem coluna de escala): detecta pelo VPA implícito
+    if sh and v.get("vpa") and price and fund_pvp:
+        ratio = v["vpa"] / (price / fund_pvp)
+        if 300 < ratio < 3000:
+            sh *= 1000; v["vpa"] = round(v["vpa"] / 1000, 4)
+            if "lpa" in v: v["lpa"] = round(v["lpa"] / 1000, 4)
+    if sh and price:
+        mc = price * sh
+        q = lambda a_, b_: round(a_ / b_, 4) if a_ is not None and b_ else None
+        nd = c.get("_netdebt")
+        v.update({"pl": q(mc, c.get("_ni")), "pvp": q(mc, c.get("_eq")) if (c.get("_eq") or 0) > 0 else None,
+                  "psr": q(mc, c.get("_rev")) if (c.get("_rev") or 0) > 0 else None,
+                  "pativo": q(mc, c.get("_assets")),
+                  "pebit": q(mc, c.get("_ebit")), "evebit": q(mc + nd, c.get("_ebit")) if nd is not None else None})
+        a.update({"pebit_adj": q(mc, c.get("_ebit_adj")),
+                  "evebit_adj": q(mc + nd, c.get("_ebit_adj")) if nd is not None else None})
+    return {k: x for k, x in v.items() if x is not None}, {k: x for k, x in a.items() if x is not None}
+
 def build():
     t0 = time.time()
     status = {}
     fund = fetch_fundamentus()  # obrigatório
-    status["fundamentus"] = f"ok ({len(fund)} papéis)"
+    status["fundamentus"] = f"ok ({len(fund)} papéis) — ao vivo"
     try:
         si, si_src = fetch_statusinvest(); status["statusinvest"] = f"ok ({len(si)} papéis) — {si_src}"
     except Exception as e:
@@ -195,12 +251,20 @@ def build():
         names = fetch_brapi_names(); status["brapi_nomes"] = f"ok ({len(names)})"
     except Exception as e:
         names = {}; status["brapi_nomes"] = f"falhou: {e}"
+    tv, status["tradingview"] = load_tv("br")
+    snaps = {}
+    snapshots.invalidate()
+    for sid, name in (("i10", "investidor10"), ("ddm", "dadosdemercado"), ("cvm", "cvm")):
+        p, desc = snapshots.load(name)
+        snaps[sid] = (p or {}).get("rows") or {}
+        status[name] = f"{desc} ({len(snaps[sid])} papéis)" if p else desc
 
-    rows, n_red, n_bold = [], 0, 0
+    rows, n_red = [], 0
     for t, f in fund.items():
         s = si.get(t, {})
         price = f.get("Cotação")
-        vals, src, div = {}, {}, {}
+        S = {"fund": {}, "si": {}}
+        div = {}
         for key, label, unit, d, excl, fcol, scol, zero_na, absthr, cmp in FIELDS:
             fv = None
             if fcol == "__VPA":
@@ -209,56 +273,107 @@ def build():
                 pl = f.get("P/L"); fv = round(price / pl, 4) if price and pl else None
             elif fcol:
                 fv = f.get(fcol)
-                if fv is not None and zero_na and fv == 0:
-                    fv = None
-            sv = s.get(scol) if scol else None
-            if fcol in ("__VPA", "__LPA"):
-                # VPA/LPA não existem como coluna no Fundamentus: usa Status Invest; se faltar, calcula
-                if sv is not None:
-                    vals[key] = sv; src[key] = "si"
-                elif fv is not None:
-                    vals[key] = fv; src[key] = "calc"
-                else:
-                    vals[key] = None
-            elif fv is not None:
-                vals[key] = fv
-            elif sv is not None:
-                vals[key] = sv; src[key] = "si"
-            else:
-                vals[key] = None
+                if fv is not None and zero_na and fv == 0: fv = None
+            sv = _r4(s.get(scol)) if scol else None
+            if fv is not None: S["fund"][key] = _r4(fv)
+            if sv is not None: S["si"][key] = sv
             if cmp and fv is not None and sv is not None and divergente(fv, sv, absthr):
                 div[key] = [fv, sv]
-        n_red += len(div); n_bold += sum(1 for v in src.values() if v == "si")
+        n_red += len(div)
+        A = {}
+        if t in tv: S["tv"] = {k: x for k, x in tv[t]["v"].items() if k != "peg"}  # PEG do TV é calculado por nós: não vota
+        if t in snaps["i10"]: S["i10"] = snaps["i10"][t]
+        dd = snaps["ddm"].get(t)
+        if dd:
+            S["ddm"] = {k: x for k, x in dd.items() if not k.endswith("_adj") and not k.startswith("_")}
+            A["ddm"] = {k: x for k, x in dd.items() if k.endswith("_adj")}
+        cv, ca = cvm_values(snaps["cvm"].get(t), price, f.get("P/VP"))
+        if cv: S["cvm"] = cv
+        if ca: A["cvm"] = ca
+        S = {k: x for k, x in S.items() if x}
         nm = names.get(t) or names.get(t[:4] + "3") or names.get(t[:4] + "4") or {}
         if not nm.get("nome") and (s.get("NOME") or s.get("SETOR")):
             nm = {"nome": s.get("NOME"), "setor": s.get("SETOR")}
-        rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"),
-                     "subsetor": nm.get("subsetor"), "insi": bool(s),
-                     "var": names.get(t, {}).get("var"),
-                     "v": vals, "src": src, "div": div})
-    rows.sort(key=lambda r: -(r["v"].get("liq2m") or 0))
+        if not nm.get("nome") and t in tv:
+            nm = {"nome": tv[t]["m"].get("nome"), "setor": tv[t]["m"].get("setor"), "subsetor": tv[t]["m"].get("subsetor")}
+        var = names.get(t, {}).get("var")
+        if var is None and t in tv: var = tv[t]["m"].get("var")
+        rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
+                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div})
+    rows.sort(key=lambda r: -((r["S"].get("fund") or {}).get("liq2m") or 0))
     now = datetime.now(timezone.utc)
-    data = {
+    return {
+        "country": "br", "currency": "BRL",
         "updated_at": now.isoformat(),
         "updated_at_sp": now.astimezone(TZ).strftime("%d/%m/%Y %H:%M:%S"),
         "took_s": round(time.time() - t0, 1),
         "status": status,
         "rule": {"rel": REL_THR, "abs": {f[0]: f[8] for f in FIELDS if f[9]}},
-        "fields": [{"key": k, "label": l, "unit": u, "dir": d, "excludeNeg": e,
-                    "fund": bool(fc), "si": bool(sc), "compared": c}
+        "fields": [{"key": k, "label": l, "unit": u, "dir": d, "excludeNeg": e, "compared": c}
                    for k, l, u, d, e, fc, sc, z, a, c in FIELDS],
-        "counts": {"tickers": len(rows), "liquidas": sum(1 for r in rows if (r["v"].get("liq2m") or 0) > 0),
-                   "red": n_red, "bold": n_bold, "si_matched": sum(1 for r in rows if r["insi"])},
+        "counts": {"tickers": len(rows), "red_before": n_red},
         "rows": rows,
     }
-    return data
+
+def finalize(base, yf_store=None):
+    """Aplica consenso; retorna payload para o cliente."""
+    rows = []
+    cnt = {"red": 0, "amb": 0, "adj": 0}
+    src_count = {}
+    for r in base["rows"]:
+        S = dict(r.get("S") or {})
+        if yf_store is not None:
+            y = yf_store.get(r["ticker"])
+            if y: S["yf"] = {k: x for k, x in y.items() if x is not None}
+        nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur")}
+        nr["S"] = S
+        if r.get("A"): nr["A"] = r["A"]
+        consensus.apply_row(nr, CMP_FIELDS, divergente)
+        for x in nr["st"].values(): cnt[x] += 1
+        for s in S: src_count[s] = src_count.get(s, 0) + 1
+        rows.append(nr)
+    d = {k: v for k, v in base.items() if k != "rows"}
+    d["rows"] = rows
+    c = dict(base.get("counts") or {})
+    c.update(cnt)
+    c["tickers"] = len(rows)
+    c["liquidas"] = sum(1 for r in rows if (r["v"].get("liq2m") or 0) > 0)
+    c["sources"] = src_count
+    d["counts"] = c
+    country = base.get("country", "br")
+    d["sources"] = [{"id": i, "name": n, "logo": f"/static/logos/{l}", "count": src_count.get(i, 0)}
+                    for i, n, l, cs in SOURCES if country in cs and src_count.get(i)]
+    keys_with_data = {k for r in rows for k, x in r["v"].items() if x is not None}
+    d["fields"] = [f for f in base["fields"] if f["key"] in keys_with_data]
+    return d
+
+def build_foreign(country):
+    tv, desc = load_tv(country)
+    rows = []
+    for t, x in tv.items():
+        m = x["m"]
+        rows.append({"ticker": t, "nome": m.get("nome"), "setor": m.get("setor"), "subsetor": m.get("subsetor"),
+                     "var": m.get("var"), "cur": m.get("cur"), "S": {"tv": x["v"]}})
+    rows.sort(key=lambda r: -(r["S"]["tv"].get("valmerc") or 0))
+    now = datetime.now(timezone.utc)
+    base = {"country": country, "currency": tradingview.COUNTRIES[country][2],
+            "updated_at": now.isoformat(), "updated_at_sp": now.astimezone(TZ).strftime("%d/%m/%Y %H:%M:%S"),
+            "status": {"tradingview": desc}, "rule": {"rel": REL_THR, "abs": {f[0]: f[8] for f in FIELDS if f[9]}},
+            "fields": [{"key": k, "label": l, "unit": ("" if u == "R$" else u), "dir": d, "excludeNeg": e, "compared": c}
+                       for k, l, u, d, e, fc, sc, z, a, c in FIELDS],
+            "counts": {"red_before": 0}, "rows": rows}
+    d = finalize(base)
+    for r in d["rows"]:  # fonte única: não precisa repetir os valores em S
+        r.pop("S", None)
+    d["single_source"] = "tv"
+    return d
 
 # ---------------------------------------------------------------------------
 YF_FILE = os.path.join(BASE, "cache", "yfinance.json")
 ABS_THR = {f[0]: f[8] for f in FIELDS if f[9]}
 
 class Cache:
-    """base = dados brutos (Fundamentus+SI); data = base + desempate yfinance aplicado."""
+    """base = dados brutos por fonte (Brasil); data = consenso aplicado (inclui Yahoo)."""
     def __init__(self):
         self.base = None
         self.data = None
@@ -266,13 +381,17 @@ class Cache:
         self.refreshing = False
         self.last_error = None
         self.yf = tiebreak.YFStore(YF_FILE)
+        self.foreign = {}       # país -> payload
+        self.foreign_lock = threading.Lock()
         if os.path.exists(CACHE_FILE):
             try:
                 with open(CACHE_FILE, encoding="utf-8") as fh:
-                    self.base = json.load(fh)
-                self.ensure_snapshot()
-                self.reapply()
-                log.info("cache de disco carregado (%s)", self.base.get("updated_at_sp"))
+                    b = json.load(fh)
+                if b.get("rows") and "S" in b["rows"][0]:
+                    self.base = b
+                    self.ensure_snapshot()
+                    self.reapply()
+                    log.info("cache de disco carregado (%s)", self.base.get("updated_at_sp"))
             except Exception as e:
                 log.warning("cache de disco inválido: %s", e)
 
@@ -297,9 +416,9 @@ class Cache:
     def reapply(self):
         if not self.base: return
         try:
-            d = tiebreak.apply(self.base, self.yf, divergente, ABS_THR)
-        except Exception as e:
-            log.exception("desempate falhou"); d = dict(self.base)
+            d = finalize(self.base, self.yf)
+        except Exception:
+            log.exception("consenso falhou"); return
         d["status"] = dict(d.get("status") or {}); d["status"]["yfinance"] = self.yf.status
         self.data = d
 
@@ -316,7 +435,7 @@ class Cache:
             self.base = d; self.last_error = None
             self.ensure_snapshot()
             self.reapply()
-            log.info("atualizado: %s", self.data["counts"])
+            log.info("atualizado: %s", {k: v for k, v in self.data["counts"].items() if k != "sources"})
             self.tiebreak_async()
             return True
         except Exception as e:
@@ -329,6 +448,19 @@ class Cache:
     def refresh_async(self):
         if not self.refreshing:
             threading.Thread(target=self.refresh, daemon=True).start()
+
+    def get_foreign(self, country):
+        c = self.foreign.get(country)
+        if c and time.time() - c[0] < REFRESH_SECONDS * 4:
+            return c[1]
+        with self.foreign_lock:
+            c = self.foreign.get(country)
+            if c and time.time() - c[0] < REFRESH_SECONDS * 4:
+                return c[1]
+            d = build_foreign(country)
+            if d["rows"]:
+                self.foreign[country] = (time.time(), d)
+            return d
 
     def tiebreak_async(self):
         if self.yf.running or not self.base: return
@@ -371,6 +503,9 @@ def scheduler():
         time.sleep(60)
 
 app = FastAPI(title="Screener B3")
+app.add_middleware(GZipMiddleware, minimum_size=2000)
+app.mount("/static/logos", StaticFiles(directory=os.path.join(BASE, "static", "logos")), name="logos")
+app.mount("/static/flags", StaticFiles(directory=os.path.join(BASE, "static", "flags")), name="flags")
 
 @app.on_event("startup")
 def _start():
@@ -378,8 +513,20 @@ def _start():
     if cache.base is not None:
         cache.tiebreak_async()
 
+@app.get("/api/countries")
+def api_countries():
+    return [{"id": k, "name": v[1], "currency": v[2], "flag": f"/static/flags/{k}.png",
+             "sources": [{"id": i, "name": n, "logo": f"/static/logos/{l}"} for i, n, l, cs in SOURCES if k in cs]}
+            for k, v in tradingview.COUNTRIES.items()]
+
 @app.get("/api/data")
-def api_data():
+def api_data(country: str = "br"):
+    country = (country or "br").lower()
+    if country != "br" and country in tradingview.COUNTRIES:
+        d = cache.get_foreign(country)
+        if not d["rows"]:
+            return JSONResponse({"loading": False, "error": d["status"].get("tradingview")}, status_code=502)
+        return d
     if cache.data is None:
         if not cache.refreshing:
             cache.refresh_async()
@@ -391,6 +538,7 @@ def api_data():
 def api_refresh():
     started = not cache.refreshing
     cache.refresh_async()
+    cache.foreign.clear()
     return {"started": started, "refreshing": True}
 
 @app.get("/api/status")
@@ -398,7 +546,8 @@ def api_status():
     d = cache.data or {}
     return {"refreshing": cache.refreshing, "updated_at": d.get("updated_at"),
             "updated_at_sp": d.get("updated_at_sp"), "counts": d.get("counts"),
-            "status": d.get("status"), "last_error": cache.last_error}
+            "status": d.get("status"), "last_error": cache.last_error,
+            "foreign": {k: {"rows": len(v[1]["rows"]), "status": v[1]["status"]} for k, v in cache.foreign.items()}}
 
 @app.get("/static/app.js")
 def app_js():

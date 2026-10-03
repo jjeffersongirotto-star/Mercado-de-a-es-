@@ -1,5 +1,8 @@
 const PAGE = 50;
-const state = { expanded: new Set(), rowMap: {}, data: null, rows: [], filtered: [], shown: 0, sortKey: 'liq2m', sortDir: -1, filters: {}, fieldMap: {} };
+const VIEW_KEY = 'screenerB3.view.v1';
+const view = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+const saveView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ country: state.country, source: state.source })); } catch (e) { } };
+const state = { country: view.country || 'br', source: view.source || 'all', countries: [], expanded: new Set(), rowMap: {}, data: null, rows: [], filtered: [], shown: 0, sortKey: 'liq2m', sortDir: -1, filters: {}, fieldMap: {} };
 const $ = (s) => document.querySelector(s);
 const nf = (d) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const F2 = nf(2), F0 = nf(0);
@@ -18,6 +21,21 @@ function fmt(v, unit, key) {
   if (['liq2m', 'patrliq', 'valmerc'].includes(key)) return fmtBig(v);
   if (unit === '%') return F2.format(v) + '%';
   return F2.format(v);
+}
+const CUR = { BRL: 'R$', USD: 'US$', EUR: '€', GBP: '£', JPY: '¥' };
+function fmtPrice(v, cur) {
+  if (v === null || v === undefined) return '—';
+  const c = cur || state.data?.currency || 'BRL';
+  return (CUR[c] || c) + ' ' + (c === 'JPY' ? F0.format(v) : F2.format(v));
+}
+const srcInfo = (id) => (state.data?.sources || []).find(s => s.id === id) || { id, name: id, logo: '' };
+const logoImg = (id, cls = 'srclogo') => { const s = srcInfo(id); return s.logo ? `<img class="${cls}" src="${s.logo}" alt="" loading="lazy">` : ''; };
+// valor exibido/filtrado: consenso ('Todos') ou só a fonte escolhida
+function val(r, k) {
+  if (state.source === 'all') return r.v[k];
+  const S = r.S ? r.S[state.source] : (state.data.single_source === state.source ? r.v : null);
+  const x = S ? S[k] : null;
+  return x === undefined ? null : x;
 }
 function hint(f) {
   if (f.dir === 'high') return { sym: '≥', txt: `Maior é melhor: mostra ${f.label} ≥ valor` };
@@ -48,7 +66,7 @@ function computeFilters() {
   state.filters = {};
   for (const f of filterFields()) {
     const v = parseVal(prefs.values[f.key]);
-    if (v !== null && !prefs.hidden[f.key]) state.filters[f.key] = v;
+    if (v !== null && !prefs.hidden[f.key]) state.filters[f.key] = v;  // só campos existentes no país atual
   }
 }
 
@@ -144,11 +162,16 @@ function buildFilters() {
 function clearFilters() { prefs.values = {}; changed(); renderFilterUI(); }
 
 // ---------- Ordenação ----------
-function buildSort() {
+function buildSortOptions() {
   const sel = $('#sortKey');
   const opts = [{ key: 'ticker', label: 'Ticker' }, { key: 'nome', label: 'Empresa' }, { key: 'var', label: 'Variação dia' }, ...state.data.fields];
   sel.innerHTML = opts.map(o => `<option value="${o.key}">${esc(o.label)}</option>`).join('');
+  if (!opts.some(o => o.key === state.sortKey)) { state.sortKey = state.data.fields.some(f => f.key === 'liq2m') ? 'liq2m' : 'ticker'; updateSortDir(); }
   sel.value = state.sortKey;
+}
+function buildSort() {
+  const sel = $('#sortKey');
+  buildSortOptions();
   sel.addEventListener('change', () => {
     state.sortKey = sel.value;
     const f = state.fieldMap[sel.value];
@@ -159,14 +182,14 @@ function buildSort() {
   updateSortDir();
 }
 function updateSortDir() { $('#sortDir').textContent = state.sortDir > 0 ? '↑ Asc' : '↓ Desc'; }
-const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' ? r.var : r.v[k]);
+const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' ? r.var : val(r, k));
 
 function passes(r) {
   const q = $('#q').value.trim().toLowerCase();
   if (q && !(r.ticker.toLowerCase().includes(q) || (r.nome || '').toLowerCase().includes(q))) return false;
   if ($('#onlyLiquid').checked && !((r.v.liq2m || 0) > 0)) return false;
   for (const [k, x] of Object.entries(state.filters)) {
-    const f = state.fieldMap[k]; const v = r.v[k];
+    const f = state.fieldMap[k]; if (!f) continue; const v = val(r, k);
     if (v === null || v === undefined) return false;
     if (f.dir === 'high' && !(v >= x)) return false;
     if (f.dir === 'low') { if (!(v <= x)) return false; if (f.excludeNeg && v < 0) return false; }
@@ -188,48 +211,59 @@ function apply() {
 
 // ---------- Blocos ----------
 function cardsHtml(r) {
-  const fields = state.data.fields;
+  const fields = state.data.fields, all = state.source === 'all';
   let cards = '';
   for (const f of fields) {
     if (f.key === 'preco') continue;
-    const v = r.v[f.key], src = r.src[f.key], dv = r.div[f.key], rs = (r.res || {})[f.key], di = (r.divinfo || {})[f.key];
+    const v = val(r, f.key), st = all ? (r.st || {})[f.key] : null, src = all ? (r.src || {})[f.key] : null;
+    const nSrc = r.S ? Object.values(r.S).filter(d => d[f.key] != null).length : 0;
+    const ag = (r.ag || {})[f.key] || [];
     const cls = ['card'];
-    let tip = '';
     if (v === null || v === undefined) cls.push('na');
     else if (v < 0) cls.push('neg');
-    if (src === 'si') { cls.push('si'); tip = 'Valor do Status Invest (Fundamentus sem dado)'; }
-    if (src === 'calc') { cls.push('calc'); tip = 'Calculado a partir do Fundamentus (cotação ÷ múltiplo)'; }
-    const F = (x) => fmt(x, f.unit, f.key);
-    if (dv) {
-      cls.push('red');
-      const why = { sem_terceira: 'Sem terceira fonte para este indicador', yf_sem_dado: 'Yahoo (yfinance) sem dado para este ticker',
-        yf_pendente: 'Aguardando consulta ao Yahoo (yfinance)…', tres_divergem: 'As três fontes divergem — mantido em vermelho' }[di && di.reason] || '';
-      tip = `Divergência grosseira\nFundamentus: ${F(dv[0])}\nStatus Invest: ${F(dv[1])}` +
-        (di && di.y != null ? `\nYahoo (yfinance): ${F(di.y)}` : '') + (why ? `\n${why}` : '') + '\n(exibido: Fundamentus)';
-    } else if (rs) {
-      cls.push('res'); cls.splice(cls.indexOf('si'), cls.includes('si') ? 1 : 0);
-      const W = { fund: 'Fundamentus', si: 'Status Invest' }[rs.w];
-      tip = `Desempate 2 de 3 ✓ (Yahoo confirmou ${W})\nFundamentus: ${F(rs.f)}${rs.w === 'fund' ? '  ✓' : ''}\nStatus Invest: ${F(rs.s)}${rs.w === 'si' ? '  ✓' : ''}\nYahoo (yfinance): ${F(rs.y)}  ✓\nExibido e usado nos filtros: ${W}`;
-    }
-    const badge = dv ? '<span class="badge bg-red-600 text-white">≠</span>' : rs ? '<span class="badge bg-amber-500 text-slate-900 font-bold">2/3</span>' : (src === 'si' ? '<span class="badge bg-slate-700 text-slate-200">SI</span>' : '');
-    cards += `<div class="${cls.join(' ')}"${tip ? ` data-tip="${esc(tip)}"` : ''} data-key="${f.key}">
+    let badge = '';
+    if (st === 'red') { cls.push('red'); badge = '<span class="badge bg-red-600 text-white">≠</span>'; }
+    else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${ag.length}/${nSrc}</span>`; }
+    else if (st === 'adj') { cls.push('adj'); badge = '<span class="badge bg-sky-600 text-white font-bold">aj</span>'; }
+    else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
+    if (all && nSrc >= 1 && v != null || st) cls.push('tip');
+    cards += `<div class="${cls.join(' ')}" data-key="${f.key}">
       <div class="lbl"><span class="truncate">${esc(f.label)}</span>${badge}</div>
-      <div class="val">${fmt(v, f.unit, f.key)}</div>${tip ? `<div class="detail">${esc(tip)}</div>` : ''}</div>`;
+      <div class="val">${v == null ? '—' : fmt(v, f.unit, f.key)}</div><div class="detail"></div></div>`;
   }
   return `<div class="cards p-2.5 sm:p-3">${cards}</div>`;
 }
 
+function tipHtml(r, f) {
+  const k = f.key, st = (r.st || {})[k], ag = (r.ag || {})[k] || [], F = (x) => fmt(x, f.unit, k);
+  const S = r.S || { [state.data.single_source || 'tv']: r.v };
+  const ids = (state.data.sources || []).map(s => s.id).filter(id => S[id] && S[id][k] != null);
+  const head = st === 'red' ? '<b class="text-red-300">Sem maioria entre as fontes</b> — exibido: Fundamentus (ou mediana)'
+    : st === 'amb' ? `<b class="text-amber-300">Maioria ${ag.length}/${ids.length}</b> — valor de consenso`
+    : st === 'adj' ? '<b class="text-sky-300">Diferença de definição de EBIT</b> — Fundamentus usa EBIT ajustado (lucro bruto − desp. vendas − desp. G&amp;A); consenso entre as fontes de EBIT padrão'
+    : ids.length > 1 ? `<b class="text-emerald-300">Fontes concordam (${ids.length}/${ids.length})</b>` : '<b>Fonte única</b>';
+  const ok = (id) => st === 'red' ? '' : (st ? (ag.includes(id) ? '✓' : '✗') : '✓');
+  const rows = ids.map(id => `<tr class="${st && st !== 'red' && !ag.includes(id) ? 'no' : ''}"><td>${logoImg(id)} ${esc(srcInfo(id).name)}</td><td class="text-right font-semibold">${F(S[id][k])}</td><td>${ok(id)}</td></tr>`).join('');
+  let extra = '';
+  const A = r.A || {};
+  const adj = Object.entries(A).filter(([, d]) => d[k + '_adj'] != null);
+  if (adj.length) extra = '<div class="mt-1 text-sky-200">EBIT ajustado: ' + adj.map(([id, d]) => `${logoImg(id)} ${esc(srcInfo(id).name)} ${F(d[k + '_adj'])}`).join(' · ') + '</div>';
+  return `${head}<table class="tipt">${rows}</table>${extra}<div class="mt-1 text-slate-400">Exibido e usado nos filtros: <b class="text-slate-200">${F(r.v[k])}</b></div>`;
+}
+
 function blockHtml(r) {
-  const price = r.v.preco;
+  const price = val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
   const open = state.expanded.has(r.ticker);
   const varTxt = r.var == null ? '' : `<span class="text-sm font-semibold ${r.var >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${r.var >= 0 ? '▲' : '▼'} ${F2.format(r.var)}%</span>`;
-  const nRed = Object.keys(r.div || {}).length, nRes = Object.keys(r.res || {}).length;
-  const badges = (nRed ? `<span class="hb hb-red" title="${nRed} divergência(s) grosseira(s) não resolvida(s)">≠ ${nRed}</span>` : '') +
-                 (nRes ? `<span class="hb hb-res" title="${nRes} divergência(s) resolvida(s) por 2 de 3 (Yahoo)">2/3 ${nRes}</span>` : '');
+  const stv = state.source === 'all' ? Object.values(r.st || {}) : [];
+  const nRed = stv.filter(x => x === 'red').length, nRes = stv.filter(x => x === 'amb').length, nAdj = stv.filter(x => x === 'adj').length;
+  const badges = (nRed ? `<span class="hb hb-red" title="${nRed} indicador(es) sem maioria entre as fontes">≠ ${nRed}</span>` : '') +
+                 (nRes ? `<span class="hb hb-res" title="${nRes} indicador(es) com maioria, mas alguma fonte discorda">maioria ${nRes}</span>` : '') +
+                 (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) com diferença de definição de EBIT (Fundamentus = ajustado)">aj ${nAdj}</span>` : '');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head flex flex-wrap items-center gap-x-4 gap-y-1 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
-      <div class="flex items-center gap-2">
-        <div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>${badges}
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <div class="text-2xl font-black tracking-tight text-emerald-300 mr-0.5">${r.ticker}</div>${badges}
       </div>
       <div class="min-w-0 flex-1 basis-full sm:basis-0 order-last sm:order-none flex items-center gap-3">
         <div class="min-w-0 flex-1">
@@ -239,7 +273,7 @@ function blockHtml(r) {
         <button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
       </div>
       <div class="flex items-baseline gap-2 ml-auto">
-        <span class="text-xl font-bold text-white">${price == null ? '–' : 'R$ ' + F2.format(price)}</span>${varTxt}
+        <span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}
       </div>
     </div>
     <div class="collapse-wrap"><div class="collapse-inner">${open ? cardsHtml(r) : ''}</div></div>
@@ -288,30 +322,41 @@ $('#btnMore').addEventListener('click', renderMore);
 // ---------- Tooltip (desktop) e toque (mobile) ----------
 const tt = $('#tooltip');
 const hoverCapable = window.matchMedia('(hover: hover)').matches;
-function showTip(e, text) {
-  tt.textContent = text; tt.classList.remove('hidden');
+function showTip(e, html) {
+  tt.innerHTML = html; tt.classList.remove('hidden');
   const x = Math.min(e.clientX + 12, window.innerWidth - tt.offsetWidth - 8);
   const y = Math.min(e.clientY + 12, window.innerHeight - tt.offsetHeight - 8);
   tt.style.left = Math.max(8, x) + 'px'; tt.style.top = Math.max(8, y) + 'px';
 }
+const nl2br = (t) => esc(t).replace(/\n/g, '<br>');
+function cardTip(card) {
+  const art = card.closest('.blk'); const r = art && state.rowMap[art.dataset.ticker]; const f = state.fieldMap[card.dataset.key];
+  return r && f ? tipHtml(r, f) : '';
+}
 document.addEventListener('mousemove', (e) => {
   if (!hoverCapable) return;
-  const el = e.target.closest('[data-tip],[data-tip-id]');
-  if (!el || (el.classList.contains('card') && el.classList.contains('open'))) { tt.classList.add('hidden'); return; }
-  showTip(e, el.dataset.tip || ruleText());
+  const card = e.target.closest('.card.tip');
+  if (card && !card.classList.contains('open')) { showTip(e, cardTip(card)); return; }
+  const el = e.target.closest('[data-tip-id]');
+  if (!el) { tt.classList.add('hidden'); return; }
+  showTip(e, nl2br(ruleText()));
 });
 document.addEventListener('click', (e) => {
-  const card = e.target.closest('.card[data-tip]');
-  if (card) { card.classList.toggle('open'); tt.classList.add('hidden'); return; }
+  const card = e.target.closest('.card.tip');
+  if (card) {
+    const open = card.classList.toggle('open');
+    if (open) card.querySelector('.detail').innerHTML = cardTip(card);
+    tt.classList.add('hidden'); return;
+  }
   const rule = e.target.closest('[data-tip-id]');
-  if (rule) { showTip(e, ruleText()); setTimeout(() => tt.classList.add('hidden'), 8000); return; }
+  if (rule) { showTip(e, nl2br(ruleText())); setTimeout(() => tt.classList.add('hidden'), 8000); return; }
   if (!hoverCapable) tt.classList.add('hidden');
 });
 
 function ruleText() {
   const r = state.data?.rule; if (!r) return '';
   const lim = Object.entries(r.abs).map(([k, a]) => `${state.fieldMap[k].label}: ${F2.format(a)}${state.fieldMap[k].unit === '%' ? ' p.p.' : ''}`).join(' · ');
-  return `Regra de divergência (indicadores presentes nas duas fontes):\n• sinais opostos (ex.: + vs −) com diferença absoluta acima do limiar; OU\n• diferença relativa > ${Math.round(r.rel * 100)}% (|a−b| ÷ max(|a|,|b|)) E diferença absoluta acima do limiar.\nO valor exibido é o do Fundamentus.\nLimiares absolutos: ${lim}\n(Liquidez 2m não é comparada: janelas diferentes.)`;
+  return `Consenso entre fontes: para cada indicador, procura o maior grupo de fontes que concordam entre si (todos os pares dentro da regra abaixo). Maioria = mais da metade das fontes com valor. Exibido: Fundamentus se estiver na maioria, senão a mediana do grupo. Sem maioria = vermelho.\nRegra de concordância entre dois valores:\n• sinais opostos (ex.: + vs −) com diferença absoluta acima do limiar; OU\n• diferença relativa > ${Math.round(r.rel * 100)}% (|a−b| ÷ max(|a|,|b|)) E diferença absoluta acima do limiar.\nLimiares absolutos: ${lim}\n(Liquidez 2m não é comparada: janelas diferentes.)`;
 }
 
 // ---------- CSV ----------
@@ -321,26 +366,79 @@ function exportCsv() {
   const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : ''))];
   const lines = [head.map(q).join(';')];
   const n = (v) => v == null ? '' : String(v).replace('.', ',');
-  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), ...fields.map(f => n(r.v[f.key]))].map(q).join(';'));
+  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
   const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `screener_b3_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  a.download = `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
 }
 
+// ---------- País e fonte ----------
+function closeMenus(except) {
+  document.querySelectorAll('.dd').forEach(dd => { if (dd !== except) { dd.classList.remove('open'); dd.querySelector('.dd-menu').classList.add('hidden'); } });
+}
+function toggleMenu(dd) {
+  const open = !dd.classList.contains('open'); closeMenus(dd);
+  dd.classList.toggle('open', open); dd.querySelector('.dd-menu').classList.toggle('hidden', !open);
+}
+document.addEventListener('click', (e) => { if (!e.target.closest('.dd')) closeMenus(); });
+$('#btnCountry').addEventListener('click', () => toggleMenu($('#ddCountry')));
+$('#btnSource').addEventListener('click', () => toggleMenu($('#ddSource')));
+function renderCountry() {
+  const c = state.countries.find(x => x.id === state.country) || { id: 'br', name: 'Brasil', flag: '/static/flags/br.png' };
+  $('#countryFlag').src = c.flag; $('#countryFlag').alt = c.name; $('#btnCountry').title = `País: ${c.name}`;
+  $('#countryTitle').textContent = c.id === 'br' ? 'B3' : c.name;
+  $('#countryMenu').innerHTML = state.countries.map(x => `<button type="button" role="option" data-country="${x.id}" class="${x.id === state.country ? 'sel' : ''}"><img class="flag" src="${x.flag}" alt=""> ${esc(x.name)}<span class="cnt">${x.sources.length > 1 ? x.sources.length + ' fontes' : 'TradingView'}</span></button>`).join('');
+}
+$('#countryMenu').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-country]'); if (!b) return;
+  closeMenus();
+  if (b.dataset.country === state.country) return;
+  state.country = b.dataset.country; state.expanded.clear(); saveView(); renderCountry();
+  state.data = null; $('#results').innerHTML = '<div class="rounded-2xl border border-slate-800 p-8 text-center text-slate-500">Carregando…</div>';
+  load();
+});
+function renderSource() {
+  const srcs = state.data?.sources || [];
+  if (state.source !== 'all' && !srcs.some(s => s.id === state.source)) state.source = 'all';
+  const cur = srcs.find(s => s.id === state.source);
+  $('#sourceLabel').innerHTML = cur ? `${logoImg(cur.id)} ${esc(cur.name)}` : 'Todos';
+  $('#btnSource').classList.toggle('border-emerald-600', !!cur);
+  $('#sourceMenu').innerHTML = `<button type="button" role="option" data-src="all" class="${state.source === 'all' ? 'sel' : ''}"><span class="srclogo grid place-items-center text-[10px]">∑</span> Todos <span class="cnt">consenso</span></button>` +
+    srcs.map(s => `<button type="button" role="option" data-src="${s.id}" class="${s.id === state.source ? 'sel' : ''}">${logoImg(s.id)} ${esc(s.name)}<span class="cnt">${F0.format(s.count)}</span></button>`).join('');
+  $('#legendAll').style.display = state.source === 'all' ? '' : 'none';
+}
+$('#sourceMenu').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-src]'); if (!b) return;
+  closeMenus(); state.source = b.dataset.src; saveView(); renderSource(); apply();
+});
+
 // ---------- Carga ----------
+let loadSeq = 0, built = false;
 async function load() {
+  const seq = ++loadSeq, country = state.country;
   try {
-    const r = await fetch('/api/data', { cache: 'no-store' });
+    const r = await fetch(`/api/data?country=${country}`, { cache: 'no-store' });
+    if (seq !== loadSeq) return;
     if (r.status === 503) { $('#updated').textContent = 'Buscando dados nas fontes…'; setTimeout(load, 3000); return; }
-    const d = await r.json(); const first = !state.data;
+    if (!r.ok) { const j = await r.json().catch(() => ({})); $('#updated').textContent = 'Fonte indisponível: ' + (j.error || r.status); setTimeout(load, 15000); return; }
+    const d = await r.json();
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
-    const st = d.status || {};
-    $('#srcStatus').textContent = `Fundamentus: ${st.fundamentus || '?'} · Status Invest: ${st.statusinvest || '?'} · Yahoo (desempate): ${st.yfinance || '?'} · ${F0.format(d.counts.red)} divergências` + (d.counts.resolved != null ? ` (${F0.format(d.counts.resolved)} resolvidas 2 de 3 de ${F0.format(d.counts.red_before)})` : '') + ` · ${F0.format(d.counts.bold)} complementos`;
-    if (first) { buildFilters(); buildSort(); }
+    const st = d.status || {}, c = d.counts || {};
+    const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
+    $('#srcStatus').textContent = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `${n}: ${st[k]}`).join(' · ') +
+      (country === 'br' ? ` · Consenso: ${F0.format(c.red || 0)} sem maioria (antes, Fundamentus × Status Invest: ${F0.format(c.red_before || 0)}) · ${F0.format(c.amb || 0)} maioria com discordância · ${F0.format(c.adj || 0)} EBIT ajustado` : '');
+    $('#subtitle').textContent = country === 'br' ? 'Consenso entre ' + (d.sources || []).length + ' fontes' : 'Fonte: TradingView (scanner)';
+    if (!built) { buildFilters(); buildSort(); built = true; } else { renderFilterUI(); buildSortOptions(); }
+    renderSource();
     computeFilters(); apply();
     if (d.refreshing) setTimeout(load, 3000);
-  } catch (e) { $('#updated').textContent = 'Erro ao carregar: ' + e; setTimeout(load, 5000); }
+  } catch (e) { if (seq === loadSeq) { $('#updated').textContent = 'Erro ao carregar: ' + e; setTimeout(load, 5000); } }
+}
+async function init() {
+  try { state.countries = await (await fetch('/api/countries')).json(); } catch (e) { state.countries = []; }
+  if (!state.countries.some(c => c.id === state.country)) state.country = 'br';
+  renderCountry(); load();
 }
 
 let qTimer;
@@ -355,4 +453,4 @@ $('#btnRefresh').addEventListener('click', async () => {
   await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; }, 2500);
 });
 setInterval(load, 10 * 60 * 1000);
-load();
+init();
