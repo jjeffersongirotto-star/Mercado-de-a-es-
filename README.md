@@ -47,3 +47,16 @@ O Status Invest pode bloquear IPs de datacenter (ex.: Render). O servidor tenta,
 3. **Arquivo local** `data/statusinvest.csv` versionado na `main`.
 
 A fonte usada e a data do snapshot aparecem em `/api/status` → `status.statusinvest`.
+
+## Desempate com 3ª fonte (yfinance)
+
+Para células em **vermelho** (divergência grosseira Fundamentus × Status Invest), o servidor consulta o Yahoo
+(`yfinance`, `Ticker('XXXX.SA').info`) **só para os tickers com divergência**, em thread de fundo (sequencial,
+pausa + retries, cache em disco de 24 h). Se o par mais próximo entre as três fontes não diverge grosseiramente,
+a célula fica **âmbar "2/3"** e o valor da fonte confirmada é usado em filtros e ordenação; senão continua vermelha.
+Mapeamento: P/L=trailingPE, P/VP=priceToBook, PSR=priceToSalesTrailing12Months, DY=trailingAnnualDividendYield×100,
+ROE/ROA=returnOnEquity/returnOnAssets×100, Marg. bruta/EBIT/líquida=grossMargins/operatingMargins/profitMargins×100,
+EV/EBITDA=enterpriseToEbitda, Liq. corrente=currentRatio, VPA=bookValue, LPA=trailingEps, Cotação=currentPrice.
+Sem 3ª fonte: ROIC, EV/EBIT, P/EBIT, P/Ativo, Dív.Líq/Patrim., crescimentos 5a.
+Se o Yahoo bloquear o servidor, usa o snapshot `data/yfinance.json` da branch `data`
+(gerado por `scripts/fetch_yfinance.py`, chamado por `scripts/push_snapshot_from_here.sh`).

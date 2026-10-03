@@ -194,15 +194,26 @@ function blockHtml(r) {
   let cards = '';
   for (const f of fields) {
     if (f.key === 'preco') continue;
-    const v = r.v[f.key], src = r.src[f.key], dv = r.div[f.key];
+    const v = r.v[f.key], src = r.src[f.key], dv = r.div[f.key], rs = (r.res || {})[f.key], di = (r.divinfo || {})[f.key];
     const cls = ['card'];
     let tip = '';
     if (v === null || v === undefined) cls.push('na');
     else if (v < 0) cls.push('neg');
     if (src === 'si') { cls.push('si'); tip = 'Valor do Status Invest (Fundamentus sem dado)'; }
     if (src === 'calc') { cls.push('calc'); tip = 'Calculado a partir do Fundamentus (cotação ÷ múltiplo)'; }
-    if (dv) { cls.push('red'); tip = `Divergência grosseira\nFundamentus: ${fmt(dv[0], f.unit, f.key)}\nStatus Invest: ${fmt(dv[1], f.unit, f.key)}\n(exibido: Fundamentus)`; }
-    const badge = dv ? '<span class="badge bg-red-600 text-white">≠</span>' : (src === 'si' ? '<span class="badge bg-slate-700 text-slate-200">SI</span>' : '');
+    const F = (x) => fmt(x, f.unit, f.key);
+    if (dv) {
+      cls.push('red');
+      const why = { sem_terceira: 'Sem terceira fonte para este indicador', yf_sem_dado: 'Yahoo (yfinance) sem dado para este ticker',
+        yf_pendente: 'Aguardando consulta ao Yahoo (yfinance)…', tres_divergem: 'As três fontes divergem — mantido em vermelho' }[di && di.reason] || '';
+      tip = `Divergência grosseira\nFundamentus: ${F(dv[0])}\nStatus Invest: ${F(dv[1])}` +
+        (di && di.y != null ? `\nYahoo (yfinance): ${F(di.y)}` : '') + (why ? `\n${why}` : '') + '\n(exibido: Fundamentus)';
+    } else if (rs) {
+      cls.push('res'); cls.splice(cls.indexOf('si'), cls.includes('si') ? 1 : 0);
+      const W = { fund: 'Fundamentus', si: 'Status Invest' }[rs.w];
+      tip = `Desempate 2 de 3 ✓ (Yahoo confirmou ${W})\nFundamentus: ${F(rs.f)}${rs.w === 'fund' ? '  ✓' : ''}\nStatus Invest: ${F(rs.s)}${rs.w === 'si' ? '  ✓' : ''}\nYahoo (yfinance): ${F(rs.y)}  ✓\nExibido e usado nos filtros: ${W}`;
+    }
+    const badge = dv ? '<span class="badge bg-red-600 text-white">≠</span>' : rs ? '<span class="badge bg-amber-500 text-slate-900 font-bold">2/3</span>' : (src === 'si' ? '<span class="badge bg-slate-700 text-slate-200">SI</span>' : '');
     cards += `<div class="${cls.join(' ')}"${tip ? ` data-tip="${esc(tip)}"` : ''} data-key="${f.key}">
       <div class="lbl"><span class="truncate">${esc(f.label)}</span>${badge}</div>
       <div class="val">${fmt(v, f.unit, f.key)}</div>${tip ? `<div class="detail">${esc(tip)}</div>` : ''}</div>`;
@@ -291,7 +302,7 @@ async function load() {
     state.data = d; state.rows = d.rows; state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {};
-    $('#srcStatus').textContent = `Fundamentus: ${st.fundamentus || '?'} · Status Invest: ${st.statusinvest || '?'} · ${F0.format(d.counts.red)} divergências · ${F0.format(d.counts.bold)} complementos`;
+    $('#srcStatus').textContent = `Fundamentus: ${st.fundamentus || '?'} · Status Invest: ${st.statusinvest || '?'} · Yahoo (desempate): ${st.yfinance || '?'} · ${F0.format(d.counts.red)} divergências` + (d.counts.resolved != null ? ` (${F0.format(d.counts.resolved)} resolvidas 2 de 3 de ${F0.format(d.counts.red_before)})` : '') + ` · ${F0.format(d.counts.bold)} complementos`;
     if (first) { buildFilters(); buildSort(); }
     computeFilters(); apply();
     if (d.refreshing) setTimeout(load, 3000);

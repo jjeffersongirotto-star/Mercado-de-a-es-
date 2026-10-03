@@ -11,6 +11,7 @@ import pandas as pd
 import requests
 
 import statusinvest
+import tiebreak
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -253,23 +254,39 @@ def build():
     return data
 
 # ---------------------------------------------------------------------------
+YF_FILE = os.path.join(BASE, "cache", "yfinance.json")
+ABS_THR = {f[0]: f[8] for f in FIELDS if f[9]}
+
 class Cache:
+    """base = dados brutos (Fundamentus+SI); data = base + desempate yfinance aplicado."""
     def __init__(self):
+        self.base = None
         self.data = None
         self.lock = threading.Lock()
         self.refreshing = False
         self.last_error = None
+        self.yf = tiebreak.YFStore(YF_FILE)
         if os.path.exists(CACHE_FILE):
             try:
                 with open(CACHE_FILE, encoding="utf-8") as fh:
-                    self.data = json.load(fh)
-                log.info("cache de disco carregado (%s)", self.data.get("updated_at_sp"))
+                    self.base = json.load(fh)
+                self.reapply()
+                log.info("cache de disco carregado (%s)", self.base.get("updated_at_sp"))
             except Exception as e:
                 log.warning("cache de disco inválido: %s", e)
 
     def age(self):
-        if not self.data: return 1e12
-        return (datetime.now(timezone.utc) - datetime.fromisoformat(self.data["updated_at"])).total_seconds()
+        if not self.base: return 1e12
+        return (datetime.now(timezone.utc) - datetime.fromisoformat(self.base["updated_at"])).total_seconds()
+
+    def reapply(self):
+        if not self.base: return
+        try:
+            d = tiebreak.apply(self.base, self.yf, divergente, ABS_THR)
+        except Exception as e:
+            log.exception("desempate falhou"); d = dict(self.base)
+        d["status"] = dict(d.get("status") or {}); d["status"]["yfinance"] = self.yf.status
+        self.data = d
 
     def refresh(self):
         with self.lock:
@@ -281,8 +298,10 @@ class Cache:
             with open(tmp, "w", encoding="utf-8") as fh:
                 json.dump(d, fh, ensure_ascii=False)
             os.replace(tmp, CACHE_FILE)
-            self.data = d; self.last_error = None
-            log.info("atualizado: %s", d["counts"])
+            self.base = d; self.last_error = None
+            self.reapply()
+            log.info("atualizado: %s", self.data["counts"])
+            self.tiebreak_async()
             return True
         except Exception as e:
             self.last_error = f"{type(e).__name__}: {e}"
@@ -294,6 +313,32 @@ class Cache:
     def refresh_async(self):
         if not self.refreshing:
             threading.Thread(target=self.refresh, daemon=True).start()
+
+    def tiebreak_async(self):
+        if self.yf.running or not self.base: return
+        threading.Thread(target=self._tiebreak, daemon=True).start()
+
+    def _tiebreak(self):
+        self.yf.running = True
+        try:
+            need = tiebreak.tickers_needing(self.base["rows"])
+            pend = len(self.yf.stale(need))
+            self.yf.status = f"consultando {pend} de {len(need)} tickers com divergência…"
+            self.reapply()
+            ok, fail, blocked, msg = tiebreak.run_fetch(self.yf, need, on_progress=self.reapply)
+            if blocked:
+                snap = self.yf.load_snapshot()
+                self.yf.status = (f"ao vivo falhou: {msg} → {snap}" if snap else f"ao vivo falhou: {msg}; sem snapshot")
+            else:
+                live = sum(1 for t in need if (self.yf.data.get(t) or {}).get("src") == "live")
+                self.yf.status = f"ao vivo ok — {live}/{len(need)} tickers (cache 24 h; {msg})"
+            self.yf.save()
+        except Exception as e:
+            log.exception("thread yfinance")
+            self.yf.status = f"erro: {type(e).__name__}: {e}"
+        finally:
+            self.yf.running = False
+            self.reapply()
 
 cache = Cache()
 
@@ -308,6 +353,8 @@ app = FastAPI(title="Screener B3")
 @app.on_event("startup")
 def _start():
     threading.Thread(target=scheduler, daemon=True).start()
+    if cache.base is not None:
+        cache.tiebreak_async()
 
 @app.get("/api/data")
 def api_data():
