@@ -8,6 +8,7 @@
 from statistics import median
 
 EBIT_KEYS = {"pebit", "evebit", "roic", "mebit"}
+SIGN_FROM = {"dlebit": "dlpl"}  # indicador -> indicador que define o sinal (dívida líquida)
 PRIORITY = ["fund", "si", "cvm", "i10", "tv", "ddm", "yf"]  # desempate de clusters de mesmo tamanho
 
 _MASKS = {}
@@ -55,7 +56,11 @@ def decide(vals, thr, divergente, adj_vals=None):
                 if 2 * len(cl2) > len(rest):
                     return round(median(v for _, v in cl2), 4), "adj", [s for s, _ in cl2]
     if not majority:
-        return (fund if fund is not None else round(median(v for _, v in items), 4)), "red", []
+        if fund is not None: return fund, "red", []
+        # sem Fundamentus: valor REAL da fonte mais próxima da mediana (não uma média sintética; ex.: 0,66 e −0,65 -> não 0,005)
+        med = median(v for _, v in items)
+        pick = min(items, key=lambda it: (abs(it[1] - med), PRIORITY.index(it[0]) if it[0] in PRIORITY else 99))
+        return pick[1], "red", []
     val = fund if "fund" in names else round(median(v for _, v in cl), 4)
     return val, ("amb" if len(cl) < n else None), names
 
@@ -64,7 +69,7 @@ def apply_row(row, fields, divergente):
     Preenche row['v'] (consenso), row['st'] {chave: red|amb|adj}, row['ag'] {chave: [fontes]} e row['src']."""
     S = row.get("S") or {}
     A = row.get("A") or {}
-    v, st, ag, src = {}, {}, {}, {}
+    v, st, ag, src, ex = {}, {}, {}, {}, {}
     for key, thr, cmp in fields:
         vals = {s: d.get(key) for s, d in S.items() if d.get(key) is not None}
         if not cmp:  # não comparado (cotação, liquidez, valores absolutos): primeira fonte disponível
@@ -74,7 +79,23 @@ def apply_row(row, fields, divergente):
             src = {k: x for k, x in src.items() if x}
             continue
         adj = {s: d.get(key + "_adj") for s, d in A.items() if d.get(key + "_adj") is not None} if key in EBIT_KEYS else None
+        dropped = {}
+        if key in SIGN_FROM:
+            # Dív.Líq/EBIT tem o sinal da dívida líquida (com EBIT positivo): o consenso de Dív.Líq/PL decide o sinal;
+            # fontes com sinal oposto (ex.: Status Invest não conta aplicações de seguradora como caixa) saem da votação
+            ref = v.get(SIGN_FROM[key])
+            ebit_pos = (v.get("pebit") or 0) > 0 or (v.get("mebit") or 0) > 0
+            if ref is not None and abs(ref) >= 0.02 and st.get(SIGN_FROM[key]) != "red" and ebit_pos:
+                dropped = {s_: x for s_, x in vals.items() if abs(x) >= 0.05 and (x > 0) != (ref > 0)}
+                if dropped and len(dropped) < len(vals):
+                    vals = {s_: x for s_, x in vals.items() if s_ not in dropped}
+                else:
+                    dropped = {}
         val, status, names = decide(vals, thr, divergente, adj)
+        if dropped:
+            ex[key] = sorted(dropped)
+            if status is None or status == "red" and len(vals) == 1: status = "amb"
+            if not names: names = list(vals)
         v[key] = val
         if status:
             st[key] = status
@@ -82,4 +103,5 @@ def apply_row(row, fields, divergente):
         if val is not None and "fund" not in vals and len(vals) >= 1:
             src[key] = names[0] if len(names) == 1 else ("si" if names == ["si"] else "multi")
     row["v"], row["st"], row["ag"], row["src"] = v, st, ag, src
+    if ex: row["ex"] = ex
     return row

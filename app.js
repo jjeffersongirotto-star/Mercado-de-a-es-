@@ -234,7 +234,7 @@ function cardsHtml(r) {
     else if (v < 0) cls.push('neg');
     let badge = '';
     if (st === 'red') { cls.push('red'); badge = '<span class="badge bg-red-600 text-white">≠</span>'; }
-    else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${ag.length}/${nSrc}</span>`; }
+    else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${((r.ex || {})[f.key] || []).length ? '±' : ag.length + '/' + nSrc}</span>`; }
     else if (st === 'adj') { cls.push('adj'); badge = '<span class="badge bg-sky-600 text-white font-bold">aj</span>'; }
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
     if (all && nSrc >= 1 && v != null || st) cls.push('tip');
@@ -249,13 +249,15 @@ function tipHtml(r, f) {
   const k = f.key, st = (r.st || {})[k], ag = (r.ag || {})[k] || [], F = (x) => fmt(x, f.unit, k, r.cur);
   const S = r.S || { [state.data.single_source || 'tv']: r.v };
   const ids = (state.data.sources || []).map(s => s.id).filter(id => S[id] && S[id][k] != null);
-  const head = st === 'red' ? '<b class="text-red-300">Sem maioria entre as fontes</b> — exibido: Fundamentus (ou mediana)'
+  const exl = ((r.ex || {})[k]) || [];
+  const head = st === 'red' ? `<b class="text-red-300">Sem maioria entre as fontes</b> — exibido: ${S.fund && S.fund[k] != null ? 'Fundamentus' : 'fonte mais próxima da mediana'}`
+    : exl.length ? `<b class="text-amber-300">Sinal conferido pela Dív.Líq/PL</b> — usado: ${ag.map(id => esc(srcInfo(id).name)).join(', ')}`
     : st === 'amb' ? `<b class="text-amber-300">Maioria ${ag.length}/${ids.length}</b> — valor de consenso`
     : st === 'adj' ? '<b class="text-sky-300">Diferença de definição de EBIT</b> — Fundamentus usa EBIT ajustado (lucro bruto − desp. vendas − desp. G&amp;A); consenso entre as fontes de EBIT padrão'
     : ids.length > 1 ? `<b class="text-emerald-300">Fontes concordam (${ids.length}/${ids.length})</b>` : '<b>Fonte única</b>';
   const ok = (id) => st === 'red' ? '' : (st ? (ag.includes(id) ? '✓' : '✗') : '✓');
   const rows = ids.map(id => `<tr class="${st && st !== 'red' && !ag.includes(id) ? 'no' : ''}"><td>${logoImg(id)} ${esc(srcInfo(id).name)}</td><td class="text-right font-semibold">${F(S[id][k])}</td><td>${ok(id)}</td></tr>`).join('');
-  let extra = '';
+  let extra = exl.length ? `<div class="mt-1 text-amber-200">Fora da votação (sinal oposto ao da Dív.Líq/PL de consenso — caixa líquido vs dívida líquida): ${exl.map(id => esc(srcInfo(id).name)).join(', ')}</div>` : '';
   const A = r.A || {};
   const adj = Object.entries(A).filter(([, d]) => d[k + '_adj'] != null);
   if (adj.length) extra = '<div class="mt-1 text-sky-200">EBIT ajustado: ' + adj.map(([id, d]) => `${logoImg(id)} ${esc(srcInfo(id).name)} ${F(d[k + '_adj'])}`).join(' · ') + '</div>';
