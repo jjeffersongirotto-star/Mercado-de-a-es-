@@ -25,37 +25,123 @@ function hint(f) {
   return null;
 }
 
-// ---------- Filtros ----------
-function buildFilters() {
-  const box = $('#filters'); box.innerHTML = '';
-  for (const f of state.data.fields) {
-    const h = hint(f); if (!h) continue;
-    const el = document.createElement('label');
-    el.className = 'flex flex-col gap-1 bg-slate-950/60 border border-slate-800 rounded-lg px-2 py-1.5';
-    el.title = h.txt + (f.unit === '%' ? ' — digite 8 para 8%' : '');
-    el.innerHTML = `<span class="text-[11px] text-slate-400 flex justify-between gap-1"><span class="truncate">${f.label}${f.unit === '%' ? ' (%)' : ''}</span>
-      <span class="font-bold ${f.dir === 'high' ? 'text-emerald-400' : 'text-sky-400'}">${h.sym}${f.excludeNeg ? '<sup class="text-[9px]">+</sup>' : ''}</span></span>
-      <input data-key="${f.key}" type="number" step="any" inputmode="decimal" placeholder="${h.sym} …"
-        class="w-full bg-transparent outline-none text-sm text-slate-100 placeholder:text-slate-600">`;
-    box.appendChild(el);
+// ---------- Filtros (favoritos, ordem, ocultos e valores persistidos no localStorage) ----------
+const LS_KEY = 'screenerB3.filtros.v1';
+const prefs = (() => {
+  let p = {};
+  try { p = JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch (e) { p = {}; }
+  return { order: p.order || [], fav: p.fav || {}, hidden: p.hidden || {}, values: p.values || {},
+           minimized: p.minimized !== false, folderOpen: !!p.folderOpen };
+})();
+const savePrefs = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch (e) { /* modo privado */ } };
+
+const filterFields = () => state.data.fields.filter(f => hint(f));
+function orderedKeys() {
+  const keys = filterFields().map(f => f.key);
+  const base = keys.slice();
+  const pos = (k) => { const i = prefs.order.indexOf(k); return i < 0 ? 1e6 + base.indexOf(k) : i; };
+  return keys.sort((a, b) => (prefs.fav[b] ? 1 : 0) - (prefs.fav[a] ? 1 : 0) || pos(a) - pos(b));
+}
+const parseVal = (s) => { s = String(s ?? '').trim().replace(',', '.'); if (s === '') return null; const n = parseFloat(s); return Number.isNaN(n) ? null : n; };
+// aplicados = com valor e não ocultos
+function computeFilters() {
+  state.filters = {};
+  for (const f of filterFields()) {
+    const v = parseVal(prefs.values[f.key]);
+    if (v !== null && !prefs.hidden[f.key]) state.filters[f.key] = v;
   }
-  box.querySelectorAll('input').forEach(i => i.addEventListener('input', () => {
-    const v = i.value.trim().replace(',', '.');
-    if (v === '' || Number.isNaN(parseFloat(v))) delete state.filters[i.dataset.key]; else state.filters[i.dataset.key] = parseFloat(v);
-    i.closest('label').classList.toggle('border-emerald-600', i.dataset.key in state.filters);
-    updateFiltersLabel(); apply();
-  }));
+}
+
+function itemHtml(f, inFolder) {
+  const h = hint(f), k = f.key, val = prefs.values[k] ?? '';
+  const sym = `<span class="font-bold ${f.dir === 'high' ? 'text-emerald-400' : 'text-sky-400'}">${h.sym}${f.excludeNeg ? '<sup class="text-[9px]">+</sup>' : ''}</span>`;
+  if (inFolder) {
+    return `<div class="fitem flex items-center gap-2 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5" data-key="${k}">
+      <span class="drag-handle cursor-grab select-none text-slate-500 px-1" title="Arraste de volta para o painel">⠿</span>
+      <span class="text-xs text-slate-300 flex-1 truncate">${esc(f.label)} ${sym}${val !== '' ? ` <span class="text-slate-500">(${esc(val)} – ignorado)</span>` : ''}</span>
+      <button type="button" class="restore text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700" data-key="${k}">restaurar</button>
+    </div>`;
+  }
+  const active = parseVal(val) !== null;
+  return `<div class="fitem flex flex-col gap-1 bg-slate-950/60 border ${active ? 'border-emerald-600' : 'border-slate-800'} rounded-lg px-2 py-1.5" data-key="${k}" title="${esc(h.txt + (f.unit === '%' ? ' — digite 8 para 8%' : ''))}">
+    <div class="flex items-center gap-1 text-[11px] text-slate-400">
+      <span class="drag-handle cursor-grab select-none text-slate-500 text-sm leading-none px-0.5" title="Arraste para reordenar ou para 'Filtros ocultos'">⠿</span>
+      <span class="truncate flex-1">${esc(f.label)}${f.unit === '%' ? ' (%)' : ''}</span>
+      ${sym}
+      <button type="button" class="fav text-base leading-none ${prefs.fav[k] ? 'text-amber-400' : 'text-slate-600 hover:text-slate-300'}" data-key="${k}" title="${prefs.fav[k] ? 'Remover dos favoritos' : 'Favoritar (vai para o topo)'}">${prefs.fav[k] ? '★' : '☆'}</button>
+    </div>
+    <input data-key="${k}" type="number" step="any" inputmode="decimal" placeholder="${h.sym} …" value="${esc(val)}"
+      class="fval w-full bg-transparent outline-none text-sm text-slate-100 placeholder:text-slate-600">
+  </div>`;
+}
+
+function renderFilterUI() {
+  const keys = orderedKeys();
+  const visible = keys.filter(k => !prefs.hidden[k]), hidden = keys.filter(k => prefs.hidden[k]);
+  $('#filters').innerHTML = visible.map(k => itemHtml(state.fieldMap[k], false)).join('');
+  $('#filtersEmpty').classList.toggle('hidden', visible.length > 0);
+  $('#hiddenList').innerHTML = hidden.map(k => itemHtml(state.fieldMap[k], true)).join('');
+  $('#hiddenCount').textContent = hidden.length;
+  $('#hiddenFolder').classList.toggle('open', prefs.folderOpen);
+  $('#folderChevron').textContent = prefs.folderOpen ? '▴' : '▾';
+  $('#hiddenEmpty').classList.toggle('hidden', hidden.length > 0 || !prefs.folderOpen);
+  updateFiltersLabel();
 }
 function updateFiltersLabel() {
   const n = Object.keys(state.filters).length;
-  $('#filtersLabel').textContent = n ? `Filtros (${n} ativo${n > 1 ? 's' : ''})` : 'Filtros';
-  $('#btnFilters').classList.toggle('border-emerald-600', n > 0);
+  $('#activeCount').textContent = n ? `${n} filtro${n > 1 ? 's' : ''} ativo${n > 1 ? 's' : ''}` : 'nenhum filtro ativo';
+  $('#activeCount').classList.toggle('text-emerald-400', n > 0);
 }
-function setFiltersOpen(open) {
-  $('#filtersPanel').classList.toggle('hidden', !open);
-  $('#btnFilters').setAttribute('aria-expanded', String(open));
-  $('#filtersChevron').textContent = open ? '▴' : '▾';
+function setMinimized(min) {
+  prefs.minimized = min; savePrefs();
+  $('#minimize').checked = min;
+  $('#filtersPanel').classList.toggle('hidden', min);
 }
+function changed() { computeFilters(); savePrefs(); updateFiltersLabel(); apply(); }
+function syncOrderFromDom() {
+  const vis = [...$('#filters').querySelectorAll('.fitem')].map(e => e.dataset.key);
+  const hid = [...$('#hiddenList').querySelectorAll('.fitem')].map(e => e.dataset.key);
+  prefs.order = [...vis, ...hid];
+}
+function restoreFilter(k) {
+  delete prefs.hidden[k];
+  prefs.order = [...prefs.order.filter(x => x !== k), k];  // volta ao fim do painel (favoritos seguem no topo)
+  changed(); renderFilterUI();
+}
+
+function buildFilters() {
+  const panel = $('#filters'), folder = $('#hiddenList');
+  panel.addEventListener('input', (e) => {
+    const i = e.target.closest('.fval'); if (!i) return;
+    prefs.values[i.dataset.key] = i.value.trim();
+    const item = i.closest('.fitem'), on = parseVal(i.value) !== null;
+    item.classList.toggle('border-emerald-600', on); item.classList.toggle('border-slate-800', !on);
+    changed();
+  });
+  panel.addEventListener('click', (e) => {
+    const s = e.target.closest('.fav'); if (!s) return;
+    const k = s.dataset.key;
+    syncOrderFromDom();
+    if (prefs.fav[k]) delete prefs.fav[k];
+    else { prefs.fav[k] = true; prefs.order = [k, ...prefs.order.filter(x => x !== k)]; }
+    savePrefs(); renderFilterUI();
+  });
+  folder.addEventListener('click', (e) => { const r = e.target.closest('.restore'); if (r) { e.stopPropagation(); restoreFilter(r.dataset.key); } });
+  $('#folderHead').addEventListener('click', () => { prefs.folderOpen = !prefs.folderOpen; savePrefs(); renderFilterUI(); });
+  $('#minimize').addEventListener('change', (e) => setMinimized(e.target.checked));
+  // Arrastar e soltar (mouse e toque) só pela alça ⠿ — digitação e rolagem no celular continuam normais
+  if (window.Sortable) {
+    const common = { group: 'filtros', handle: '.drag-handle', animation: 150, forceFallback: true, fallbackOnBody: true,
+      fallbackTolerance: 3, ghostClass: 'opacity-40', emptyInsertThreshold: 30, scroll: true, bubbleScroll: true };
+    Sortable.create(panel, { ...common, onEnd: (evt) => { if (evt.to === panel) { syncOrderFromDom(); savePrefs(); renderFilterUI(); } } });
+    Sortable.create(folder, { ...common,
+      onAdd: (evt) => { prefs.hidden[evt.item.dataset.key] = true; syncOrderFromDom(); changed(); renderFilterUI(); },
+      onRemove: (evt) => { delete prefs.hidden[evt.item.dataset.key]; syncOrderFromDom(); changed(); renderFilterUI(); } });
+  }
+  setMinimized(prefs.minimized);
+  computeFilters(); renderFilterUI();
+}
+function clearFilters() { prefs.values = {}; changed(); renderFilterUI(); }
 
 // ---------- Ordenação ----------
 function buildSort() {
@@ -207,7 +293,7 @@ async function load() {
     const st = d.status || {};
     $('#srcStatus').textContent = `Fundamentus: ${st.fundamentus || '?'} · Status Invest: ${st.statusinvest || '?'} · ${F0.format(d.counts.red)} divergências · ${F0.format(d.counts.bold)} complementos`;
     if (first) { buildFilters(); buildSort(); }
-    apply();
+    computeFilters(); apply();
     if (d.refreshing) setTimeout(load, 3000);
   } catch (e) { $('#updated').textContent = 'Erro ao carregar: ' + e; setTimeout(load, 5000); }
 }
@@ -215,16 +301,11 @@ async function load() {
 let qTimer;
 $('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(apply, 150); });
 $('#onlyLiquid').addEventListener('change', apply);
-$('#btnFilters').addEventListener('click', () => setFiltersOpen($('#filtersPanel').classList.contains('hidden')));
-$('#btnClear').addEventListener('click', () => {
-  state.filters = {}; document.querySelectorAll('#filters input').forEach(i => { i.value = ''; i.closest('label').classList.remove('border-emerald-600'); });
-  $('#q').value = ''; updateFiltersLabel(); apply();
-});
+$('#btnClear').addEventListener('click', () => { $('#q').value = ''; clearFilters(); });
 $('#btnCsv').addEventListener('click', exportCsv);
 $('#btnRefresh').addEventListener('click', async () => {
   $('#btnRefresh').disabled = true; $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
   await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; }, 2500);
 });
-setFiltersOpen(!isMobile());
 setInterval(load, 10 * 60 * 1000);
 load();
