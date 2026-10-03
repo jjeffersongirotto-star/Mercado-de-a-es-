@@ -60,3 +60,23 @@ EV/EBITDA=enterpriseToEbitda, Liq. corrente=currentRatio, VPA=bookValue, LPA=tra
 Sem 3ª fonte: ROIC, EV/EBIT, P/EBIT, P/Ativo, Dív.Líq/Patrim., crescimentos 5a.
 Se o Yahoo bloquear o servidor, usa o snapshot `data/yfinance.json` da branch `data`
 (gerado por `scripts/fetch_yfinance.py`, chamado por `scripts/push_snapshot_from_here.sh`).
+
+## Multi-fonte, consenso, seletor de fonte e de país
+| Fonte | Como chega ao Render | Países |
+|---|---|---|
+| Fundamentus | ao vivo | BR |
+| Status Invest | ao vivo → snapshot (branch `data`) se 403 | BR |
+| TradingView (scanner) | ao vivo em lote → snapshot `tradingview_<país>.json` se bloquear | BR, EUA, Reino Unido, Alemanha, Portugal, Japão |
+| Investidor10 | snapshot diário (raspado da máquina da rotina, ~1 req/s) | BR |
+| Dados de Mercado | snapshot diário (EBIT padrão e **ajustado**) | BR |
+| CVM dados abertos (DFP/ITR) | snapshot diário pré-processado (`scripts/build_cvm.py` → `cvm.json`) | BR |
+| Yahoo (yfinance) | ao vivo em 2º plano → snapshot | BR (só tickers com divergência) |
+
+**Consenso ("Todos")**: por indicador, o maior grupo de fontes que concordam entre si (todos os pares dentro da regra de divergência).
+Maioria = mais da metade das fontes com valor. Exibe o Fundamentus se ele estiver no grupo; senão a mediana do grupo.
+Vermelho = sem maioria; âmbar = maioria com discordância (n/m); azul **aj** = o Fundamentus usa EBIT ajustado
+(lucro bruto − despesas de vendas − G&A, confirmado pela CVM/Dados de Mercado) e diverge só por definição.
+Selecionar uma fonte mostra somente os valores dela (filtros e ordenação usam esses valores; sem dado = —).
+
+Rotina diária (19:05): `scripts/push_snapshot_from_here.sh` atualiza todos os snapshots em sequência
+(`ONLY="cvm tradingview"` limita as etapas).

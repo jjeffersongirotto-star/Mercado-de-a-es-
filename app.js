@@ -426,8 +426,10 @@ async function load() {
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
-    $('#srcStatus').textContent = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `${n}: ${st[k]}`).join(' · ') +
-      (country === 'br' ? ` · Consenso: ${F0.format(c.red || 0)} sem maioria (antes, Fundamentus × Status Invest: ${F0.format(c.red_before || 0)}) · ${F0.format(c.amb || 0)} maioria com discordância · ${F0.format(c.adj || 0)} EBIT ajustado` : '');
+    $('#srcStatus').innerHTML = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `<div><b class="text-slate-300">${n}</b>: ${esc(st[k])}</div>`).join('');
+    $('#consSummary').innerHTML = country === 'br'
+      ? `Consenso: <b class="text-red-300">${F0.format(c.red || 0)}</b> sem maioria (antes, Fundamentus × Status Invest: ${F0.format(c.red_before || 0)}) · <b class="text-amber-300">${F0.format(c.amb || 0)}</b> maioria com discordância · <b class="text-sky-300">${F0.format(c.adj || 0)}</b> EBIT ajustado`
+      : `${F0.format(c.tickers || d.rows.length)} ações (maiores por valor de mercado) · fonte única: TradingView`;
     $('#subtitle').textContent = country === 'br' ? 'Consenso entre ' + (d.sources || []).length + ' fontes' : 'Fonte: TradingView (scanner)';
     if (!built) { buildFilters(); buildSort(); built = true; } else { renderFilterUI(); buildSortOptions(); }
     renderSource();
