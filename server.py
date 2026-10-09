@@ -339,6 +339,8 @@ def finalize(base, yf_store=None):
         if r["ticker"] in FIN: nr["fin"] = True
         consensus.apply_row(nr, CMP_FIELDS, divergente)
         bkk = set(nr.get("bk") or [])
+        cnt["two"] = cnt.get("two", 0) + sum(1 for k_, m in (nr.get("cm") or {}).items() if m.get("t") == "pri" and k_ not in bkk and k_ not in nr["st"])
+        cnt["bank"] = cnt.get("bank", 0) + sum(1 for k_ in bkk if k_ not in nr["st"])
         for k_, x in nr["st"].items():
             if k_ in bkk: cnt["bank"] = cnt.get("bank", 0) + 1
             else: cnt[x] += 1

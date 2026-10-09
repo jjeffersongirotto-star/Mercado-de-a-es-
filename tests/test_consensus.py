@@ -12,7 +12,7 @@ def approx(a, b): return abs(a - b) < 1e-3
 def test_half_group_wins():          # regra 2
     v, st, names, meta = run([1, 1, 2, 4]); assert approx(v, 1) and st == "amb" and meta == {"t": "half"}
 def test_two_different_priority():   # 2 fontes divergentes -> fonte de maior prioridade (si > i10)
-    v, st, _, meta = run([1, 3]); assert v == 1 and st == "red" and meta == {"t": "pri", "src": "si"}
+    v, st, _, meta = run([1, 3]); assert v == 1 and st is None and meta == {"t": "pri", "src": "si"}
     v, st, _, meta = decide({"tv": 5, "fund": 9}); assert v == 9 and meta["src"] == "fund"
     v, st, _, meta = decide({"yf": 5, "i10": 9}); assert v == 9 and meta["src"] == "i10"
     v, st, _, meta = decide({"si": 5, "cvm": 9}); assert v == 9 and meta["src"] == "cvm"
@@ -89,6 +89,17 @@ def test_financial_detection():
             {"ticker": "RPAD5", "nome": "ALFA HOLDINGS S.A.", "subsetor": None}, {"ticker": "BBSE3", "nome": "BB SEGURIDADE", "subsetor": "Seguradoras"},
             {"ticker": "PETR4", "nome": "PETROBRAS", "subsetor": "Petróleo"}, {"ticker": "B3SA3", "nome": "B3 S.A.", "subsetor": "Dados Financeiros e Bolsas de Valores"}]
     assert financial_tickers(rows) == {"BBAS3", "RPAD3", "RPAD5", "BBSE3"}
+
+def test_evebitda_20pct():
+    v, st, _, _ = decide({"fund": 15.0, "tv": 12.65, "i10": 12.76}, key="evebitda"); assert st is None   # 2,35 ≤ 20% de 15
+    v, st, _, _ = decide({"fund": 15.0, "tv": 12.65, "i10": 12.76}, key="evebit"); assert st == "amb"   # 10%
+    assert not equal(10, 7.9, (0.2, 0))
+
+def test_bank_two_sources_dark_blue():
+    from consensus import apply_row
+    r = {"S": {"si": {"mebit": 10.0}, "tv": {"mebit": 30.0}}, "fin": True}
+    apply_row(r, [("mebit", 1.0, True)], lambda a, b, t: True)
+    assert r["bk"] == ["mebit"] and "mebit" not in r["st"] and r["cm"]["mebit"]["t"] == "pri"
 
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]

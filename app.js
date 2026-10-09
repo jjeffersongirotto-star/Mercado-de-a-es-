@@ -239,6 +239,7 @@ function cardsHtml(r) {
     if (isBank) { cls.push('bank'); badge = '<span class="badge bg-blue-900 text-blue-100 font-bold border border-blue-700" title="Banco/seguradora — indicador não comparável entre fontes">banco</span>'; }
     else if (st === 'red') { cls.push('red'); if (cmt === 'avg') cls.push('avg'); badge = `<span class="badge bg-red-600 text-white">${cmt === 'avg' ? 'média' : cmt === 'w' ? 'pond.' : cmt === 'pri' ? '2 f.' : '≠'}</span>`; }
     else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${((r.ex || {})[f.key] || []).length ? '±' : ag.length + '/' + (nSrc - (((r.xv || {})[f.key]) || []).length)}</span>`; }
+    else if (cmt === 'pri') { cls.push('two'); badge = '<span class="badge bg-slate-600 text-slate-100" title="apenas 2 fontes, divergentes — exibida a de maior prioridade">2 fontes</span>'; }
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
     if (all && nSrc >= 1 && v != null || st) cls.push('tip');
     cards += `<div class="${cls.join(' ')}" data-key="${f.key}">
@@ -259,7 +260,7 @@ function tipHtml(r, f) {
   const isBank = (r.bk || []).includes(k);
   const idsV = ids.filter(id => !xv.includes(id));
   const head = isBank ? '<b class="text-blue-300">Banco/seguradora</b> — indicador baseado em EBIT/receita não é comparável entre fontes'
-    : st === 'red' && cm.t === 'pri' ? `<b class="text-red-300">Apenas 2 fontes</b> — exibido: ${esc(srcInfo(cm.src).name)} (maior prioridade)`
+    : cm.t === 'pri' ? `<b class="text-slate-200">Apenas 2 fontes</b> — exibido: ${esc(srcInfo(cm.src).name)} (maior prioridade)`
     : st === 'red' && cm.t === 'avg' ? '<b class="text-red-300">Sem maioria — todas as fontes diferem</b><br>Exibido: <b class="text-yellow-300">média de todas as fontes</b>'
     : st === 'red' && cm.t === 'w' ? '<b class="text-red-300">Sem maioria — média ponderada pelos grupos</b><br>' + cm.w.map(([w, x, ids]) => `${P0.format(w * 100)}% × ${F(x)} <span class="text-slate-400">(${ids.map(id => esc(srcInfo(id).name)).join(', ')})</span>`).join('<br>+ ')
     : st === 'red' ? '<b class="text-red-300">Sem maioria entre as fontes</b>'
@@ -267,7 +268,7 @@ function tipHtml(r, f) {
     : exl.length ? `<b class="text-amber-300">Sinal conferido pela Dív.Líq/PL</b> — usado: ${ag.map(id => esc(srcInfo(id).name)).join(', ')}`
     : st === 'amb' ? `<b class="text-amber-300">Maioria ${ag.length}/${idsV.length}</b> — valor de consenso`
     : idsV.length > 1 ? `<b class="text-emerald-300">Fontes concordam (${idsV.length}/${idsV.length})</b>` : '<b>Fonte única</b>';
-  const ok = (id) => xv.includes(id) ? '' : st === 'red' ? '' : (st ? (ag.includes(id) ? '✓' : '✗') : '✓');
+  const ok = (id) => xv.includes(id) ? '' : cm.t === 'pri' ? (id === cm.src ? '✓' : '') : st === 'red' ? '' : (st ? (ag.includes(id) ? '✓' : '✗') : '✓');
   const aj = cm.aj || [], A0 = r.A || {};
   const ajm = (id) => aj.includes(id) ? ` <span class="badge bg-sky-600 text-white font-bold" title="concorda com o Fundamentus via EBIT ajustado">aj</span> <span class="text-sky-200">${F(A0[id][k + '_adj'])}</span>` : '';
   const rows = ids.map(id => `<tr class="${xv.includes(id) || st && st !== 'red' && !ag.includes(id) ? 'no' : ''}"><td>${logoImg(id)} ${esc(srcInfo(id).name)}${xv.includes(id) ? ' <span class="text-slate-400 text-[10px]">fora da votação neste indicador</span>' : ''}</td><td class="text-right font-semibold">${F(S[id][k])}${ajm(id)}</td><td>${ok(id)}</td></tr>`).join('');
@@ -478,6 +479,10 @@ $('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTime
 $('#onlyLiquid').addEventListener('change', apply);
 $('#btnClear').addEventListener('click', () => { $('#q').value = ''; clearFilters(); });
 $('#btnCsv').addEventListener('click', exportCsv);
+const infoOpen = (o) => { $('#infoModal').classList.toggle('hidden', !o); document.body.style.overflow = o ? 'hidden' : ''; };
+$('#btnInfo').addEventListener('click', () => infoOpen(true));
+$('#infoModal').addEventListener('click', (e) => { if (e.target.id === 'infoModal' || e.target.closest('[data-close]')) infoOpen(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#infoModal').classList.contains('hidden')) infoOpen(false); });
 $('#btnExpandAll').addEventListener('click', () => expandAll(true));
 $('#btnCollapseAll').addEventListener('click', () => expandAll(false));
 $('#btnRefresh').addEventListener('click', async () => {

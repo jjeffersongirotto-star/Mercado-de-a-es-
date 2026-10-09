@@ -1,4 +1,4 @@
-"""Consenso entre fontes ('Todos'): grupos de valores iguais (tolerância única de 10%).
+"""Consenso entre fontes ('Todos'): grupos de valores iguais (tolerância de 10%; EV/EBITDA 20%).
 - valor exibido: o do Fundamentus se ele estiver no cluster; senão a mediana do cluster;
 - 'red'  : nenhum cluster com maioria (> metade das fontes com valor);
 - 'amb'  : maioria encontrada, mas alguma fonte discorda;
@@ -17,12 +17,14 @@ FLOOR = {"roa": 0.3, "roe": 0.3, "mbruta": 0.3, "mebit": 0.3, "mliq": 0.3, "roic
 # bancos/seguradoras: indicadores baseados em EBIT/receita não são comparáveis entre fontes
 BANK_KEYS = {"roic", "evebitda", "evebit", "pebit", "mebit", "cresc5a"}
 
+TOL_KEY = {"evebitda": 0.20}  # tolerância relativa específica por indicador
 TOL = 0.10  # "iguais" se |a−b| ≤ max(10% de max(|a|,|b|), piso); sinais opostos nunca são iguais
 
-def equal(a, b, fl=0.0):
+def equal(a, b, fl=0.0, tol=TOL):
+    if isinstance(fl, tuple): tol, fl = fl
     if a == b: return True
     if a * b < 0: return False
-    return abs(a - b) <= max(TOL * max(abs(a), abs(b)), fl) + 1e-9
+    return abs(a - b) <= max(tol * max(abs(a), abs(b)), fl) + 1e-9
 
 _MASKS = {}
 def _masks(n):
@@ -90,7 +92,7 @@ def decide(vals, thr=None, divergente=None, adj_vals=None, key=None):
        o valor da fonte de maior prioridade (RANK; meta t=pri);
     4) senão: média ponderada — cada grupo repetido = mediana × tamanho/n; singletons juntos = média × qtd/n ('red', meta t=w).
     meta 'aj' = fontes que concordaram com o Fundamentus via EBIT ajustado."""
-    items, groups, use = _best_assignment(vals, adj_vals, FLOOR.get(key, 0.0))
+    items, groups, use = _best_assignment(vals, adj_vals, (TOL_KEY.get(key, TOL), FLOOR.get(key, 0.0)))
     n = len(items)
     if n == 0: return None, None, [], None
     if n == 1: return items[0][1], None, [items[0][0]], None
@@ -111,7 +113,7 @@ def decide(vals, thr=None, divergente=None, adj_vals=None, key=None):
     aj = [s for s in use]
     if len(g1) < 2 and n == 2:  # 2 fontes divergentes: a de maior prioridade
         s0 = min((s for s, _ in items), key=lambda s: RANK.index(s) if s in RANK else 99)
-        return dict(items)[s0], "red", [], M({"t": "pri", "src": s0})
+        return dict(items)[s0], None, [s0], M({"t": "pri", "src": s0})  # neutro (não vermelho)
     if len(g1) < 2:  # regra 3: todos diferentes (3+)
         return round(sum(v for _, v in items) / n, 4), "red", [], M({"t": "avg"})
     # regra 4: ponderada
@@ -164,7 +166,7 @@ def apply_row(row, fields, divergente):
             if status is None or status == "red" and len(vals) == 1: status = "amb"
             if not names: names = list(vals)
         v[key] = val
-        if fin and key in BANK_KEYS and status in ("red", "amb"): bk.append(key)
+        if fin and key in BANK_KEYS and (status in ("red", "amb") or (meta or {}).get("t") == "pri"): bk.append(key)
         if status:
             st[key] = status
             if names: ag[key] = names

@@ -62,6 +62,10 @@
   .card.bank .val { color: rgb(191 219 254); }
   .card.bank .detail { color: rgb(219 234 254); }
   .hb-bank { color: rgb(191 219 254); background: rgb(23 37 84 / .8); border: 1px solid rgb(30 64 175); }
+  .info-panel h3 { margin: .9rem 0 .3rem; font-weight: 700; color: rgb(110 231 183); font-size: .9rem; }
+  .info-panel ul { list-style: disc; padding-left: 1.2rem; } .info-panel li { margin: .15rem 0; }
+  .info-panel ul.info-colors { list-style: none; padding-left: 0; } .info-colors li { display: flex; align-items: center; gap: .45rem; }
+  .sw-ok { border: 1px solid rgb(51 65 85); background: rgb(15 23 42); } .sw-bank { border: 1px solid rgb(30 64 175); background: rgb(23 37 84); }
   .card.aj { box-shadow: inset 3px 0 0 rgb(56 189 248); }
   .lgi { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
   .lgc { font-weight: 700; }
@@ -106,6 +110,7 @@
       <span id="updated" class="text-slate-400 text-xs sm:text-sm">Carregando…</span>
       <button id="btnRefresh" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700">⟳<span class="hidden sm:inline"> Atualizar</span></button>
       <button id="btnCsv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">⬇ CSV</button>
+      <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
     </div>
   </div>
 </header>
@@ -169,8 +174,51 @@
   <p class="text-xs text-slate-500 pb-6">Dados de fontes públicas (Fundamentus, Status Invest, CVM dados abertos, Investidor10, TradingView, Dados de Mercado, Yahoo; nomes/setores/variação via brapi.dev). Não é recomendação de investimento. Atualização automática a cada 30 min.</p>
 </main>
 
+<div id="infoModal" class="hidden fixed inset-0 z-[100] bg-black/70 flex items-start sm:items-center justify-center p-2 sm:p-6">
+  <div class="info-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-6 text-sm text-slate-300 shadow-2xl">
+    <button type="button" data-close class="sticky top-0 float-right -mt-1 -mr-1 w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 text-lg" aria-label="Fechar">✕</button>
+    <h2 class="text-lg font-bold text-slate-100 mb-2">Como funciona o consenso</h2>
+    <h3>Fontes e ranking de prioridade</h3>
+    <ol class="list-decimal pl-5">
+      <li>CVM (oficial)</li><li>Status Invest</li><li>Dados de Mercado</li><li>Fundamentus</li><li>Investidor10</li><li>TradingView</li><li>Yahoo Finance</li></ol>
+    <p class="text-slate-400 text-xs mt-1">O ranking só decide quando há apenas 2 fontes e elas divergem.</p>
+    <h3>Regras de mescla (modo “Todos”)</h3>
+    <ul>
+      <li><b>Iguais</b>: diferença ≤ 10% do maior valor (EV/EBITDA: 20%).</li>
+      <li><b>Piso</b>: também iguais se a diferença ≤ 0,3 pp (ROA, ROE, margens bruta/EBIT/líquida, ROIC) ou ≤ 1 pp (Cresc. Receita/Lucro 5a).</li>
+      <li>Sinais opostos nunca são iguais. Um grupo exige que todos os pares sejam iguais.</li>
+      <li><b>Maioria</b> (mais da metade): valor do Fundamentus se estiver no grupo, senão a mediana do grupo.</li>
+      <li><b>Metade</b> com 2+ fontes (grupo único) = tratado como maioria.</li>
+      <li><b>Todas diferentes</b> (3+ fontes): média simples de todas.</li>
+      <li><b>Grupos minoritários</b>: média ponderada — cada grupo pesa tamanho/n; as fontes isoladas entram juntas pela média delas.</li>
+      <li><b>Só 2 fontes divergentes</b>: valor da fonte de maior prioridade.</li></ul>
+    <h3>Cores</h3>
+    <ul class="info-colors">
+      <li><span class="sw sw-ok"></span>Normal: fontes concordam (ou fonte única)</li>
+      <li><span class="sw sw-res"></span>Laranja: maioria com divergência (<b class="text-amber-300">k/n</b> = fontes que concordam)</li>
+      <li><span class="sw sw-red"></span>Vermelho: divergência na maioria (<b>pond.</b> = média ponderada)</li>
+      <li><span class="sw sw-red sw-avg"></span>Vermelho com canto e <b class="text-yellow-300">número amarelo</b>: todas diferentes (média)</li>
+      <li><span class="badge bg-slate-600 text-slate-100">2 fontes</span> Cinza: só 2 fontes divergentes</li>
+      <li><span class="badge bg-sky-600 text-white font-bold">aj</span> Azul: concorda via EBIT ajustado</li>
+      <li><span class="sw sw-bank"></span>Azul escuro: banco/seguradora (indicador não comparável)</li>
+      <li><span class="badge bg-amber-500 text-slate-900 font-bold">±</span> Fonte excluída pela checagem de sinal</li></ul>
+    <h3>Particularidades</h3>
+    <ul>
+      <li>Fundamentus usa <b>EBIT ajustado</b>; CVM e Dados de Mercado votam com o EBIT padrão ou o ajustado (o que formar o maior grupo).</li>
+      <li><b>Fora da votação</b> (aparecem no detalhe, em cinza): TradingView em ROIC; Yahoo em ROA e Marg. EBIT; Fundamentus em Cresc. Receita 5a; Status Invest em Cresc. Lucro 5a.</li>
+      <li><b>Dív.Líq/EBIT</b>: fontes com sinal oposto ao da Dív.Líq/PL de consenso ficam fora (±).</li>
+      <li><b>Bancos/seguradoras</b>: ROIC, EV/EBITDA, EV/EBIT, P/EBIT, Marg. EBIT e Cresc. Receita 5a divergentes aparecem em azul escuro.</li>
+      <li><b>Volume</b>: só TradingView; o financeiro médio usa a cotação atual.</li>
+      <li><b>Liquidez 2 meses</b>: Fundamentus.</li>
+      <li><b>Atualização</b>: Fundamentus, Status Invest e TradingView ao vivo (a cada 30 min); Yahoo, Investidor10, Dados de Mercado e CVM por cópia diária nos dias úteis às 19h05 (também cópia de reserva do Status Invest).</li>
+      <li>Filtros, ordenação e CSV usam o <b>valor exibido</b>.</li>
+      <li>Países estrangeiros: só TradingView.</li></ul>
+  </div>
+</div>
+
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=13"></script>
+<script src="/static/app.js?v=14"></script>
+
 </body>
 </html>
