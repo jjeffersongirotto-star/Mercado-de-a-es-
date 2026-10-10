@@ -15,6 +15,7 @@ import tiebreak
 import tradingview
 import snapshots
 import consensus
+import history
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -565,6 +566,31 @@ def api_status():
             "updated_at_sp": d.get("updated_at_sp"), "counts": d.get("counts"),
             "status": d.get("status"), "last_error": cache.last_error,
             "foreign": {k: {"rows": len(v[1]["rows"]), "status": v[1]["status"]} for k, v in cache.foreign.items()}}
+
+@app.get("/api/history/{ticker}")
+def api_history(ticker: str, kind: str = "m"):
+    try:
+        return JSONResponse(history.get(ticker, kind), headers={"Cache-Control": "public, max-age=300"})
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": "histórico indisponível: " + str(e)[:200]}, status_code=502)
+
+@app.get("/api/indices/{name}")
+def api_indices(name: str):
+    if name not in history.SGS:
+        return JSONResponse({"error": "índice desconhecido"}, status_code=404)
+    try:
+        return JSONResponse(history.bcb(name), headers={"Cache-Control": "public, max-age=3600"})
+    except Exception as e:
+        return JSONResponse({"error": "Banco Central indisponível: " + str(e)[:200]}, status_code=502)
+
+@app.get("/static/{name}.js")
+def extra_js(name: str):
+    if name not in ("app", "previsao", "grafico", "grupos"):
+        return JSONResponse({"error": "não encontrado"}, status_code=404)
+    return FileResponse(os.path.join(BASE, name + ".js"), media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache"})
 
 @app.get("/static/app.js")
 def app_js():

@@ -90,6 +90,37 @@
   .flag { width: 22px; height: 15px; border-radius: 3px; object-fit: cover; box-shadow: 0 0 0 1px #0006; }
   .chev { transition: transform .2s; display: inline-block; }
   .dd.open .chev { transform: rotate(180deg); }
+  .tabs { display: flex; gap: .25rem; padding: .25rem; border-radius: .9rem; background: rgb(15 23 42 / .7); border: 1px solid rgb(30 41 59); }
+  .tabs button { flex: 1; padding: .5rem .5rem; border-radius: .65rem; font-size: .9rem; font-weight: 600; color: rgb(148 163 184); }
+  .tabs button.on { background: rgb(6 78 59 / .55); color: rgb(110 231 183); box-shadow: inset 0 0 0 1px rgb(16 185 129 / .5); }
+  .pv-ref { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+  @media (min-width: 768px) { .pv-ref { grid-template-columns: repeat(6, minmax(0, 1fr)); } .pv-wide { grid-column: span 3; } }
+  .pv-wide { grid-column: 1 / -1; }
+  .pv-f { display: flex; flex-direction: column; gap: .3rem; padding: .5rem .6rem; border-radius: .7rem; border: 1px solid; min-width: 0; }
+  .pv-f > span { font-size: 11px; text-transform: uppercase; letter-spacing: .02em; font-weight: 600; }
+  .pv-in { min-width: 0; width: 100%; padding: .4rem .5rem; border-radius: .5rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .95rem; color: rgb(226 232 240); outline: none; }
+  .pv-in:focus { border-color: rgb(16 185 129); } .pv-in:disabled { opacity: .35; }
+  .pv-mini { display: inline-flex; align-items: center; gap: .3rem; font-size: 11px; color: rgb(148 163 184); }
+  .pv-mini .pv-in { width: auto; }
+  .pv-x, .pv-i, .pv-plus { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: .5rem; background: rgb(30 41 59); border: 1px solid rgb(51 65 85); color: rgb(203 213 225); }
+  .pv-plus { color: rgb(110 231 183); font-size: 18px; font-weight: 700; }
+  .pv-c-ap { --c: 16 185 129; } .pv-c-d { --c: 56 189 248; } .pv-c-r { --c: 245 158 11; } .pv-c-t { --c: 167 139 250; } .pv-c-w { --c: 244 63 94; } .pv-c-m { --c: 148 163 184; }
+  .pv-f { border-color: rgb(var(--c) / .45); background: rgb(var(--c) / .08); } .pv-f > span { color: rgb(var(--c)); }
+  .pv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: .6rem; border: 1px solid rgb(30 41 59); }
+  .pv-main { max-height: 70vh; overflow-y: auto; }
+  .pv-t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; white-space: nowrap; }
+  .pv-t th { position: sticky; top: 0; z-index: 1; padding: .45rem .6rem; font-size: 11px; font-weight: 700; text-align: right; white-space: normal; min-width: 92px;
+             color: rgb(var(--c)); background: rgb(15 23 42); border-bottom: 2px solid rgb(var(--c) / .7); }
+  .pv-t td { padding: .35rem .6rem; text-align: right; border-bottom: 1px solid rgb(30 41 59); }
+  .pv-t th:first-child, .pv-t td:first-child { position: sticky; left: 0; text-align: center; min-width: 52px; background: rgb(15 23 42); z-index: 2; }
+  .pv-t th:first-child { z-index: 3; }
+  .pv-t tbody tr:nth-child(even) td { background-color: rgb(30 41 59 / .25); }
+  .pv-t tbody tr:nth-child(even) td:first-child { background: rgb(22 31 48); }
+  .pv-t td.pv-c-r, .pv-t td.pv-c-d, .pv-t td.pv-c-ap { color: rgb(226 232 240); }
+  .pv-t td.pv-c-w { color: rgb(253 164 175); }
+  .pv-sum td { background: rgb(var(--c) / .12) !important; font-weight: 700; font-size: 13px; }
+  .pv-sum td:first-child { background: rgb(15 23 42) !important; }
+  .pv-ym { display: block; font-size: 9.5px; color: rgb(100 116 139); }
 </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
@@ -116,6 +147,12 @@
 </header>
 
 <main class="max-w-[1800px] mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3">
+  <nav class="tabs" role="tablist">
+    <button type="button" data-tab="acoes" role="tab">Ações</button>
+    <button type="button" data-tab="grupos" role="tab">Grupos</button>
+    <button type="button" data-tab="previsao" role="tab">Previsão</button>
+  </nav>
+  <div data-tabpane="acoes" class="space-y-3">
   <!-- Barra de controle: busca, líquidas, ordenação, botão de filtros -->
   <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 space-y-3">
     <div class="flex flex-wrap items-center gap-2">
@@ -172,6 +209,44 @@
     <button id="btnMore" class="hidden px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Carregar mais</button>
   </div>
   <p class="text-xs text-slate-500 pb-6">Dados de fontes públicas (Fundamentus, Status Invest, CVM dados abertos, Investidor10, TradingView, Dados de Mercado, Yahoo; nomes/setores/variação via brapi.dev). Não é recomendação de investimento. Atualização automática a cada 30 min.</p>
+  </div>
+  <div data-tabpane="grupos" class="hidden space-y-3"><div id="gruposRoot" class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">Em breve.</div></div>
+  <div data-tabpane="previsao" class="hidden space-y-3">
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4">
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <h2 class="text-base font-bold">Referências</h2><span id="pvMode" class="text-xs text-slate-400"></span></div>
+      <div class="pv-ref">
+        <label class="pv-f pv-c-ap"><span>Valor inicial (R$)</span><input id="pvIni" inputmode="decimal" class="pv-in"></label>
+        <label class="pv-f pv-c-ap"><span>Aporte mensal (R$)</span><input id="pvAp" inputmode="decimal" class="pv-in"></label>
+        <label class="pv-f pv-c-d"><span>Dividendos MÊS (%)</span><input id="pvDm" inputmode="decimal" class="pv-in"></label>
+        <label class="pv-f pv-c-d"><span>Dividendos ANO (%)</span><input id="pvDa" inputmode="decimal" class="pv-in"></label>
+        <label class="pv-f pv-c-r"><span>Rentabilidade MÊS (%)</span><input id="pvRm" inputmode="decimal" class="pv-in"></label>
+        <label class="pv-f pv-c-r"><span>Rentabilidade ANO (%)</span><input id="pvRa" inputmode="decimal" class="pv-in"></label>
+        <div class="pv-f pv-c-t pv-wide"><span>Ação <small class="text-slate-500 normal-case">(simula o passado com preços e dividendos reais)</small></span>
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="pvTicker" list="pvTickers" placeholder="Ex.: PETR4" autocapitalize="characters" class="pv-in w-28 uppercase">
+            <datalist id="pvTickers"></datalist>
+            <button id="pvClearT" type="button" class="pv-x" aria-label="Limpar ação">✕</button>
+            <span id="pvDates" class="hidden flex flex-wrap items-center gap-2">
+              <label class="pv-mini">Data inicial<input id="pvDi" type="month" class="pv-in w-36"></label>
+              <label class="pv-mini">Data final<input id="pvDf" type="month" class="pv-in w-36"></label>
+              <button id="pvOldest" type="button" class="pv-i" aria-label="Data mais antiga disponível">ⓘ</button>
+            </span></div>
+          <p id="pvStatus" class="text-xs text-amber-300 mt-1"></p></div>
+        <div class="pv-f pv-c-w pv-wide"><span class="flex items-center justify-between">Retiradas (valor e mês em que começa)
+          <button id="pvAddRet" type="button" class="pv-plus" aria-label="Adicionar retirada">+</button></span>
+          <div id="pvRet" class="flex flex-col gap-1.5"></div>
+          <p class="text-[11px] text-slate-500 mt-1">Vale do mês indicado até a próxima retirada. Valor 0 encerra as retiradas. Durante a retirada o aporte é 0; sai primeiro dos dividendos, depois da rentabilidade e por fim do patrimônio.</p></div>
+      </div>
+    </section>
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-2 sm:p-3 space-y-3">
+      <div class="pv-scroll"><table class="pv-t pv-sum"><thead id="pvSumHead"></thead><tbody id="pvSumBody"></tbody></table></div>
+      <p class="text-[11px] text-slate-500 px-1">Digite um mês na primeira célula para ver a linha dele e esconder os meses anteriores (vazio ou 1 mostra tudo).</p>
+      <div class="pv-scroll pv-main"><table class="pv-t"><thead id="pvHead"></thead><tbody id="pvBody"></tbody></table></div>
+      <div class="flex flex-col items-center gap-1 pb-1"><span id="pvCount" class="text-xs text-slate-500"></span>
+        <div id="pvMore"><button id="pvMoreBtn" type="button" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Mostrar mais meses</button></div></div>
+    </section>
+  </div>
 </main>
 
 <div id="infoModal" class="hidden fixed inset-0 z-[100] bg-black/70 flex items-start sm:items-center justify-center p-2 sm:p-6">
@@ -219,6 +294,7 @@
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/app.js?v=14"></script>
+<script src="/static/previsao.js?v=1"></script>
 
 </body>
 </html>
