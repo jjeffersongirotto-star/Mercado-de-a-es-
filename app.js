@@ -198,7 +198,8 @@ const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' 
 function passes(r) {
   const q = $('#q').value.trim().toLowerCase();
   if (q && !(r.ticker.toLowerCase().includes(q) || (r.nome || '').toLowerCase().includes(q))) return false;
-  if ($('#onlyLiquid').checked && !((r.v.liq2m || 0) > 0)) return false;
+  if (state.group && !state.selMode && !state.group.has(r.ticker)) return false;
+  if ((!state.group || state.selMode) && $('#onlyLiquid').checked && !((r.v.liq2m || 0) > 0)) return false;
   for (const [k, x] of Object.entries(state.filters)) {
     const f = state.fieldMap[k]; if (!f) continue; const v = val(r, k);
     if (v === null || v === undefined) return false;
@@ -297,7 +298,7 @@ function blockHtml(r) {
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head flex flex-wrap items-center gap-x-4 gap-y-1 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-1.5 flex-wrap">
-        <div class="text-2xl font-black tracking-tight text-emerald-300 mr-0.5">${r.ticker}</div>${badges}
+        ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<div class="text-2xl font-black tracking-tight text-emerald-300 mr-0.5">${r.ticker}</div>${badges}
       </div>
       <div class="min-w-0 flex-1 basis-full sm:basis-0 order-last sm:order-none flex items-center gap-3">
         <div class="min-w-0 flex-1">
@@ -326,7 +327,7 @@ function setBlockOpen(art, open) {
   btn.firstElementChild.textContent = open ? '−' : '+';
 }
 document.addEventListener('click', (e) => {
-  const head = e.target.closest('.blk-head'); if (!head) return;
+  const head = e.target.closest('.blk-head'); if (!head || e.target.closest('.gsel')) return;
   if (window.getSelection && String(window.getSelection()).length) return;
   const art = head.closest('.blk'); setBlockOpen(art, !art.classList.contains('open'));
 });
