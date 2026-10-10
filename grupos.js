@@ -12,8 +12,11 @@
   try { const v = JSON.parse(localStorage.getItem(VKEY) || '{}'); state.ord2 = v.ord2 || ''; state.sector = v.sector || 'Todos'; } catch (e) { state.ord2 = ''; state.sector = 'Todos'; }
   const ORD = [['', 'Padrão (barra de filtros)'], ['valmerc:-1', 'Valor de mercado: maior → menor'], ['valmerc:1', 'Valor de mercado: menor → maior'],
     ['preco:-1', 'Preço da ação: maior → menor'], ['preco:1', 'Preço da ação: menor → maior'], ['var:-1', 'Alta do dia: maior → menor'], ['var:1', 'Alta do dia: menor → maior']];
-  const tools = () => `<div class="gtools"><label>Ordenar<select id="gOrd">${ORD.map(([v, l]) => `<option value="${v}"${v === state.ord2 ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+  const toolsOld = () => `<div class="gtools"><label>Ordenar<select id="gOrd">${ORD.map(([v, l]) => `<option value="${v}"${v === state.ord2 ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
     <label>Setor<select id="gSec">${['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${escH(x)}</option>`).join('')}</select></label></div>`;
+  const tools = () => '';
+  state.ord2 = '';
+  $g('#gSec').innerHTML = ['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${escH(x)}</option>`).join('');
   document.addEventListener('change', (e) => {
     if (e.target.id !== 'gOrd' && e.target.id !== 'gSec') return;
     if (e.target.id === 'gOrd') state.ord2 = e.target.value; else state.sector = e.target.value;
@@ -35,7 +38,7 @@
       b.innerHTML = `<div class="gbar mb-2"><button type="button" class="gbtn" data-g="back">← Grupos</button>
         <b class="text-emerald-300">${escH(viewing.name)}</b><span class="text-xs text-slate-400">${viewing.tickers.length} empresa(s)</span>
         <button type="button" class="gbtn ml-auto" data-g="edit" data-n="${escH(viewing.name)}">Editar</button></div>${tools()}`;
-    } else b.innerHTML = `<div class="flex flex-wrap items-end gap-2">${tools()}<button type="button" class="gbtn ml-auto" data-g="new">＋ Criar grupo</button></div>`;
+    } else b.innerHTML = '';
   }
   function refresh() { bar(); if (typeof apply === 'function' && state.data) apply(); }
   function startSel(g) {

@@ -175,7 +175,7 @@ function clearFilters() { prefs.values = {}; changed(); renderFilterUI(); }
 // ---------- Ordenação ----------
 function buildSortOptions() {
   const sel = $('#sortKey');
-  const opts = [{ key: 'ticker', label: 'Ticker' }, { key: 'nome', label: 'Empresa' }, { key: 'var', label: 'Variação dia' }, ...state.data.fields];
+  const opts = [{ key: 'ticker', label: 'Ticker' }, { key: 'nome', label: 'Empresa' }, { key: 'var', label: 'Alta do dia (%)' }, ...state.data.fields];
   sel.innerHTML = opts.map(o => `<option value="${o.key}">${esc(o.label)}</option>`).join('');
   if (!opts.some(o => o.key === state.sortKey)) { state.sortKey = state.data.fields.some(f => f.key === 'liq2m') ? 'liq2m' : 'ticker'; updateSortDir(); }
   sel.value = state.sortKey;
@@ -218,6 +218,7 @@ function apply() {
     if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
     return (typeof va === 'string' ? va.localeCompare(vb, 'pt-BR') : va - vb) * d;
   });
+  if (FAVS.size) state.filtered = state.filtered.filter(r => FAVS.has(r.ticker)).concat(state.filtered.filter(r => !FAVS.has(r.ticker)));
   $('#count').textContent = F0.format(state.filtered.length);
   $('#results').innerHTML = ''; state.shown = 0;
   renderMore();
@@ -301,7 +302,7 @@ function blockHtml(r) {
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
-        ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>
+        ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<button type="button" class="star${FAVS.has(r.ticker) ? ' on' : ''}" data-fav="${r.ticker}" aria-pressed="${FAVS.has(r.ticker)}" aria-label="Favoritar ${r.ticker}">${FAVS.has(r.ticker) ? '★' : '☆'}</button><div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>
         <div class="ml-auto flex items-baseline gap-2 whitespace-nowrap"><span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}</div>
       </div>
       ${tags || r.macro ? `<div class="flex flex-wrap items-center gap-1 mt-1">${tags}${r.macro && r.macro !== 'Outros' ? `<span class="ctag ctag-sec">${esc(r.macro)}</span>` : ''}</div>` : ''}
@@ -518,6 +519,19 @@ function friendlyStatus(s, upd) {
   fix(document);
   new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && fix(n.parentNode || n)))).observe(document.body, { childList: true, subtree: true });
 })();
+
+// ---------- Favoritos (estrela) ----------
+const FAV_KEY = 'screenerB3.favs.v1';
+const FAVS = new Set((() => { try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) { return []; } })());
+function toggleFav(t) {
+  if (FAVS.has(t)) FAVS.delete(t); else FAVS.add(t);
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([...FAVS])); } catch (e) { }
+  document.querySelectorAll(`.star[data-fav="${t}"]`).forEach(b => { b.classList.toggle('on', FAVS.has(t)); b.textContent = FAVS.has(t) ? '★' : '☆'; b.setAttribute('aria-pressed', String(FAVS.has(t))); });
+  document.dispatchEvent(new CustomEvent('favs'));
+  clearTimeout(toggleFav._h); toggleFav._h = setTimeout(() => { if (state.data) apply(); }, 600);
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('.star[data-fav]'); if (b) { e.stopPropagation(); toggleFav(b.dataset.fav); } }, true);
+$('#btnFilt').addEventListener('click', () => { const p = $('#moreFilt'), open = p.classList.toggle('hidden') === false; $('#btnFilt').setAttribute('aria-expanded', String(open)); });
 
 // ---------- Carga ----------
 let loadSeq = 0, built = false;

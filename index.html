@@ -195,6 +195,13 @@
   .gc-bar .gc-ref.ricon { background: none; border: 0; width: 34px; height: 34px; font-size: 22px; }
   .ctag { font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 9999px; color: rgb(203 213 225); background: rgb(51 65 85 / .55); border: 1px solid rgb(71 85 105 / .7); white-space: nowrap; }
   .ctag-sec { color: rgb(148 163 184); background: transparent; border-style: dashed; }
+  .lupa { position: relative; flex: none; width: 40px; height: 38px; display: grid; place-items: center; border-radius: .6rem; background: rgb(30 41 59); border: 1px solid rgb(51 65 85); color: rgb(203 213 225); }
+  .lupa[aria-expanded="true"] { border-color: rgb(16 185 129); color: rgb(110 231 183); }
+  .lupa-plus { position: absolute; right: 3px; bottom: 1px; font-size: 13px; font-weight: 900; line-height: 1; color: rgb(110 231 183); }
+  .sel { padding: .45rem .6rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .85rem; color: rgb(226 232 240); }
+  .gtools-l { display: inline-flex; align-items: center; gap: .35rem; font-size: 12px; color: rgb(148 163 184); }
+  .star { flex: none; width: 30px; height: 30px; display: grid; place-items: center; font-size: 20px; line-height: 1; color: rgb(100 116 139); }
+  .star.on { color: rgb(250 204 21); }
   .gtools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
   .gtools select { padding: .45rem .6rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .85rem; color: rgb(226 232 240); max-width: 100%; min-width: 0; }
   .gtools label { display: inline-flex; align-items: center; gap: .35rem; font-size: 12px; color: rgb(148 163 184); min-width: 0; }
@@ -204,10 +211,17 @@
 <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
   <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
     <div class="flex items-center gap-2">
+      <div class="flex flex-col items-start gap-1">
       <div id="ddCountry" class="dd">
         <button id="btnCountry" type="button" title="País" aria-haspopup="listbox" class="h-9 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5">
           <img id="countryFlag" class="flag" src="/static/flags/br.png" alt="Brasil"><span class="chev text-[10px] text-slate-400">▾</span></button>
         <div id="countryMenu" class="dd-menu hidden left-0" role="listbox"></div>
+      </div>
+      <div id="ddSource" class="dd">
+        <button id="btnSource" type="button" title="Fonte dos dados" aria-haspopup="listbox" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs flex items-center gap-1.5">
+          <span class="text-xs text-slate-400">Fonte</span><span id="sourceLabel" class="flex items-center gap-1.5 font-medium">Todos</span><span class="chev text-[10px] text-slate-400">▾</span></button>
+        <div id="sourceMenu" class="dd-menu hidden left-0" role="listbox"></div>
+      </div>
       </div>
       <div>
         <h1 class="text-lg font-bold leading-tight">Screener <span id="countryTitle">B3</span></h1>
@@ -230,26 +244,24 @@
     <button type="button" data-tab="previsao" role="tab">Previsão</button>
   </nav>
   <div data-tabpane="acoes" class="space-y-3">
-  <!-- Barra de controle: busca, líquidas, ordenação, botão de filtros -->
-  <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 space-y-3">
-    <div class="flex flex-wrap items-center gap-2">
-      <input id="q" type="search" placeholder="Buscar ticker ou nome…" class="flex-1 min-w-[180px] px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
-      <label class="flex items-center gap-2 text-sm px-2"><input id="onlyLiquid" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Só líquidas</label>
-      <div class="flex items-center gap-1">
-        <label for="sortKey" class="text-xs text-slate-400">Ordenar</label>
-        <select id="sortKey" class="px-2 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm max-w-[170px]"></select>
-        <button id="sortDir" title="Inverter ordem" class="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">↓ Desc</button>
-      </div>
-      <label class="flex items-center gap-2 text-sm px-2 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700 cursor-pointer select-none">
-        <input id="minimize" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Minimizar filtros
-        <span id="activeCount" class="text-xs text-slate-400">nenhum filtro ativo</span></label>
-      <div id="ddSource" class="dd">
-        <button id="btnSource" type="button" title="Fonte dos dados" aria-haspopup="listbox" class="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm flex items-center gap-1.5">
-          <span class="text-xs text-slate-400">Fonte</span><span id="sourceLabel" class="flex items-center gap-1.5 font-medium">Todos</span><span class="chev text-[10px] text-slate-400">▾</span></button>
-        <div id="sourceMenu" class="dd-menu hidden left-0" role="listbox"></div>
-      </div>
-      <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Limpar</button>
+  <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 space-y-2.5">
+    <div class="flex items-center gap-2">
+      <input id="q" type="search" placeholder="Buscar ticker ou nome…" class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
+      <button id="btnFilt" type="button" class="lupa" aria-expanded="false" aria-controls="moreFilt" title="Mais filtros" aria-label="Mostrar mais filtros">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span class="lupa-plus">+</span></button>
+      <button type="button" class="gbtn whitespace-nowrap" data-g="new"><span class="sm:hidden">＋ Grupo</span><span class="hidden sm:inline">＋ Criar grupo</span></button>
     </div>
+    <div id="moreFilt" class="hidden space-y-2.5 rounded-xl border border-slate-800 bg-slate-950/40 p-2.5">
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="flex items-center gap-2 text-sm px-2"><input id="onlyLiquid" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Só líquidas</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700 cursor-pointer select-none">
+          <input id="minimize" type="checkbox" checked class="accent-emerald-500 w-4 h-4"> Minimizar filtros
+          <span id="activeCount" class="text-xs text-slate-400">nenhum filtro ativo</span></label>
+        <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Limpar</button>
+        <button id="btnExpandAll" type="button" class="px-2 py-1.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-xs">Expandir todos</button>
+        <button id="btnCollapseAll" type="button" class="px-2 py-1.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-xs">Recolher todos</button>
+        <label class="gtools-l">Setor<select id="gSec" class="sel"></select></label>
+      </div>
     <div id="filtersPanel" class="hidden">
       <p class="text-[11px] text-slate-400 mb-2">Combinados com E · campo vazio = sem filtro · percentuais como número (8 = 8%) ·
         ☆ favoritar (vai para o topo) · arraste pela alça <b>⠿</b> para reordenar ou para <b>Filtros ocultos</b> ·
@@ -271,15 +283,17 @@
         </div>
       </div>
     </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <label for="sortKey" class="text-xs text-slate-400">Ordenar</label>
+      <select id="sortKey" class="sel flex-1 min-w-0 max-w-[260px]"></select>
+      <button id="sortDir" title="Inverter ordem" class="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm whitespace-nowrap">Maior → menor</button>
+    </div>
   </section>
-
-  <section class="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-400">
-    <div class="flex items-center gap-2"><span><span id="count" class="text-base font-bold text-slate-100">0</span> resultados</span>
-      <button id="btnExpandAll" type="button" class="px-2 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-[11px]">Expandir todos</button>
-      <button id="btnCollapseAll" type="button" class="px-2 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:border-emerald-600 hover:text-emerald-300 text-[11px]">Recolher todos</button></div>
-    <div class="basis-full flex flex-col gap-1"><div id="consSummary" class="text-slate-300"></div><details class="text-slate-400"><summary class="cursor-pointer select-none hover:text-slate-200">Status das fontes</summary><div id="srcStatus" class="mt-1 leading-relaxed"></div></details></div>
+  <section class="flex flex-col gap-1.5 text-xs text-slate-400">
+    <div id="consSummary" class="text-slate-300"></div><details class="text-slate-400"><summary class="cursor-pointer select-none hover:text-slate-200">Status das fontes</summary><div id="srcStatus" class="mt-1 leading-relaxed"></div></details>
+    <div><span id="count" class="text-base font-bold text-slate-100">0</span> resultados</div>
   </section>
-
   <div id="gBar"></div>
   <section id="results" class="space-y-3"></section>
   <div id="more" class="flex flex-col items-center gap-2 py-4">
@@ -416,10 +430,10 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=19"></script>
+<script src="/static/app.js?v=20"></script>
 <script src="/static/previsao.js?v=5"></script>
 <script src="/static/grafico.js?v=4"></script>
-<script src="/static/grupos.js?v=2"></script>
+<script src="/static/grupos.js?v=3"></script>
 
 </body>
 </html>
