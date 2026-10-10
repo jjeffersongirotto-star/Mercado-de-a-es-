@@ -282,6 +282,7 @@ function tipHtml(r, f) {
   return `${head}<table class="tipt">${rows}</table>${extra}<div class="mt-1 text-slate-400">Exibido e usado nos filtros: <b class="text-slate-200">${F(r.v[k])}</b></div>`;
 }
 
+const chartSlot = (r) => state.country === 'br' ? `<div class="gchart" data-gt="${r.ticker}"></div>` : '';
 function blockHtml(r) {
   const price = val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
   const open = state.expanded.has(r.ticker);
@@ -309,7 +310,7 @@ function blockHtml(r) {
         <span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}
       </div>
     </div>
-    <div class="collapse-wrap"><div class="collapse-inner">${open ? cardsHtml(r) : ''}</div></div>
+    <div class="collapse-wrap"><div class="collapse-inner">${open ? cardsHtml(r) + chartSlot(r) : ''}</div></div>
   </article>`;
 }
 
@@ -317,7 +318,7 @@ function setBlockOpen(art, open) {
   const t = art.dataset.ticker, inner = art.querySelector('.collapse-inner'), btn = art.querySelector('.tgl');
   if (open) {
     state.expanded.add(t);
-    if (!inner.firstElementChild) { const r = state.rowMap[t]; if (r) inner.innerHTML = cardsHtml(r); }
+    if (!inner.firstElementChild) { const r = state.rowMap[t]; if (r) inner.innerHTML = cardsHtml(r) + chartSlot(r); }
     requestAnimationFrame(() => art.classList.add('open'));
   } else { state.expanded.delete(t); art.classList.remove('open'); }
   btn.setAttribute('aria-expanded', String(open));

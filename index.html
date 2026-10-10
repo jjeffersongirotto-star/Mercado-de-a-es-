@@ -121,6 +121,32 @@
   .pv-sum td { background: rgb(var(--c) / .12) !important; font-weight: 700; font-size: 13px; }
   .pv-sum td:first-child { background: rgb(15 23 42) !important; }
   .pv-ym { display: block; font-size: 9.5px; color: rgb(100 116 139); }
+  .gchart { padding: 0 .75rem .75rem; }
+  .gc { border: 1px solid rgb(30 41 59); border-radius: .8rem; background: rgb(2 6 23 / .5); padding: .6rem; }
+  .gc-bar { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+  .gc-bar button { padding: .3rem .55rem; border-radius: .5rem; font-size: 12px; background: rgb(30 41 59); border: 1px solid rgb(51 65 85); color: rgb(203 213 225); }
+  .gc-bar button.on { background: rgb(6 78 59 / .6); border-color: rgb(16 185 129); color: rgb(110 231 183); }
+  .gc-bar .gc-ref { margin-left: auto; width: 32px; height: 32px; border-radius: 9999px; padding: 0; font-size: 17px; }
+  .gc-dates { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0 .3rem; }
+  .gc-dates label { display: inline-flex; align-items: center; gap: .3rem; font-size: 11px; color: rgb(148 163 184); }
+  .gc-dates input { padding: .25rem .4rem; border-radius: .45rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); color: rgb(226 232 240); font-size: 12px; color-scheme: dark; }
+  .gc-chk { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin: .3rem 0 .5rem; }
+  .gc-chk label { display: inline-flex; align-items: center; gap: .3rem; font-size: 12px; color: var(--lc); font-weight: 600; }
+  .gc-chk input { accent-color: var(--lc); width: 15px; height: 15px; }
+  .gc-wrap { display: flex; gap: .5rem; align-items: stretch; }
+  .gc-plot { position: relative; flex: 1; min-width: 0; height: 220px; padding-left: 38px; padding-bottom: 18px; }
+  @media (min-width: 768px) { .gc-plot { height: 280px; } }
+  .gc-svg { width: 100%; height: 100%; display: block; }
+  .gc-grid { stroke: rgb(51 65 85 / .5); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .gc-zero { stroke: rgb(148 163 184 / .6); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+  .gc-yl { position: absolute; left: 0; top: 0; bottom: 18px; width: 36px; }
+  .gc-yl span { position: absolute; right: 2px; transform: translateY(-50%); font-size: 9.5px; color: rgb(100 116 139); }
+  .gc-xl { position: absolute; left: 38px; right: 0; bottom: 0; display: flex; justify-content: space-between; font-size: 9.5px; color: rgb(100 116 139); }
+  .gc-leg { flex: none; width: 84px; display: flex; flex-direction: column; justify-content: center; gap: .35rem; }
+  .gc-leg div { border-left: 3px solid var(--lc); padding-left: .35rem; line-height: 1.15; }
+  .gc-leg b { display: block; font-size: 12.5px; color: var(--lc); } .gc-leg span { font-size: 10px; color: rgb(148 163 184); }
+  .gc-load { display: grid; place-items: center; height: 100%; font-size: 12px; color: rgb(148 163 184); text-align: center; }
+  .gc-note { margin-top: .35rem; font-size: 10.5px; color: rgb(100 116 139); }
 </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
@@ -293,8 +319,9 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=14"></script>
+<script src="/static/app.js?v=15"></script>
 <script src="/static/previsao.js?v=1"></script>
+<script src="/static/grafico.js?v=1"></script>
 
 </body>
 </html>
