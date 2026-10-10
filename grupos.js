@@ -183,8 +183,8 @@
       <div class="flex flex-wrap items-center gap-2"><h2 class="text-base font-bold mr-auto">Grupos</h2>
         <button type="button" class="gbtn${reorg ? ' pri' : ''}" data-g="reorg">${reorg ? 'Concluir' : '⇅ Reorganizar'}</button>
         ${state.country === 'br' ? `<button type="button" class="gbtn pri" data-g="new">＋ Criar</button>
-        <button type="button" class="gbtn" data-g="export" title="Exportar grupos">⬇</button>
-        <button type="button" class="gbtn" data-g="import" title="Importar grupos">⬆</button>` : ''}
+        <button type="button" class="gbtn" data-g="export" title="Exportar grupos" aria-label="Exportar grupos">↓</button>
+        <button type="button" class="gbtn" data-g="import" title="Importar grupos" aria-label="Importar grupos">↑</button>` : ''}
         <input id="gFile" type="file" accept=".json,application/json,text/plain,*/*" class="hidden"></div>
       <div id="gGrid" class="ggrid${reorg ? ' reorg' : ''}">${tileIds().map(tileHtml).join('')}</div></section>`;
     $g('#gFile').addEventListener('change', importG);

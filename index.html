@@ -281,6 +281,62 @@
   .gtools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
   .gtools select { padding: .45rem .6rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .85rem; color: rgb(226 232 240); max-width: 100%; min-width: 0; }
   .gtools label { display: inline-flex; align-items: center; gap: .35rem; font-size: 12px; color: rgb(148 163 184); min-width: 0; }
+
+  /* ================= Design system (único para todas as abas) ================= */
+  :root { --c-pos: rgb(52 211 153); --c-pos-bg: rgb(5 150 105); --c-pos-bd: rgb(16 185 129); --c-neg: rgb(251 113 133); --c-neg-bg: rgb(190 18 60); --c-neg-bd: rgb(244 63 94);
+          --c-amber: rgb(251 191 36); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
+          --bg-card: rgb(15 23 42 / .6); --bg-in: rgb(2 6 23); --bg-sec: rgb(30 41 59); --bd: rgb(51 65 85); --bd-card: rgb(30 41 59);
+          --h: 38px; --h-sm: 32px; --r: .6rem; --r-card: 1rem; --sh: 0 1px 2px rgb(0 0 0 / .3); --sp: .6rem; --ring: 0 0 0 2px rgb(16 185 129 / .35); }
+  /* Botões por função */
+  body .gbtn, body #btnClear, body #btnExpandAll, body #btnCollapseAll, body .umod-c, body .cmp-allb, body .cmp-minb, body .pv-lnk, body #btnMore, body .umod-list button {
+    min-height: var(--h-sm); padding: 0 .8rem; border-radius: var(--r); font-size: 13px; font-weight: 600; line-height: 1.2; background: var(--bg-sec); border: 1px solid var(--bd); color: var(--c-txt); display: inline-flex; align-items: center; justify-content: center; gap: .3rem; }
+  body .gbtn, body #btnClear, body .cmp-allb, body .cmp-minb, body .umod-c, body #btnMore { min-height: var(--h); }
+  body .umod-list button { justify-content: flex-start; min-height: var(--h); }
+  body .gbtn.pri, body .pv-ok, body .umod-ok, body #btnCsv { min-height: var(--h); padding: 0 .9rem; border-radius: var(--r); font-size: 13px; font-weight: 700; background: var(--c-pos-bg); border: 1px solid var(--c-pos-bd); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+  body .pv-ok { min-height: var(--h-sm); }
+  body .gbtn.dan, body .pv-lnk.dan, body .gt-tabs button.dan { color: var(--c-neg); border-color: rgb(159 18 57 / .8); background: rgb(76 5 25 / .35); }
+  body .umod-ok.dan { background: var(--c-neg-bg); border-color: var(--c-neg-bd); color: #fff; }
+  body .cmp-allb.on { border-color: var(--c-pos-bd); color: var(--c-pos); background: rgb(6 78 59 / .45); }
+  /* Botões de ícone: mesmo tamanho, mesmo traço; fechar ✕ e adicionar + idênticos */
+  body .lupa, body .gx, body #btnInfo, body [data-close], body .pv-x, body .pv-i, body .pv-plus, body .cmp-swap, body #btnCountry {
+    width: var(--h); height: var(--h); min-width: var(--h); padding: 0; flex: none; display: inline-grid; place-items: center; border-radius: var(--r); background: var(--bg-sec); border: 1px solid var(--bd); color: var(--c-txt); font-size: 16px; font-weight: 600; line-height: 1; }
+  body #btnCountry { width: auto; padding: 0 .4rem; display: inline-flex; gap: .3rem; }
+  body .pv-plus { color: var(--c-pos); font-size: 20px; }
+  body .ricon, body .gc-bar .gc-ref.ricon { width: var(--h); height: var(--h); background: none; border: 0; color: rgb(203 213 225); }
+  body .star { width: var(--h-sm); height: var(--h-sm); }
+  body [data-g="export"], body [data-g="import"] { width: var(--h); padding: 0; font-variant-emoji: text; font-family: system-ui, sans-serif; }
+  body .gt > .gper, body .gfull > .gper { align-self: flex-start; width: auto; margin: .4rem .5rem 0; }
+  /* Segmentados: abas, períodos, direção da ordem, abas internas */
+  body .tabs button, body .gc-bar button[data-per], body #sortDir, body .gt-tabs button { min-height: var(--h); border-radius: var(--r); font-size: 13px; font-weight: 600; }
+  body .tabs button { min-height: var(--h); }
+  body .gc-bar button[data-per], body #sortDir { padding: 0 .7rem; background: var(--bg-sec); border: 1px solid var(--bd); color: var(--c-txt); }
+  body #sortDir { min-height: var(--h); }
+  body .gc-bar button[data-per].on, body .gt-tabs button.on, body .tabs button.on { background: rgb(6 78 59 / .55); border-color: var(--c-pos-bd); color: rgb(110 231 183); box-shadow: none; }
+  body .tabs button.on { box-shadow: inset 0 0 0 1px rgb(16 185 129 / .5); }
+  /* Campos */
+  body .pv-in, body .sel, body .gper, body .gmv, body .cmp-f, body .umod-in, body #q, body .cmp-srch input, body .gc-dates input, body .pv-ym input, body #gName, body #gQ, body #filters input, body #filters select, body .pv-ex-row select {
+    min-height: var(--h); padding: 0 .6rem; border-radius: var(--r); background: var(--bg-in); border: 1px solid var(--bd); color: var(--c-txt); font-size: 14px; outline: none; }
+  body .gper, body .gmv, body .cmp-f { min-height: var(--h-sm); font-size: 13px; }
+  body .pv-in:focus, body .sel:focus, body .gper:focus, body .gmv:focus, body .cmp-f:focus, body .umod-in:focus, body #q:focus, body .cmp-srch input:focus, body .gc-dates input:focus, body #filters input:focus, body #gName:focus, body #gQ:focus {
+    border-color: var(--c-pos-bd); box-shadow: var(--ring); }
+  body input:disabled, body select:disabled { opacity: .45; }
+  /* Cartões, blocos e painéis */
+  body .blk, body .gt, body .gfull, body .cmp-top, body .cmp-chart, body .cmp-col, body .icard, body .umod-box, body .pv-card, body [data-tabpane] > section.rounded-2xl, body [data-tabpane] > section > .rounded-2xl {
+    border-radius: var(--r-card); border: 1px solid var(--bd-card); box-shadow: var(--sh); }
+  body .gt, body .gfull, body .cmp-top, body .cmp-chart, body .cmp-col { background: var(--bg-card); }
+  body .gt-fav { border-color: rgb(250 204 21 / .45); } body .gt.hl { border-color: var(--c-pos-bd); box-shadow: var(--ring); }
+  /* Tipografia */
+  body .gt-name, body .gfull-head b, body .cmp-col h3, body .icard > summary, body .umod-box h3, body [data-tabpane] h2 { font-size: 14px; font-weight: 700; letter-spacing: 0; }
+  body .gfull-head b { font-size: 15px; }
+  body .gtab th, body .gc-dates label, body .cmp-row label, body .gtools-l, body label[for="sortKey"], body .pv-mini { font-size: 12px; font-weight: 500; color: var(--c-mut); }
+  body .gtab th { text-transform: none; letter-spacing: 0; font-size: 11px; }
+  body .cmp-ref, body .cmp-it small, body .gt-empty, body .gt-n, body .ldr span, body #activeCount, body .pv-saved + .text-xs { font-size: 11.5px; font-weight: 400; color: var(--c-dim); }
+  /* Cores com significado fixo */
+  body .up, body .gtab .up, body .cmp-it .up, body .cmp-col h3.up { color: var(--c-pos); }
+  body .dn, body .gtab .dn, body .cmp-it .dn, body .cmp-col h3.dn { color: var(--c-neg); }
+  /* Etiquetas */
+  body .ctag, body .nova, body .cmp-chip small { font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 9999px; line-height: 1.5; }
+  body .nova { color: var(--c-info); background: rgb(14 165 233 / .15); border: 1px solid rgb(14 165 233 / .5); font-weight: 700; }
 </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
@@ -307,7 +363,7 @@
     <div class="ml-auto flex flex-nowrap items-center gap-2 text-sm min-w-0">
       <span id="updated" class="text-slate-400 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[46vw] sm:max-w-none">Carregando…</span>
       <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button id="btnCsv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">⬇ CSV</button>
+      <button id="btnCsv">↓ CSV</button>
       <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
     </div>
   </div>
@@ -427,7 +483,7 @@
 
 <div id="infoModal" class="hidden fixed inset-0 z-[100] bg-black/70 flex items-start sm:items-center justify-center p-2 sm:p-6">
   <div class="info-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-6 text-sm text-slate-300 shadow-2xl">
-    <button type="button" data-close class="sticky top-0 float-right -mt-1 -mr-1 w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 text-lg" aria-label="Fechar">✕</button>
+    <button type="button" data-close class="sticky top-0 float-right -mt-1 -mr-1" aria-label="Fechar">✕</button>
     <h2 class="text-lg font-bold text-slate-100 mb-1">Informações</h2>
     <details class="icard"><summary>Como funciona o consenso</summary><div class="ib">
     <h3>Fontes e ranking de prioridade</h3>
@@ -529,11 +585,11 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/ui.js?v=2"></script>
+<script src="/static/ui.js?v=3"></script>
 <script src="/static/app.js?v=25"></script>
 <script src="/static/previsao.js?v=7"></script>
 <script src="/static/grafico.js?v=7"></script>
-<script src="/static/grupos.js?v=6"></script>
+<script src="/static/grupos.js?v=7"></script>
 <script src="/static/comparar.js?v=4"></script>
 
 </body>
