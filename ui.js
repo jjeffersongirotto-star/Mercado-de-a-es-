@@ -46,3 +46,9 @@
       <g class="ldr-note"><rect x="84" y="92" width="30" height="5" rx="1.5" fill="rgb(6 78 59)"/></g>
     </g></svg>${txt ? `<span>${txt}</span>` : ''}</div>`;
 })();
+window.uiChoose = (msg, options) => new Promise((res) => {
+  const w = document.createElement('div'); w.className = 'umod';
+  w.innerHTML = `<div class="umod-box" role="dialog" aria-modal="true"><p></p><div class="umod-list">${options.map((o, i) => `<button type="button" data-i="${i}">${o.label}</button>`).join('')}</div><div class="umod-btns"><button type="button" class="umod-c">Cancelar</button></div></div>`;
+  w.querySelector('p').textContent = msg; document.body.appendChild(w);
+  w.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) { w.remove(); res(options[+b.dataset.i].value); } else if (e.target === w || e.target.closest('.umod-c')) { w.remove(); res(null); } });
+});

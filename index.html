@@ -253,6 +253,27 @@
   .gt-tabs .gper { margin: 0 0 0 auto; }
   .ggrid.reorg .gt { cursor: grab; } .ggrid.reorg .gt:not(.gt-fav) { outline: 1px dashed rgb(16 185 129 / .6); }
   .gx { width: 34px; height: 34px; border-radius: 9999px; display: grid; place-items: center; background: rgb(30 41 59); border: 1px solid rgb(71 85 105); color: rgb(226 232 240); font-size: 16px; }
+  .cmp-top { min-height: 30vh; border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .6); border-radius: 1rem; padding: .7rem; display: flex; flex-direction: column; gap: .55rem; }
+  .cmp-srch { position: relative; } .cmp-srch input { width: 100%; padding: .55rem .75rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .9rem; outline: none; }
+  .cmp-srch input:focus { border-color: rgb(16 185 129); }
+  .cmp-srch .pv-combo button[disabled] { opacity: .45; }
+  .cmp-row { display: flex; flex-wrap: wrap; gap: .45rem; } .cmp-row label { display: inline-flex; align-items: center; gap: .3rem; font-size: 12px; color: rgb(148 163 184); }
+  .cmp-row .sel { padding: .35rem .45rem; font-size: 13px; max-width: 46vw; } .cmp-row input:disabled { opacity: .4; }
+  .cmp-chips { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+  .cmp-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .25rem .2rem .55rem; border-radius: 9999px; border: 1px solid var(--cc); color: rgb(226 232 240); font-size: 12px; }
+  .cmp-chip.ref { background: rgb(6 78 59 / .4); } .cmp-chip small { font-size: 9px; color: rgb(110 231 183); font-weight: 700; } .cmp-chip.off { opacity: .4; }
+  .cmp-chip button { width: 20px; height: 20px; border-radius: 9999px; font-size: 11px; color: rgb(148 163 184); }
+  .cmp-swap { width: 34px; height: 30px; border-radius: .6rem; border: 1px solid rgb(51 65 85); background: rgb(30 41 59); font-size: 16px; color: rgb(110 231 183); }
+  .cmp-chart { border: 1px solid rgb(30 41 59); border-radius: 1rem; padding: .6rem; background: rgb(15 23 42 / .5); }
+  .cmp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+  .cmp-col { border: 1px solid rgb(30 41 59); border-radius: .9rem; padding: .5rem; background: rgb(15 23 42 / .5); min-width: 0; }
+  .cmp-col h3 { font-size: 13px; font-weight: 700; margin-bottom: .3rem; } .cmp-col h3.up, .cmp-it .up { color: rgb(52 211 153); } .cmp-col h3.dn, .cmp-it .dn { color: rgb(251 113 133); }
+  .cmp-f { width: 100%; padding: .3rem .5rem; border-radius: .5rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: 12px; margin-bottom: .3rem; outline: none; }
+  .cmp-it { display: grid; grid-template-columns: 1fr auto; gap: 0 .3rem; padding: .3rem 0; border-bottom: 1px solid rgb(30 41 59 / .7); font-size: 12.5px; }
+  .cmp-it b { color: rgb(226 232 240); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .cmp-it small { grid-column: 1 / -1; font-size: 10.5px; color: rgb(100 116 139); }
+  .cmp-ref { font-size: 11px; color: rgb(148 163 184); margin-bottom: .2rem; }
+  .umod-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .6rem; max-height: 50vh; overflow-y: auto; }
+  .umod-list button { text-align: left; padding: .5rem .7rem; border-radius: .6rem; border: 1px solid rgb(51 65 85); background: rgb(2 6 23); color: rgb(226 232 240); font-size: 14px; }
   .gtools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
   .gtools select { padding: .45rem .6rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .85rem; color: rgb(226 232 240); max-width: 100%; min-width: 0; }
   .gtools label { display: inline-flex; align-items: center; gap: .35rem; font-size: 12px; color: rgb(148 163 184); min-width: 0; }
@@ -292,6 +313,7 @@
   <nav class="tabs" role="tablist">
     <button type="button" data-tab="acoes" role="tab">Ações</button>
     <button type="button" data-tab="grupos" role="tab">Grupos</button>
+    <button type="button" data-tab="comparar" role="tab">Comparar</button>
     <button type="button" data-tab="previsao" role="tab">Previsão</button>
   </nav>
   <div data-tabpane="acoes" class="space-y-3">
@@ -353,6 +375,7 @@
   </div>
   </div>
   <div data-tabpane="grupos" class="hidden space-y-3"><div id="gruposRoot"></div></div>
+  <div data-tabpane="comparar" class="hidden space-y-3"><div id="compRoot"></div></div>
   <div data-tabpane="previsao" class="hidden space-y-3">
     <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4">
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
@@ -460,6 +483,11 @@
       <li><b>Patrimônio total</b>: só a rentabilidade, sem dividendos. <b>Patrimônio total com dividendos</b>: rentabilidade + dividendos reinvestidos todo mês.</li>
       <li><b>Retirada</b> (aparece se houver): valor retirado no mês. Com retiradas, as fórmulas de % continuam as mesmas (o aporte total não desconta retiradas).</li></ul>
     </div></details>
+    <details class="icard"><summary>Comparar, Novidades, CDB e Ouro</summary><div class="ib"><ul>
+      <li><b>Comparar</b>: busque e adicione ações e índices (Ibovespa, Dólar, CDB 100% do CDI, IPCA, Poupança, Ouro). O primeiro item é a referência (⇅ troca). Com o critério <b>Preço da ação</b>, compara a variação % entre as datas; com um indicador (DY, P/L, ROE…), compara os valores atuais só entre ações (índices e datas ficam bloqueados). “Renderam menos/mais” mostram cada item e a diferença em pontos para a referência; favoritos primeiro, depois a maior diferença.</li>
+      <li><b>Novidades</b>: as 10 listagens mais recentes pela primeira data de negociação (Yahoo, no Brasil; data de IPO do TradingView, no exterior). Etiqueta <b>NOVA</b> = listada há menos de 3 meses. Mudanças de ticker podem aparecer como listagem nova.</li>
+      <li><b>CDB 100% do CDI</b>: acumula a taxa CDI diária do Banco Central (SGS 12) × 100%, sem impostos.</li>
+      <li><b>Ouro</b>: contrato futuro de ouro (Yahoo, GC=F, US$/onça) × dólar PTAX do Banco Central, em R$ por onça; desde 11/2006.</li></ul></div></details>
     <details class="icard"><summary>Grupos</summary><div class="ib">
     <ul>
       <li>Usam só um ticker por empresa (e, exceto Favoritos e Pequenas e médias, só papéis com negociação média ≥ R$ 500 mil/dia; P/L ≥ 2 em Rentabilidade e Graham; DY &lt; 40% e EV/EBIT ≥ 1 para evitar distorções) e mostram o TOP 10, sempre ordenado por um percentual ou índice (nunca por R$), recalculado com os dados atuais. Toque no título para destacar e de novo para abrir em tela cheia (com filtros, fonte, ordenação e gráficos da tela principal; ✕ fecha).</li>
@@ -497,11 +525,12 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/ui.js?v=1"></script>
+<script src="/static/ui.js?v=2"></script>
 <script src="/static/app.js?v=24"></script>
 <script src="/static/previsao.js?v=6"></script>
-<script src="/static/grafico.js?v=6"></script>
+<script src="/static/grafico.js?v=7"></script>
 <script src="/static/grupos.js?v=6"></script>
+<script src="/static/comparar.js?v=1"></script>
 
 </body>
 </html>

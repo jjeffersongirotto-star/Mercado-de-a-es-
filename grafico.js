@@ -171,5 +171,5 @@
   const scan = (root) => (root.querySelectorAll ? root.querySelectorAll('.gchart:not([data-m])') : []).forEach(el => io.observe(el));
   new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && (n.matches?.('.gchart') ? io.observe(n) : scan(n))))).observe(document.body, { childList: true, subtree: true });
   scan(document);
-  window.mountChart = mount; window.gcRender = render;
+  window.mountChart = mount; window.gcRender = render; window.gcPricePts = pricePts; window.gcRatePts = ratePts;
 })();
