@@ -49,9 +49,9 @@
       const now = Date.now(); let start, end, kind;
       if (S.per === 'custom') {
         start = S.di ? Date.parse(S.di) : now - 365 * DAY; end = S.df ? Date.parse(S.df) + DAY - 1 : now;
-        kind = now - start > 5 * 365.25 * DAY ? 'm' : 'd';
+        kind = now - start > 9.9 * 365.25 * DAY ? 'm' : 'd';
       } else if (S.per === '1d') { kind = 'i'; start = 0; end = now + DAY; }
-      else { kind = 'd'; const n = parseInt(S.per); start = now - (S.per.endsWith('d') ? n * DAY : S.per.endsWith('m') ? 30.5 * DAY : n * 365.25 * DAY); end = now; }
+      else { kind = 'd'; const n = parseInt(S.per), s = new Date(now); if (S.per.endsWith('d')) s.setDate(s.getDate() - n); else if (S.per.endsWith('m')) s.setMonth(s.getMonth() - n); else s.setFullYear(s.getFullYear() - n); start = s.getTime(); end = now; }
       return { start, end, kind };
     }
     function paint() {
@@ -112,7 +112,7 @@
   // Cache no navegador (IndexedDB): mostra na hora e atualiza depois
   const mem = {};
   let dbp = null;
-  const db = () => dbp || (dbp = new Promise((res) => { try { const r = indexedDB.open('screenerB3-hist', 1); r.onupgradeneeded = () => r.result.createObjectStore('c'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }));
+  const db = () => dbp || (dbp = new Promise((res) => { try { try { indexedDB.deleteDatabase('screenerB3-hist'); } catch (e) { } const r = indexedDB.open('screenerB3-hist-b3', 1); r.onupgradeneeded = () => r.result.createObjectStore('c'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }));
   async function cget(k) {
     if (mem[k]) return mem[k];
     const d = await db(); if (!d) return null;
@@ -122,30 +122,40 @@
     const v = { at: Date.now(), pay }; mem[k] = v;
     const d = await db(); if (!d) return; try { d.transaction('c', 'readwrite').objectStore('c').put(v, k); } catch (e) { }
   }
+  // Base = último fechamento até o início do período (convenção usual: variação desde o fechamento anterior)
   function pricePts(d, start, end) {
-    const out = []; let base = null;
+    const out = []; let base = null, i0 = 0;
+    for (let i = 0; i < d.t.length; i++) { if (d.t[i] * 1000 <= start) i0 = i; else break; }
+    if (d.t.length && d.t[0] * 1000 <= start) { base = d.c[i0]; out.push([start, 0]); }
     for (let i = 0; i < d.t.length; i++) {
-      const ms = d.t[i] * 1000; if (ms < start - 0 || ms > end) continue;
+      const ms = d.t[i] * 1000; if (ms <= start || ms > end) continue;
       if (base == null) base = d.c[i];
       out.push([ms, (d.c[i] / base - 1) * 100]);
     }
     return out;
   }
+  // Índices mensais (IPCA, poupança): soma os meses do mês inicial em diante que já terminaram até o fim do período.
+  // CDI diário: acumula as taxas dos dias desde a data inicial até a final.
   function ratePts(d, start, end) {
-    const out = []; let cum = 1, first = true;
-    const s0 = iso(start), e0 = iso(end), sMonth = s0.slice(0, 7) + '-01';
+    const out = []; let cum = 1;
+    const s0 = iso(start), e0 = iso(end), monthly = d.d.length < 1000;
+    const sMonth = s0.slice(0, 7) + '-01';
+    out.push([start, 0]);
     for (let i = 0; i < d.d.length; i++) {
-      const x = d.d[i]; if (x < sMonth || x > e0) continue;
-      const monthly = d.d.length < 1000; // IPCA/poupança são mensais
-      if (!monthly && x < s0) continue;
-      if (first) { out.push([Math.max(start, Date.parse(x)), 0]); first = false; }
-      cum *= 1 + d.v[i] / 100;
-      const ms = monthly ? Math.min(end, Date.parse(x) + 30 * DAY) : Date.parse(x);
-      out.push([ms, (cum - 1) * 100]);
+      const x = d.d[i];
+      if (monthly) {
+        if (x < sMonth) continue;
+        const nx = new Date(Date.parse(x)); nx.setUTCMonth(nx.getUTCMonth() + 1);
+        const fim = nx.getTime(); if (fim > end + DAY) break;
+        cum *= 1 + d.v[i] / 100; out.push([Math.min(end, fim), (cum - 1) * 100]);
+      } else {
+        if (x < s0 || x > e0) continue;
+        cum *= 1 + d.v[i] / 100; out.push([Date.parse(x) + DAY, (cum - 1) * 100]);
+      }
     }
     return out;
   }
-
+  window.gcPts = { pricePts, ratePts };
   function render(plot, leg, series, start, end, kind) {
     const W = 600, H = 240, pad = 4;
     if (!series.length || !series[0].pts.length) { plot.innerHTML = '<div class="gc-load">Sem dados no período.</div>'; leg.innerHTML = ''; return; }

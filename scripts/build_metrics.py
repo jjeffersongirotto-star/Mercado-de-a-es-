@@ -2,15 +2,17 @@
 """Métricas por ticker para os Grupos (a partir do histórico mensal do Yahoo, range=max, com dividendos e desdobramentos):
 ret{n}: variação % do preço em n anos (1..5) · dy{n}: proventos médios por ano nos últimos n anos ÷ preço atual (%)
 prov12: proventos 12m ÷ preço (%) + bonificações 12m (%) · anual: proventos por ano (5 anos fechados) ÷ preço médio do ano (%)
-ytd: eventos do ano corrente [data, valor/ação, tipo]. Obs.: o Yahoo soma dividendos e JCP (valores brutos) sem distinguir.
+ytd: eventos do ano corrente [data-com, valor/ação, tipo, rótulo]. Preços: B3 COTAHIST (ajustados por desdobramentos/grupamentos/bonificações da B3).
+Proventos: B3 (últimos ~12 meses, com tipo JCP/Dividendo) e Yahoo antes disso (dividendos+JCP somados).
 Uso: build_metrics.py OUT_DIR  (grava OUT_DIR/metrics.json). DATA_JSON = /api/data local (senão baixa do app)."""
-import json, os, sys, time
+import gzip, json, os, sys, time
 from datetime import datetime, timezone
 import requests
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import universe
 
 out = sys.argv[1]
+HIST = os.environ.get("HIST_DIR") or os.path.join(out, "history4")
 if os.environ.get("DATA_JSON"):
     rows = json.load(open(os.environ["DATA_JSON"]))["rows"]
 else:
@@ -27,29 +29,40 @@ res, fail = {}, 0
 for r in kept:
     t = r["ticker"]
     try:
-        q = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{t}.SA", params={"range": "max", "interval": "1mo", "events": "div,split"},
-                         headers={"User-Agent": "Mozilla/5.0"}, timeout=(6, 25))
-        q.raise_for_status()
-        x = q.json()["chart"]["result"][0]
-        pts = [(a, b) for a, b in zip(x.get("timestamp") or [], x["indicators"]["quote"][0]["close"]) if b]
+        # Fonte: histórico oficial da B3 (COTAHIST, ajustado por eventos) gerado por build_cotahist.py
+        H = json.loads(gzip.decompress(open(os.path.join(HIST, t + ".json.gz"), "rb").read()))
+        pts = [(a, b) for a, b in zip(H["d"]["t"], H["d"]["c"]) if b]
         if len(pts) < 2:
             raise ValueError("vazio")
-        ev = x.get("events") or {}
-        divs = sorted((int(k), float(v["amount"])) for k, v in (ev.get("dividends") or {}).items())
-        spl = sorted((int(k), float(v["numerator"]) / float(v["denominator"])) for k, v in (ev.get("splits") or {}).items() if v.get("denominator"))
+        divs = [(a, b) for a, b, *_ in H["divs"]]
+        lab = {a: (x[2] if len(x) > 2 else "") for a, *x in [[d[0], d[1], d[2] if len(d) > 2 else ""] for d in H["divs"]]}
+        spl = [(a, m_, l_) for a, m_, l_ in H.get("splits", [])]
+        x = {"meta": {}}
         p = pts[-1][1]; tnow = pts[-1][0]
         ftd = (x.get("meta") or {}).get("firstTradeDate") or pts[0][0]
         m = {"p": round(p, 2), "first": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m"),
-             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"), "m10": [round(c, 2) for _, c in pts[-10:]],
-             "mc0": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m"), "mc": [round(c, 2) for _, c in pts]}
+             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"),              "mc0": None, "mc": None}
+        mm = {}
+        for ts, c in pts: mm[datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m")] = c
+        ks = sorted(mm); m["mc0"] = ks[0]; m["mc"] = [round(mm[k], 2) for k in ks]
+        dnow = datetime.fromtimestamp(tnow, timezone.utc)
+        def back(years=0, months=0):  # mesma data do calendário, n anos/meses antes
+            y, mo = dnow.year - years, dnow.month - months
+            while mo < 1: mo += 12; y -= 1
+            import calendar
+            return dnow.replace(year=y, month=mo, day=min(dnow.day, calendar.monthrange(y, mo)[1])).timestamp()
         for n in range(1, 6):
-            old = [c for ts, c in pts if ts <= tnow - n * 365.25 * 86400 + 20 * 86400]
+            b = back(years=n)
+            old = [c for ts, c in pts if ts <= b]  # último fechamento até a data de n anos atrás
             m[f"ret{n}"] = round((p / old[-1] - 1) * 100, 2) if old else None
             if old:
-                s = sum(v for ts, v in divs if ts > tnow - n * 365.25 * 86400)
+                s = sum(v for ts, v in divs if ts > b)
                 m[f"dy{n}"] = round(s / n / p * 100, 2)
-        d12 = sum(v for ts, v in divs if ts > tnow - 365.25 * 86400)
-        b12 = sum((rt - 1) * 100 for ts, rt in spl if ts > tnow - 365.25 * 86400 and 1 < rt <= 1.5)  # bonificação; acima disso é desdobramento
+        for n in (1, 2, 3, 6, 9):  # média simples dos fechamentos diários dos últimos n meses
+            w = [c for ts, c in pts if ts > back(months=n)]
+            m[f"avg{n}"] = round(sum(w) / len(w), 2) if w else None
+        d12 = sum(v for ts, v in divs if ts > back(years=1))
+        b12 = sum((rt - 1) * 100 for ts, rt, l_ in spl if ts > back(years=1) and l_.startswith("BONIF"))  # bonificações (B3)
         m["prov12"] = round(d12 / p * 100 + b12, 2)
         an = {}
         for y in range(Y - 5, Y):
@@ -58,11 +71,11 @@ for r in kept:
             if cl:
                 an[str(y)] = round(dv / (sum(cl) / len(cl)) * 100, 3)
         m["anual"] = an
-        m["ytd"] = [[datetime.fromtimestamp(ts, timezone.utc).strftime("%m/%Y"), round(v, 4), "provento"] for ts, v in divs if datetime.fromtimestamp(ts, timezone.utc).year == Y] + \
-                   [[datetime.fromtimestamp(ts, timezone.utc).strftime("%m/%Y"), round(rt, 4), "bonificação" if 1 < rt <= 1.5 else "desdobramento" if rt > 1 else "grupamento"] for ts, rt in spl if datetime.fromtimestamp(ts, timezone.utc).year == Y]
+        LB = {"JRS CAP PROPRIO": "JCP", "DIVIDENDO": "Dividendo", "RENDIMENTO": "Rendimento"}
+        m["ytd"] = [[datetime.fromtimestamp(ts, timezone.utc).strftime("%d/%m/%Y"), round(v, 4), "provento", LB.get(lab.get(ts, ""), "")] for ts, v in divs if datetime.fromtimestamp(ts, timezone.utc).year == Y] + \
+                   [[datetime.fromtimestamp(ts, timezone.utc).strftime("%d/%m/%Y"), round(rt, 4), "bonificação" if l_.startswith("BONIF") else "desdobramento" if rt > 1 else "grupamento"] for ts, rt, l_ in spl if datetime.fromtimestamp(ts, timezone.utc).year == Y]
         res[t] = m
     except Exception as e:
         fail += 1
-    time.sleep(0.25)
 json.dump({"fetched_at": now.isoformat(), "metrics": res}, open(os.path.join(out, "metrics.json"), "w"), separators=(",", ":"))
 print(f"métricas: {len(res)} ok, {fail} falhas")

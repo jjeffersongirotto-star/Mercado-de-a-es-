@@ -93,20 +93,20 @@
   const fmtD = (d) => d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '—';
   const PRE = [
     { id: 'valor', m: 1, name: 'Maior valorização', h: 'Valorização', per: true, calc: (n) => rowsK().filter(r => MX(r.ticker)['ret' + n] != null).map(r => [r, MX(r.ticker)['ret' + n]]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, pc(v), v]) },
-    { id: 'rent', name: 'Maior rentabilidade', t: 'atual', h: 'Lucro/valor', calc: () => rowsK().filter(r => r.v.pl >= 2).map(r => [r, 100 / r.v.pl]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
+    { id: 'rent', name: 'Maior rentabilidade', t: 'últimos 12 meses', h: 'Lucro/valor', calc: () => rowsK().filter(r => r.v.pl >= 2).map(r => [r, 100 / r.v.pl]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
     { id: 'dy', m: 1, name: 'Maiores pagadoras de dividendos', h: 'DY a.a.', per: true, calc: (n) => rowsK().map(r => [r, MX(r.ticker)['dy' + n] ?? (n === 1 ? r.v.dy : null)]).filter(x => x[1] > 0 && x[1] < 40).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
     { id: 'prov', m: 1, name: 'Mais proventos ao investidor', t: '12 meses', h: 'Proventos', calc: () => rowsK().map(r => [r, MX(r.ticker).prov12]).filter(x => x[1] > 0 && x[1] < 60).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
-    { id: 'peq', m: 1, name: 'Pequenas e médias promissoras', t: 'atual', h: 'Nota', calc: () => {
+    { id: 'peq', m: 1, name: 'Pequenas e médias promissoras', t: 'últimos 12 meses', h: 'Nota', calc: () => {
       const c = rowsAll().filter(r => { const v = r.v; const liq = v.vol30 ?? v.liq2m; return v.valmerc >= 3e8 && v.valmerc <= 1e10 && v.lpa > 0 && v.roe >= 12 && (v.cresc5a > 0 || v.lucro5a > 0) && (v.dlebit == null || v.dlebit < 3) && liq >= 1e6; });
       const a = pctRank(c, r => r.v.roe), b = pctRank(c, r => r.v.lucro5a ?? -1e9), d = pctRank(c, r => r.v.pl > 0 ? 1 / r.v.pl : 0);
       return c.map(r => [r, (a.get(r) + b.get(r) + d.get(r)) / 3 * 100]).sort((x, y) => y[1] - x[1]).map(([r, v]) => [r, F2.format(v), v]); } },
-    { id: 'magic', name: 'Magic Formula', t: 'atual', h: 'ROIC · EV/EBIT', calc: () => {
+    { id: 'magic', name: 'Magic Formula', t: 'últimos 12 meses', h: 'ROIC · EV/EBIT', calc: () => {
       const c = rowsK().filter(r => r.v.evebit >= 1 && r.v.roic != null && r.v.roic < 150);
       const r1 = new Map(c.slice().sort((a, b) => b.v.roic - a.v.roic).map((r, i) => [r, i])), r2 = new Map(c.slice().sort((a, b) => a.v.evebit - b.v.evebit).map((r, i) => [r, i]));
       return c.map(r => [r, r1.get(r) + r2.get(r)]).sort((a, b) => a[1] - b[1]).map(([r]) => [r, F2.format(r.v.roic) + '% · ' + F2.format(r.v.evebit)]); } },
-    { id: 'graham', name: 'Baratas pelo Graham', t: 'atual', h: 'Desconto', calc: () => rowsK().filter(r => r.v.lpa > 0 && r.v.vpa > 0 && r.v.preco > 0 && r.v.pl >= 2).map(r => [r, (Math.sqrt(22.5 * r.v.lpa * r.v.vpa) / r.v.preco - 1) * 100]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
+    { id: 'graham', name: 'Baratas pelo Graham', t: 'últimos 12 meses', h: 'Desconto', calc: () => rowsK().filter(r => r.v.lpa > 0 && r.v.vpa > 0 && r.v.preco > 0 && r.v.pl >= 2).map(r => [r, (Math.sqrt(22.5 * r.v.lpa * r.v.vpa) / r.v.preco - 1) * 100]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
     { id: 'consist', m: 1, name: 'Pagadoras consistentes', t: 'últimos 5 anos', h: 'DY médio · CV', calc: () => rowsK().map(r => { const an = Object.values(MX(r.ticker).anual || {}); if (an.length < 5 || an.some(x => !(x > 0))) return null; const m = an.reduce((a, b) => a + b, 0) / an.length, sd = Math.sqrt(an.reduce((a, b) => a + (b - m) ** 2, 0) / an.length); return [r, sd / m, m]; }).filter(Boolean).sort((a, b) => a[1] - b[1] || b[2] - a[2]).map(([r, cv, m]) => [r, F2.format(m) + '% · ' + F2.format(cv)]) },
-    { id: 'divida', name: 'Menos endividadas', t: 'atual', h: 'Dív.Líq/PL', calc: () => rowsK().filter(r => r.v.lpa > 0 && r.v.dlpl != null).map(r => [r, r.v.dlpl]).sort((a, b) => a[1] - b[1]).map(([r, v]) => [r, F2.format(v)]) },
+    { id: 'divida', name: 'Menos endividadas', t: 'últimos 12 meses', h: 'Dív.Líq/PL', calc: () => rowsK().filter(r => r.v.lpa > 0 && r.v.dlpl != null).map(r => [r, r.v.dlpl]).sort((a, b) => a[1] - b[1]).map(([r, v]) => [r, F2.format(v)]) },
     { id: 'quedas', m: 1, name: 'Maiores quedas', h: 'Variação', per: true, calc: (n) => rowsK().filter(r => MX(r.ticker)['ret' + n] != null).map(r => [r, MX(r.ticker)['ret' + n]]).filter(x => x[1] < 0).sort((a, b) => a[1] - b[1]).map(([r, v]) => [r, pc(v), v]) },
     { id: 'negoc', name: 'Mais negociadas', t: '30 dias', h: 'Giro/dia', calc: () => rowsK().filter(r => r.v.valmerc > 0 && (r.v.vol30 ?? r.v.liq2m) > 0).map(r => [r, (r.v.vol30 ?? r.v.liq2m) / r.v.valmerc * 100]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%']) },
     { id: 'novas', name: 'Novidades', t: 'listagens recentes', h: 'Listagem', calc: () => rowsAll().filter(r => listDate(r)).sort((a, b) => listDate(b).localeCompare(listDate(a))).map(r => [r, fmtD(listDate(r))]) },
@@ -117,7 +117,14 @@
   ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tabs: [], assign: {}, tab: 'all', sort: 'preco' }; ui.fav.avg = ui.fav.avg || 1;
   const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } };
   const favList = () => rowsAll().filter(r => FAVS.has(r.ticker));
-  const avgP = (r, n) => { const m = (MX(r.ticker).m10 || []).slice(-n); return m.length ? m.reduce((a, b) => a + b, 0) / m.length : null; };
+  // Preço médio: média dos fechamentos DIÁRIOS dos últimos n meses (histórico diário atualizado do servidor)
+  const DAILY = {}, pend = new Set(); let rt = null;
+  const avgP = (r, n) => {
+    const t = r.ticker, h = DAILY[t];
+    if (h) return avgLastMonths(h.t, h.c, n);
+    if (!pend.has(t)) { pend.add(t); fetch(`/api/history/${encodeURIComponent(t)}?kind=d`).then(x => x.ok ? x.json() : null).then(d => { if (d && d.t) DAILY[t] = d; clearTimeout(rt); rt = setTimeout(() => window.gruposRefresh && gruposRefresh(), 300); }).catch(() => { }); }
+    return MX(t)['avg' + n] ?? null;
+  };
   function favRows() {
     const f = ui.fav, s = f.sort || 'preco';
     let L = favList(); if (f.tab !== 'all' && f.tab !== 'prov') L = L.filter(r => f.assign[r.ticker] === f.tab);
@@ -144,8 +151,12 @@
   function favBody(full) {
     const f = ui.fav;
     if (f.tab === 'prov') {
-      const L = favList().map(r => { const ev = MX(r.ticker).ytd || [], p = r.v.preco || MX(r.ticker).p || 0; return [r, ev, p]; });
-      return L.length ? '<ul class="gt-list">' + L.map(([r, ev, p]) => `<li class="gp"><b>${escH(r.ticker)}</b><span class="gv">${ev.length ? ev.map(e => e[2] === 'provento' ? `${e[0]}: R$ ${F2.format(e[1])} (${F2.format(p ? e[1] / p * 100 : 0)}%)` : (e[2] === 'bonificação' ? `${e[0]}: bonificação ${F2.format((e[1] - 1) * 100)}%` : `${e[0]}: ${e[2]} ${F2.format(e[1])}:1`)).join(' · ') + ` — total ${F2.format(p ? ev.filter(e => e[2] === 'provento').reduce((a, e) => a + e[1], 0) / p * 100 : 0)}%` : 'sem proventos no ano'}</span></li>`).join('') + '</ul>' : '<p class="gt-empty">Nenhum favorito.</p>';
+      const parse = (s) => { const [d, m, y] = s.split('/'); return (y || '') + m + d; };
+      const L = favList().map(r => { const p = r.v.preco || MX(r.ticker).p || 0; return [r, (MX(r.ticker).ytd || []).slice().sort((a, b) => parse(b[0]).localeCompare(parse(a[0]))), p]; }).filter(x => x[1].length);
+      if (!L.length) return '<p class="gt-empty">Nenhum provento dos favoritos neste ano.</p>';
+      return '<div class="pcols">' + L.map(([r, ev, p]) => `<div class="pcol"><div class="pcol-h">${escH(r.ticker)}</div>${ev.map(e => e[2] === 'bonificação' || e[2] === 'desdobramento' || e[2] === 'grupamento'
+        ? `<div class="pcard bon"><span>${e[0].slice(0, 5)}</span><b>${e[2] === 'bonificação' ? 'Bonif. ' + F2.format((e[1] - 1) * 100) + '%' : e[2] + ' ' + F2.format(e[1]) + ':1'}</b></div>`
+        : `<div class="pcard"><span>${e[0].slice(0, 5)}${e[3] ? ' · ' + escH(e[3]) : ''}</span><b>R$ ${F2.format(e[1])}</b><em>${F2.format(p ? e[1] / p * 100 : 0)}%</em></div>`).join('')}</div>`).join('') + '</div>';
     }
     const R = favRows();
     if (!R.length) return '<p class="gt-empty">Toque na ☆ de uma empresa para favoritar.</p>';
@@ -163,7 +174,7 @@
   const starB = (id) => id === 'fav' ? '' : `<button type="button" class="gstar${ui.gstar.includes(id) ? ' on' : ''}" data-gstar="${escH(id)}" aria-label="Destacar grupo">${ui.gstar.includes(id) ? '★' : '☆'}</button>`;
   function tileHtml(id) {
     const d = groupData(id); if (!d) return '';
-    if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span><span class="gt-n">${d.n}</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div></div>`;
+    if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div></div>`;
     return `<div class="gt" data-id="${escH(id)}"><div class="gt-head" data-open="${escH(id)}">${starB(id)}<span class="gt-name">${escH(d.title)}</span></div>
       ${d.p ? perSel(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
       <div class="gt-list">${d.rows.length ? tbl(d.rows, d.h, false) : '<p class="gt-empty">Sem dados suficientes.</p>'}</div></div>`;
@@ -181,7 +192,7 @@
     if (fullId) { r.innerHTML = fullHtml(fullId); if (fullId) return; }
     r.innerHTML = `<section class="space-y-2">
       <div class="flex flex-wrap items-center gap-2"><h2 class="text-base font-bold mr-auto">Grupos</h2>
-        <button type="button" class="gbtn${reorg ? ' pri' : ''}" data-g="reorg">${reorg ? 'Concluir' : '⇅ Reorganizar'}</button>
+        <button type="button" class="gbtn" data-g="reorg">⇅ Reorganizar</button>
         ${state.country === 'br' ? `<button type="button" class="gbtn pri" data-g="new">＋ Criar</button>
         <button type="button" class="gbtn" data-g="export" title="Exportar grupos" aria-label="Exportar grupos">↓</button>
         <button type="button" class="gbtn" data-g="import" title="Importar grupos" aria-label="Importar grupos">↑</button>` : ''}
@@ -191,6 +202,33 @@
     if (sortable) { sortable.destroy(); sortable = null; }
     if (reorg && window.Sortable) sortable = Sortable.create($g('#gGrid'), { animation: 150, filter: '.gt-fav', preventOnFilter: false, onMove: (e) => !e.related.classList.contains('gt-fav'),
       onEnd: () => { ui.order = [...$g('#gGrid').children].map(x => x.dataset.id).filter(x => x !== 'fav'); saveUI(); } });
+  }
+  // Tela de reorganização: só os grupos escolhidos, numerados, ajustados para caber na tela
+  function openReorg(which) {
+    const ids = tileIds().filter(x => x !== 'fav' && (which === 'star') === ui.gstar.includes(x));
+    if (!ids.length) { uiAlert(which === 'star' ? 'Nenhum grupo favoritado. Toque na ☆ de um grupo.' : 'Não há outros grupos.'); return; }
+    const ov = document.createElement('div'); ov.className = 'rg-ov';
+    ov.innerHTML = `<div class="rg-top"><button type="button" class="gbtn" data-rg="cancel">Cancelar</button><b>${which === 'star' ? 'Favoritados' : 'Demais grupos'}</b><button type="button" class="gbtn pri" data-rg="save">Salvar</button></div><div class="rg-grid"></div>`;
+    document.body.appendChild(ov);
+    const grid = ov.querySelector('.rg-grid');
+    grid.innerHTML = ids.map(id => `<div class="rg-card" data-id="${escH(id)}"><span class="rg-n"></span><span class="rg-t">${escH(groupData(id)?.title || id)}</span><span class="rg-h">⠿</span></div>`).join('');
+    const num = () => [...grid.children].forEach((c, i) => { c.querySelector('.rg-n').textContent = i + 1; });
+    const fit = () => {
+      const n = ids.length, H = window.innerHeight - ov.querySelector('.rg-top').offsetHeight - 24, W = Math.min(window.innerWidth - 24, 900);
+      const h0 = 64, w0 = 340, gap = 8;
+      let s = Math.min(1, (H - gap * (n - 1)) / (n * h0)), cols = 1;
+      if (w0 * s < W / 2 && n > 1) { cols = 2; const r2 = Math.ceil(n / 2); s = Math.min(1, (H - gap * (r2 - 1)) / (r2 * h0)); }
+      const rows = Math.ceil(n / cols), ch = Math.max(26, h0 * s), cw = cols === 1 ? Math.min(W, w0) : Math.min(W / 2 - gap, w0);
+      grid.style.gridTemplateRows = `repeat(${rows}, ${ch}px)`; grid.style.gridTemplateColumns = `repeat(${cols}, ${cw}px)`;
+      grid.style.fontSize = Math.max(10, 15 * Math.min(1, ch / h0)) + 'px';
+    };
+    num(); fit(); window.addEventListener('resize', fit);
+    const so = window.Sortable ? Sortable.create(grid, { animation: 150, onSort: num }) : null;
+    ov.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-rg]'); if (!b) return;
+      if (b.dataset.rg === 'save') { const neu = [...grid.children].map(c => c.dataset.id); ui.order = neu.concat(tileIds().filter(x => x !== 'fav' && !neu.includes(x))); saveUI(); uiToast('Ordem salva'); }
+      so && so.destroy(); window.removeEventListener('resize', fit); ov.remove(); list();
+    });
   }
   window.gruposRefresh = () => { if (!$g('[data-tabpane="grupos"]').classList.contains('hidden')) list(); };
   $g('#gruposRoot').addEventListener('click', async (e) => {
@@ -210,7 +248,10 @@
     if (ft) { const k = ft.dataset.ftab; if (k === '+') { const n = ((await uiPrompt('Nome da nova aba:', '', { ok: 'Criar' })) || '').trim().slice(0, 30); if (!n) return; const id = 't' + Date.now().toString(36); ui.fav.tabs.push({ id, name: n }); ui.fav.tab = id; } else ui.fav.tab = k; saveUI(); list(); return; }
     const fr = e.target.closest('[data-fren]'); if (fr) { const t = ui.fav.tabs.find(x => x.id === fr.dataset.fren); const n = ((await uiPrompt('Novo nome da aba:', t.name)) || '').trim().slice(0, 30); if (n) { t.name = n; saveUI(); list(); } return; }
     const fd = e.target.closest('[data-fdel]'); if (fd) { const t = ui.fav.tabs.find(x => x.id === fd.dataset.fdel); if (t && await uiConfirm(`Excluir a aba "${t.name}"? As empresas continuam nos Favoritos.`, { ok: 'Excluir', danger: true })) { ui.fav.tabs = ui.fav.tabs.filter(x => x !== t); for (const k in ui.fav.assign) if (ui.fav.assign[k] === t.id) delete ui.fav.assign[k]; ui.fav.tab = 'all'; saveUI(); list(); } return; }
-    if (e.target.closest('[data-g="reorg"]')) { reorg = !reorg; list(); }
+    if (e.target.closest('[data-g="reorg"]')) {
+      const w = await uiChoose('Reorganizar quais grupos?', [{ label: '★ Favoritados', value: 'star' }, { label: 'Demais', value: 'rest' }]);
+      if (w) openReorg(w); return;
+    }
   });
   $g('#gruposRoot').addEventListener('change', (e) => {
     const p = e.target.dataset.per; if (p) { ui.per[p] = +e.target.value; saveUI(); list(); return; }

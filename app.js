@@ -211,6 +211,7 @@ function passes(r) {
   const q = norm($('#q').value.trim());
   if (q && !(r._s || norm(r.ticker + ' ' + r.nome)).includes(q)) return false;
   if (state.sector && state.sector !== 'Todos' && r.macro !== state.sector) return false;
+  const fx = $('#fIndex') && $('#fIndex').value; if (fx && !(r.ix && r.ix[fx])) return false;
   if (state.group && !state.selMode && !state.group.has(r.ticker)) return false;
   if ((!state.group || state.selMode) && $('#onlyLiquid').checked && !((r.v.liq2m || 0) > 0)) return false;
   for (const [k, x] of Object.entries(state.filters)) {
@@ -320,7 +321,7 @@ function blockHtml(r) {
         ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<button type="button" class="star${FAVS.has(r.ticker) ? ' on' : ''}" data-fav="${r.ticker}" aria-pressed="${FAVS.has(r.ticker)}" aria-label="Favoritar ${r.ticker}">${FAVS.has(r.ticker) ? '★' : '☆'}</button><div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>${window.isNova && isNova(r) ? '<span class="nova">NOVA</span>' : ''}
         <div class="ml-auto flex items-baseline gap-2 whitespace-nowrap"><span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}</div>
       </div>
-      ${tags || r.macro ? `<div class="flex flex-wrap items-center gap-1 mt-1">${tags}${r.macro && r.macro !== 'Outros' ? `<span class="ctag ctag-sec">${esc(r.macro)}</span>` : ''}</div>` : ''}
+      ${tags || r.macro || r.ix ? `<div class="flex flex-wrap items-center gap-1 mt-1">${tags}${r.macro && r.macro !== 'Outros' ? `<span class="ctag ctag-sec">${esc(r.macro)}</span>` : ''}${ixTags(r)}</div>` : ''}
       <div class="flex items-center gap-3 mt-1">
         <div class="min-w-0 flex-1">
           <div class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</div>
@@ -329,10 +330,13 @@ function blockHtml(r) {
         <button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
       </div>
     </div>
-    <div class="collapse-wrap"><div class="collapse-inner">${open ? chartSlot(r) + cardsHtml(r) : ''}</div></div>
+    <div class="collapse-wrap"><div class="collapse-inner">${open ? chartSlot(r) + ibovW(r) + cardsHtml(r) : ''}</div></div>
   </article>`;
 }
 
+const IX_SHOW = ['IBOV', 'IBXX', 'IBXL', 'SMLL', 'MLCX', 'IDIV', 'UTIL', 'IFNC', 'IMAT'];
+function ixTags(r) { return r.ix ? IX_SHOW.filter(k => r.ix[k]).map(k => `<span class="ctag ctag-ix" title="Índice B3 ${k}${r.ix[k][1] ? ' (' + r.ix[k][1] + ')' : ''}">${k}</span>`).join('') : ''; }
+function ibovW(r) { const x = r.ix && r.ix.IBOV; return x ? `<div class="text-xs text-slate-400 px-1 py-1">Peso no Ibovespa (B3): <b class="text-slate-100">${x[0].toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}%</b>${x[1] ? ` (via ${x[1]})` : ''}</div>` : ''; }
 function setBlockOpen(art, open) {
   const t = art.dataset.ticker, inner = art.querySelector('.collapse-inner'), btn = art.querySelector('.tgl');
   if (open) {
@@ -586,6 +590,7 @@ async function init() {
 let qTimer;
 $('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(apply, 60); });
 $('#onlyLiquid').addEventListener('change', apply);
+$('#fIndex') && $('#fIndex').addEventListener('change', apply);
 $('#btnClear').addEventListener('click', () => { $('#q').value = ''; clearFilters(); });
 $('#btnCsv').addEventListener('click', exportCsv);
 const infoOpen = (o) => { $('#infoModal').classList.toggle('hidden', !o); document.body.style.overflow = o ? 'hidden' : ''; };

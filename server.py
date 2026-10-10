@@ -329,7 +329,19 @@ def finalize(base, yf_store=None):
     cnt = {"red": 0, "amb": 0, "adj": 0}
     src_count = {}
     FIN = consensus.financial_tickers(base["rows"])
+    # Prioridade B3: papéis fora da lista oficial negociada (COTAHIST, 90 dias) saem; composição oficial dos índices
+    isbr = base.get("country", "br") == "br"
+    b3l, _ = snapshots.load("b3_listed", max_mem_age=6 * 3600) if isbr else (None, None)
+    listed = set((b3l or {}).get("tickers") or [])
+    if len(listed) < 200: listed = None
+    b3i, _ = snapshots.load("b3_indices", max_mem_age=6 * 3600) if isbr else (None, None)
+    IXC = {}
+    for ix, comp in ((b3i or {}).get("indices") or {}).items():
+        for cod, part in comp.items():
+            IXC.setdefault(cod[:4], {}).setdefault(ix, (cod, part))
     for r in base["rows"]:
+        if listed is not None and r["ticker"] not in listed and r["ticker"][-1:].isdigit():
+            continue
         S = dict(r.get("S") or {})
         if yf_store is not None:
             y = yf_store.get(r["ticker"])
@@ -338,6 +350,9 @@ def finalize(base, yf_store=None):
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
         if r["ticker"] in FIN: nr["fin"] = True
+        ixs = IXC.get(r["ticker"][:4])
+        if ixs:  # índices da empresa (qualquer classe; mostra a classe quando diferente da exibida)
+            nr["ix"] = {k: ([p, c] if c != r["ticker"] else [p]) for k, (c, p) in ixs.items()}
         consensus.apply_row(nr, CMP_FIELDS, divergente)
         bkk = set(nr.get("bk") or [])
         cnt["two"] = cnt.get("two", 0) + sum(1 for k_, m in (nr.get("cm") or {}).items() if m.get("t") == "pri" and k_ not in bkk and k_ not in nr["st"])
@@ -349,6 +364,7 @@ def finalize(base, yf_store=None):
         rows.append(nr)
     d = {k: v for k, v in base.items() if k != "rows"}
     d["rows"] = rows
+    if b3i: d["b3_ix_date"] = b3i.get("date")
     c = dict(base.get("counts") or {})
     c.update(cnt)
     c["adj"] = sum(1 for r in rows for m in (r.get("cm") or {}).values() if m.get("aj"))
@@ -589,6 +605,24 @@ def api_chart(ticker: str, kind: str = "d"):
 def api_profiles():
     d, _ = snapshots.load("profiles", max_mem_age=6 * 3600)
     return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=3600"})
+
+@app.get("/api/returns")
+def api_returns(di: str, df: str):
+    """Variação % de todas as ações mantidas entre di e df (diário quando há; senão mensal)."""
+    from datetime import datetime as _dt
+    rows = (cache.data or {}).get("rows") or []
+    import sys as _s
+    if os.path.join(BASE, "scripts") not in _s.path:
+        _s.path.insert(0, os.path.join(BASE, "scripts"))
+    import universe as _u
+    rows, _, _ = _u.universe(rows)
+    s0 = _dt.strptime(di, "%Y-%m-%d").timestamp() - 1
+    e0 = _dt.strptime(df, "%Y-%m-%d").timestamp() + 86399
+    tick = [r["ticker"] for r in rows]
+    H = history.all_closes(tick)
+    live = {r["ticker"]: (r.get("v") or {}).get("preco") for r in rows}
+    out = {t: history.period_return(H.get(t), s0, e0, live.get(t)) for t in tick}
+    return JSONResponse({k: v for k, v in out.items() if v is not None}, headers={"Cache-Control": "public, max-age=600"})
 
 @app.get("/api/metrics")
 def api_metrics():

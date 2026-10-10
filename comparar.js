@@ -96,8 +96,9 @@
     if (series.length) gcRender(plot, leg, series, start, end, kind);
     else { plot.innerHTML = '<div class="gc-nodata-msg">Sem informações no banco de dados</div>'; leg.innerHTML = ''; }
     if (S.all) {
-      const M = await metrics(); if (my !== seq) return;
-      for (const r of rows()) { if (S.items.includes(r.ticker)) continue; const v = monthRet(M[r.ticker], S.di, S.df); if (v != null) vals[r.ticker] = v; }
+      let R = {}; try { R = await (await fetch(`/api/returns?di=${S.di}&df=${S.df}`)).json(); } catch (e) { }
+      if (my !== seq) return;
+      for (const r of rows()) { if (S.items.includes(r.ticker)) continue; const v = R[r.ticker]; if (v != null) vals[r.ticker] = v; }
       for (const [id, , k] of IDX) if (vals[id] == null) { const d = anyP[k]; if (d && !d.error) { const pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end); if (pts.length) vals[id] = pts[pts.length - 1][1]; } }
     }
     cols(); window.__cmpMs = Math.round(performance.now() - t0);

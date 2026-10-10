@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import history, universe
 
 out = sys.argv[1]
-os.makedirs(os.path.join(out, "history"), exist_ok=True); os.makedirs(os.path.join(out, "history2"), exist_ok=True)
+os.makedirs(os.path.join(out, "history"), exist_ok=True); os.makedirs(os.path.join(out, "history3"), exist_ok=True)
 if os.environ.get("DATA_JSON"):
     rows = json.load(open(os.environ["DATA_JSON"]))["rows"]
 else:
@@ -26,13 +26,13 @@ tickers = [r["ticker"] for r in kept]
 at = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 ok = fail = 0
 if not os.environ.get("ONLY_PROFILES"):
-    for t in tickers + ["IBOV"]:
+    for t in ["IBOV"]:  # ações brasileiras: histórico oficial da B3 (build_cotahist.py); Yahoo só para o índice
         try:
             pay = {}
             for k in ("m", "d"):
                 pay[k] = history.yahoo(t, k); pay[k]["at"] = at
                 time.sleep(0.3)
-            with open(os.path.join(out, "history2", t + ".json.gz"), "wb") as f:
+            with open(os.path.join(out, "history3", t + ".json.gz"), "wb") as f:
                 f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
             ok += 1
         except Exception as e:
@@ -40,9 +40,12 @@ if not os.environ.get("ONLY_PROFILES"):
     for n in history.SGS:
         try:
             json.dump(history.bcb(n), open(os.path.join(out, "history", f"bcb_{n}.json"), "w"), separators=(",", ":"))
-        json.dump(history.gold(), open(os.path.join(out, "history", "gold.json"), "w"), separators=(",", ":"))
         except Exception as e:
             print("BCB", n, e, file=sys.stderr)
+    try:
+        json.dump(history.gold(), open(os.path.join(out, "history", "gold3.json"), "w"), separators=(",", ":"))
+    except Exception as e:
+        print("ouro", e, file=sys.stderr)
     print(f"histórico: {ok} ok, {fail} falhas")
 if not os.environ.get("ONLY_HISTORY"):
     import html as H, re

@@ -52,3 +52,15 @@ window.uiChoose = (msg, options) => new Promise((res) => {
   w.querySelector('p').textContent = msg; document.body.appendChild(w);
   w.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) { w.remove(); res(options[+b.dataset.i].value); } else if (e.target === w || e.target.closest('.umod-c')) { w.remove(); res(null); } });
 });
+// Média simples dos fechamentos diários dos últimos n meses (a partir do último pregão). t em segundos.
+window.avgLastMonths = function (t, c, n) {
+  if (!t || !t.length) return null;
+  const d = new Date(t[t.length - 1] * 1000), day = d.getUTCDate();
+  d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - n);
+  const dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, dim));
+  const cut = d.getTime() / 1000; let s = 0, k = 0;
+  for (let i = 0; i < t.length; i++) if (t[i] > cut && c[i] != null) { s += c[i]; k++; }
+  return k ? s / k : null;
+};
+if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths };

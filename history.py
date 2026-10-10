@@ -10,7 +10,7 @@ log = logging.getLogger("screener.hist")
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"}
 RAW = os.environ.get("SNAPSHOT_RAW_BASE",
                      "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data")
-KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("5y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
+KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("10y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
 _mem = {}
 
 def _ysym(t):
@@ -22,8 +22,14 @@ def yahoo(t, kind, rng=None):
     last = None
     for host in ("query1", "query2"):
         try:
+            # Mensal = derivado do diário: no Yahoo, intervalo 1mo e range=max+1d perdem/achatam proventos.
+            p = {"interval": "1d" if kind == "m" else itv, "events": "div,split"}
+            if rng == "max":
+                p.update(period1=0, period2=int(time.time()) + 86400)
+            else:
+                p["range"] = rng
             r = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{_ysym(t)}",
-                             params={"range": rng, "interval": itv, "events": "div,split"}, headers={"User-Agent": "Mozilla/5.0"}, timeout=(6, 20))
+                             params=p, headers={"User-Agent": "Mozilla/5.0"}, timeout=(6, 25))
             r.raise_for_status()
             res = r.json()["chart"]["result"][0]
             ts, cl = res.get("timestamp") or [], res["indicators"]["quote"][0]["close"]
@@ -31,6 +37,12 @@ def yahoo(t, kind, rng=None):
             if not pts:
                 raise ValueError("vazio")
             divs = sorted([int(k), float(v["amount"])] for k, v in (res.get("events", {}).get("dividends") or {}).items())
+            if kind == "m":  # um ponto por mês: data do 1º pregão do mês, fechamento do último pregão
+                mm = {}
+                for a, b in pts:
+                    k = time.strftime("%Y-%m", time.gmtime(a))
+                    mm[k] = (mm[k][0], b) if k in mm else (a, b)
+                pts = [mm[k] for k in sorted(mm)]
             return {"t": [p[0] for p in pts], "c": [round(p[1], 4) for p in pts], "div": divs, "source": "Yahoo Finance"}
         except Exception as e:
             last = e
@@ -62,7 +74,7 @@ def brapi(t, kind, rng=None):
 def snapshot(t, kind, rng=None):
     if kind == "i":
         raise RuntimeError("snapshot sem intradiário")
-    r = requests.get(f"{RAW}/history2/{t.upper()}.json.gz", timeout=(6, 30))
+    r = requests.get(f"{RAW}/history3/{t.upper()}.json.gz", timeout=(6, 30))
     r.raise_for_status()
     d = json.loads(gzip.decompress(r.content))[kind]
     d["source"] = "cópia diária (Yahoo, " + d.get("at", "?") + ")"
@@ -97,13 +109,81 @@ def _merge(old, new):
     divs.update({d[0]: d[1] for d in new.get("div", [])})
     return {"t": t + new["t"], "c": c + new["c"], "div": sorted([k, v] for k, v in divs.items()), "source": new["source"]}
 
+# ---------- Ações brasileiras: histórico oficial da B3 (COTAHIST), sem Yahoo ----------
+import re as _re, zipfile as _zf, io as _io
+_BR = _re.compile(r"[A-Z]{4}\d{1,2}")
+_h4 = {}
+_cotad = {}
+
+def is_br(t):
+    return bool(_BR.fullmatch(t))
+
+def _cota_day(d):
+    """Arquivo diário COTAHIST_D{ddmmaaaa}: {isin: (fechamento por ação, ts)}; None se ainda não publicado."""
+    k = d.strftime("%Y%m%d")
+    if k in _cotad:
+        return _cotad[k]
+    disk = _dload("cotad_" + k)
+    if disk is not None:
+        _cotad[k] = disk; return disk
+    try:
+        r = requests.get(f"https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D{d:%d%m%Y}.ZIP", headers=UA, timeout=(6, 40))
+        if r.status_code != 200 or r.content[:2] != b"PK":
+            return None
+        z = _zf.ZipFile(_io.BytesIO(r.content)); out = {}
+        for l in z.read(z.namelist()[0]).decode("latin1").splitlines():
+            if l.startswith("01") and l[24:27] == "010" and l[10:12] == "02":
+                out[l[230:242]] = round(int(l[108:121]) / 100 / (int(l[210:217]) or 1), 4)
+        _cotad[k] = out; _dsave("cotad_" + k, out)
+        return out
+    except Exception as e:
+        log.warning("COTAHIST diário %s: %s", k, e)
+        return None
+
+def b3hist(t):
+    c = _h4.get(t)
+    if c and time.time() - c[0] < 3 * 3600:
+        return c[1]
+    base = c[1] if c else _dload("h4_" + t)
+    if not base:
+        r = requests.get(f"{RAW}/history4/{t}.json.gz", timeout=(6, 30))
+        r.raise_for_status()
+        base = json.loads(gzip.decompress(r.content))
+    d = base["d"]
+    if d["t"]:
+        day = datetime.utcfromtimestamp(d["t"][-1]).date() + timedelta(days=1)
+        today = datetime.utcnow().date(); n = 0
+        while day <= today and n < 15:
+            if day.weekday() < 5:
+                f = _cota_day(datetime(day.year, day.month, day.day))
+                if f and base.get("isin") in f:
+                    ts = int(datetime(day.year, day.month, day.day, 13).replace(tzinfo=__import__("datetime").timezone.utc).timestamp())
+                    d["t"].append(ts); d["c"].append(f[base["isin"]]); n += 1
+                    m = base["m"]
+                    if m["t"] and time.strftime("%Y-%m", time.gmtime(m["t"][-1])) == day.strftime("%Y-%m"):
+                        m["c"][-1] = f[base["isin"]]
+                    else:
+                        m["t"].append(ts); m["c"].append(f[base["isin"]])
+            day += timedelta(days=1)
+    _h4[t] = (time.time(), base); _dsave("h4_" + t, base)
+    return base
+
+def b3get(t, kind):
+    h = b3hist(t)
+    if kind == "i":  # sem intradiário oficial gratuito: último pregão vs anterior
+        d = h["d"]; return {"t": d["t"][-2:], "c": d["c"][-2:], "div": [], "source": "B3 (COTAHIST) · fechamento", "daily": True}
+    x = dict(h[kind]); x["source"] = "B3 (COTAHIST, " + h["d"].get("at", "") + ")"
+    return x
+
 def get(t, kind):
     t = t.upper().strip()
+    if is_br(t) and kind in KINDS:
+        return b3get(t, kind)
     if t == "^BVSP":
         t = "IBOV"
     if kind not in KINDS or not t.replace("^", "").isalnum() or len(t) > 12:
         raise ValueError("parâmetros inválidos")
-    key, name = (t, kind), f"{t}_{kind}v2"
+    key, name = (t, kind), f"{t}_{kind}v4"
     c = _mem.get(key)
     if c and time.time() - c[0] < KINDS[kind][2]:
         return c[1]
@@ -165,10 +245,10 @@ def gold():
     c = _gold.get("g")
     if c and time.time() - c[0] < 6 * 3600:
         return c[1]
-    base = _dload("gold")
+    base = _dload("gold4")
     if not base:
         try:
-            r = requests.get(f"{RAW}/history/gold.json", timeout=(6, 20))
+            r = requests.get(f"{RAW}/history/gold3.json", timeout=(6, 20))
             if r.status_code == 200:
                 base = r.json()
         except Exception:
@@ -177,7 +257,7 @@ def gold():
     try:
         usd = bcb("usd"); ud = dict(zip(usd["d"], usd["v"])); keys = usd["d"]
         import bisect
-        for rng, itv in ((("5d", "1d"),) if out else (("max", "1mo"), ("5y", "1d"))):
+        for rng, itv in ((("5d", "1d"),) if out else (("max", "1mo"), ("10y", "1d"))):
             for host in ("query1", "query2"):
                 q = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/GC=F", params={"range": rng, "interval": itv}, headers={"User-Agent": "Mozilla/5.0"}, timeout=(6, 25))
                 if q.status_code == 200:
@@ -198,7 +278,7 @@ def gold():
     s2 = sorted(out.items())
     res = {"d": [a for a, _ in s2], "v": [b for _, b in s2]}
     _gold["g"] = (time.time(), res)
-    _dsave("gold", res)
+    _dsave("gold4", res)
     return res
 
 # ---------- Banco Central (SGS) ----------
@@ -247,3 +327,46 @@ def bcb(name):
     _bcb[name] = (time.time(), res)
     _dsave("bcb_" + name, res)
     return res
+
+# ---------- Retornos de todas as ações (aba Comparar → "Comparar com tudo") ----------
+_allc = {"at": 0, "d": {}}
+
+def _load_both(t):
+    try:
+        p = b3hist(t)
+        return t, {k: {"t": p[k]["t"], "c": p[k]["c"]} for k in ("d", "m")}
+    except Exception:
+        return t, None
+
+def all_closes(tickers):
+    from concurrent.futures import ThreadPoolExecutor
+    if time.time() - _allc["at"] > 6 * 3600:
+        _allc["d"] = {}; _allc["at"] = time.time()
+    miss = [t for t in tickers if t not in _allc["d"]]
+    if miss:
+        with ThreadPoolExecutor(16) as ex:
+            for t, v in ex.map(_load_both, miss):
+                _allc["d"][t] = v
+    return _allc["d"]
+
+def period_return(h, start_ts, end_ts, live=None):
+    """Base = último fechamento até start_ts; fim = último fechamento até end_ts (ou preço atual)."""
+    if not h:
+        return None
+    for k in ("d", "m"):
+        x = h.get(k)
+        if not x or not x["t"] or x["t"][0] > start_ts:
+            continue
+        b = e = None
+        for ts, c in zip(x["t"], x["c"]):
+            if c is None:
+                continue
+            if ts <= start_ts:
+                b = c
+            if ts <= end_ts:
+                e = c
+        if live and end_ts >= x["t"][-1]:
+            e = live
+        if b and e:
+            return round((e / b - 1) * 100, 4)
+    return None
