@@ -40,6 +40,7 @@ if not os.environ.get("ONLY_PROFILES"):
     for n in history.SGS:
         try:
             json.dump(history.bcb(n), open(os.path.join(out, "history", f"bcb_{n}.json"), "w"), separators=(",", ":"))
+        json.dump(history.gold(), open(os.path.join(out, "history", "gold.json"), "w"), separators=(",", ":"))
         except Exception as e:
             print("BCB", n, e, file=sys.stderr)
     print(f"histórico: {ok} ok, {fail} falhas")

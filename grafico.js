@@ -4,10 +4,12 @@
     { id: 'stock', label: 'Ação', color: '#34d399' },
     { id: 'ibov', label: 'Ibovespa', color: '#60a5fa' },
     { id: 'usd', label: 'Dólar', color: '#facc15' },
-    { id: 'cdi', label: 'CDI', color: '#f472b6' },
+    { id: 'cdi', label: 'CDB 100% do CDI', color: '#f472b6' },
     { id: 'ipca', label: 'Inflação (IPCA)', color: '#fb923c' },
     { id: 'poup', label: 'Poupança', color: '#a78bfa' },
+    { id: 'gold', label: 'Ouro', color: '#d4a373' },
   ];
+  window.GC_LINES = LINES;
   const PERIODS = [['1d', '1 dia'], ['7d', '7 dias'], ['1m', '1 mês'], ['1y', '1 ano'], ['2y', '2 anos'], ['3y', '3 anos'], ['4y', '4 anos'], ['5y', '5 anos']];
   const DAY = 864e5;
   const P2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' });
@@ -64,7 +66,7 @@
         const d = L.id === 'stock' ? sd : pay[L.id];
         if (!d || d.error) { skipped.push(L.label + (kind === 'i' ? '' : ' (indisponível)')); continue; }
         if (L.id === 'stock' || L.id === 'ibov') series.push({ ...L, label: L.id === 'stock' ? t : L.label, pts: pricePts(d, start, end) });
-        else if (L.id === 'usd') series.push({ ...L, pts: pricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) });
+        else if (L.id === 'usd' || L.id === 'gold') series.push({ ...L, pts: pricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) });
         else series.push({ ...L, pts: ratePts(d, start, end) });
       }
       if (!series.length) { plot.innerHTML = '<div class="gc-load">Marque ao menos uma linha.</div>'; q('.gc-leg').innerHTML = ''; }

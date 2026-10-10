@@ -148,7 +148,58 @@ def chart(t, kind):
                 out[n] = {"d": b["d"][i0:], "v": b["v"][i0:]}
             except Exception as e:
                 out[n] = {"error": str(e)[:120]}
+        try:
+            b = gold()
+            t0 = out["stock"]["t"][0] if out["stock"].get("t") else 0
+            cut = datetime.fromtimestamp(t0 - 40 * 86400).strftime("%Y-%m-%d")
+            i0 = next((i for i, x in enumerate(b["d"]) if x >= cut), len(b["d"]))
+            out["gold"] = {"d": b["d"][i0:], "v": b["v"][i0:]}
+        except Exception as e:
+            out["gold"] = {"error": str(e)[:120]}
     return out
+
+# ---------- Ouro em reais (Yahoo GC=F em US$/onça × dólar PTAX do BCB) ----------
+_gold = {}
+
+def gold():
+    c = _gold.get("g")
+    if c and time.time() - c[0] < 6 * 3600:
+        return c[1]
+    base = _dload("gold")
+    if not base:
+        try:
+            r = requests.get(f"{RAW}/history/gold.json", timeout=(6, 20))
+            if r.status_code == 200:
+                base = r.json()
+        except Exception:
+            pass
+    out = dict(zip(base["d"], base["v"])) if base else {}
+    try:
+        usd = bcb("usd"); ud = dict(zip(usd["d"], usd["v"])); keys = usd["d"]
+        import bisect
+        for rng, itv in ((("5d", "1d"),) if out else (("max", "1mo"), ("5y", "1d"))):
+            for host in ("query1", "query2"):
+                q = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/GC=F", params={"range": rng, "interval": itv}, headers={"User-Agent": "Mozilla/5.0"}, timeout=(6, 25))
+                if q.status_code == 200:
+                    break
+            q.raise_for_status()
+            x = q.json()["chart"]["result"][0]
+            for ts, cl in zip(x.get("timestamp") or [], x["indicators"]["quote"][0]["close"]):
+                if not cl:
+                    continue
+                d = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d")
+                i = bisect.bisect_right(keys, d) - 1
+                if i >= 0:
+                    out[d] = round(cl * ud[keys[i]], 2)
+    except Exception as e:
+        if not out:
+            raise
+        log.warning("ouro incremental falhou: %s", e)
+    s2 = sorted(out.items())
+    res = {"d": [a for a, _ in s2], "v": [b for _, b in s2]}
+    _gold["g"] = (time.time(), res)
+    _dsave("gold", res)
+    return res
 
 # ---------- Banco Central (SGS) ----------
 SGS = {"cdi": 12, "ipca": 433, "poup": 25, "usd": 1}

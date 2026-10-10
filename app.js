@@ -304,7 +304,7 @@ function blockHtml(r) {
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
-        ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<button type="button" class="star${FAVS.has(r.ticker) ? ' on' : ''}" data-fav="${r.ticker}" aria-pressed="${FAVS.has(r.ticker)}" aria-label="Favoritar ${r.ticker}">${FAVS.has(r.ticker) ? '★' : '☆'}</button><div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>
+        ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<button type="button" class="star${FAVS.has(r.ticker) ? ' on' : ''}" data-fav="${r.ticker}" aria-pressed="${FAVS.has(r.ticker)}" aria-label="Favoritar ${r.ticker}">${FAVS.has(r.ticker) ? '★' : '☆'}</button><div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>${window.isNova && isNova(r) ? '<span class="nova">NOVA</span>' : ''}
         <div class="ml-auto flex items-baseline gap-2 whitespace-nowrap"><span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}</div>
       </div>
       ${tags || r.macro ? `<div class="flex flex-wrap items-center gap-1 mt-1">${tags}${r.macro && r.macro !== 'Outros' ? `<span class="ctag ctag-sec">${esc(r.macro)}</span>` : ''}</div>` : ''}

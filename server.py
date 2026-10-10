@@ -334,7 +334,7 @@ def finalize(base, yf_store=None):
         if yf_store is not None:
             y = yf_store.get(r["ticker"])
             if y: S["yf"] = {k: x for k, x in y.items() if x is not None}
-        nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur")}
+        nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur", "ipo")}
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
         if r["ticker"] in FIN: nr["fin"] = True
@@ -369,7 +369,7 @@ def build_foreign(country):
     for t, x in tv.items():
         m = x["m"]
         rows.append({"ticker": t, "nome": m.get("nome"), "setor": m.get("setor"), "subsetor": m.get("subsetor"),
-                     "var": m.get("var"), "cur": m.get("cur"), "S": {"tv": x["v"]}})
+                     "var": m.get("var"), "cur": m.get("cur"), "ipo": m.get("ipo"), "S": {"tv": x["v"]}})
     rows.sort(key=lambda r: -(r["S"]["tv"].get("valmerc") or 0))
     now = datetime.now(timezone.utc)
     base = {"country": country, "currency": tradingview.COUNTRIES[country][2],

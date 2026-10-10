@@ -38,7 +38,9 @@ for r in kept:
         divs = sorted((int(k), float(v["amount"])) for k, v in (ev.get("dividends") or {}).items())
         spl = sorted((int(k), float(v["numerator"]) / float(v["denominator"])) for k, v in (ev.get("splits") or {}).items() if v.get("denominator"))
         p = pts[-1][1]; tnow = pts[-1][0]
-        m = {"p": round(p, 2), "first": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m")}
+        ftd = (x.get("meta") or {}).get("firstTradeDate") or pts[0][0]
+        m = {"p": round(p, 2), "first": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m"),
+             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"), "m10": [round(c, 2) for _, c in pts[-10:]]}
         for n in range(1, 6):
             old = [c for ts, c in pts if ts <= tnow - n * 365.25 * 86400 + 20 * 86400]
             m[f"ret{n}"] = round((p / old[-1] - 1) * 100, 2) if old else None
