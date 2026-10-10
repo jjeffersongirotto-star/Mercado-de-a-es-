@@ -195,6 +195,18 @@ function buildSort() {
 function updateSortDir() { $('#sortDir').innerHTML = state.sortDir > 0 ? '<span class="sd-ic">1→9</span> Menor → maior' : '<span class="sd-ic">9→1</span> Maior → menor'; }
 const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' ? r.var : val(r, k));
 
+// Ordem das buscas: 0 ticker começa com · 1 ticker contém · 2 nome · 3 setor · 4 descrição/atividade · 9 sem relação
+function searchRank(r, q) {
+  if (!q) return 0;
+  const t = norm(r.ticker);
+  if (t.startsWith(q)) return 0;
+  if (t.includes(q)) return 1;
+  if (norm(r.nome).includes(q)) return 2;
+  if (norm([r.setor, r.subsetor, r.psetor, r.pind, r.macro].filter(Boolean).join(' ')).includes(q)) return 3;
+  if ((r._s || '').includes(q)) return 4;
+  return 9;
+}
+window.searchRank = searchRank;
 function passes(r) {
   const q = norm($('#q').value.trim());
   if (q && !(r._s || norm(r.ticker + ' ' + r.nome)).includes(q)) return false;
@@ -220,6 +232,7 @@ function apply() {
   });
   if (state.groupRank && state.group) state.filtered.sort((x, y) => (state.groupRank.get(x.ticker) ?? 1e9) - (state.groupRank.get(y.ticker) ?? 1e9));
   else if (FAVS.size) state.filtered = state.filtered.filter(r => FAVS.has(r.ticker)).concat(state.filtered.filter(r => !FAVS.has(r.ticker)));
+  { const q = norm($('#q').value.trim()); if (q) { const rk = new Map(state.filtered.map(r => [r, searchRank(r, q)])); state.filtered.sort((x, y) => rk.get(x) - rk.get(y)); } }
   $('#count').textContent = F0.format(state.filtered.length);
   if (!state.data || !(state.data.rows || []).length) return;
   $('#results').innerHTML = ''; state.shown = 0;

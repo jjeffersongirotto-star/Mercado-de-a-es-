@@ -174,7 +174,7 @@ if (typeof document !== 'undefined') {
     function show() {
       const q = nrm(inp.value.trim());
       const list = rowsAll().filter(r => !q || r.ticker.toLowerCase().startsWith(q) || (r._s || nrm(r.ticker + ' ' + r.nome)).includes(q))
-        .sort((a, b) => (b.ticker.toLowerCase().startsWith(q) ? 1 : 0) - (a.ticker.toLowerCase().startsWith(q) ? 1 : 0)).slice(0, 30);
+        .map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30);
       box.innerHTML = list.length ? list.map(r => `<button type="button" data-t="${r.ticker}"><b>${r.ticker}</b><span class="pv-cn">${escP(r.nome || '')}</span><span class="pv-cs">${escP(r.macro || r.setor || '')}</span></button>`).join('')
         : '<div class="pv-cempty">Nenhuma empresa encontrada.</div>';
       box.classList.remove('hidden');

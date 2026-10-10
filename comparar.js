@@ -41,7 +41,7 @@
     if (!q) { d.classList.add('hidden'); return; }
     const ind = S.crit !== 'preco';
     const idx = IDX.filter(x => norm(x[1]).includes(q) && !S.items.includes(x[0])).map(x => ({ id: x[0], t: x[1], s: 'índice', off: ind }));
-    const st = rows().filter(r => !S.items.includes(r.ticker) && (r._s ? r._s.includes(q) : norm(r.ticker + ' ' + r.nome).includes(q))).slice(0, 30).map(r => ({ id: r.ticker, t: r.ticker, s: r.nome || '' }));
+    const st = rows().filter(r => !S.items.includes(r.ticker) && (r._s ? r._s.includes(q) : norm(r.ticker + ' ' + r.nome).includes(q))).map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30).map(r => ({ id: r.ticker, t: r.ticker, s: r.nome || '' }));
     const L = idx.concat(st);
     d.innerHTML = L.length ? L.map(o => `<button type="button" data-add="${esc(o.id)}"${o.off ? ' disabled' : ''}><b>${esc(o.t)}</b><span>${esc(o.s)}${o.off ? ' · indisponível para indicadores' : ''}</span></button>`).join('') : '<div class="px-3 py-2 text-xs text-slate-500">Nada encontrado.</div>';
     d.classList.remove('hidden');
