@@ -33,6 +33,24 @@ if (typeof document !== 'undefined') {
   const st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })() ||
     { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
   if (!Array.isArray(st.ex)) st.ex = [];
+  st.ret.forEach(r => { if (r.ok === undefined) r.ok = true; }); st.ex.forEach(r => { if (r.ok === undefined) r.ok = true; });
+  function toast(msg) {
+    let t = document.getElementById('pvToast');
+    if (!t) { t = document.createElement('div'); t.id = 'pvToast'; t.className = 'pv-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1800);
+  }
+  // botões salvar/editar/apagar das linhas (Retiradas e Aportes extraordinários)
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rowact]'); if (!b) return;
+    const [kind, act, i] = b.dataset.rowact.split(':'), arr = kind === 'ret' ? st.ret : st.ex, r = arr[+i]; if (!r) return;
+    if (act === 'save') {
+      if (kind === 'ex' && r.t === 'p' && !(r.n >= 2)) { toast('Intervalo deve ser inteiro ≥ 2'); return; }
+      r.ok = true; toast(kind === 'ret' ? 'Retirada salva' : 'Aporte salvo');
+    } else if (act === 'edit') r.ok = false;
+    else if (act === 'del') { if (!confirm(kind === 'ret' ? 'Apagar esta retirada?' : 'Apagar este aporte?')) return; arr.splice(+i, 1); toast(kind === 'ret' ? 'Retirada apagada' : 'Aporte apagado'); }
+    if (kind === 'ret') st.ret.sort((a, b) => a.m - b.m);
+    save(); renderRet(); renderEx(); applyMode(); compute();
+  });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
   let rows = [], shownRows = PAGE_ROWS, hist = null, histT = '';
 
@@ -73,16 +91,19 @@ if (typeof document !== 'undefined') {
   function renderRet() {
     const box = el('pvRet');
     if (!st.ret.length) { box.innerHTML = '<p class="text-xs text-slate-500">Nenhuma retirada. Toque em <b>+</b> para adicionar.</p>'; return; }
-    box.innerHTML = st.ret.map((r, i) => `<div class="flex items-center gap-1.5" data-i="${i}">
+    box.innerHTML = st.ret.map((r, i) => r.ok ? `<div class="pv-saved" data-i="${i}"><span>${r.v > 0 ? brl.format(r.v) + '/mês' : 'Encerrar retiradas'} a partir do mês <b>${r.m}</b></span>
+        <button type="button" class="pv-lnk" data-rowact="ret:edit:${i}">Editar</button><button type="button" class="pv-lnk dan" data-rowact="ret:del:${i}">Apagar</button></div>`
+      : `<div class="flex flex-wrap items-center gap-1.5" data-i="${i}">
       <label class="pv-mini">R$<input inputmode="decimal" class="pv-in" style="width:7.5em" data-f="v" value="${fmtIn(r.v, 2)}"></label>
       <label class="pv-mini">mês<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="m" value="${r.m || ''}"></label>
-      <button type="button" class="pv-x" data-del="${i}" aria-label="Remover retirada">✕</button></div>`).join('');
+      <button type="button" class="pv-x" data-del="${i}" aria-label="Remover retirada">✕</button>
+      <button type="button" class="pv-ok" data-rowact="ret:save:${i}">Retirada</button><span class="text-[10.5px] text-slate-500">rascunho (não entra no cálculo)</span></div>`).join('');
   }
   el('pvRet').addEventListener('change', (e) => {
     const row = e.target.closest('[data-i]'); if (!row) return;
     const r = st.ret[+row.dataset.i]; const f = e.target.dataset.f;
     r[f] = f === 'm' ? Math.max(1, Math.min(MAXM, Math.round(num(e.target.value)))) : Math.max(0, num(e.target.value));
-    st.ret.sort((a, b) => a.m - b.m); save(); setTimeout(() => { fill(); compute(); }, 0);
+    save(); setTimeout(() => { compute(); }, 0);
   });
   el('pvRet').addEventListener('input', (e) => {
     const row = e.target.closest('[data-i]'); if (!row) return;
@@ -96,7 +117,7 @@ if (typeof document !== 'undefined') {
   });
   el('pvAddRet').addEventListener('click', () => {
     const last = st.ret[st.ret.length - 1];
-    st.ret.push({ v: 0, m: last ? Math.min(MAXM, last.m + 12) : 180 }); fill(); save();
+    st.ret.push({ v: 0, m: last ? Math.min(MAXM, last.m + 12) : 180, ok: false }); fill(); save();
     const ins = el('pvRet').querySelectorAll('input[data-f="v"]'); ins[ins.length - 1]?.focus();
   });
   // Aportes extraordinários: t = 'm' (mensal, substitui), 'u' (único), 'p' (por período, a cada n meses)
@@ -104,12 +125,16 @@ if (typeof document !== 'undefined') {
   function renderEx() {
     const box = el('pvEx');
     if (!st.ex.length) { box.innerHTML = '<p class="text-xs text-slate-500">Nenhum aporte extra. Toque em <b>+</b> para adicionar.</p>'; return; }
-    box.innerHTML = st.ex.map((r, i) => `<div class="pv-ex-row" data-x="${i}">
+    const exTxt = (r) => r.t === 'm' ? (r.v > 0 ? `Aporte mensal de ${brl.format(r.v)} a partir do mês <b>${r.m}</b>` : `Encerrar aportes a partir do mês <b>${r.m}</b>`)
+      : r.t === 'u' ? `Aporte único de ${brl.format(r.v)} no mês <b>${r.m}</b>` : `${brl.format(r.v)} a cada ${r.n} meses a partir do mês <b>${r.m}</b>`;
+    box.innerHTML = st.ex.map((r, i) => r.ok ? `<div class="pv-saved" data-x="${i}"><span>${exTxt(r)}</span>
+        <button type="button" class="pv-lnk" data-rowact="ex:edit:${i}">Editar</button><button type="button" class="pv-lnk dan" data-rowact="ex:del:${i}">Apagar</button></div>` : `<div class="pv-ex-row" data-x="${i}">
       <select data-f="t" aria-label="Tipo">${EXT.map(([k, l]) => `<option value="${k}"${r.t === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       <label class="pv-mini">R$<input inputmode="decimal" class="pv-in" style="width:7em" data-f="v" value="${fmtIn(r.v, 2)}"></label>
       <label class="pv-mini">mês<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="m" value="${r.m || ''}"></label>
       ${r.t === 'p' ? `<label class="pv-mini">a cada<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="n" value="${r.n || ''}">meses</label>` : ''}
       <button type="button" class="pv-x" data-xdel="${i}" aria-label="Remover aporte">✕</button>
+      <button type="button" class="pv-ok" data-rowact="ex:save:${i}">Aporte</button><span class="text-[10.5px] text-slate-500">rascunho</span>
       ${r.t === 'p' && !(r.n >= 2) ? '<span class="text-[11px] text-rose-300 basis-full">Intervalo deve ser um número inteiro de meses ≥ 2.</span>' : ''}</div>`).join('');
   }
   function setEx(e, final) {
@@ -119,22 +144,22 @@ if (typeof document !== 'undefined') {
     if (f === 'v') r.v = Math.max(0, num(raw));
     if (f === 'm') r.m = Math.max(1, Math.min(MAXM, Math.round(num(raw)) || 1));
     if (f === 'n') { const n = Number(String(raw).replace(',', '.')); r.n = Number.isInteger(n) && n >= 2 ? n : null; }
-    if (final) { save(); setTimeout(() => { renderEx(); compute(); }, 0); } else liveCompute();
+    save(); liveCompute(); if (final && f === 'n') { const row2 = e.target.closest('[data-x]'); const warn = row2.querySelector('.text-rose-300'); if (warn && r.n >= 2) warn.remove(); }
   }
   el('pvEx').addEventListener('input', (e) => { if (e.target.tagName === 'INPUT') setEx(e, false); });
   el('pvEx').addEventListener('change', (e) => setEx(e, true));
   el('pvEx').addEventListener('click', (e) => { const b = e.target.closest('[data-xdel]'); if (!b) return; st.ex.splice(+b.dataset.xdel, 1); save(); renderEx(); compute(); });
-  el('pvAddEx').addEventListener('click', () => { st.ex.push({ t: 'u', v: 0, m: 12 }); save(); renderEx(); const ins = el('pvEx').querySelectorAll('input[data-f="v"]'); ins[ins.length - 1]?.focus(); });
+  el('pvAddEx').addEventListener('click', () => { st.ex.push({ t: 'u', v: 0, m: 12, ok: false }); save(); renderEx(); const ins = el('pvEx').querySelectorAll('input[data-f="v"]'); ins[ins.length - 1]?.focus(); });
   function apAt(m, w) {
     let reg = st.ap, extra = 0;
-    for (const r of st.ex.slice().sort((a, b) => a.m - b.m)) {
+    for (const r of st.ex.filter(x => x.ok).sort((a, b) => a.m - b.m)) {
       if (r.t === 'm' && r.m <= m) reg = r.v;
       else if (r.t === 'u' && r.m === m) extra += r.v;
       else if (r.t === 'p' && r.n >= 2 && m >= r.m && (m - r.m) % r.n === 0) extra += r.v;
     }
     return { reg: w > 0 ? 0 : reg, extra };
   }
-  const wAt = (m) => { if (st.proj) return 0; let w = 0; for (const r of st.ret.slice().sort((a, b) => a.m - b.m)) if (r.m <= m) w = r.v; return w; };
+  const wAt = (m) => { if (st.proj) return 0; let w = 0; for (const r of st.ret.filter(x => x.ok).sort((a, b) => a.m - b.m)) if (r.m <= m) w = r.v; return w; };
 
   // Ação (modo histórico)
   function tickerList() { }
@@ -266,7 +291,7 @@ if (typeof document !== 'undefined') {
 
   const COLS = [['m', 'Mês', 'pv-c-m'], ['va', 'Valorização total', 'pv-c-p'], ['pa', '% Aporte', 'pv-c-p'], ['pv', '% Valorização', 'pv-c-p'], ['pd', '% Dividendos', 'pv-c-p'], ['ap', 'Aporte mensal', 'pv-c-ap'], ['apT', 'Aporte total', 'pv-c-ap'], ['rent', 'Rentabilidade mensal', 'pv-c-r'],
     ['div', 'Dividendo mensal', 'pv-c-d'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Patrimônio total', 'pv-c-r'], ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d']];
-  const hasW = () => st.ret.some(r => r.v > 0);
+  const hasW = () => !st.proj && st.ret.some(r => r.ok && r.v > 0);
   const cols = () => hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS;
   const PP = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const pcell = (r, k) => { const p = pvPcts(r.apT, r.sem, r.com)[k]; if (p == null) return ['—', '']; const cls = k === 'pa' ? (p > 1 ? 'neg' : 'pos') : (p < 0 ? 'neg' : p > 0 ? 'pos' : ''); return [PP.format(p * 100) + '%', cls]; };
@@ -282,7 +307,7 @@ if (typeof document !== 'undefined') {
     const hh = head();
     if (el('pvSumHead').innerHTML !== hh || !el('pvMes')) {
       el('pvSumHead').innerHTML = hh; el('pvSumBody').innerHTML = line(r);
-      el('pvSumBody').querySelector('td').innerHTML = `<input id="pvMes" inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" placeholder="1" value="${st.mes || ''}" aria-label="Mês">`;
+      el('pvSumBody').querySelector('td').innerHTML = `<input id="pvMes" inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.4em;display:block;margin:0 auto" placeholder="1" value="${st.mes || ''}" aria-label="Mês">`;
       const upd = deb(() => { st.mes = String(Math.max(0, Math.round(num(el('pvMes').value))) || ''); shownRows = PAGE_ROWS; save(); renderAll(); });
       el('pvMes').addEventListener('input', upd);
     } else {
@@ -297,21 +322,8 @@ if (typeof document !== 'undefined') {
     el('pvCount').textContent = `Mostrando meses ${rows[s].m}–${rows[end - 1].m} de ${rows.length}`;
     syncWidths();
   }
-  // Larguras: a tabela principal (auto, títulos quebram) define; o resumo copia e rola junto
-  function syncWidths() {
-    const sumT = el('pvSumHead').closest('table');
-    const ths = [...el('pvHead').querySelectorAll('th')];
-    const sh = [...el('pvSumHead').querySelectorAll('th')], sb = [...el('pvSumBody').querySelectorAll('td')];
-    ths.forEach(th => th.style.minWidth = '');
-    const ws = ths.map(th => th.getBoundingClientRect().width);
-    ws.forEach((w, i) => { if (sh[i]) sh[i].style.width = w + 'px'; if (sb[i]) sb[i].style.width = w + 'px'; });
-    sumT.style.width = ws.reduce((a, b) => a + b, 0) + 'px';
-    el('pvSumScroll').scrollLeft = el('pvMainScroll').scrollLeft;
-  }
-  let syncing = false;
-  for (const [a, b] of [['pvSumScroll', 'pvMainScroll'], ['pvMainScroll', 'pvSumScroll']])
-    el(a).addEventListener('scroll', () => { if (syncing) { syncing = false; return; } if (el(b).scrollLeft !== el(a).scrollLeft) { syncing = true; el(b).scrollLeft = el(a).scrollLeft; } }, { passive: true });
-  window.addEventListener('resize', () => { if (rows.length) syncWidths(); });
+  function syncWidths() { }
+
   el('pvMoreBtn').addEventListener('click', () => { shownRows += PAGE_ROWS; renderAll(); });
 
   let inited = false;

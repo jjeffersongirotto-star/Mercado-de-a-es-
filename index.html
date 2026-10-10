@@ -112,7 +112,16 @@
   .pv-t th { position: sticky; top: 0; z-index: 1; padding: .45rem .6rem; font-size: 11px; font-weight: 700; text-align: center; white-space: normal; width: 1px; vertical-align: bottom;
              color: rgb(var(--c)); background: rgb(15 23 42); border-bottom: 2px solid rgb(var(--c) / .7); }
   .pv-t td { padding: .35rem .6rem; text-align: center; white-space: nowrap; border-bottom: 1px solid rgb(30 41 59); font-variant-numeric: tabular-nums; }
-  .pv-t { width: max-content; }  .pv-sum { table-layout: fixed; }
+  .pv-t { width: max-content; }  .pv-saved { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; padding: .35rem .5rem; border-radius: .5rem; background: rgb(2 6 23 / .6); border: 1px solid rgb(51 65 85); font-size: 12.5px; }
+  .pv-saved > span { flex: 1 1 12rem; min-width: 0; }
+  .pv-lnk { font-size: 12px; font-weight: 600; color: rgb(110 231 183); padding: .15rem .35rem; } .pv-lnk.dan { color: rgb(253 164 175); }
+  .pv-ok { padding: .3rem .6rem; border-radius: .5rem; font-size: 12px; font-weight: 700; background: rgb(5 150 105); color: #fff; border: 1px solid rgb(16 185 129); }
+  .pv-toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; z-index: 200; pointer-events: none; transition: all .2s;
+              background: rgb(6 78 59); color: rgb(209 250 229); border: 1px solid rgb(16 185 129); padding: .55rem 1rem; border-radius: 9999px; font-size: 13px; font-weight: 600; }
+  .pv-toast.on { opacity: 1; transform: translate(-50%, 0); }
+  input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:autofill, select:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px rgb(2 6 23) inset !important; box-shadow: 0 0 0 1000px rgb(2 6 23) inset !important;
+    -webkit-text-fill-color: rgb(226 232 240) !important; caret-color: rgb(226 232 240); transition: background-color 9999s; }
   .pv-ex-row { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
   .pv-ex-row select { padding: .35rem .3rem; border-radius: .5rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: 12.5px; color: rgb(226 232 240); }
   .icard { border: 1px solid rgb(51 65 85); border-radius: .9rem; background: rgb(15 23 42 / .6); margin-top: .6rem; }
@@ -167,6 +176,9 @@
   .gc-leg div { border-left: 3px solid var(--lc); padding-left: .35rem; line-height: 1.15; }
   .gc-leg b { display: block; font-size: 12.5px; color: var(--lc); } .gc-leg span { font-size: 10px; color: rgb(148 163 184); }
   .gc-load { display: grid; place-items: center; height: 100%; font-size: 12px; color: rgb(148 163 184); text-align: center; }
+  .gc-empty { display: grid; place-items: center; height: 100%; font-size: 13px; color: rgb(148 163 184); border: 1px dashed rgb(51 65 85); border-radius: .5rem; text-align: center; padding: 1rem; }
+  .gc-nodata .gc-chk label, .gc-nodata .gc-dates label { opacity: .4; filter: grayscale(1); }
+  .sd-ic { font-size: 10px; font-weight: 800; padding: 0 3px; border-radius: 4px; background: rgb(51 65 85); margin-right: 2px; }
   .gc-note { margin-top: .35rem; font-size: 10.5px; color: rgb(100 116 139); }
   .gsel { display: grid; place-items: center; width: 30px; height: 30px; margin-right: .1rem; }
   .gsel input { width: 20px; height: 20px; accent-color: rgb(16 185 129); }
@@ -404,9 +416,9 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=18"></script>
-<script src="/static/previsao.js?v=4"></script>
-<script src="/static/grafico.js?v=3"></script>
+<script src="/static/app.js?v=19"></script>
+<script src="/static/previsao.js?v=5"></script>
+<script src="/static/grafico.js?v=4"></script>
 <script src="/static/grupos.js?v=2"></script>
 
 </body>

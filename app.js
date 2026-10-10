@@ -192,7 +192,7 @@ function buildSort() {
   $('#sortDir').addEventListener('click', () => { state.sortDir *= -1; updateSortDir(); apply(); });
   updateSortDir();
 }
-function updateSortDir() { $('#sortDir').textContent = state.sortDir > 0 ? '↑ Asc' : '↓ Desc'; }
+function updateSortDir() { $('#sortDir').innerHTML = state.sortDir > 0 ? '<span class="sd-ic">1→9</span> Menor → maior' : '<span class="sd-ic">9→1</span> Maior → menor'; }
 const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' ? r.var : val(r, k));
 
 function passes(r) {
@@ -500,6 +500,25 @@ function prepRow(r) {
   r._s = norm([r.ticker, r.nome, r.setor, r.subsetor, r.psetor, r.pind, r.macro, r.desc].filter(Boolean).join(' | '));
 }
 
+function friendlyStatus(s, upd) {
+  s = String(s || '');
+  const m = /(\d{2})\/(\d{2})\/\d{4} (\d{2}:\d{2})/.exec(s);
+  if (/ao vivo/i.test(s) && !/bloque|falh|erro/i.test(s.split('ao vivo')[0])) return 'ao vivo' + (upd ? ' · atualizado em ' + String(upd).slice(0, 5) + ' ' + String(upd).slice(11, 16) : '');
+  if (m) return `atualizado em ${m[1]}/${m[2]} ${m[3]}`;
+  if (/indispon|falh|erro|bloque|sem snapshot/i.test(s)) return 'indisponível no momento';
+  return upd ? 'atualizado em ' + String(upd).slice(0, 5) + ' ' + String(upd).slice(11, 16) : 'atualizado';
+}
+// Sem sugestões/autopreenchimento do Chrome em nenhum campo
+(function noAutofill() {
+  const fix = (root) => (root.querySelectorAll ? root.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file])') : []).forEach(i => {
+    if (i.dataset.naf) return; i.dataset.naf = '1';
+    i.setAttribute('autocomplete', 'off'); i.setAttribute('autocorrect', 'off'); i.setAttribute('spellcheck', 'false');
+    if (!i.name) i.name = 'f_' + Math.random().toString(36).slice(2, 8);
+  });
+  fix(document);
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && fix(n.parentNode || n)))).observe(document.body, { childList: true, subtree: true });
+})();
+
 // ---------- Carga ----------
 let loadSeq = 0, built = false;
 async function load() {
@@ -516,7 +535,7 @@ async function load() {
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
-    $('#srcStatus').innerHTML = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `<div><b class="text-slate-300">${n}</b>: ${esc(st[k])}</div>`).join('');
+    $('#srcStatus').innerHTML = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `<div><b class="text-slate-300">${n}</b>: ${friendlyStatus(st[k], d.updated_at_sp)}</div>`).join('');
     $('#consSummary').innerHTML = country === 'br' ? '' : `${F0.format(c.tickers || d.rows.length)} ações (maiores por valor de mercado) · fonte única: TradingView`;
     $('#consSummary').style.display = country === 'br' ? 'none' : '';
     $('#subtitle').textContent = country === 'br' ? 'Consenso entre ' + (d.sources || []).length + ' fontes' : 'Fonte: TradingView (scanner)';

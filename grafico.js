@@ -90,7 +90,12 @@
         if (!r.ok || !pay.stock) throw new Error(pay.error || r.status);
         cput(key, pay);
         if (my === seq) { cur = { kind, pay }; paint(); }
-      } catch (e) { if (my === seq && !cached) q('.gc-plot').innerHTML = `<div class="gc-load">Histórico indisponível: ${String(e.message).slice(0, 120)}</div>`; }
+      } catch (e) {
+        if (my === seq && !cached) {
+          q('.gc-plot').innerHTML = '<div class="gc-empty">Sem informações no banco de dados</div>'; q('.gc-leg').innerHTML = ''; q('.gc-note').textContent = '';
+          box.querySelectorAll('.gc-chk input, .gc-dates input').forEach(i => { i.disabled = true; }); box.classList.add('gc-nodata');
+        }
+      }
       finally { if (my === seq) ref.classList.remove('spin'); }
     }
     draw();

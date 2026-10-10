@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Snapshot de histórico (Yahoo: 20a mensal + 5a diário, com dividendos) para o universo exibido + Ibovespa,
+"""Snapshot de histórico (Yahoo: mensal desde o início (range=max) + 5a diário, com dividendos) para o universo exibido + Ibovespa,
 séries do BCB (CDI, IPCA, Poupança, Dólar) e perfis/descrições das empresas (Investidor10 'Sobre a empresa').
 Uso: fetch_history.py OUT_DIR   (grava OUT_DIR/history/*.json.gz, OUT_DIR/history/bcb_*.json, OUT_DIR/profiles.json)
 ONLY_PROFILES=1 / ONLY_HISTORY=1 limitam a etapa. DATA_JSON=arquivo local de /api/data (senão baixa do app)."""
@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import history, universe
 
 out = sys.argv[1]
-os.makedirs(os.path.join(out, "history"), exist_ok=True)
+os.makedirs(os.path.join(out, "history"), exist_ok=True); os.makedirs(os.path.join(out, "history2"), exist_ok=True)
 if os.environ.get("DATA_JSON"):
     rows = json.load(open(os.environ["DATA_JSON"]))["rows"]
 else:
@@ -32,7 +32,7 @@ if not os.environ.get("ONLY_PROFILES"):
             for k in ("m", "d"):
                 pay[k] = history.yahoo(t, k); pay[k]["at"] = at
                 time.sleep(0.3)
-            with open(os.path.join(out, "history", t + ".json.gz"), "wb") as f:
+            with open(os.path.join(out, "history2", t + ".json.gz"), "wb") as f:
                 f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
             ok += 1
         except Exception as e:

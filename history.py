@@ -10,7 +10,7 @@ log = logging.getLogger("screener.hist")
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"}
 RAW = os.environ.get("SNAPSHOT_RAW_BASE",
                      "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data")
-KINDS = {"m": ("20y", "1mo", 6 * 3600), "d": ("5y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
+KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("5y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
 _mem = {}
 
 def _ysym(t):
@@ -39,7 +39,7 @@ def yahoo(t, kind, rng=None):
 def brapi(t, kind, rng=None):
     rng0, itv, _ = KINDS[kind]; rng = rng or rng0
     sym = "^BVSP" if t.upper() in ("IBOV", "^BVSP") else t.upper()
-    p = {"range": {"20y": "max"}.get(rng, rng), "interval": itv, "dividends": "true"}
+    p = {"range": rng, "interval": itv, "dividends": "true"}
     tok = os.environ.get("BRAPI_TOKEN")
     if tok:
         p["token"] = tok
@@ -62,7 +62,7 @@ def brapi(t, kind, rng=None):
 def snapshot(t, kind, rng=None):
     if kind == "i":
         raise RuntimeError("snapshot sem intradiário")
-    r = requests.get(f"{RAW}/history/{t.upper()}.json.gz", timeout=(6, 30))
+    r = requests.get(f"{RAW}/history2/{t.upper()}.json.gz", timeout=(6, 30))
     r.raise_for_status()
     d = json.loads(gzip.decompress(r.content))[kind]
     d["source"] = "cópia diária (Yahoo, " + d.get("at", "?") + ")"
@@ -103,7 +103,7 @@ def get(t, kind):
         t = "IBOV"
     if kind not in KINDS or not t.replace("^", "").isalnum() or len(t) > 12:
         raise ValueError("parâmetros inválidos")
-    key, name = (t, kind), f"{t}_{kind}"
+    key, name = (t, kind), f"{t}_{kind}v2"
     c = _mem.get(key)
     if c and time.time() - c[0] < KINDS[kind][2]:
         return c[1]
