@@ -221,6 +221,7 @@ function apply() {
   if (state.groupRank && state.group) state.filtered.sort((x, y) => (state.groupRank.get(x.ticker) ?? 1e9) - (state.groupRank.get(y.ticker) ?? 1e9));
   else if (FAVS.size) state.filtered = state.filtered.filter(r => FAVS.has(r.ticker)).concat(state.filtered.filter(r => !FAVS.has(r.ticker)));
   $('#count').textContent = F0.format(state.filtered.length);
+  if (!state.data || !(state.data.rows || []).length) return;
   $('#results').innerHTML = ''; state.shown = 0;
   renderMore();
 }
@@ -349,7 +350,7 @@ function renderMore() {
   }
   state.shown += next.length;
   const total = state.filtered.length;
-  $('#shown').textContent = total ? `Mostrando ${F0.format(state.shown)} de ${F0.format(total)}` : '';
+  
   $('#btnMore').classList.toggle('hidden', state.shown >= total);
 }
 // rolagem infinita + botão de fallback
@@ -408,7 +409,7 @@ function exportCsv() {
   for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
   const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  a.download = `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`; a.click(); URL.revokeObjectURL(a.href);
 }
 
 // ---------- País e fonte ----------
@@ -433,7 +434,7 @@ $('#countryMenu').addEventListener('click', (e) => {
   closeMenus();
   if (b.dataset.country === state.country) return;
   state.country = b.dataset.country; state.expanded.clear(); saveView(); renderCountry();
-  state.data = null; $('#results').innerHTML = '<div class="rounded-2xl border border-slate-800 p-8 text-center text-slate-500">Carregando…</div>';
+  state.data = null; $('#results').innerHTML = loaderHTML('Carregando…');
   load();
 });
 function renderSource() {
@@ -563,6 +564,7 @@ async function load() {
   } catch (e) { if (seq === loadSeq) { $('#updated').textContent = 'Erro ao carregar: ' + e; setTimeout(load, 5000); } }
 }
 async function init() {
+  if (!state.data) $('#results').innerHTML = loaderHTML('Carregando…');
   try { state.countries = await (await fetch('/api/countries')).json(); } catch (e) { state.countries = []; }
   if (!state.countries.some(c => c.id === state.country)) state.country = 'br';
   renderCountry(); load();
@@ -580,7 +582,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#inf
 $('#btnExpandAll').addEventListener('click', () => expandAll(true));
 $('#btnCollapseAll').addEventListener('click', () => expandAll(false));
 $('#btnRefresh').addEventListener('click', async () => {
-  $('#btnRefresh').disabled = true; $('#btnRefresh').classList.add('spin'); if (!$('#updated').textContent.includes('atualizando')) $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
+  $('#btnRefresh').disabled = true; if (!document.querySelector('#results > .ldr')) $('#results').insertAdjacentHTML('afterbegin', loaderHTML('Atualizando…')); $('#btnRefresh').classList.add('spin'); if (!$('#updated').textContent.includes('atualizando')) $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
   await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; $('#btnRefresh').classList.remove('spin'); }, 2500);
 });
 setInterval(load, 10 * 60 * 1000);

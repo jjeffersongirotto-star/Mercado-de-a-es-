@@ -92,7 +92,8 @@
         if (my === seq) { cur = { kind, pay }; paint(); }
       } catch (e) {
         if (my === seq && !cached) {
-          q('.gc-plot').innerHTML = '<div class="gc-empty">Sem informações no banco de dados</div>'; q('.gc-leg').innerHTML = ''; q('.gc-note').textContent = '';
+          const now = Date.now(); render(q('.gc-plot'), q('.gc-leg'), [{ id: 'x', color: 'transparent', label: '', pts: [[now - 365 * DAY, -10], [now, 10]] }], 0, 0, 'm');
+          q('.gc-plot').insertAdjacentHTML('beforeend', '<div class="gc-nodata-msg">Sem informações no banco de dados</div>'); q('.gc-leg').innerHTML = ''; q('.gc-note').textContent = '';
           box.querySelectorAll('.gc-chk input, .gc-dates input').forEach(i => { i.disabled = true; }); box.classList.add('gc-nodata');
         }
       }
@@ -168,5 +169,5 @@
   const scan = (root) => (root.querySelectorAll ? root.querySelectorAll('.gchart:not([data-m])') : []).forEach(el => io.observe(el));
   new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && (n.matches?.('.gchart') ? io.observe(n) : scan(n))))).observe(document.body, { childList: true, subtree: true });
   scan(document);
-  window.mountChart = mount;
+  window.mountChart = mount; window.gcRender = render;
 })();

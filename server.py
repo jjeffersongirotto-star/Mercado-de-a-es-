@@ -606,7 +606,7 @@ def api_indices(name: str):
 
 @app.get("/static/{name}.js")
 def extra_js(name: str):
-    if name not in ("app", "previsao", "grafico", "grupos"):
+    if name not in ("app", "previsao", "grafico", "grupos", "ui", "comparar"):
         return JSONResponse({"error": "não encontrado"}, status_code=404)
     return FileResponse(os.path.join(BASE, name + ".js"), media_type="application/javascript",
                         headers={"Cache-Control": "no-cache"})

@@ -4,7 +4,7 @@
   const $g = (s) => document.querySelector(s);
   const escH = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let groups = (() => { try { const g = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(g) ? g : []; } catch (e) { return []; } })();
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(groups)); } catch (e) { alert('Não foi possível salvar no navegador.'); } };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(groups)); } catch (e) { uiAlert('Não foi possível salvar no navegador.'); } };
   state.selSet = new Set(); state.selMode = false; state.group = null;
   let editing = null, viewing = null;
 
@@ -54,17 +54,17 @@
     if (c.checked) state.selSet.add(c.dataset.gsel); else state.selSet.delete(c.dataset.gsel);
     const b = $g('#gBar b'); if (b) b.textContent = state.selSet.size + ' selecionada(s)';
   });
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-g]'); if (!b) return;
     const a = b.dataset.g, find = (n) => groups.find(g => g.name === n);
     if (a === 'new') startSel(null);
     else if (a === 'cancel') stopSel();
     else if (a === 'save') {
       const name = ($g('#gName').value || '').trim();
-      if (!name) { alert('Dê um nome ao grupo.'); $g('#gName').focus(); return; }
-      if (!state.selSet.size) { alert('Selecione pelo menos uma empresa.'); return; }
+      if (!name) { uiAlert('Dê um nome ao grupo.'); $g('#gName').focus(); return; }
+      if (!state.selSet.size) { uiAlert('Selecione pelo menos uma empresa.'); return; }
       const other = find(name);
-      if (other && other !== editing && !confirm(`Já existe um grupo "${name}". Substituir?`)) return;
+      if (other && other !== editing && !(await uiConfirm(`Já existe um grupo "${name}". Substituir?`, { ok: 'Substituir', danger: true }))) return;
       groups = groups.filter(g => g !== other && g !== editing);
       groups.push({ name, tickers: [...state.selSet].sort(), updated: new Date().toISOString() });
       groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save();
@@ -73,7 +73,7 @@
     else if (a === 'back') { viewing = null; state.group = null; state.groupRank = null; refresh(); showTab('grupos'); }
     else if (a === 'open') openGroup(find(b.dataset.n));
     else if (a === 'edit') startSel(find(b.dataset.n));
-    else if (a === 'del') { const g = find(b.dataset.n); if (g && confirm(`Excluir o grupo "${g.name}"?`)) { groups = groups.filter(x => x !== g); save(); list(); } }
+    else if (a === 'del') { const g = find(b.dataset.n); if (g && await uiConfirm(`Excluir o grupo "${g.name}"?`, { ok: 'Excluir', danger: true })) { groups = groups.filter(x => x !== g); save(); list(); } }
     else if (a === 'export') exportG();
     else if (a === 'import') $g('#gFile').click();
   });
@@ -161,8 +161,8 @@
   let sortable = null, reorg = false;
   async function list() {
     const r = $g('#gruposRoot');
-    if (!METRICS) { r.innerHTML = '<div class="text-sm text-slate-400 p-4">Carregando grupos…</div>'; await loadMetrics(); }
-    if (!state.data) { r.innerHTML = '<div class="text-sm text-slate-400 p-4">Carregando dados…</div>'; setTimeout(list, 1500); return; }
+    if (!METRICS) { r.innerHTML = loaderHTML('Carregando grupos…'); await loadMetrics(); }
+    if (!state.data) { r.innerHTML = loaderHTML('Carregando dados…'); setTimeout(list, 1500); return; }
     r.innerHTML = `<section class="space-y-2">
       <div class="flex flex-wrap items-center gap-2"><h2 class="text-base font-bold mr-auto">Grupos</h2>
         <button type="button" class="gbtn${reorg ? ' pri' : ''}" data-g="reorg">${reorg ? 'Concluir' : '⇅ Reorganizar'}</button>
@@ -177,13 +177,13 @@
     if (reorg && window.Sortable) sortable = Sortable.create($g('#gGrid'), { animation: 150, filter: '.gt-fav', preventOnFilter: false, onMove: (e) => !e.related.classList.contains('gt-fav'),
       onEnd: () => { ui.order = [...$g('#gGrid').children].map(x => x.dataset.id).filter(x => x !== 'fav'); saveUI(); } });
   }
-  $g('#gruposRoot').addEventListener('click', (e) => {
+  $g('#gruposRoot').addEventListener('click', async (e) => {
     const h = e.target.closest('[data-open]');
     if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { const g = tickersOf(h.dataset.open); if (g && g.tickers.length) openGroup(g); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
     const ft = e.target.closest('[data-ftab]');
-    if (ft) { const k = ft.dataset.ftab; if (k === '+') { const n = (prompt('Nome da nova aba:') || '').trim().slice(0, 30); if (!n) return; const id = 't' + Date.now().toString(36); ui.fav.tabs.push({ id, name: n }); ui.fav.tab = id; } else ui.fav.tab = k; saveUI(); list(); return; }
-    const fr = e.target.closest('[data-fren]'); if (fr) { const t = ui.fav.tabs.find(x => x.id === fr.dataset.fren); const n = (prompt('Novo nome da aba:', t.name) || '').trim().slice(0, 30); if (n) { t.name = n; saveUI(); list(); } return; }
-    const fd = e.target.closest('[data-fdel]'); if (fd) { const t = ui.fav.tabs.find(x => x.id === fd.dataset.fdel); if (t && confirm(`Excluir a aba "${t.name}"? As empresas continuam nos Favoritos.`)) { ui.fav.tabs = ui.fav.tabs.filter(x => x !== t); for (const k in ui.fav.assign) if (ui.fav.assign[k] === t.id) delete ui.fav.assign[k]; ui.fav.tab = 'all'; saveUI(); list(); } return; }
+    if (ft) { const k = ft.dataset.ftab; if (k === '+') { const n = ((await uiPrompt('Nome da nova aba:', '', { ok: 'Criar' })) || '').trim().slice(0, 30); if (!n) return; const id = 't' + Date.now().toString(36); ui.fav.tabs.push({ id, name: n }); ui.fav.tab = id; } else ui.fav.tab = k; saveUI(); list(); return; }
+    const fr = e.target.closest('[data-fren]'); if (fr) { const t = ui.fav.tabs.find(x => x.id === fr.dataset.fren); const n = ((await uiPrompt('Novo nome da aba:', t.name)) || '').trim().slice(0, 30); if (n) { t.name = n; saveUI(); list(); } return; }
+    const fd = e.target.closest('[data-fdel]'); if (fd) { const t = ui.fav.tabs.find(x => x.id === fd.dataset.fdel); if (t && await uiConfirm(`Excluir a aba "${t.name}"? As empresas continuam nos Favoritos.`, { ok: 'Excluir', danger: true })) { ui.fav.tabs = ui.fav.tabs.filter(x => x !== t); for (const k in ui.fav.assign) if (ui.fav.assign[k] === t.id) delete ui.fav.assign[k]; ui.fav.tab = 'all'; saveUI(); list(); } return; }
     if (e.target.closest('[data-g="reorg"]')) { reorg = !reorg; list(); }
   });
   $g('#gruposRoot').addEventListener('change', (e) => {
@@ -195,7 +195,7 @@
   function exportG() {
     const blob = new Blob([JSON.stringify({ app: 'screener-b3', tipo: 'grupos', versao: 1, exportado: new Date().toISOString(), grupos: groups }, null, 1)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'grupos-screener-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = 'grupos-screener-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
   async function importG(e) {
@@ -210,14 +210,14 @@
         const ex = groups.find(x => x.name === name);
         if (ex) {
           if (ex.tickers.join() === tk.join()) continue;
-          if (confirm(`O grupo "${name}" já existe. OK = substituir; Cancelar = importar como cópia.`)) groups = groups.filter(x => x !== ex);
+          if (await uiConfirm(`O grupo "${name}" já existe.`, { ok: 'Substituir', cancel: 'Importar como cópia', danger: true })) groups = groups.filter(x => x !== ex);
           else { let i = 2; while (groups.some(x => x.name === `${name} (${i})`)) i++; name = `${name} (${i})`; }
         }
         groups.push({ name, tickers: tk, updated: g.updated || new Date().toISOString() }); n++;
       }
       groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); list();
-      alert(n + ' grupo(s) importado(s).');
-    } catch (err) { alert('Não foi possível importar: ' + err.message); }
+      uiToast(n + ' grupo(s) importado(s)');
+    } catch (err) { uiAlert('Não foi possível importar: ' + err.message); }
     e.target.value = '';
   }
 

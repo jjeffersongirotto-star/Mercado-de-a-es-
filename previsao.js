@@ -40,14 +40,14 @@ if (typeof document !== 'undefined') {
     t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1800);
   }
   // botões salvar/editar/apagar das linhas (Retiradas e Aportes extraordinários)
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-rowact]'); if (!b) return;
     const [kind, act, i] = b.dataset.rowact.split(':'), arr = kind === 'ret' ? st.ret : st.ex, r = arr[+i]; if (!r) return;
     if (act === 'save') {
       if (kind === 'ex' && r.t === 'p' && !(r.n >= 2)) { toast('Intervalo deve ser inteiro ≥ 2'); return; }
       r.ok = true; toast(kind === 'ret' ? 'Retirada salva' : 'Aporte salvo');
     } else if (act === 'edit') r.ok = false;
-    else if (act === 'del') { if (!confirm(kind === 'ret' ? 'Apagar esta retirada?' : 'Apagar este aporte?')) return; arr.splice(+i, 1); toast(kind === 'ret' ? 'Retirada apagada' : 'Aporte apagado'); }
+    else if (act === 'del') { if (!(await uiConfirm(kind === 'ret' ? 'Apagar esta retirada?' : 'Apagar este aporte?', { ok: 'Apagar', danger: true }))) return; arr.splice(+i, 1); toast(kind === 'ret' ? 'Retirada apagada' : 'Aporte apagado'); }
     if (kind === 'ret') st.ret.sort((a, b) => a.m - b.m);
     save(); renderRet(); renderEx(); applyMode(); compute();
   });
@@ -258,7 +258,7 @@ if (typeof document !== 'undefined') {
     if (st.df && st.di && st.df < st.di) st.df = st.di;
     el('pvDi').value = st.di; el('pvDf').value = st.df; compute(); save();
   });
-  el('pvOldest').addEventListener('click', () => { const t = el('pvOldest').dataset.tip; if (t) alert(t); });
+  el('pvOldest').addEventListener('click', () => { const t = el('pvOldest').dataset.tip; if (t) uiAlert(t); });
 
   // Cálculo. Convenção (igual à planilha): mês 1 = valor inicial; no mês n,
   // rentabilidade = patrimônio_sem(n-1) × r ; dividendo = patrimônio_com(n-1) × d (reinvestido na linha "com").
