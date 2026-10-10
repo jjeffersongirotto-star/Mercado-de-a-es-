@@ -491,10 +491,12 @@ function classify(r) {
   const defSec = ['Utilidade Pública', 'Financeiro', 'Saúde', 'Consumo Não Cíclico'].includes(sec);
   const perene = (sec === 'Utilidade Pública' || /banco|segur/.test(norm(r.subsetor + ' ' + (r.pind || '')))) && v.dy > 5 && v.roe > 10 && !(v.lucro5a < 0) && v.lpa > 0;
   if (perene) out.push('Perenes');
-  if (Math.max(v.cresc5a ?? -1e9, v.lucro5a ?? -1e9) > 15 && v.lpa > 0) out.push('Growth');
+  if (v.lucro5a > 20 && v.cresc5a > 10 && v.lpa > 0) out.push('Growth');
   if (v.lpa > 0 && v.lucro5a != null && v.lucro5a <= 0 && v.roe > 0) out.push('Turnaround');
   if (v.pl > 0 && v.pl <= 10 && v.pvp > 0 && v.pvp < 1.5) out.push('Valor');
   if (!perene) out.push(defSec ? 'Defensivas' : ['Materiais Básicos & Commodities', 'Petróleo, Gás e Biocombustíveis', 'Consumo Cíclico', 'Agronegócio'].includes(sec) ? 'Cíclicas' : null);
+  const gi = out.indexOf('Growth'), vi = out.indexOf('Valor');
+  if (gi >= 0 && vi >= 0) { out[gi] = 'Growth barata'; out.splice(vi, 1); }
   return out.filter(Boolean).slice(0, 2);
 }
 function prepRow(r) {
