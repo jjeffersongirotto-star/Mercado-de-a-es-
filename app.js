@@ -544,7 +544,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#inf
 $('#btnExpandAll').addEventListener('click', () => expandAll(true));
 $('#btnCollapseAll').addEventListener('click', () => expandAll(false));
 $('#btnRefresh').addEventListener('click', async () => {
-  $('#btnRefresh').disabled = true; $('#btnRefresh').classList.add('spin'); $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
+  $('#btnRefresh').disabled = true; $('#btnRefresh').classList.add('spin'); if (!$('#updated').textContent.includes('atualizando')) $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
   await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; $('#btnRefresh').classList.remove('spin'); }, 2500);
 });
 setInterval(load, 10 * 60 * 1000);

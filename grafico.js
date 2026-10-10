@@ -25,7 +25,7 @@
     const persist = () => savePref(t, S);
     box.innerHTML = `<div class="gc">
       <div class="gc-bar">${PERIODS.map(([k, l]) => `<button type="button" data-per="${k}">${l}</button>`).join('')}
-        <button type="button" class="gc-ref ricon" title="Atualizar" aria-label="Atualizar gráfico">⟳</button></div>
+        <button type="button" class="gc-ref ricon" title="Atualizar" aria-label="Atualizar gráfico"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
       <div class="gc-dates"><label>Data inicial<input type="date" data-d="di"></label><label>Data final<input type="date" data-d="df"></label></div>
       <div class="gc-chk">${LINES.map(L => `<label style="--lc:${L.color}"><input type="checkbox" data-l="${L.id}">${L.label}</label>`).join('')}</div>
       <div class="gc-wrap"><div class="gc-plot"></div><div class="gc-leg"></div></div>

@@ -24,14 +24,15 @@ if (typeof document !== 'undefined') {
 // ---------- Previsão ----------
 (function () {
   const KEY = 'screenerB3.previsao.v1';
-  const MAXM = 960, PAGE_ROWS = 120;
+  const MAXM = 960, PAGE_ROWS = 240;
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   const pct = (d) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
   const P3 = pct(3), P2 = pct(2);
   const el = (id) => document.getElementById(id);
   const num = (s) => { s = String(s ?? '').trim().replace(/\s|R\$/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
   const st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })() ||
-    { ini: 60000, ap: 0, dm: (Math.pow(1.06, 1 / 12) - 1) * 100, da: 6, rm: (Math.pow(1.15, 1 / 12) - 1) * 100, ra: 15, ticker: '', di: '', df: '', ret: [], mes: '', proj: '' };
+    { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
+  if (!Array.isArray(st.ex)) st.ex = [];
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
   let rows = [], shownRows = PAGE_ROWS, hist = null, histT = '';
 
@@ -44,7 +45,7 @@ if (typeof document !== 'undefined') {
     el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2);
     el('pvRm').value = fmtIn(st.rm, 3); el('pvRa').value = fmtIn(st.ra, 2);
     el('pvTicker').value = st.ticker || ''; el('pvProj').value = st.proj || '';
-    renderRet(); applyMode();
+    renderRet(); renderEx(); applyMode();
   }
   const deb = (fn, ms = 150) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
   const liveCompute = deb(() => { compute(); save(); });
@@ -98,6 +99,41 @@ if (typeof document !== 'undefined') {
     st.ret.push({ v: 0, m: last ? Math.min(MAXM, last.m + 12) : 180 }); fill(); save();
     const ins = el('pvRet').querySelectorAll('input[data-f="v"]'); ins[ins.length - 1]?.focus();
   });
+  // Aportes extraordinários: t = 'm' (mensal, substitui), 'u' (único), 'p' (por período, a cada n meses)
+  const EXT = [['m', 'Aporte mensal'], ['u', 'Aporte único'], ['p', 'Aporte por período']];
+  function renderEx() {
+    const box = el('pvEx');
+    if (!st.ex.length) { box.innerHTML = '<p class="text-xs text-slate-500">Nenhum aporte extra. Toque em <b>+</b> para adicionar.</p>'; return; }
+    box.innerHTML = st.ex.map((r, i) => `<div class="pv-ex-row" data-x="${i}">
+      <select data-f="t" aria-label="Tipo">${EXT.map(([k, l]) => `<option value="${k}"${r.t === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      <label class="pv-mini">R$<input inputmode="decimal" class="pv-in" style="width:7em" data-f="v" value="${fmtIn(r.v, 2)}"></label>
+      <label class="pv-mini">mês<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="m" value="${r.m || ''}"></label>
+      ${r.t === 'p' ? `<label class="pv-mini">a cada<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="n" value="${r.n || ''}">meses</label>` : ''}
+      <button type="button" class="pv-x" data-xdel="${i}" aria-label="Remover aporte">✕</button>
+      ${r.t === 'p' && !(r.n >= 2) ? '<span class="text-[11px] text-rose-300 basis-full">Intervalo deve ser um número inteiro de meses ≥ 2.</span>' : ''}</div>`).join('');
+  }
+  function setEx(e, final) {
+    const row = e.target.closest('[data-x]'); if (!row) return;
+    const r = st.ex[+row.dataset.x], f = e.target.dataset.f, raw = e.target.value;
+    if (f === 't') { r.t = raw; if (r.t === 'p' && !r.n) r.n = 12; save(); renderEx(); compute(); return; }
+    if (f === 'v') r.v = Math.max(0, num(raw));
+    if (f === 'm') r.m = Math.max(1, Math.min(MAXM, Math.round(num(raw)) || 1));
+    if (f === 'n') { const n = Number(String(raw).replace(',', '.')); r.n = Number.isInteger(n) && n >= 2 ? n : null; }
+    if (final) { save(); setTimeout(() => { renderEx(); compute(); }, 0); } else liveCompute();
+  }
+  el('pvEx').addEventListener('input', (e) => { if (e.target.tagName === 'INPUT') setEx(e, false); });
+  el('pvEx').addEventListener('change', (e) => setEx(e, true));
+  el('pvEx').addEventListener('click', (e) => { const b = e.target.closest('[data-xdel]'); if (!b) return; st.ex.splice(+b.dataset.xdel, 1); save(); renderEx(); compute(); });
+  el('pvAddEx').addEventListener('click', () => { st.ex.push({ t: 'u', v: 0, m: 12 }); save(); renderEx(); const ins = el('pvEx').querySelectorAll('input[data-f="v"]'); ins[ins.length - 1]?.focus(); });
+  function apAt(m, w) {
+    let reg = st.ap, extra = 0;
+    for (const r of st.ex.slice().sort((a, b) => a.m - b.m)) {
+      if (r.t === 'm' && r.m <= m) reg = r.v;
+      else if (r.t === 'u' && r.m === m) extra += r.v;
+      else if (r.t === 'p' && r.n >= 2 && m >= r.m && (m - r.m) % r.n === 0) extra += r.v;
+    }
+    return { reg: w > 0 ? 0 : reg, extra };
+  }
   const wAt = (m) => { if (st.proj) return 0; let w = 0; for (const r of st.ret.slice().sort((a, b) => a.m - b.m)) if (r.m <= m) w = r.v; return w; };
 
   // Ação (modo histórico)
@@ -213,11 +249,12 @@ if (typeof document !== 'undefined') {
     } else if (!st.proj && st.ticker) { renderAll(); return; }
     const n = steps ? steps.length : MAXM;
     const r0 = (projS && st.proj ? projS.rm : st.rm) / 100, d0 = (projS && st.proj ? projS.dm : st.dm) / 100;
-    let sem = st.ini, com = st.ini, apT = st.ini, divT = 0;
-    rows.push({ m: 1, ap: st.ini, apT, rent: 0, div: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
+    const x1 = apAt(1, 0).extra;
+    let sem = st.ini + x1, com = st.ini + x1, apT = st.ini + x1, divT = 0;
+    rows.push({ m: 1, ap: st.ini + x1, apT, rent: 0, div: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
     for (let m = 2; m <= n; m++) {
       const r = steps ? steps[m - 1].r : r0, d = steps ? steps[m - 1].d : d0;
-      const w = wAt(m), ap = w > 0 ? 0 : st.ap;
+      const w = wAt(m), A = apAt(m, w), ap = A.reg + A.extra;
       const rent = sem * r, div = com * d, rentC = com * r;
       sem = Math.max(0, sem + rent + ap - w);
       com = Math.max(0, com + rentC + div + ap - w);
@@ -228,7 +265,7 @@ if (typeof document !== 'undefined') {
   }
 
   const COLS = [['m', 'Mês', 'pv-c-m'], ['va', 'Valorização total', 'pv-c-p'], ['pa', '% Aporte', 'pv-c-p'], ['pv', '% Valorização', 'pv-c-p'], ['pd', '% Dividendos', 'pv-c-p'], ['ap', 'Aporte mensal', 'pv-c-ap'], ['apT', 'Aporte total', 'pv-c-ap'], ['rent', 'Rentabilidade mensal', 'pv-c-r'],
-    ['div', 'Dividendo mensal', 'pv-c-d'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Patrimônio total', 'pv-c-r'], ['com', 'Patrimônio total com dividendos', 'pv-c-d']];
+    ['div', 'Dividendo mensal', 'pv-c-d'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Patrimônio total', 'pv-c-r'], ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d']];
   const hasW = () => st.ret.some(r => r.v > 0);
   const cols = () => hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS;
   const PP = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -258,12 +295,29 @@ if (typeof document !== 'undefined') {
     el('pvBody').innerHTML = rows.slice(s, end).map(line).join('');
     el('pvMore').classList.toggle('hidden', end >= rows.length);
     el('pvCount').textContent = `Mostrando meses ${rows[s].m}–${rows[end - 1].m} de ${rows.length}`;
+    syncWidths();
   }
-  el('pvMoreBtn').addEventListener('click', () => { shownRows += PAGE_ROWS * 2; renderAll(); });
+  // Larguras: a tabela principal (auto, títulos quebram) define; o resumo copia e rola junto
+  function syncWidths() {
+    const sumT = el('pvSumHead').closest('table');
+    const ths = [...el('pvHead').querySelectorAll('th')];
+    const sh = [...el('pvSumHead').querySelectorAll('th')], sb = [...el('pvSumBody').querySelectorAll('td')];
+    ths.forEach(th => th.style.minWidth = '');
+    const ws = ths.map(th => th.getBoundingClientRect().width);
+    ws.forEach((w, i) => { if (sh[i]) sh[i].style.width = w + 'px'; if (sb[i]) sb[i].style.width = w + 'px'; });
+    sumT.style.width = ws.reduce((a, b) => a + b, 0) + 'px';
+    el('pvSumScroll').scrollLeft = el('pvMainScroll').scrollLeft;
+  }
+  let syncing = false;
+  for (const [a, b] of [['pvSumScroll', 'pvMainScroll'], ['pvMainScroll', 'pvSumScroll']])
+    el(a).addEventListener('scroll', () => { if (syncing) { syncing = false; return; } if (el(b).scrollLeft !== el(a).scrollLeft) { syncing = true; el(b).scrollLeft = el(a).scrollLeft; } }, { passive: true });
+  window.addEventListener('resize', () => { if (rows.length) syncWidths(); });
+  el('pvMoreBtn').addEventListener('click', () => { shownRows += PAGE_ROWS; renderAll(); });
 
   let inited = false;
   document.addEventListener('tabshow', (e) => {
     if (e.detail !== 'previsao') return;
+    if (rows.length) setTimeout(syncWidths, 0);
     tickerList();
     if (!inited) { inited = true; fill(); loadHist(); if (st.proj) loadProj(); }
   });

@@ -109,10 +109,18 @@
   .pv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: .6rem; border: 1px solid rgb(30 41 59); }
   .pv-main { max-height: 70vh; overflow-y: auto; }
   .pv-t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; white-space: nowrap; }
-  .pv-t th { position: sticky; top: 0; z-index: 1; padding: .45rem .6rem; font-size: 11px; font-weight: 700; text-align: center; white-space: normal; min-width: 96px; vertical-align: bottom;
+  .pv-t th { position: sticky; top: 0; z-index: 1; padding: .45rem .6rem; font-size: 11px; font-weight: 700; text-align: center; white-space: normal; width: 1px; vertical-align: bottom;
              color: rgb(var(--c)); background: rgb(15 23 42); border-bottom: 2px solid rgb(var(--c) / .7); }
   .pv-t td { padding: .35rem .6rem; text-align: center; white-space: nowrap; border-bottom: 1px solid rgb(30 41 59); font-variant-numeric: tabular-nums; }
-  .pv-t { width: max-content; min-width: 100%; }
+  .pv-t { width: max-content; }  .pv-sum { table-layout: fixed; }
+  .pv-ex-row { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+  .pv-ex-row select { padding: .35rem .3rem; border-radius: .5rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: 12.5px; color: rgb(226 232 240); }
+  .icard { border: 1px solid rgb(51 65 85); border-radius: .9rem; background: rgb(15 23 42 / .6); margin-top: .6rem; }
+  .icard > summary { cursor: pointer; list-style: none; padding: .8rem 1rem; font-weight: 700; color: rgb(226 232 240); display: flex; justify-content: space-between; align-items: center; }
+  .icard > summary::-webkit-details-marker { display: none; }
+  .icard > summary::after { content: "+"; font-size: 20px; color: rgb(110 231 183); } .icard[open] > summary::after { content: "−"; }
+  .icard > .ib { padding: 0 1rem 1rem; }
+  .info-colors li > span.t { flex: 1; min-width: 0; }
   .pv-t td.pos { color: rgb(110 231 183) !important; } .pv-t td.neg { color: rgb(253 164 175) !important; }
   .pv-c-p { --c: 45 212 191; } .pv-c-pj { --c: 34 211 238; }
   .pv-off { opacity: .45; }
@@ -169,7 +177,8 @@
   .gcard { border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .6); border-radius: 1rem; padding: .75rem; }
   .gchip { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgb(30 41 59); color: rgb(110 231 183); font-weight: 700; }
   .ricon { width: 34px; height: 34px; display: grid; place-items: center; font-size: 22px; line-height: 1; color: rgb(203 213 225); background: none; border: 0; border-radius: 9999px; }
-  .ricon:hover { color: rgb(110 231 183); } .ricon.spin, .gc-ref.spin { animation: rspin .8s linear infinite; }
+  .ricon:hover { color: rgb(110 231 183); } .ricon .ri { display: block; width: 22px; height: 22px; transform-origin: 50% 50%; transform-box: fill-box; }
+  .ricon.spin .ri { animation: rspin .8s linear infinite; }
   @keyframes rspin { to { transform: rotate(360deg); } }
   .gc-bar .gc-ref.ricon { background: none; border: 0; width: 34px; height: 34px; font-size: 22px; }
   .ctag { font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 9999px; color: rgb(203 213 225); background: rgb(51 65 85 / .55); border: 1px solid rgb(71 85 105 / .7); white-space: nowrap; }
@@ -193,9 +202,9 @@
         <p id="subtitle" class="hidden sm:block text-[11px] text-slate-400 leading-tight">Consenso entre várias fontes</p>
       </div>
     </div>
-    <div class="ml-auto flex flex-wrap items-center gap-2 text-sm">
-      <span id="updated" class="text-slate-400 text-xs sm:text-sm">Carregando…</span>
-      <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados">⟳</button>
+    <div class="ml-auto flex flex-nowrap items-center gap-2 text-sm min-w-0">
+      <span id="updated" class="text-slate-400 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[46vw] sm:max-w-none">Carregando…</span>
+      <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button id="btnCsv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">⬇ CSV</button>
       <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
     </div>
@@ -283,7 +292,7 @@
           <div class="flex items-center gap-2"><div class="flex-1 min-w-0 max-w-xs"><input id="pvProj" placeholder="Buscar empresa…" autocapitalize="characters" class="pv-in"></div>
             <button id="pvClearP" type="button" class="pv-x" aria-label="Limpar projeção">✕</button></div>
           <div id="pvProjInfo" class="text-xs text-slate-300"></div></div>
-        <div class="pv-f pv-c-t pv-wide"><span>Ação <small class="text-slate-500 normal-case">(simula o passado com preços e dividendos reais)</small></span>
+        <div class="pv-f pv-c-t pv-wide"><span>E se eu tivesse investido? <small class="text-slate-500 normal-case">(preços e dividendos reais)</small></span>
           <div class="flex flex-wrap items-center gap-2">
             <div class="flex-1 min-w-0 max-w-xs"><input id="pvTicker" placeholder="Buscar empresa…" autocapitalize="characters" class="pv-in"></div>
             <button id="pvClearT" type="button" class="pv-x" aria-label="Limpar ação">✕</button>
@@ -293,6 +302,10 @@
               <button id="pvOldest" type="button" class="pv-i" aria-label="Data mais antiga disponível">ⓘ</button>
             </span></div>
           <p id="pvStatus" class="text-xs text-amber-300 mt-1"></p></div>
+        <div id="pvExBox" class="pv-f pv-c-ap pv-wide"><span class="flex items-center justify-between">Aportes extraordinários
+          <button id="pvAddEx" type="button" class="pv-plus" aria-label="Adicionar aporte extraordinário">+</button></span>
+          <div id="pvEx" class="flex flex-col gap-1.5"></div>
+          <p class="text-[11px] text-slate-500 mt-1">Aporte mensal: substitui o aporte do mês indicado em diante (0 encerra). Único: uma vez no mês. Por período: a cada N meses (N ≥ 2).</p></div>
         <div id="pvRetBox" class="pv-f pv-c-w pv-wide"><span class="flex items-center justify-between">Retiradas (valor e mês em que começa)
           <button id="pvAddRet" type="button" class="pv-plus" aria-label="Adicionar retirada">+</button></span>
           <div id="pvRet" class="flex flex-col gap-1.5"></div>
@@ -300,9 +313,9 @@
       </div>
     </section>
     <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-2 sm:p-3 space-y-3">
-      <div class="pv-scroll"><table class="pv-t pv-sum"><thead id="pvSumHead"></thead><tbody id="pvSumBody"></tbody></table></div>
+      <div id="pvSumScroll" class="pv-scroll"><table class="pv-t pv-sum"><thead id="pvSumHead"></thead><tbody id="pvSumBody"></tbody></table></div>
       <p class="text-[11px] text-slate-500 px-1">Digite um mês na primeira célula para ver a linha dele e esconder os meses anteriores (vazio ou 1 mostra tudo).</p>
-      <div class="pv-scroll pv-main"><table class="pv-t"><thead id="pvHead"></thead><tbody id="pvBody"></tbody></table></div>
+      <div id="pvMainScroll" class="pv-scroll pv-main"><table id="pvMainT" class="pv-t"><thead id="pvHead"></thead><tbody id="pvBody"></tbody></table></div>
       <div class="flex flex-col items-center gap-1 pb-1"><span id="pvCount" class="text-xs text-slate-500"></span>
         <div id="pvMore"><button id="pvMoreBtn" type="button" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Mostrar mais meses</button></div></div>
     </section>
@@ -312,7 +325,8 @@
 <div id="infoModal" class="hidden fixed inset-0 z-[100] bg-black/70 flex items-start sm:items-center justify-center p-2 sm:p-6">
   <div class="info-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-6 text-sm text-slate-300 shadow-2xl">
     <button type="button" data-close class="sticky top-0 float-right -mt-1 -mr-1 w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 text-lg" aria-label="Fechar">✕</button>
-    <h2 class="text-lg font-bold text-slate-100 mb-2">Como funciona o consenso</h2>
+    <h2 class="text-lg font-bold text-slate-100 mb-1">Informações</h2>
+    <details class="icard"><summary>Como funciona o consenso</summary><div class="ib">
     <h3>Fontes e ranking de prioridade</h3>
     <ol class="list-decimal pl-5">
       <li>CVM (oficial)</li><li>Status Invest</li><li>Dados de Mercado</li><li>Fundamentus</li><li>Investidor10</li><li>TradingView</li><li>Yahoo Finance</li></ol>
@@ -329,14 +343,14 @@
       <li><b>Só 2 fontes divergentes</b>: valor da fonte de maior prioridade.</li></ul>
     <h3>Cores</h3>
     <ul class="info-colors">
-      <li><span class="sw sw-ok"></span>Normal: fontes concordam (ou fonte única)</li>
-      <li><span class="sw sw-res"></span>Laranja: maioria com divergência (<b class="text-amber-300">k/n</b> = fontes que concordam)</li>
-      <li><span class="sw sw-red"></span>Vermelho: divergência na maioria (<b>pond.</b> = média ponderada)</li>
-      <li><span class="sw sw-red sw-avg"></span>Vermelho com canto e <b class="text-yellow-300">número amarelo</b>: todas diferentes (média)</li>
-      <li><span class="badge bg-slate-600 text-slate-100">2 fontes</span> Cinza: só 2 fontes divergentes</li>
-      <li><span class="badge bg-sky-600 text-white font-bold">aj</span> Azul: concorda via EBIT ajustado</li>
-      <li><span class="sw sw-bank"></span>Azul escuro: banco/seguradora (indicador não comparável)</li>
-      <li><span class="badge bg-amber-500 text-slate-900 font-bold">±</span> Fonte excluída pela checagem de sinal</li></ul>
+      <li><span class="sw sw-ok"></span><span class="t">Normal: fontes concordam (ou fonte única)</span></li>
+      <li><span class="sw sw-res"></span><span class="t">Laranja: maioria com divergência (<b class="text-amber-300">k/n</b> = fontes que concordam)</span></li>
+      <li><span class="sw sw-red"></span><span class="t">Vermelho: divergência na maioria (<b>pond.</b> = média ponderada)</span></li>
+      <li><span class="sw sw-red sw-avg"></span><span class="t">Vermelho com canto e <b class="text-yellow-300">número amarelo</b>: todas diferentes (média)</span></li>
+      <li><span class="badge bg-slate-600 text-slate-100">2 fontes</span><span class="t">Cinza: só 2 fontes divergentes</span></li>
+      <li><span class="badge bg-sky-600 text-white font-bold">aj</span><span class="t">Azul: concorda via EBIT ajustado</span></li>
+      <li><span class="sw sw-bank"></span><span class="t">Azul escuro: banco/seguradora (indicador não comparável)</span></li>
+      <li><span class="badge bg-amber-500 text-slate-900 font-bold">±</span><span class="t">Fonte excluída pela checagem de sinal</span></li></ul>
     <h3>Particularidades</h3>
     <ul>
       <li>Fundamentus usa <b>EBIT ajustado</b>; CVM e Dados de Mercado votam com o EBIT padrão ou o ajustado (o que formar o maior grupo).</li>
@@ -348,14 +362,29 @@
       <li><b>Atualização</b>: Fundamentus, Status Invest e TradingView ao vivo (a cada 30 min); Yahoo, Investidor10, Dados de Mercado e CVM por cópia diária nos dias úteis às 19h05 (também cópia de reserva do Status Invest).</li>
       <li>Filtros, ordenação e CSV usam o <b>valor exibido</b>.</li>
       <li>Países estrangeiros: só TradingView.</li></ul>
-    <h3>Previsão</h3>
+    </div></details>
+    <details class="icard"><summary>Como funciona a Previsão</summary><div class="ib">
     <ul>
-      <li>Mês 1 = valor inicial. Em cada mês: rentabilidade = patrimônio (sem dividendos) do mês anterior × taxa; dividendo = patrimônio com dividendos do mês anterior × taxa de dividendos (reinvestido).</li>
+      <li><b>Valor inicial</b>: quanto você começa investindo (mês 1).</li>
+      <li><b>Aporte mensal</b>: valor investido todo mês a partir do mês 2.</li>
+      <li><b>Dividendos e Rentabilidade (mês ↔ ano)</b>: preencha um; o outro é calculado por juros compostos (ano = (1 + mês)<sup>12</sup> − 1).</li>
+      <li><b>Projeções</b>: escolha uma empresa para projetar o futuro com as médias dela nos últimos 10 anos (rentabilidade = taxa mensal constante que leva o preço inicial ao final; dividendos = média de dividendos do mês ÷ preço do mês anterior). Ficam ativos só valor inicial, aporte e aportes extraordinários.</li>
+      <li><b>E se eu tivesse investido?</b>: escolha uma empresa e as datas; simula o passado com a variação real do preço e os dividendos realmente pagos.</li>
+      <li><b>Retiradas</b>: valor e mês de início; vale até a próxima linha; valor 0 encerra. Durante a retirada o aporte mensal é 0 e o dinheiro sai dos dividendos, depois da rentabilidade e por fim do patrimônio.</li>
+      <li><b>Aportes extraordinários</b>: <i>Aporte mensal</i> substitui o aporte regular do mês indicado até a próxima linha desse tipo (0 encerra; durante retiradas vira 0). <i>Aporte único</i> entra uma vez no mês indicado. <i>Aporte por período</i> entra a cada N meses (N inteiro ≥ 2) a partir do mês indicado. Único e por período entram mesmo durante retiradas. Todos somam no aporte do mês e no aporte total.</li>
+      <li><b>Célula Mês do resumo</b>: digite um mês para ver a linha dele no resumo e esconder os meses anteriores na tabela; vazio ou 1 mostra tudo.</li>
+      <li>A tabela mostra 240 meses por vez; “Mostrar mais meses” acrescenta mais 240 (até 960).</li></ul>
+    <h3>Colunas</h3>
+    <ul>
       <li><b>Valorização total</b> = (com dividendos − aporte total) ÷ aporte total.</li>
-      <li><b>% Aporte</b> = aporte total ÷ com dividendos (vermelho acima de 100%: patrimônio abaixo do investido). <b>% Valorização</b> = (patrimônio total − aporte total) ÷ com dividendos. <b>% Dividendos</b> = (com dividendos − patrimônio total) ÷ com dividendos. Os três somam 100%.</li>
-      <li>Com retiradas, as fórmulas continuam as mesmas: o aporte total não desconta o que foi retirado, então os percentuais deixam de representar só o que foi investido.</li>
-      <li><b>Projeções</b>: rentabilidade mensal = média geométrica da variação mensal do preço nos últimos 10 anos (120 meses fechados; se houver menos, usa o que existir e mostra o período); dividendos mensais = média de (dividendos pagos no mês ÷ preço do mês anterior). Usa só valor inicial e aporte; taxas, Ação e Retiradas ficam desativadas.</li>
-      <li><b>Ação</b>: simula o passado com a variação real do preço e os dividendos reais entre as datas escolhidas.</li></ul>
+      <li><b>% Aporte</b> = aporte total ÷ com dividendos — verde até 100%, vermelho acima (patrimônio abaixo do investido).</li>
+      <li><b>% Valorização</b> = (patrimônio total − aporte total) ÷ com dividendos; <b>% Dividendos</b> = (com dividendos − patrimônio total) ÷ com dividendos. % Aporte + % Valorização + % Dividendos = 100%. Positivo em verde, negativo em vermelho; “—” quando o patrimônio é zero.</li>
+      <li><b>Aporte mensal</b>: aporte do mês (regular + extraordinários). <b>Aporte total</b>: tudo aportado desde o início, incluindo o valor inicial.</li>
+      <li><b>Rentabilidade mensal</b> = patrimônio total do mês anterior × taxa. <b>Dividendo mensal</b> = patrimônio com dividendos do mês anterior × taxa de dividendos. <b>Dividendos total</b>: soma desde o início.</li>
+      <li><b>Patrimônio total</b>: só a rentabilidade, sem dividendos. <b>Patrimônio total com dividendos</b>: rentabilidade + dividendos reinvestidos todo mês.</li>
+      <li><b>Retirada</b> (aparece se houver): valor retirado no mês. Com retiradas, as fórmulas de % continuam as mesmas (o aporte total não desconta retiradas).</li></ul>
+    </div></details>
+    <details class="icard"><summary>Etiquetas e empresas exibidas</summary><div class="ib">
     <h3>Empresas exibidas</h3>
     <ul>
       <li><b>Um ticker por empresa</b> (mesmas 4 letras): ON (3); se não houver, PN (4); depois Unit (11); depois outras classes.</li>
@@ -369,14 +398,15 @@
       <li><b>Valor</b>: P/L entre 0 e 10 e P/VP abaixo de 1,5.</li>
       <li><b>Defensivas</b>: Utilidade Pública, Financeiro, Saúde e Consumo Não Cíclico (se não for Perene). <b>Cíclicas</b>: Materiais Básicos, Petróleo/Gás, Consumo Cíclico e Agronegócio.</li>
       <li>O setor tracejado mostra o grupo de setor usado no filtro “Setor”. Sem histórico de 2 anos dos indicadores, as regras usam os dados atuais e os crescimentos de 5 anos.</li></ul>
+    </div></details>
   </div>
 </div>
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=17"></script>
-<script src="/static/previsao.js?v=3"></script>
-<script src="/static/grafico.js?v=2"></script>
+<script src="/static/app.js?v=18"></script>
+<script src="/static/previsao.js?v=4"></script>
+<script src="/static/grafico.js?v=3"></script>
 <script src="/static/grupos.js?v=2"></script>
 
 </body>
