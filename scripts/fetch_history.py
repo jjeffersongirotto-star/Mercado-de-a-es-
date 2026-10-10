@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Snapshot de histórico (Yahoo: 20a mensal + 5a diário, com dividendos) para o universo exibido + Ibovespa,
-séries do BCB (CDI, IPCA, Poupança, Dólar) e perfis/descrições das empresas (brapi summaryProfile).
+séries do BCB (CDI, IPCA, Poupança, Dólar) e perfis/descrições das empresas (Investidor10 'Sobre a empresa').
 Uso: fetch_history.py OUT_DIR   (grava OUT_DIR/history/*.json.gz, OUT_DIR/history/bcb_*.json, OUT_DIR/profiles.json)
 ONLY_PROFILES=1 / ONLY_HISTORY=1 limitam a etapa. DATA_JSON=arquivo local de /api/data (senão baixa do app)."""
 import gzip, json, os, sys, time
@@ -44,15 +44,23 @@ if not os.environ.get("ONLY_PROFILES"):
             print("BCB", n, e, file=sys.stderr)
     print(f"histórico: {ok} ok, {fail} falhas")
 if not os.environ.get("ONLY_HISTORY"):
+    import html as H, re
     prof = {}
-    for t in tickers:
+    UAH = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"}
+    for t in tickers:   # descrição "Sobre a empresa" do Investidor10 (português)
         try:
-            r = requests.get(f"https://brapi.dev/api/quote/{t}", params={"modules": "summaryProfile"}, timeout=30)
-            p = (r.json().get("results") or [{}])[0].get("summaryProfile") or {}
-            if p:
-                prof[t] = {"d": (p.get("longBusinessSummary") or "")[:1500], "s": p.get("sectorDisp") or p.get("sector"), "i": p.get("industryDisp") or p.get("industry")}
+            h = requests.get(f"https://investidor10.com.br/acoes/{t.lower()}/", headers=UAH, timeout=30).text
+            am = re.search(r'"articleBody":\s*"((?:[^"\\]|\\.)*)"', h)
+            ab = json.loads('"' + am.group(1) + '"').strip() if am else ""
+            body = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", h, flags=re.S)
+            txt = re.sub(r"\s+", " ", H.unescape(re.sub(r"<[^>]+>", " ", body)))
+            pos = txt.find(ab[:40]) if ab else -1
+            d = txt[pos:pos + 1200].strip() if pos >= 0 else ab
+            m = re.search(r"atua no setor e subsetor de (.+?)\s*$", ab)
+            if d:
+                prof[t] = {"d": d, "s": m.group(1).strip()[:80] if m else None, "i": None}
         except Exception as e:
             print("perfil", t, e, file=sys.stderr)
-        time.sleep(0.4)
+        time.sleep(1.0)
     json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(), "profiles": prof}, open(os.path.join(out, "profiles.json"), "w"), ensure_ascii=False)
     print(f"perfis: {len(prof)}")
