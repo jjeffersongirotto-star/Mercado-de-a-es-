@@ -109,9 +109,22 @@
   .pv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: .6rem; border: 1px solid rgb(30 41 59); }
   .pv-main { max-height: 70vh; overflow-y: auto; }
   .pv-t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; white-space: nowrap; }
-  .pv-t th { position: sticky; top: 0; z-index: 1; padding: .45rem .6rem; font-size: 11px; font-weight: 700; text-align: right; white-space: normal; min-width: 92px;
+  .pv-t th { position: sticky; top: 0; z-index: 1; padding: .45rem .6rem; font-size: 11px; font-weight: 700; text-align: center; white-space: normal; min-width: 96px; vertical-align: bottom;
              color: rgb(var(--c)); background: rgb(15 23 42); border-bottom: 2px solid rgb(var(--c) / .7); }
-  .pv-t td { padding: .35rem .6rem; text-align: right; border-bottom: 1px solid rgb(30 41 59); }
+  .pv-t td { padding: .35rem .6rem; text-align: center; white-space: nowrap; border-bottom: 1px solid rgb(30 41 59); font-variant-numeric: tabular-nums; }
+  .pv-t { width: max-content; min-width: 100%; }
+  .pv-t td.pos { color: rgb(110 231 183) !important; } .pv-t td.neg { color: rgb(253 164 175) !important; }
+  .pv-c-p { --c: 45 212 191; } .pv-c-pj { --c: 34 211 238; }
+  .pv-off { opacity: .45; }
+  .pv-combo { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 70; max-height: 300px; overflow-y: auto; min-width: 240px;
+              background: rgb(15 23 42); border: 1px solid rgb(51 65 85); border-radius: .7rem; box-shadow: 0 12px 32px rgba(0,0,0,.55); padding: .25rem; }
+  .pv-combo button { display: grid; grid-template-columns: 4.2rem 1fr; gap: 0 .5rem; width: 100%; text-align: left; padding: .4rem .5rem; border-radius: .5rem; }
+  .pv-combo button:hover, .pv-combo button:focus { background: rgb(30 41 59); }
+  .pv-combo b { color: rgb(110 231 183); font-size: 13px; grid-row: span 2; align-self: center; }
+  .pv-cn { font-size: 12px; color: rgb(226 232 240); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pv-cs { font-size: 10.5px; color: rgb(100 116 139); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pv-cempty { padding: .6rem; font-size: 12px; color: rgb(148 163 184); }
+  .pv-pstats { display: flex; flex-wrap: wrap; gap: .25rem .9rem; margin-top: .2rem; } .pv-pstats b { color: rgb(103 232 249); }
   .pv-t th:first-child, .pv-t td:first-child { position: sticky; left: 0; text-align: center; min-width: 52px; background: rgb(15 23 42); z-index: 2; }
   .pv-t th:first-child { z-index: 3; }
   .pv-t tbody tr:nth-child(even) td { background-color: rgb(30 41 59 / .25); }
@@ -266,10 +279,13 @@
         <label class="pv-f pv-c-d"><span>Dividendos ANO (%)</span><input id="pvDa" inputmode="decimal" class="pv-in"></label>
         <label class="pv-f pv-c-r"><span>Rentabilidade MÊS (%)</span><input id="pvRm" inputmode="decimal" class="pv-in"></label>
         <label class="pv-f pv-c-r"><span>Rentabilidade ANO (%)</span><input id="pvRa" inputmode="decimal" class="pv-in"></label>
+        <div class="pv-f pv-c-pj pv-wide"><span>Projeções <small class="text-slate-500 normal-case">(projeta o futuro com as médias dos últimos 10 anos da empresa)</small></span>
+          <div class="flex items-center gap-2"><div class="flex-1 min-w-0 max-w-xs"><input id="pvProj" placeholder="Buscar empresa…" autocapitalize="characters" class="pv-in"></div>
+            <button id="pvClearP" type="button" class="pv-x" aria-label="Limpar projeção">✕</button></div>
+          <div id="pvProjInfo" class="text-xs text-slate-300"></div></div>
         <div class="pv-f pv-c-t pv-wide"><span>Ação <small class="text-slate-500 normal-case">(simula o passado com preços e dividendos reais)</small></span>
           <div class="flex flex-wrap items-center gap-2">
-            <input id="pvTicker" list="pvTickers" placeholder="Ex.: PETR4" autocapitalize="characters" class="pv-in w-28 uppercase">
-            <datalist id="pvTickers"></datalist>
+            <div class="flex-1 min-w-0 max-w-xs"><input id="pvTicker" placeholder="Buscar empresa…" autocapitalize="characters" class="pv-in"></div>
             <button id="pvClearT" type="button" class="pv-x" aria-label="Limpar ação">✕</button>
             <span id="pvDates" class="hidden flex flex-wrap items-center gap-2">
               <label class="pv-mini">Data inicial<input id="pvDi" type="month" class="pv-in w-36"></label>
@@ -277,7 +293,7 @@
               <button id="pvOldest" type="button" class="pv-i" aria-label="Data mais antiga disponível">ⓘ</button>
             </span></div>
           <p id="pvStatus" class="text-xs text-amber-300 mt-1"></p></div>
-        <div class="pv-f pv-c-w pv-wide"><span class="flex items-center justify-between">Retiradas (valor e mês em que começa)
+        <div id="pvRetBox" class="pv-f pv-c-w pv-wide"><span class="flex items-center justify-between">Retiradas (valor e mês em que começa)
           <button id="pvAddRet" type="button" class="pv-plus" aria-label="Adicionar retirada">+</button></span>
           <div id="pvRet" class="flex flex-col gap-1.5"></div>
           <p class="text-[11px] text-slate-500 mt-1">Vale do mês indicado até a próxima retirada. Valor 0 encerra as retiradas. Durante a retirada o aporte é 0; sai primeiro dos dividendos, depois da rentabilidade e por fim do patrimônio.</p></div>
@@ -332,6 +348,14 @@
       <li><b>Atualização</b>: Fundamentus, Status Invest e TradingView ao vivo (a cada 30 min); Yahoo, Investidor10, Dados de Mercado e CVM por cópia diária nos dias úteis às 19h05 (também cópia de reserva do Status Invest).</li>
       <li>Filtros, ordenação e CSV usam o <b>valor exibido</b>.</li>
       <li>Países estrangeiros: só TradingView.</li></ul>
+    <h3>Previsão</h3>
+    <ul>
+      <li>Mês 1 = valor inicial. Em cada mês: rentabilidade = patrimônio (sem dividendos) do mês anterior × taxa; dividendo = patrimônio com dividendos do mês anterior × taxa de dividendos (reinvestido).</li>
+      <li><b>Valorização total</b> = (com dividendos − aporte total) ÷ aporte total.</li>
+      <li><b>% Aporte</b> = aporte total ÷ com dividendos (vermelho acima de 100%: patrimônio abaixo do investido). <b>% Valorização</b> = (patrimônio total − aporte total) ÷ com dividendos. <b>% Dividendos</b> = (com dividendos − patrimônio total) ÷ com dividendos. Os três somam 100%.</li>
+      <li>Com retiradas, as fórmulas continuam as mesmas: o aporte total não desconta o que foi retirado, então os percentuais deixam de representar só o que foi investido.</li>
+      <li><b>Projeções</b>: rentabilidade mensal = média geométrica da variação mensal do preço nos últimos 10 anos (120 meses fechados; se houver menos, usa o que existir e mostra o período); dividendos mensais = média de (dividendos pagos no mês ÷ preço do mês anterior). Usa só valor inicial e aporte; taxas, Ação e Retiradas ficam desativadas.</li>
+      <li><b>Ação</b>: simula o passado com a variação real do preço e os dividendos reais entre as datas escolhidas.</li></ul>
     <h3>Empresas exibidas</h3>
     <ul>
       <li><b>Um ticker por empresa</b> (mesmas 4 letras): ON (3); se não houver, PN (4); depois Unit (11); depois outras classes.</li>
@@ -351,7 +375,7 @@
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/app.js?v=17"></script>
-<script src="/static/previsao.js?v=2"></script>
+<script src="/static/previsao.js?v=3"></script>
 <script src="/static/grafico.js?v=2"></script>
 <script src="/static/grupos.js?v=2"></script>
 
