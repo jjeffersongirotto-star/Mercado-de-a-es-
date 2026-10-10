@@ -264,6 +264,10 @@
   .cmp-chip.ref { background: rgb(6 78 59 / .4); } .cmp-chip small { font-size: 9px; color: rgb(110 231 183); font-weight: 700; } .cmp-chip.off { opacity: .4; }
   .cmp-chip button { width: 20px; height: 20px; border-radius: 9999px; font-size: 11px; color: rgb(148 163 184); }
   .cmp-swap { width: 34px; height: 30px; border-radius: .6rem; border: 1px solid rgb(51 65 85); background: rgb(30 41 59); font-size: 16px; color: rgb(110 231 183); }
+  .cmp-bar { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .cmp-allb, .cmp-minb { padding: .45rem .8rem; border-radius: .6rem; font-size: 13px; font-weight: 600; border: 1px solid rgb(51 65 85); background: rgb(30 41 59); color: rgb(226 232 240); }
+  .cmp-allb.on { border-color: rgb(16 185 129); color: rgb(110 231 183); background: rgb(6 78 59 / .45); } .cmp-minb { margin-left: auto; }
+  .cmp-col > div { max-height: 70vh; overflow-y: auto; }
   .cmp-chart { border: 1px solid rgb(30 41 59); border-radius: 1rem; padding: .6rem; background: rgb(15 23 42 / .5); }
   .cmp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
   .cmp-col { border: 1px solid rgb(30 41 59); border-radius: .9rem; padding: .5rem; background: rgb(15 23 42 / .5); min-width: 0; }
@@ -484,7 +488,7 @@
       <li><b>Retirada</b> (aparece se houver): valor retirado no mês. Com retiradas, as fórmulas de % continuam as mesmas (o aporte total não desconta retiradas).</li></ul>
     </div></details>
     <details class="icard"><summary>Comparar, Novidades, CDB e Ouro</summary><div class="ib"><ul>
-      <li><b>Comparar</b>: busque e adicione ações e índices (Ibovespa, Dólar, CDB 100% do CDI, IPCA, Poupança, Ouro). O primeiro item é a referência (⇅ troca). Com o critério <b>Preço da ação</b>, compara a variação % entre as datas; com um indicador (DY, P/L, ROE…), compara os valores atuais só entre ações (índices e datas ficam bloqueados). “Renderam menos/mais” mostram cada item e a diferença em pontos para a referência; favoritos primeiro, depois a maior diferença.</li>
+      <li><b>Comparar</b>: busque e adicione ações e índices (Ibovespa, Dólar, CDB 100% do CDI, IPCA, Poupança, Ouro). O primeiro item é a referência (⇅ troca). Com o critério <b>Preço da ação</b>, compara a variação % entre as datas; com um indicador (DY, P/L, ROE…), compara os valores atuais só entre ações (índices e datas ficam bloqueados). “Renderam menos/mais” mostram cada item e a diferença em pontos para a referência; favoritos primeiro, depois a maior diferença. <b>Comparar com tudo</b> coloca nas colunas todas as ações mantidas e todos os índices (o gráfico mostra só os itens escolhidos); para as ações, a variação usa preços mensais (fechamento do mês anterior ao início até o mês final).</li>
       <li><b>Novidades</b>: as 10 listagens mais recentes pela primeira data de negociação (Yahoo, no Brasil; data de IPO do TradingView, no exterior). Etiqueta <b>NOVA</b> = listada há menos de 3 meses. Mudanças de ticker podem aparecer como listagem nova.</li>
       <li><b>CDB 100% do CDI</b>: acumula a taxa CDI diária do Banco Central (SGS 12) × 100%, sem impostos.</li>
       <li><b>Ouro</b>: contrato futuro de ouro (Yahoo, GC=F, US$/onça) × dólar PTAX do Banco Central, em R$ por onça; desde 11/2006.</li></ul></div></details>
@@ -530,7 +534,7 @@
 <script src="/static/previsao.js?v=7"></script>
 <script src="/static/grafico.js?v=7"></script>
 <script src="/static/grupos.js?v=6"></script>
-<script src="/static/comparar.js?v=2"></script>
+<script src="/static/comparar.js?v=3"></script>
 
 </body>
 </html>

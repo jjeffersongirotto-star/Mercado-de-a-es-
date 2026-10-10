@@ -6,8 +6,8 @@
   const COLORS = ['#34d399', '#60a5fa', '#facc15', '#f472b6', '#fb923c', '#a78bfa', '#d4a373', '#22d3ee', '#f87171', '#a3e635', '#e879f9', '#94a3b8'];
   const today = new Date().toISOString().slice(0, 10), yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();
-  S.items = S.items || []; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df })); } catch (e) { } };
+  S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all })); } catch (e) { } };
   const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const F2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const pc = (x) => (x > 0 ? '+' : '') + F2.format(x) + '%';
@@ -25,6 +25,7 @@
       <div class="cmp-row"><label>Critério<select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
         <label>Início<input id="cmpDi" type="date" class="sel"></label><label>Fim<input id="cmpDf" type="date" class="sel"></label></div>
       <div id="cmpChips" class="cmp-chips"></div></section>
+      <div class="cmp-bar"><button type="button" id="cmpAll" class="cmp-allb"></button><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
       <section class="cmp-cols"><div class="cmp-col"><h3 class="dn">Renderam menos</h3><input class="cmp-f" data-q="qa" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpLess"></div></div>
         <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>`;
@@ -35,6 +36,19 @@
     $c('#cmpChips').innerHTML = S.items.length ? S.items.map((id, i) => `<span class="cmp-chip${i === 0 ? ' ref' : ''}${ind && isIdx(id) ? ' off' : ''}" style="--cc:${COLORS[i % COLORS.length]}">${i === 0 ? '<small>ref.</small>' : ''}${esc(label(id))}<button type="button" data-rm="${esc(id)}" aria-label="Remover ${esc(label(id))}">✕</button></span>`).join('') +
       (S.items.length > 1 ? '<button type="button" id="cmpSwap" class="cmp-swap" title="Trocar referência" aria-label="Trocar referência">⇅</button>' : '') : '<span class="text-xs text-slate-500">Adicione itens pela busca. O primeiro é a referência.</span>';
     $c('#cmpDi').disabled = $c('#cmpDf').disabled = ind;
+    $c('#cmpAll').textContent = S.all ? '✓ Comparando com tudo · voltar' : 'Comparar com tudo';
+    $c('#cmpAll').classList.toggle('on', S.all);
+    $c('#cmpMin').textContent = S.min ? '▸ Expandir gráfico' : '▾ Minimizar gráfico';
+    $c('#cmpMin').setAttribute('aria-expanded', String(!S.min));
+  }
+  let MET = null;
+  const metrics = async () => MET || (MET = fetch('/api/metrics').then(r => r.json()).then(d => d.metrics || {}).catch(() => { MET = null; return {}; }));
+  function monthRet(m, di, df) {
+    if (!m || !m.mc || !m.mc0) return null;
+    const [y0, m0] = m.mc0.split('-').map(Number), ix = (s) => (+s.slice(0, 4) - y0) * 12 + (+s.slice(5, 7) - m0);
+    const a = ix(di) - 1, b = Math.min(ix(df), m.mc.length - 1);
+    if (a < 0 || b <= a || !m.mc[a]) return null;
+    return (m.mc[b] / m.mc[a] - 1) * 100;
   }
   function drop() {
     const q = norm($c('#cmpQ').value).trim(), d = $c('#cmpDrop');
@@ -53,9 +67,12 @@
       chart.classList.add('hidden');
       const byT = new Map(rows().map(r => [r.ticker, r]));
       for (const id of S.items) if (!isIdx(id)) { const r = byT.get(id); if (r && r.v[S.crit] != null) vals[id] = r.v[S.crit]; }
+      if (S.all) for (const r of rows()) if (r.v[S.crit] != null) vals[r.ticker] = r.v[S.crit];
       cols(); return;
     }
-    chart.classList.remove('hidden');
+    chart.classList.toggle('hidden', S.min);
+    if (S.all) { $c('#cmpLess').innerHTML = loaderHTML('Comparando com tudo…'); $c('#cmpMore').innerHTML = ''; }
+    const t0 = performance.now();
     if (!S.items.length) { chart.querySelector('.gc-plot').innerHTML = ''; chart.querySelector('.gc-leg').innerHTML = ''; cols(); return; }
     const start = Date.parse(S.di), end = Date.parse(S.df) + 864e5 - 1;
     const kind = (Date.now() - start) > 5 * 365 * 864e5 ? 'm' : 'd';
@@ -78,13 +95,19 @@
     const plot = chart.querySelector('.gc-plot'), leg = chart.querySelector('.gc-leg');
     if (series.length) gcRender(plot, leg, series, start, end, kind);
     else { plot.innerHTML = '<div class="gc-nodata-msg">Sem informações no banco de dados</div>'; leg.innerHTML = ''; }
-    cols();
+    if (S.all) {
+      const M = await metrics(); if (my !== seq) return;
+      for (const r of rows()) { if (S.items.includes(r.ticker)) continue; const v = monthRet(M[r.ticker], S.di, S.df); if (v != null) vals[r.ticker] = v; }
+      for (const [id, , k] of IDX) if (vals[id] == null) { const d = anyP[k]; if (d && !d.error) { const pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end); if (pts.length) vals[id] = pts[pts.length - 1][1]; } }
+    }
+    cols(); window.__cmpMs = Math.round(performance.now() - t0);
   }
   function cols() {
     const ref = S.items[0], rv = vals[ref], ind = S.crit !== 'preco';
     const fmt = (v) => ind ? F2.format(v) : pc(v);
     const L = [], M = [];
-    for (const id of S.items.slice(1)) {
+    const cand = S.all ? [...new Set(S.items.slice(1).concat(IDX.map(x => x[0]), rows().map(r => r.ticker)))].filter(id => id !== ref) : S.items.slice(1);
+    for (const id of cand) {
       if (vals[id] == null) continue;
       const it = { id, v: vals[id], d: rv == null ? 0 : vals[id] - rv };
       (rv != null && it.d < 0 ? L : M).push(it);
@@ -103,6 +126,8 @@
     $c('#cmpQ').addEventListener('input', drop);
     $c('#cmpQ').addEventListener('focus', drop);
     root.addEventListener('click', async (e) => {
+      if (e.target.closest('#cmpMin')) { S.min = !S.min; $c('#cmpChart').classList.toggle('hidden', S.min || S.crit !== 'preco'); chips(); save(); return; }
+      if (e.target.closest('#cmpAll')) { S.all = !S.all; all(); return; }
       const a = e.target.closest('[data-add]');
       if (a) { S.items.push(a.dataset.add); $c('#cmpQ').value = ''; $c('#cmpDrop').classList.add('hidden'); all(); return; }
       const rm = e.target.closest('[data-rm]'); if (rm) { S.items = S.items.filter(x => x !== rm.dataset.rm); all(); return; }

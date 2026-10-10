@@ -40,7 +40,8 @@ for r in kept:
         p = pts[-1][1]; tnow = pts[-1][0]
         ftd = (x.get("meta") or {}).get("firstTradeDate") or pts[0][0]
         m = {"p": round(p, 2), "first": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m"),
-             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"), "m10": [round(c, 2) for _, c in pts[-10:]]}
+             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"), "m10": [round(c, 2) for _, c in pts[-10:]],
+             "mc0": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m"), "mc": [round(c, 2) for _, c in pts]}
         for n in range(1, 6):
             old = [c for ts, c in pts if ts <= tnow - n * 365.25 * 86400 + 20 * 86400]
             m[f"ret{n}"] = round((p / old[-1] - 1) * 100, 2) if old else None
