@@ -590,6 +590,11 @@ def api_profiles():
     d, _ = snapshots.load("profiles", max_mem_age=6 * 3600)
     return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=3600"})
 
+@app.get("/api/metrics")
+def api_metrics():
+    d, _ = snapshots.load("metrics", max_mem_age=3 * 3600)
+    return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=1800"})
+
 @app.get("/api/indices/{name}")
 def api_indices(name: str):
     if name not in history.SGS:

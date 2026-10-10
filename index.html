@@ -202,6 +202,29 @@
   .gtools-l { display: inline-flex; align-items: center; gap: .35rem; font-size: 12px; color: rgb(148 163 184); }
   .star { flex: none; width: 30px; height: 30px; display: grid; place-items: center; font-size: 20px; line-height: 1; color: rgb(100 116 139); }
   .star.on { color: rgb(250 204 21); }
+  .ggrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+  @media (min-width: 900px) { .ggrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .gt { display: flex; flex-direction: column; min-width: 0; height: 23vh; min-height: 160px; max-height: 240px; border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .7); border-radius: .9rem; overflow: hidden; }
+  .gt-fav { grid-column: 1 / -1; height: 30vh; max-height: 320px; border-color: rgb(250 204 21 / .45); }
+  .gt.hl { border-color: rgb(16 185 129); box-shadow: 0 0 0 2px rgb(16 185 129 / .35); }
+  .gt-head { display: flex; align-items: center; gap: .3rem; padding: .45rem .55rem; background: rgb(30 41 59 / .7); cursor: pointer; user-select: none; }
+  .gt-name { font-size: 12.5px; font-weight: 700; color: rgb(226 232 240); line-height: 1.15; flex: 1; min-width: 0; }
+  .gt-fav .gt-name { color: rgb(250 204 21); }
+  .gt-n { font-size: 10.5px; color: rgb(148 163 184); }
+  .gt-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: .2rem .35rem; overscroll-behavior: contain; }
+  .gt-list li { display: flex; align-items: center; gap: .3rem; padding: .22rem .1rem; border-bottom: 1px solid rgb(30 41 59 / .7); font-size: 11.5px; min-width: 0; }
+  .gt-list li.gp { flex-wrap: wrap; } .gt-list li.gp .gv { text-align: left; white-space: normal; flex-basis: 100%; }
+  .gt-list b { color: rgb(110 231 183); font-size: 12px; } .gi { color: rgb(100 116 139); font-size: 10px; width: 1.1rem; }
+  .gv { margin-left: auto; color: rgb(203 213 225); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .gt-empty { color: rgb(100 116 139); font-size: 11.5px; justify-content: center; border: 0 !important; }
+  .gper, .gmv { margin: .3rem .45rem 0; padding: .2rem .3rem; font-size: 11px; border-radius: .4rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); color: rgb(226 232 240); }
+  .gmv { margin: 0 0 0 .3rem; max-width: 80px; }
+  .gt-tabs { display: flex; flex-wrap: wrap; gap: .25rem; padding: .35rem .45rem 0; align-items: center; }
+  .gt-tabs button { font-size: 11px; padding: .15rem .5rem; border-radius: 9999px; border: 1px solid rgb(51 65 85); color: rgb(203 213 225); background: rgb(2 6 23); }
+  .gt-tabs button.on { border-color: rgb(250 204 21); color: rgb(250 204 21); } .gt-tabs button.dan { color: rgb(253 164 175); }
+  .gt-tabs .gper { margin: 0 0 0 auto; }
+  .ggrid.reorg .gt { cursor: grab; } .ggrid.reorg .gt:not(.gt-fav) { outline: 1px dashed rgb(16 185 129 / .6); }
+  .gx { width: 34px; height: 34px; border-radius: 9999px; display: grid; place-items: center; background: rgb(30 41 59); border: 1px solid rgb(71 85 105); color: rgb(226 232 240); font-size: 16px; }
   .gtools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
   .gtools select { padding: .45rem .6rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .85rem; color: rgb(226 232 240); max-width: 100%; min-width: 0; }
   .gtools label { display: inline-flex; align-items: center; gap: .35rem; font-size: 12px; color: rgb(148 163 184); min-width: 0; }
@@ -410,6 +433,22 @@
       <li><b>Patrimônio total</b>: só a rentabilidade, sem dividendos. <b>Patrimônio total com dividendos</b>: rentabilidade + dividendos reinvestidos todo mês.</li>
       <li><b>Retirada</b> (aparece se houver): valor retirado no mês. Com retiradas, as fórmulas de % continuam as mesmas (o aporte total não desconta retiradas).</li></ul>
     </div></details>
+    <details class="icard"><summary>Grupos</summary><div class="ib">
+    <ul>
+      <li>Usam só um ticker por empresa (e, exceto Favoritos e Pequenas e médias, só papéis com negociação média ≥ R$ 500 mil/dia; P/L ≥ 2 em Rentabilidade e Graham; DY &lt; 40% e EV/EBIT ≥ 1 para evitar distorções) e mostram o TOP 10, sempre ordenado por um percentual ou índice (nunca por R$), recalculado com os dados atuais. Toque no título para destacar e de novo para abrir em tela cheia (com filtros, fonte, ordenação e gráficos da tela principal; ✕ fecha).</li>
+      <li><b>Favoritos</b>: todas as empresas com ★ (sem limite), com abas criadas por você e a aba <b>Proventos no ano</b> (proventos pagos no ano por ação e em % do preço, e bonificações). Ordem padrão: preço da ação.</li>
+      <li><b>Maior valorização</b> / <b>Maiores quedas</b>: variação % do preço em 1 a 5 anos.</li>
+      <li><b>Maior rentabilidade</b>: lucro ÷ valor de mercado = 1 ÷ (P/L) (LPA/preço; sem série anual de lucro, não há opção de período).</li>
+      <li><b>Maiores pagadoras de dividendos</b>: proventos médios por ano no período ÷ preço atual.</li>
+      <li><b>Mais proventos ao investidor</b>: proventos dos últimos 12 meses ÷ preço + bonificações (%) no período.</li>
+      <li><b>Pequenas e médias promissoras</b>: valor de mercado de R$ 300 mi a 10 bi, LPA &gt; 0, ROE ≥ 12%, crescimento de receita ou lucro 5a &gt; 0, Dív.Líq/EBIT &lt; 3 e negociação ≥ R$ 1 mi/dia; nota = média dos percentis de ROE, crescimento do lucro e 1/(P/L).</li>
+      <li><b>Magic Formula</b> (Greenblatt): soma das posições no ranking de ROIC (maior) e EV/EBIT (menor, só positivo).</li>
+      <li><b>Baratas pelo Graham</b>: desconto do preço frente a √(22,5 × LPA × VPA).</li>
+      <li><b>Pagadoras consistentes</b>: pagaram proventos em todos os 5 últimos anos fechados; ordem pela menor variação (coeficiente de variação do DY anual) e depois pelo DY médio.</li>
+      <li><b>Menos endividadas</b>: menor Dív.Líq/PL com LPA &gt; 0.</li>
+      <li><b>Mais negociadas</b>: volume médio de 30 dias ÷ valor de mercado.</li>
+      <li>Fonte dos proventos: Yahoo Finance (dividendos e JCP somados, valores brutos; bonificações = desdobramentos de até 50%; os maiores aparecem como desdobramento e não contam como provento; datas por mês). “Reorganizar” muda a ordem (Favoritos fica sempre primeiro).</li></ul>
+    </div></details>
     <details class="icard"><summary>Etiquetas e empresas exibidas</summary><div class="ib">
     <h3>Empresas exibidas</h3>
     <ul>
@@ -430,10 +469,10 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=20"></script>
+<script src="/static/app.js?v=21"></script>
 <script src="/static/previsao.js?v=5"></script>
 <script src="/static/grafico.js?v=4"></script>
-<script src="/static/grupos.js?v=3"></script>
+<script src="/static/grupos.js?v=4"></script>
 
 </body>
 </html>

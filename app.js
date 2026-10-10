@@ -184,7 +184,7 @@ function buildSort() {
   const sel = $('#sortKey');
   buildSortOptions();
   sel.addEventListener('change', () => {
-    state.sortKey = sel.value;
+    state.sortKey = sel.value; state.groupRank = null;
     const f = state.fieldMap[sel.value];
     state.sortDir = (sel.value === 'ticker' || sel.value === 'nome') ? 1 : (f && f.dir === 'low' ? 1 : -1);
     updateSortDir(); apply();
@@ -218,7 +218,8 @@ function apply() {
     if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
     return (typeof va === 'string' ? va.localeCompare(vb, 'pt-BR') : va - vb) * d;
   });
-  if (FAVS.size) state.filtered = state.filtered.filter(r => FAVS.has(r.ticker)).concat(state.filtered.filter(r => !FAVS.has(r.ticker)));
+  if (state.groupRank && state.group) state.filtered.sort((x, y) => (state.groupRank.get(x.ticker) ?? 1e9) - (state.groupRank.get(y.ticker) ?? 1e9));
+  else if (FAVS.size) state.filtered = state.filtered.filter(r => FAVS.has(r.ticker)).concat(state.filtered.filter(r => !FAVS.has(r.ticker)));
   $('#count').textContent = F0.format(state.filtered.length);
   $('#results').innerHTML = ''; state.shown = 0;
   renderMore();
