@@ -119,9 +119,10 @@
     $c('#cmpMore').innerHTML = (rv != null ? `<p class="cmp-ref">Ref. ${esc(label(ref))}: ${fmt(rv)}</p>` : '') + html(M, S.qb, 'up');
   }
   function all() { chips(); compute(); save(); }
-  let built = false;
+  let built = false, waiting = false;
   function build() {
-    if (!state.data) { root.innerHTML = loaderHTML('Carregando dados…'); setTimeout(build, 1200); return; }
+    if (built) return;
+    if (!state.data) { root.innerHTML = loaderHTML('Carregando dados…'); if (!waiting) { waiting = true; setTimeout(() => { waiting = false; build(); }, 1200); } return; }
     shell(); built = true;
     $c('#cmpQ').addEventListener('input', drop);
     $c('#cmpQ').addEventListener('focus', drop);
