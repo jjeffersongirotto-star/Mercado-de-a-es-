@@ -155,6 +155,15 @@
   .gbtn.pri { background: rgb(5 150 105); border-color: rgb(16 185 129); color: #fff; } .gbtn.dan { color: rgb(253 164 175); border-color: rgb(159 18 57 / .7); }
   .gcard { border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .6); border-radius: 1rem; padding: .75rem; }
   .gchip { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgb(30 41 59); color: rgb(110 231 183); font-weight: 700; }
+  .ricon { width: 34px; height: 34px; display: grid; place-items: center; font-size: 22px; line-height: 1; color: rgb(203 213 225); background: none; border: 0; border-radius: 9999px; }
+  .ricon:hover { color: rgb(110 231 183); } .ricon.spin, .gc-ref.spin { animation: rspin .8s linear infinite; }
+  @keyframes rspin { to { transform: rotate(360deg); } }
+  .gc-bar .gc-ref.ricon { background: none; border: 0; width: 34px; height: 34px; font-size: 22px; }
+  .ctag { font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 9999px; color: rgb(203 213 225); background: rgb(51 65 85 / .55); border: 1px solid rgb(71 85 105 / .7); white-space: nowrap; }
+  .ctag-sec { color: rgb(148 163 184); background: transparent; border-style: dashed; }
+  .gtools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .gtools select { padding: .45rem .6rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .85rem; color: rgb(226 232 240); max-width: 100%; min-width: 0; }
+  .gtools label { display: inline-flex; align-items: center; gap: .35rem; font-size: 12px; color: rgb(148 163 184); min-width: 0; }
 </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
@@ -173,7 +182,7 @@
     </div>
     <div class="ml-auto flex flex-wrap items-center gap-2 text-sm">
       <span id="updated" class="text-slate-400 text-xs sm:text-sm">Carregando…</span>
-      <button id="btnRefresh" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700">⟳<span class="hidden sm:inline"> Atualizar</span></button>
+      <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados">⟳</button>
       <button id="btnCsv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">⬇ CSV</button>
       <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
     </div>
@@ -323,15 +332,28 @@
       <li><b>Atualização</b>: Fundamentus, Status Invest e TradingView ao vivo (a cada 30 min); Yahoo, Investidor10, Dados de Mercado e CVM por cópia diária nos dias úteis às 19h05 (também cópia de reserva do Status Invest).</li>
       <li>Filtros, ordenação e CSV usam o <b>valor exibido</b>.</li>
       <li>Países estrangeiros: só TradingView.</li></ul>
+    <h3>Empresas exibidas</h3>
+    <ul>
+      <li><b>Um ticker por empresa</b> (mesmas 4 letras): ON (3); se não houver, PN (4); depois Unit (11); depois outras classes.</li>
+      <li><b>Ilíquidas removidas</b>: média diária negociada &lt; R$ 50 mil (30 dias, TradingView; sem TV, liquidez 2 meses do Fundamentus) ou sem negócios em 2 meses — <b>exceto</b> se tiverem bons resultados recentes: LPA &gt; 0, ROE ≥ 10% e lucro 5a não negativo.</li>
+      <li>A busca ignora acentos e maiúsculas e procura em ticker, nome, setor, subsetor e descrição da empresa (brapi).</li></ul>
+    <h3>Classificação (no máximo 2 etiquetas, por prioridade)</h3>
+    <ul>
+      <li><b>Perenes</b>: energia, saneamento, gás, bancos ou seguros com DY &gt; 5%, ROE &gt; 10%, LPA &gt; 0 e lucro 5a não negativo.</li>
+      <li><b>Growth</b>: crescimento de receita ou lucro em 5 anos &gt; 15% a.a. e LPA &gt; 0.</li>
+      <li><b>Turnaround</b> (recuperação): lucro 5a negativo ou zero, mas LPA e ROE atuais positivos (voltou a lucrar).</li>
+      <li><b>Valor</b>: P/L entre 0 e 10 e P/VP abaixo de 1,5.</li>
+      <li><b>Defensivas</b>: Utilidade Pública, Financeiro, Saúde e Consumo Não Cíclico (se não for Perene). <b>Cíclicas</b>: Materiais Básicos, Petróleo/Gás, Consumo Cíclico e Agronegócio.</li>
+      <li>O setor tracejado mostra o grupo de setor usado no filtro “Setor”. Sem histórico de 2 anos dos indicadores, as regras usam os dados atuais e os crescimentos de 5 anos.</li></ul>
   </div>
 </div>
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/app.js?v=16"></script>
-<script src="/static/previsao.js?v=1"></script>
-<script src="/static/grafico.js?v=1"></script>
-<script src="/static/grupos.js?v=1"></script>
+<script src="/static/app.js?v=17"></script>
+<script src="/static/previsao.js?v=2"></script>
+<script src="/static/grafico.js?v=2"></script>
+<script src="/static/grupos.js?v=2"></script>
 
 </body>
 </html>

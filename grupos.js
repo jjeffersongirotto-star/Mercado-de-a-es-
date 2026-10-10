@@ -8,17 +8,34 @@
   state.selSet = new Set(); state.selMode = false; state.group = null;
   let editing = null, viewing = null;
 
+  const VKEY = 'screenerB3.ordsetor.v1';
+  try { const v = JSON.parse(localStorage.getItem(VKEY) || '{}'); state.ord2 = v.ord2 || ''; state.sector = v.sector || 'Todos'; } catch (e) { state.ord2 = ''; state.sector = 'Todos'; }
+  const ORD = [['', 'Padrão (barra de filtros)'], ['valmerc:-1', 'Valor de mercado: maior → menor'], ['valmerc:1', 'Valor de mercado: menor → maior'],
+    ['preco:-1', 'Preço da ação: maior → menor'], ['preco:1', 'Preço da ação: menor → maior'], ['var:-1', 'Alta do dia: maior → menor'], ['var:1', 'Alta do dia: menor → maior']];
+  const tools = () => `<div class="gtools"><label>Ordenar<select id="gOrd">${ORD.map(([v, l]) => `<option value="${v}"${v === state.ord2 ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label>Setor<select id="gSec">${['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${escH(x)}</option>`).join('')}</select></label></div>`;
+  document.addEventListener('change', (e) => {
+    if (e.target.id !== 'gOrd' && e.target.id !== 'gSec') return;
+    if (e.target.id === 'gOrd') state.ord2 = e.target.value; else state.sector = e.target.value;
+    try { localStorage.setItem(VKEY, JSON.stringify({ ord2: state.ord2, sector: state.sector })); } catch (er) { }
+    if (state.data) apply();
+  });
+  document.addEventListener('input', (e) => {
+    if (e.target.id !== 'gQ') return;
+    $g('#q').value = e.target.value; if (state.data) apply();
+  });
   function bar() {
     const b = $g('#gBar');
     if (state.selMode) {
-      b.innerHTML = `<div class="gbar"><b class="text-emerald-300 text-sm">${state.selSet.size} selecionada(s)</b>
+      b.innerHTML = `<div class="gbar mb-2"><b class="text-emerald-300 text-sm">${state.selSet.size} selecionada(s)</b>
         <input id="gName" maxlength="40" placeholder="Nome do grupo" value="${escH(editing ? editing.name : '')}" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
-        <button type="button" class="gbtn pri" data-g="save">Salvar</button><button type="button" class="gbtn" data-g="cancel">Cancelar</button></div>`;
+        <button type="button" class="gbtn pri" data-g="save">Salvar</button><button type="button" class="gbtn" data-g="cancel">Cancelar</button>
+        <input id="gQ" type="search" placeholder="Buscar empresa, setor ou atividade (ex.: gasol)…" value="${escH($g('#q').value)}" class="basis-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm"></div>${tools()}`;
     } else if (viewing) {
-      b.innerHTML = `<div class="gbar"><button type="button" class="gbtn" data-g="back">← Grupos</button>
+      b.innerHTML = `<div class="gbar mb-2"><button type="button" class="gbtn" data-g="back">← Grupos</button>
         <b class="text-emerald-300">${escH(viewing.name)}</b><span class="text-xs text-slate-400">${viewing.tickers.length} empresa(s)</span>
-        <button type="button" class="gbtn ml-auto" data-g="edit" data-n="${escH(viewing.name)}">Editar</button></div>`;
-    } else b.innerHTML = `<div class="flex justify-end"><button type="button" class="gbtn" data-g="new">＋ Criar grupo</button></div>`;
+        <button type="button" class="gbtn ml-auto" data-g="edit" data-n="${escH(viewing.name)}">Editar</button></div>${tools()}`;
+    } else b.innerHTML = `<div class="flex flex-wrap items-end gap-2">${tools()}<button type="button" class="gbtn ml-auto" data-g="new">＋ Criar grupo</button></div>`;
   }
   function refresh() { bar(); if (typeof apply === 'function' && state.data) apply(); }
   function startSel(g) {

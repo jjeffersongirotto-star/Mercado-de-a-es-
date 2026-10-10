@@ -17,8 +17,8 @@ def _ysym(t):
     t = t.upper()
     return "^BVSP" if t in ("IBOV", "^BVSP") else t + ".SA"
 
-def yahoo(t, kind):
-    rng, itv, _ = KINDS[kind]
+def yahoo(t, kind, rng=None):
+    rng0, itv, _ = KINDS[kind]; rng = rng or rng0
     last = None
     for host in ("query1", "query2"):
         try:
@@ -36,8 +36,8 @@ def yahoo(t, kind):
             last = e
     raise RuntimeError(f"Yahoo: {last}")
 
-def brapi(t, kind):
-    rng, itv, _ = KINDS[kind]
+def brapi(t, kind, rng=None):
+    rng0, itv, _ = KINDS[kind]; rng = rng or rng0
     sym = "^BVSP" if t.upper() in ("IBOV", "^BVSP") else t.upper()
     p = {"range": {"20y": "max"}.get(rng, rng), "interval": itv, "dividends": "true"}
     tok = os.environ.get("BRAPI_TOKEN")
@@ -59,7 +59,7 @@ def brapi(t, kind):
             pass
     return {"t": [p[0] for p in pts], "c": [p[1] for p in pts], "div": sorted(divs), "source": "brapi.dev"}
 
-def snapshot(t, kind):
+def snapshot(t, kind, rng=None):
     if kind == "i":
         raise RuntimeError("snapshot sem intradiário")
     r = requests.get(f"{RAW}/history/{t.upper()}.json.gz", timeout=(6, 30))
@@ -68,54 +68,131 @@ def snapshot(t, kind):
     d["source"] = "cópia diária (Yahoo, " + d.get("at", "?") + ")"
     return d
 
+DISK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache", "hist")
+os.makedirs(DISK, exist_ok=True)
+INC = {"d": "1mo", "m": "1y"}
+
+def _dload(name):
+    try:
+        with open(os.path.join(DISK, name + ".json")) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+def _dsave(name, d):
+    try:
+        p = os.path.join(DISK, name + ".json")
+        with open(p + ".tmp", "w") as f:
+            json.dump(d, f, separators=(",", ":"))
+        os.replace(p + ".tmp", p)
+    except Exception as e:
+        log.warning("disco: %s", e)
+
+def _merge(old, new):
+    """Junta séries: pontos novos substituem os do mesmo período (mês/dia) a partir do 1º ponto novo."""
+    cut = new["t"][0]
+    t = [x for x in old["t"] if x < cut]
+    c = old["c"][:len(t)]
+    divs = {d[0]: d[1] for d in old.get("div", [])}
+    divs.update({d[0]: d[1] for d in new.get("div", [])})
+    return {"t": t + new["t"], "c": c + new["c"], "div": sorted([k, v] for k, v in divs.items()), "source": new["source"]}
+
 def get(t, kind):
     t = t.upper().strip()
+    if t == "^BVSP":
+        t = "IBOV"
     if kind not in KINDS or not t.replace("^", "").isalnum() or len(t) > 12:
         raise ValueError("parâmetros inválidos")
-    key = (t, kind)
+    key, name = (t, kind), f"{t}_{kind}"
     c = _mem.get(key)
     if c and time.time() - c[0] < KINDS[kind][2]:
         return c[1]
+    base = c[1] if c else (_dload(name) if kind != "i" else None)
+    if base and kind != "i" and time.time() - base.get("_at", 0) < KINDS[kind][2]:
+        _mem[key] = (base["_at"], base); return base
     errs = []
-    for f in (yahoo, brapi, snapshot):
+    for f in (yahoo, brapi) if base else (yahoo, brapi, snapshot):
         try:
-            d = f(t, kind)
+            if base and base.get("t"):
+                d = _merge(base, f(t, kind, INC[kind]))   # incremental: só os últimos dias/meses
+            else:
+                d = f(t, kind)
+            d["_at"] = time.time()
             if len(_mem) > 600:
                 _mem.clear()
             _mem[key] = (time.time(), d)
+            if kind != "i":
+                _dsave(name, d)
             return d
         except Exception as e:
             errs.append(f"{f.__name__}: {str(e)[:80]}")
     log.warning("histórico %s/%s falhou: %s", t, kind, errs)
-    if c:
-        return c[1]
+    if base:
+        return base
     raise RuntimeError("; ".join(errs))
+
+def chart(t, kind):
+    """Uma requisição por período: ação + Ibovespa + índices BCB (exceto intradiário)."""
+    out = {"stock": get(t, kind)}
+    try:
+        out["ibov"] = get("IBOV", kind)
+    except Exception as e:
+        out["ibov"] = {"error": str(e)[:120]}
+    if kind != "i":
+        for n in SGS:
+            try:
+                b = bcb(n)
+                t0 = out["stock"]["t"][0] if out["stock"].get("t") else 0
+                cut = datetime.fromtimestamp(t0 - 40 * 86400).strftime("%Y-%m-%d")
+                i0 = next((i for i, x in enumerate(b["d"]) if x >= cut), len(b["d"]))
+                out[n] = {"d": b["d"][i0:], "v": b["v"][i0:]}
+            except Exception as e:
+                out[n] = {"error": str(e)[:120]}
+    return out
 
 # ---------- Banco Central (SGS) ----------
 SGS = {"cdi": 12, "ipca": 433, "poup": 25, "usd": 1}
 _bcb = {}
 
+def _bcb_fetch(code, a, b):
+    r = requests.get(f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados",
+                     params={"formato": "json", "dataInicial": a.strftime("%d/%m/%Y"), "dataFinal": b.strftime("%d/%m/%Y")},
+                     headers=UA, timeout=(6, 40))
+    r.raise_for_status()
+    return r.json()
+
 def bcb(name):
-    """Série completa dos últimos ~20 anos (BCB limita a 10 anos por consulta para séries diárias)."""
+    """~20 anos (consultas de 5 anos). Guardado em disco; depois só busca os últimos 60 dias."""
     c = _bcb.get(name)
     if c and time.time() - c[0] < 6 * 3600:
         return c[1]
-    code = SGS[name]
-    out, end = {}, datetime.now()
-    for k in range(4):
-        a, b = end - timedelta(days=1826 * (k + 1) - 1), end - timedelta(days=1826 * k)
-        r = requests.get(f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados",
-                         params={"formato": "json", "dataInicial": a.strftime("%d/%m/%Y"), "dataFinal": b.strftime("%d/%m/%Y")},
-                         headers=UA, timeout=(6, 40))
-        r.raise_for_status()
-        for x in r.json():
-            d, m, y = x["data"].split("/")
-            if name == "poup" and d != "01":
-                continue
-            out[f"{y}-{m}-{d}"] = float(x["valor"])
+    code, end = SGS[name], datetime.now()
+    base = c[1] if c else _dload("bcb_" + name)
+    if not base:
+        try:
+            r = requests.get(f"{RAW}/history/bcb_{name}.json", timeout=(6, 20))
+            if r.status_code == 200:
+                base = r.json()
+        except Exception:
+            pass
+    out = dict(zip(base["d"], base["v"])) if base else {}
+    windows = [(end - timedelta(days=60), end)] if out else \
+        [(end - timedelta(days=1826 * (k + 1) - 1), end - timedelta(days=1826 * k)) for k in range(4)]
+    try:
+        for a, b in windows:
+            for x in _bcb_fetch(code, a, b):
+                d, m, y = x["data"].split("/")
+                if name == "poup" and d != "01":
+                    continue
+                out[f"{y}-{m}-{d}"] = float(x["valor"])
+    except Exception as e:
+        if not out:
+            raise
+        log.warning("BCB %s incremental falhou: %s", name, e)
     if not out:
         raise RuntimeError("BCB vazio")
     s = sorted(out.items())
     res = {"d": [a for a, _ in s], "v": [b for _, b in s]}
     _bcb[name] = (time.time(), res)
+    _dsave("bcb_" + name, res)
     return res

@@ -576,6 +576,20 @@ def api_history(ticker: str, kind: str = "m"):
     except Exception as e:
         return JSONResponse({"error": "histórico indisponível: " + str(e)[:200]}, status_code=502)
 
+@app.get("/api/chart/{ticker}")
+def api_chart(ticker: str, kind: str = "d"):
+    try:
+        return JSONResponse(history.chart(ticker, kind), headers={"Cache-Control": "public, max-age=120"})
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": "histórico indisponível: " + str(e)[:200]}, status_code=502)
+
+@app.get("/api/profiles")
+def api_profiles():
+    d, _ = snapshots.load("profiles", max_mem_age=6 * 3600)
+    return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=3600"})
+
 @app.get("/api/indices/{name}")
 def api_indices(name: str):
     if name not in history.SGS:

@@ -21,64 +21,99 @@
   function mount(box) {
     if (box.dataset.m) return; box.dataset.m = '1';
     const t = box.dataset.gt;
-    const S = { per: '1d', di: '', df: '', on: {} };
+    const S = Object.assign({ per: '1d', di: '', df: '', on: { stock: true } }, loadPref(t));
+    const persist = () => savePref(t, S);
     box.innerHTML = `<div class="gc">
       <div class="gc-bar">${PERIODS.map(([k, l]) => `<button type="button" data-per="${k}">${l}</button>`).join('')}
-        <button type="button" class="gc-ref" title="Atualizar" aria-label="Atualizar gráfico">⟳</button></div>
+        <button type="button" class="gc-ref ricon" title="Atualizar" aria-label="Atualizar gráfico">⟳</button></div>
       <div class="gc-dates"><label>Data inicial<input type="date" data-d="di"></label><label>Data final<input type="date" data-d="df"></label></div>
-      <div class="gc-chk">${LINES.slice(1).map(L => `<label style="--lc:${L.color}"><input type="checkbox" data-l="${L.id}">${L.label}</label>`).join('')}</div>
+      <div class="gc-chk">${LINES.map(L => `<label style="--lc:${L.color}"><input type="checkbox" data-l="${L.id}">${L.label}</label>`).join('')}</div>
       <div class="gc-wrap"><div class="gc-plot"></div><div class="gc-leg"></div></div>
       <p class="gc-note"></p></div>`;
     const q = (s) => box.querySelector(s);
     box.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-per]'); if (b) { S.per = b.dataset.per; S.di = S.df = ''; box.querySelectorAll('[data-d]').forEach(i => i.value = ''); draw(); }
-      if (e.target.closest('.gc-ref')) { Object.keys(cache).filter(k => k.includes('kind=i') || k.includes('/' + t + '?')).forEach(k => delete cache[k]); draw(); }
+      const b = e.target.closest('[data-per]'); if (b) { S.per = b.dataset.per; S.di = S.df = ''; box.querySelectorAll('[data-d]').forEach(i => i.value = ''); persist(); draw(); }
+      if (e.target.closest('.gc-ref')) draw(true);
       e.stopPropagation();
     });
     box.addEventListener('change', (e) => {
-      const c = e.target.dataset.l; if (c) { S.on[c] = e.target.checked; draw(); }
-      const d = e.target.dataset.d; if (d) { S[d] = e.target.value; if (S.di || S.df) S.per = 'custom'; draw(); }
+      const c = e.target.dataset.l; if (c) { S.on[c] = e.target.checked; persist(); paint(); }
+      const d = e.target.dataset.d; if (d) { S[d] = e.target.value; if (S.di || S.df) S.per = 'custom'; persist(); draw(); }
     });
-    let seq = 0;
-    async function draw() {
-      const my = ++seq;
-      box.querySelectorAll('[data-per]').forEach(b => b.classList.toggle('on', b.dataset.per === S.per));
-      const plot = q('.gc-plot'), note = q('.gc-note');
-      plot.innerHTML = '<div class="gc-load">Carregando…</div>'; note.textContent = '';
-      const now = Date.now();
-      let start, end, kind;
+    box.querySelectorAll('[data-l]').forEach(i => i.checked = !!S.on[i.dataset.l]);
+    box.querySelectorAll('[data-d]').forEach(i => i.value = S[i.dataset.d] || '');
+    let seq = 0, cur = null;
+    function range() {
+      const now = Date.now(); let start, end, kind;
       if (S.per === 'custom') {
         start = S.di ? Date.parse(S.di) : now - 365 * DAY; end = S.df ? Date.parse(S.df) + DAY - 1 : now;
         kind = now - start > 5 * 365.25 * DAY ? 'm' : 'd';
-      } else if (S.per === '1d') kind = 'i';
+      } else if (S.per === '1d') { kind = 'i'; start = 0; end = now + DAY; }
       else { kind = 'd'; const n = parseInt(S.per); start = now - (S.per.endsWith('d') ? n * DAY : S.per.endsWith('m') ? 30.5 * DAY : n * 365.25 * DAY); end = now; }
+      return { start, end, kind };
+    }
+    function paint() {
+      if (!cur) return;
+      const { kind } = cur, pay = cur.pay, plot = q('.gc-plot'), note = q('.gc-note');
+      let { start, end } = range();
+      const sd = pay.stock;
+      if (kind === 'i') { start = sd.t[0] * 1000; end = sd.t[sd.t.length - 1] * 1000 + 1; }
+      const series = [], skipped = [];
+      for (const L of LINES) {
+        if (!S.on[L.id]) continue;
+        const d = L.id === 'stock' ? sd : pay[L.id];
+        if (!d || d.error) { skipped.push(L.label + (kind === 'i' ? '' : ' (indisponível)')); continue; }
+        if (L.id === 'stock' || L.id === 'ibov') series.push({ ...L, label: L.id === 'stock' ? t : L.label, pts: pricePts(d, start, end) });
+        else if (L.id === 'usd') series.push({ ...L, pts: pricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) });
+        else series.push({ ...L, pts: ratePts(d, start, end) });
+      }
+      if (!series.length) { plot.innerHTML = '<div class="gc-load">Marque ao menos uma linha.</div>'; q('.gc-leg').innerHTML = ''; }
+      else render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind);
+      const notes = [];
+      if (skipped.length) notes.push((kind === 'i' ? 'Sem dados intradiários: ' : 'Ocultos: ') + skipped.join(', ') + '.');
+      if (kind === 'i') notes.push('Hoje (5 em 5 min). Toque em ⟳ para atualizar.');
+      notes.push('Fonte: ' + sd.source + (kind !== 'i' ? ' · índices: Banco Central (SGS)' : '') + '.');
+      note.textContent = notes.join(' ');
+    }
+    async function draw(force) {
+      const my = ++seq, { kind } = range(), key = t + '|' + kind, ref = q('.gc-ref');
+      box.querySelectorAll('[data-per]').forEach(b => b.classList.toggle('on', b.dataset.per === S.per));
+      const cached = force ? null : await cget(key);
+      if (my !== seq) return;
+      if (cached) { cur = { kind, pay: cached.pay }; paint(); }
+      else if (!cur || cur.kind !== kind) q('.gc-plot').innerHTML = '<div class="gc-load">Carregando…</div>';
+      const fresh = cached && Date.now() - cached.at < (kind === 'i' ? 60e3 : 15 * 60e3);
+      if (fresh && !force) return;
+      ref.classList.add('spin');
       try {
-        const sd = await hist(t, kind);
-        if (kind === 'i') { start = sd.t[0] * 1000; end = sd.t[sd.t.length - 1] * 1000 + 1; }
-        const series = [{ ...LINES[0], label: t, pts: pricePts(sd, start, end) }];
-        const want = LINES.slice(1).filter(L => S.on[L.id]);
-        const skipped = [];
-        await Promise.all(want.map(async L => {
-          try {
-            if (L.id === 'ibov') series.push({ ...L, pts: pricePts(await hist('IBOV', kind), start, end) });
-            else if (kind === 'i') skipped.push(L.label);
-            else if (L.id === 'usd') { const d = await idx('usd'); series.push({ ...L, pts: pricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) }); }
-            else { const d = await idx(L.id); series.push({ ...L, pts: ratePts(d, start, end) }); }
-          } catch (e) { skipped.push(L.label + ' (indisponível)'); }
-        }));
-        if (my !== seq) return;
-        series.sort((a, b) => LINES.findIndex(L => L.id === a.id) - LINES.findIndex(L => L.id === b.id));
-        render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind);
-        const notes = [];
-        if (skipped.length) notes.push((kind === 'i' ? 'Sem dados intradiários: ' : 'Ocultos: ') + skipped.join(', ') + '.');
-        if (kind === 'i') notes.push('Hoje (5 em 5 min). Toque em ⟳ para atualizar.');
-        notes.push('Fonte: ' + sd.source + (want.some(L => !['ibov'].includes(L.id)) && kind !== 'i' ? ' · Banco Central (SGS)' : '') + '. Primeiro dado: ' + brDate(iso(sd.t[0] * 1000)) + '.');
-        note.textContent = notes.join(' ');
-      } catch (e) { if (my === seq) plot.innerHTML = `<div class="gc-load">Histórico indisponível: ${String(e.message).slice(0, 120)}</div>`; }
+        const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=${kind}`); const pay = await r.json();
+        if (!r.ok || !pay.stock) throw new Error(pay.error || r.status);
+        cput(key, pay);
+        if (my === seq) { cur = { kind, pay }; paint(); }
+      } catch (e) { if (my === seq && !cached) q('.gc-plot').innerHTML = `<div class="gc-load">Histórico indisponível: ${String(e.message).slice(0, 120)}</div>`; }
+      finally { if (my === seq) ref.classList.remove('spin'); }
     }
     draw();
+    setTimeout(async () => { const k = t + '|d'; if (!(await cget(k))) { try { const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=d`); if (r.ok) cput(k, await r.json()); } catch (e) { } } }, 1200);
   }
 
+  const PKEY = 'screenerB3.chart.v1';
+  const prefsAll = () => { try { return JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) { return {}; } };
+  function loadPref(t) { const p = prefsAll()[t]; return p ? { per: p.per, di: p.di || '', df: p.df || '', on: p.on || { stock: true } } : {}; }
+  function savePref(t, S) { const a = prefsAll(); a[t] = { per: S.per, di: S.di, df: S.df, on: S.on }; try { localStorage.setItem(PKEY, JSON.stringify(a)); } catch (e) { } }
+  // Cache no navegador (IndexedDB): mostra na hora e atualiza depois
+  const mem = {};
+  let dbp = null;
+  const db = () => dbp || (dbp = new Promise((res) => { try { const r = indexedDB.open('screenerB3-hist', 1); r.onupgradeneeded = () => r.result.createObjectStore('c'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }));
+  async function cget(k) {
+    if (mem[k]) return mem[k];
+    const d = await db(); if (!d) return null;
+    return new Promise(res => { try { const q = d.transaction('c').objectStore('c').get(k); q.onsuccess = () => { if (q.result) mem[k] = q.result; res(q.result || null); }; q.onerror = () => res(null); } catch (e) { res(null); } });
+  }
+  async function cput(k, pay) {
+    const v = { at: Date.now(), pay }; mem[k] = v;
+    const d = await db(); if (!d) return; try { d.transaction('c', 'readwrite').objectStore('c').put(v, k); } catch (e) { }
+  }
   function pricePts(d, start, end) {
     const out = []; let base = null;
     for (let i = 0; i < d.t.length; i++) {

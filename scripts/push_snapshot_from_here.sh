@@ -5,6 +5,7 @@
 #   Status Invest (CSV)  · Yahoo (desempate)   · TradingView (todos os países, fallback)
 #   Investidor10 (~1 req/s, ~1000 páginas)     · Dados de Mercado (~1 req/2,5 s, ~300 páginas)
 #   CVM dados abertos (DFP/ITR, pré-processado: data/cvm.json compacto)
+#   Histórico (Yahoo 20a mensal/5a diário + Ibovespa + BCB) e perfis (brapi) do universo exibido
 # ONLY="cvm tradingview" limita as etapas; PYTHON = interpretador com pandas/lxml/yfinance/requests.
 set -e
 REPO_URL="${REPO_URL:-https://github.com/jjeffersongirotto-star/Mercado-de-a-es-.git}"
@@ -13,7 +14,7 @@ PY="${PYTHON:-}"
 if [ -z "$PY" ]; then
   if [ -x /workspace/b3-api/.venv/bin/python ]; then PY=/workspace/b3-api/.venv/bin/python; else PY=python3; fi
 fi
-STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado}"
+STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado history}"
 TMP="$(mktemp -d)"
 git clone -q --depth 1 --branch data "$REPO_URL" "$TMP" 2>/dev/null || { git -C "$TMP" init -q -b data; git -C "$TMP" remote add origin "$REPO_URL"; }
 mkdir -p "$TMP/data"
@@ -30,6 +31,7 @@ for s in $STEPS; do
     tradingview)    run "TradingView"      "$PY" "$HERE/scripts/fetch_tradingview.py" "$TMP/data" ;;
     cvm)            run "CVM"              "$PY" "$HERE/scripts/build_cvm.py" "$TMP/data" "${CVM_CACHE:-/tmp/cvmraw}" ;;
     investidor10)   run "Investidor10"     "$PY" "$HERE/scripts/fetch_investidor10.py" "$TMP/data" ;;
+    history)        run "Histórico+perfis" "$PY" "$HERE/scripts/fetch_history.py" "$TMP/data" ;;
     dadosdemercado) run "Dados de Mercado" "$PY" "$HERE/scripts/fetch_dadosdemercado.py" "$TMP/data" ;;
   esac
 done

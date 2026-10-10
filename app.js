@@ -196,8 +196,9 @@ function updateSortDir() { $('#sortDir').textContent = state.sortDir > 0 ? '↑ 
 const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' ? r.var : val(r, k));
 
 function passes(r) {
-  const q = $('#q').value.trim().toLowerCase();
-  if (q && !(r.ticker.toLowerCase().includes(q) || (r.nome || '').toLowerCase().includes(q))) return false;
+  const q = norm($('#q').value.trim());
+  if (q && !(r._s || norm(r.ticker + ' ' + r.nome)).includes(q)) return false;
+  if (state.sector && state.sector !== 'Todos' && r.macro !== state.sector) return false;
   if (state.group && !state.selMode && !state.group.has(r.ticker)) return false;
   if ((!state.group || state.selMode) && $('#onlyLiquid').checked && !((r.v.liq2m || 0) > 0)) return false;
   for (const [k, x] of Object.entries(state.filters)) {
@@ -210,7 +211,8 @@ function passes(r) {
 }
 
 function apply() {
-  const k = state.sortKey, d = state.sortDir;
+  const o2 = state.ord2 ? state.ord2.split(':') : null;
+  const k = o2 ? o2[0] : state.sortKey, d = o2 ? +o2[1] : state.sortDir;
   state.filtered = state.rows.filter(passes).sort((a, b) => {
     const va = getVal(a, k), vb = getVal(b, k);
     if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
@@ -295,23 +297,23 @@ function blockHtml(r) {
                  (nRes ? `<span class="hb hb-res" title="${nRes} indicador(es) com maioria, mas alguma fonte discorda">maioria ${nRes}</span>` : '') +
                  (nBank ? `<span class="hb hb-bank" title="${nBank} indicador(es) baseados em EBIT/receita não comparáveis (banco/seguradora)">banco ${nBank}</span>` : '') +
                  (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) em que CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado">aj ${nAdj}</span>` : '');
+  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
-    <div class="blk-head flex flex-wrap items-center gap-x-4 gap-y-1 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
-      <div class="flex items-center gap-1.5 flex-wrap">
-        ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<div class="text-2xl font-black tracking-tight text-emerald-300 mr-0.5">${r.ticker}</div>${badges}
+    <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
+      <div class="flex items-center gap-2">
+        ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>
+        <div class="ml-auto flex items-baseline gap-2 whitespace-nowrap"><span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}</div>
       </div>
-      <div class="min-w-0 flex-1 basis-full sm:basis-0 order-last sm:order-none flex items-center gap-3">
+      ${tags || r.macro ? `<div class="flex flex-wrap items-center gap-1 mt-1">${tags}${r.macro && r.macro !== 'Outros' ? `<span class="ctag ctag-sec">${esc(r.macro)}</span>` : ''}</div>` : ''}
+      <div class="flex items-center gap-3 mt-1">
         <div class="min-w-0 flex-1">
           <div class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</div>
           <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
         </div>
         <button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
       </div>
-      <div class="flex items-baseline gap-2 ml-auto">
-        <span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}
-      </div>
     </div>
-    <div class="collapse-wrap"><div class="collapse-inner">${open ? cardsHtml(r) + chartSlot(r) : ''}</div></div>
+    <div class="collapse-wrap"><div class="collapse-inner">${open ? chartSlot(r) + cardsHtml(r) : ''}</div></div>
   </article>`;
 }
 
@@ -319,7 +321,7 @@ function setBlockOpen(art, open) {
   const t = art.dataset.ticker, inner = art.querySelector('.collapse-inner'), btn = art.querySelector('.tgl');
   if (open) {
     state.expanded.add(t);
-    if (!inner.firstElementChild) { const r = state.rowMap[t]; if (r) inner.innerHTML = cardsHtml(r) + chartSlot(r); }
+    if (!inner.firstElementChild) { const r = state.rowMap[t]; if (r) inner.innerHTML = chartSlot(r) + cardsHtml(r); }
     requestAnimationFrame(() => art.classList.add('open'));
   } else { state.expanded.delete(t); art.classList.remove('open'); }
   btn.setAttribute('aria-expanded', String(open));
@@ -446,6 +448,58 @@ $('#sourceMenu').addEventListener('click', (e) => {
   closeMenus(); state.source = b.dataset.src; saveView(); renderSource(); apply();
 });
 
+// ---------- Universo: 1 ticker por empresa; remove ilíquidas sem bons resultados (igual a scripts/universe.py) ----------
+const isIlliq = (r) => { const v = r.v || {}, liq = v.vol30 != null ? v.vol30 : v.liq2m; return !(v.liq2m > 0) || liq == null || liq < 50000; };
+const isPromising = (r) => { const v = r.v || {}; return v.lpa > 0 && v.roe >= 10 && !(v.lucro5a < 0); };
+const clsRank = (t) => { const m = /^[A-Z]{4}(\d+)/.exec(t); return ({ '3': 0, '4': 1, '11': 2 })[m ? m[1] : ''] ?? 3; };
+function universe(rows) {
+  const best = {};
+  for (const r of rows) {
+    if (isIlliq(r) && !isPromising(r)) continue;
+    const k = r.ticker.slice(0, 4), key = [clsRank(r.ticker), -((r.v || {}).liq2m || 0)], b = best[k];
+    if (!b || key[0] < b[0][0] || (key[0] === b[0][0] && key[1] < b[0][1])) best[k] = [key, r];
+  }
+  const keep = new Set(Object.values(best).map(b => b[1]));
+  return rows.filter(r => keep.has(r));
+}
+let PROFILES = null;
+async function loadProfiles(rows) {
+  if (!PROFILES) { try { const j = await (await fetch('/api/profiles')).json(); PROFILES = j.profiles || {}; } catch (e) { PROFILES = {}; } }
+  for (const r of rows) { const p = PROFILES[r.ticker]; if (p) { r.desc = p.d; r.psetor = p.s; r.pind = p.i; } }
+}
+const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+// ---------- Setor (macro) e classificação ----------
+const SECTORS = ['Financeiro', 'Utilidade Pública', 'Materiais Básicos & Commodities', 'Petróleo, Gás e Biocombustíveis', 'Consumo Cíclico', 'Consumo Não Cíclico', 'Agronegócio', 'Saúde', 'Tecnologia & Comunicações', 'Outros'];
+const SEC_RULES = [
+  [3, /petrol|refino|combustiv|biocomb|acucar e alcool|etanol|oleo e gas/], [1, /energia eletrica|saneamento|\bagua\b|^gas$|\bgas\b(?! integrado)|utilidade|eletric/],
+  [0, /banco|segur|ressegur|financ|bolsa|previd|credito|corretora|holding/], [7, /medic|hospit|saude|diagnost|farmac|odontol/],
+  [8, /telecom|programas|tecnolog|computador|software|comunica|internet|fidelizac/], [6, /agric|agropec|fertiliz|defensiv|sement|graos/],
+  [5, /alimento|bebida|cerveja|carnes|supermerc|uso pessoal|limpeza|frigor/],
+  [4, /varejo|tecido|vestuar|calcad|incorpora|construc|eletrodom|automove|viage|educac|hotel|restaurante|aluguel de carro|comercio|e-commerce|esport|eventos|imobili|acessorio/],
+  [2, /siderur|minera|minerais|papel|celulose|quimic|embalag|metal|cobre|madeira|aco\b/]];
+const TV_SEC = { 'Finance': 0, 'Utilities': 1, 'Energy Minerals': 3, 'Non-Energy Minerals': 2, 'Process Industries': 2, 'Retail Trade': 4, 'Consumer Durables': 4, 'Consumer Services': 4,
+  'Consumer Non-Durables': 5, 'Health Services': 7, 'Health Technology': 7, 'Technology Services': 8, 'Communications': 8, 'Electronic Technology': 8 };
+function macroSector(r) {
+  for (const txt of [norm(r.subsetor), norm(r.pind), norm(r.psetor)]) { if (!txt) continue; for (const [i, re] of SEC_RULES) if (re.test(txt)) return SECTORS[i]; }
+  return SECTORS[TV_SEC[r.setor] ?? 9];
+}
+// Classificação (máx. 2, por prioridade). Regras explicadas no painel ⓘ.
+function classify(r) {
+  const v = r.v || {}, sec = r.macro, out = [];
+  const defSec = ['Utilidade Pública', 'Financeiro', 'Saúde', 'Consumo Não Cíclico'].includes(sec);
+  const perene = (sec === 'Utilidade Pública' || /banco|segur/.test(norm(r.subsetor + ' ' + (r.pind || '')))) && v.dy > 5 && v.roe > 10 && !(v.lucro5a < 0) && v.lpa > 0;
+  if (perene) out.push('Perenes');
+  if (Math.max(v.cresc5a ?? -1e9, v.lucro5a ?? -1e9) > 15 && v.lpa > 0) out.push('Growth');
+  if (v.lpa > 0 && v.lucro5a != null && v.lucro5a <= 0 && v.roe > 0) out.push('Turnaround');
+  if (v.pl > 0 && v.pl <= 10 && v.pvp > 0 && v.pvp < 1.5) out.push('Valor');
+  if (!perene) out.push(defSec ? 'Defensivas' : ['Materiais Básicos & Commodities', 'Petróleo, Gás e Biocombustíveis', 'Consumo Cíclico', 'Agronegócio'].includes(sec) ? 'Cíclicas' : null);
+  return out.filter(Boolean).slice(0, 2);
+}
+function prepRow(r) {
+  r.macro = macroSector(r); r.tags = classify(r);
+  r._s = norm([r.ticker, r.nome, r.setor, r.subsetor, r.psetor, r.pind, r.macro, r.desc].filter(Boolean).join(' | '));
+}
+
 // ---------- Carga ----------
 let loadSeq = 0, built = false;
 async function load() {
@@ -456,6 +510,8 @@ async function load() {
     if (r.status === 503) { $('#updated').textContent = 'Buscando dados nas fontes…'; setTimeout(load, 3000); return; }
     if (!r.ok) { const j = await r.json().catch(() => ({})); $('#updated').textContent = 'Fonte indisponível: ' + (j.error || r.status); setTimeout(load, 15000); return; }
     const d = await r.json();
+    if (country === 'br') { d.rows = universe(d.rows); await loadProfiles(d.rows); }
+    d.rows.forEach(prepRow);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
@@ -477,7 +533,7 @@ async function init() {
 }
 
 let qTimer;
-$('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(apply, 150); });
+$('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(apply, 60); });
 $('#onlyLiquid').addEventListener('change', apply);
 $('#btnClear').addEventListener('click', () => { $('#q').value = ''; clearFilters(); });
 $('#btnCsv').addEventListener('click', exportCsv);
@@ -488,8 +544,8 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#inf
 $('#btnExpandAll').addEventListener('click', () => expandAll(true));
 $('#btnCollapseAll').addEventListener('click', () => expandAll(false));
 $('#btnRefresh').addEventListener('click', async () => {
-  $('#btnRefresh').disabled = true; $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
-  await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; }, 2500);
+  $('#btnRefresh').disabled = true; $('#btnRefresh').classList.add('spin'); $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
+  await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; $('#btnRefresh').classList.remove('spin'); }, 2500);
 });
 setInterval(load, 10 * 60 * 1000);
 init();
