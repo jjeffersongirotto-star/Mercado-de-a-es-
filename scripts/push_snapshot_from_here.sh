@@ -42,7 +42,7 @@ for s in $STEPS; do
 done
 # Prioridade B3: com o histórico COTAHIST publicado, apaga o histórico Yahoo das ações brasileiras (fica só o Ibovespa)
 if [ -n "$(ls "$TMP/data/history4" 2>/dev/null | head -1)" ]; then
-  for d in history history2 history3; do [ -d "$TMP/data/$d" ] && find "$TMP/data/$d" -type f ! -name 'IBOV*' -delete; done
+  for d in history history2 history3; do [ -d "$TMP/data/$d" ] && find "$TMP/data/$d" -type f ! -name 'IBOV*' ! -name 'gold*' ! -name 'bcb_*' -delete; done
 fi
 [ ${#MSG[@]} -eq 0 ] && { echo "Nenhum snapshot gerado" >&2; exit 1; }
 cd "$TMP" && git add -A data && (git diff --cached --quiet || git -c user.name="${GIT_NAME:-jjeffersongirotto-star}" -c user.email="${GIT_EMAIL:-jjeffersongirotto-star@users.noreply.github.com}" commit -q -m "Snapshot ${MSG[*]} $(date -u +%Y-%m-%dT%H:%MZ)") && git push -q origin data

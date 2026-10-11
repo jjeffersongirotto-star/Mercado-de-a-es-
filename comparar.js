@@ -78,8 +78,10 @@
     const kind = (Date.now() - start) > 5 * 365 * 864e5 ? 'm' : 'd';
     chart.querySelector('.gc-plot').innerHTML = loaderHTML('');
     const stocks = S.items.filter(x => !isIdx(x)), need = stocks.length ? stocks : ['IBOV'];
-    const pays = {};
-    await Promise.all(need.map(async t => { try { const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=${kind}`); if (r.ok) pays[t] = await r.json(); } catch (e) { } }));
+    const pays = {}, tget = async (u, ms) => { const ac = new AbortController(), h = setTimeout(() => ac.abort(), ms); try { const r = await fetch(u, { signal: ac.signal }); return r.ok ? await r.json() : null; } catch (e) { return null; } finally { clearTimeout(h); } };
+    // "comparar com tudo": retornos de todas as ações numa chamada só, em paralelo com o gráfico; nada fica carregando para sempre
+    const pR = S.all ? tget(`/api/returns?di=${S.di}&df=${S.df}`, 20000) : null;
+    await Promise.all(need.map(async t => { const j = await tget(`/api/chart/${encodeURIComponent(t)}?kind=${kind}`, 15000); if (j) pays[t] = j; }));
     if (my !== seq) return;
     const anyP = Object.values(pays)[0] || {};
     const series = [];
@@ -96,11 +98,12 @@
     if (series.length) gcRender(plot, leg, series, start, end, kind);
     else { plot.innerHTML = '<div class="gc-nodata-msg">Sem informações no banco de dados</div>'; leg.innerHTML = ''; }
     if (S.all) {
-      let R = {}; try { R = await (await fetch(`/api/returns?di=${S.di}&df=${S.df}`)).json(); } catch (e) { }
+      const R = (await pR) || {}; S._miss = !Object.keys(R).length || !Object.keys(pays).length;
       if (my !== seq) return;
       for (const r of rows()) { if (S.items.includes(r.ticker)) continue; const v = R[r.ticker]; if (v != null) vals[r.ticker] = v; }
       for (const [id, , k] of IDX) if (vals[id] == null) { const d = anyP[k]; if (d && !d.error) { const pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end); if (pts.length) vals[id] = pts[pts.length - 1][1]; } }
     }
+    if (!S.all) S._miss = false;
     cols(); window.__cmpMs = Math.round(performance.now() - t0);
   }
   function cols() {
@@ -117,6 +120,7 @@
     const sorter = (a, b) => (fav(b.id) - fav(a.id)) || Math.abs(b.d) - Math.abs(a.d);
     const html = (arr, q, cls) => arr.filter(x => !q || norm(label(x.id)).includes(norm(q))).sort(sorter).map(x => `<div class="cmp-it"><b>${fav(x.id) ? '★ ' : ''}${esc(label(x.id))}</b><span class="${cls}">${fmt(x.v)}</span><small>${rv != null ? (x.d > 0 ? '+' : '') + F2.format(x.d) + (ind ? '' : ' p.p.') + ' vs ref.' : ''}</small></div>`).join('') || '<p class="text-xs text-slate-500 py-2">—</p>';
     $c('#cmpLess').innerHTML = (rv != null ? `<p class="cmp-ref">Ref. ${esc(label(ref))}: ${fmt(rv)}</p>` : '') + html(L, S.qa, 'dn');
+    if (S._miss) $c('#cmpLess').insertAdjacentHTML('afterbegin', '<p class="gt-help">Alguns dados não carregaram agora; mostrando o que veio.</p>');
     $c('#cmpMore').innerHTML = (rv != null ? `<p class="cmp-ref">Ref. ${esc(label(ref))}: ${fmt(rv)}</p>` : '') + html(M, S.qb, 'up');
   }
   function all() { chips(); compute(); save(); }

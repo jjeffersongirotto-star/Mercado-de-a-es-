@@ -29,7 +29,7 @@ def yahoo(t, kind, rng=None):
             else:
                 p["range"] = rng
             r = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{_ysym(t)}",
-                             params=p, headers={"User-Agent": "Mozilla/5.0"}, timeout=(6, 25))
+                             params=p, headers={"User-Agent": "Mozilla/5.0"}, timeout=(4, 10))
             r.raise_for_status()
             res = r.json()["chart"]["result"][0]
             ts, cl = res.get("timestamp") or [], res["indicators"]["quote"][0]["close"]
@@ -55,7 +55,7 @@ def brapi(t, kind, rng=None):
     tok = os.environ.get("BRAPI_TOKEN")
     if tok:
         p["token"] = tok
-    r = requests.get(f"https://brapi.dev/api/quote/{sym}", params=p, headers=UA, timeout=(6, 25))
+    r = requests.get(f"https://brapi.dev/api/quote/{sym}", params=p, headers=UA, timeout=(4, 10))
     r.raise_for_status()
     d = r.json()["results"][0]
     pts = [(x["date"], x["close"]) for x in d.get("historicalDataPrice") or [] if x.get("close") is not None]
@@ -194,7 +194,8 @@ def get(t, kind):
     if base and kind != "i" and time.time() - base.get("_at", 0) < KINDS[kind][2]:
         _mem[key] = (base["_at"], base); return base
     errs = []
-    for f in (yahoo, brapi) if base else (yahoo, brapi, snapshot):
+    # frio (sem base): cópia diária do data branch primeiro (rápida); Yahoo/brapi só para os dias novos
+    for f in (yahoo, brapi) if base else (snapshot, yahoo, brapi):
         try:
             if base and base.get("t"):
                 d = _merge(base, f(t, kind, INC[kind]))   # incremental: só os últimos dias/meses
@@ -211,6 +212,7 @@ def get(t, kind):
             errs.append(f"{f.__name__}: {str(e)[:80]}")
     log.warning("histórico %s/%s falhou: %s", t, kind, errs)
     if base:
+        _mem[key] = (time.time() - KINDS[kind][2] + 1800, base)  # fontes fora: não tenta de novo por 30 min
         return base
     raise RuntimeError("; ".join(errs))
 
@@ -262,7 +264,7 @@ def gold():
         import bisect
         for rng, itv in ((("5d", "1d"),) if out else (("max", "1mo"), ("10y", "1d"))):
             for host in ("query1", "query2"):
-                q = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/GC=F", params={"range": rng, "interval": itv}, headers={"User-Agent": "Mozilla/5.0"}, timeout=(6, 25))
+                q = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/GC=F", params={"range": rng, "interval": itv}, headers={"User-Agent": "Mozilla/5.0"}, timeout=(4, 10))
                 if q.status_code == 200:
                     break
             q.raise_for_status()
