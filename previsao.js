@@ -42,6 +42,7 @@ if (typeof document !== 'undefined') {
   const st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })() ||
     { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
   if (!Array.isArray(st.ex)) st.ex = [];
+  if (!(st.tx >= 0)) st.tx = 0;
   st.ret.forEach(r => { if (r.ok === undefined) r.ok = true; }); st.ex.forEach(r => { if (r.ok === undefined) r.ok = true; });
   function toast(msg) {
     let t = document.getElementById('pvToast');
@@ -69,7 +70,7 @@ if (typeof document !== 'undefined') {
 
   function fill() {
     el('pvIni').value = fmtIn(st.ini, 2); el('pvAp').value = fmtIn(st.ap, 2);
-    el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2);
+    el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2); el('pvTx').value = fmtIn(st.tx, 2);
     el('pvRm').value = fmtIn(st.rm, 3); el('pvRa').value = fmtIn(st.ra, 2);
     el('pvTicker').value = st.ticker || ''; el('pvProj').value = st.proj || '';
     renderRet(); renderEx(); applyMode();
@@ -81,7 +82,7 @@ if (typeof document !== 'undefined') {
     i.addEventListener('input', () => { f(num(i.value)); if (pair) el(pair).value = fmtIn(st[pd[0]], pd[1]); liveCompute(); });
     i.addEventListener('change', () => { f(num(i.value)); save(); setTimeout(() => { fill(); compute(); }, 0); });
   }
-  bind('pvIni', v => st.ini = Math.max(0, v)); bind('pvAp', v => st.ap = Math.max(0, v));
+  bind('pvIni', v => st.ini = Math.max(0, v)); bind('pvTx', v => st.tx = Math.max(0, Math.min(100, v))); bind('pvAp', v => st.ap = Math.max(0, v));
   bind('pvDm', v => { st.dm = v; st.da = m2a(v); }, 'pvDa', ['da', 2]); bind('pvDa', v => { st.da = v; st.dm = a2m(v); }, 'pvDm', ['dm', 3]);
   bind('pvRm', v => { st.rm = v; st.ra = m2a(v); }, 'pvRa', ['ra', 2]); bind('pvRa', v => { st.ra = v; st.rm = a2m(v); }, 'pvRm', ['rm', 3]);
   // 1º toque seleciona tudo (digitar substitui); toque seguinte posiciona o cursor normalmente
@@ -296,21 +297,22 @@ if (typeof document !== 'undefined') {
     const r0 = (projS && st.proj ? projS.rm : st.rm) / 100, d0 = (projS && st.proj ? projS.dm : st.dm) / 100;
     const x1 = apAt(1, 0).extra;
     let sem = st.ini + x1, com = st.ini + x1, apT = st.ini + x1, divT = 0;
-    rows.push({ m: 1, ap: st.ini + x1, apT, rent: 0, div: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
+    rows.push({ m: 1, ap: st.ini + x1, apT, rent: 0, div: 0, tax: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
     for (let m = 2; m <= n; m++) {
       const r = steps ? steps[m - 1].r : r0, d = steps ? steps[m - 1].d : d0;
       const W = wAt(m), W0 = W.reg + W.extra, A = apAt(m, 0), A0 = A.reg + A.extra, ap = W0 > 0 ? 0 : A0, w = W0; // mês com retirada: aporte 0 (inclusive extraordinários) e sai a retirada inteira
-      const rent = sem * r, div = com * d, rentC = com * r;
+      const rent = sem * r, div = com * d, rentC = com * r, tax = div * (st.tx || 0) / 100; // reinveste o dividendo líquido do imposto
       sem = Math.max(0, sem + rent + ap - w);
-      com = Math.max(0, com + rentC + div + ap - w);
-      apT += ap; divT += div;
-      rows.push({ m, ap, apT, rent, div, divT, sem, com, w, ym: steps?.[m - 1].ym });
+      com = Math.max(0, com + rentC + div - tax + ap - w);
+      apT += ap; divT += div - tax;
+      rows.push({ m, ap, apT, rent, div, tax, divT, sem, com, w, ym: steps?.[m - 1].ym });
     }
     shownRows = PAGE_ROWS; renderAll();
   }
 
-  const COLS = [['m', 'Mês', 'pv-c-m'], ['va', 'Valorização total', 'pv-c-p'], ['pa', '% Aporte', 'pv-c-p'], ['pv', '% Valorização', 'pv-c-p'], ['pd', '% Dividendos', 'pv-c-p'], ['ap', 'Aporte mensal', 'pv-c-ap'], ['apT', 'Aporte total', 'pv-c-ap'], ['rent', 'Rentabilidade mensal', 'pv-c-r'],
-    ['div', 'Dividendo mensal', 'pv-c-d'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Patrimônio total', 'pv-c-r'], ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d']];
+  const COLS = [['m', 'Mês', 'pv-c-m'], ['ap', 'Aporte mensal', 'pv-c-ap'], ['apT', 'Aporte total', 'pv-c-ap'], ['pa', '% Aporte', 'pv-c-ap'], ['rent', 'Rentabilidade mensal', 'pv-c-r'],
+    ['div', 'Dividendo mensal', 'pv-c-d'], ['tax', 'Imposto', 'pv-c-tx'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Patrimônio total', 'pv-c-r'], ['va', 'Valorização total', 'pv-c-r'], ['pv', '% Valorização', 'pv-c-r'],
+    ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d'], ['pd', '% Dividendos', 'pv-c-d']];
   const hasW = () => st.ret.some(r => r.ok && r.v > 0);
   const cols = () => hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS;
   const PP = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
