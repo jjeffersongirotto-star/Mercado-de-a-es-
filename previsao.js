@@ -299,7 +299,7 @@ if (typeof document !== 'undefined') {
     rows.push({ m: 1, ap: st.ini + x1, apT, rent: 0, div: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
     for (let m = 2; m <= n; m++) {
       const r = steps ? steps[m - 1].r : r0, d = steps ? steps[m - 1].d : d0;
-      const W = wAt(m), W0 = W.reg + W.extra, A = apAt(m, 0), A0 = A.reg + A.extra, ap = A0 > W0 ? A0 - W0 : 0, w = A0 > W0 ? 0 : W0; // aporte maior: entra a diferença; senão aporte 0 e sai a retirada inteira
+      const W = wAt(m), W0 = W.reg + W.extra, A = apAt(m, 0), A0 = A.reg + A.extra, ap = W0 > 0 ? 0 : A0, w = W0; // mês com retirada: aporte 0 (inclusive extraordinários) e sai a retirada inteira
       const rent = sem * r, div = com * d, rentC = com * r;
       sem = Math.max(0, sem + rent + ap - w);
       com = Math.max(0, com + rentC + div + ap - w);
