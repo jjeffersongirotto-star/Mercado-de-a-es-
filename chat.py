@@ -156,7 +156,7 @@ def gemini(q, ctx, hist):
     key = os.environ.get("GEMINI_API_KEY")
     if not key: raise RuntimeError("sem chave")
     models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]
-    sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo "
+    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE; nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo "
              "(dados do site: tabela de todas as ações, grupos, índices e o que o usuário preencheu em Previsão e Comparar). "
              "Você pode filtrar, ranquear e cruzar critérios na tabela (ex.: P/L baixo + LPA positivo + crescimento) e deve explicar os critérios usados. "
              "Diga quais ações atendem aos critérios, sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. "
@@ -252,10 +252,36 @@ SCREEN = ("qual acao", "quais acoes", "que acao", "que acoes", "melhores", "melh
 COMPLEX = ("por que", "porque", "explique", "analise", "analisa", "devo", "vale a pena", "compensa", "opiniao", "sugest", "e se", "minha", "meu ", "previs", "aluguel", "simula")
 TABS = {"aluguel": "Aluguel", "previsao": "Previsão", "comparar": "Comparar", "grupos": "Grupos", "acoes": "Ações", "chat": "Chat", "filtro": "Ações", "favorit": "Grupos"}
 
+LABELS = ["Ações","Grupos","Comparar","Previsão","Chat","CSV","Limpar","Expandir todos","Recolher todos","Maior → menor","Carregar mais",
+ "Previsão rentabilidade","Previsão aluguel","Mostrar mais meses","Criar grupo","Criar","Reorganizar","Salvar","Cancelar","Editar","Excluir",
+ "Favoritos","Favoritados","Favoritar","Filtros ocultos","Mais filtros","Lupa","Só líquidas","Índice B3","Setor","Minimizar filtros","Ordenar",
+ "Status das fontes","Buscar","Valor inicial","Aporte mensal","Dividendos","Rentabilidade","Imposto","Projeções","E se eu tivesse investido",
+ "Data inicial","Data final","Aportes extraordinários","Retiradas extraordinárias","Ação","Quantidade","Adições mensais","Taxa","Prazo",
+ "% não alugado","Taxa da corretora","Descontar automaticamente","Remover","Adicionar","Renderam menos","Renderam mais","Filtrar","Todos",
+ "País","Fonte","Estrela","Alça","Enviar","Mês","Inverter ordem","Restaurar","Concordância","Exportar"]
+_LN = None
+def fake_label(q):
+    """Se a pergunta cita um botão/opção que não existe, devolve a resposta; senão None."""
+    global _LN
+    if _LN is None: _LN = [norm(x).replace("+","").strip() for x in LABELS]
+    nq = norm(q)
+    m = re.search(r"(?:bot[aã]o|opc[aã]o|op[cç][oõ]es|aba|menu|campo|icone|chave|toggle|link)\s+(?:de |do |da |chamad[oa] )?[\"'“]?([^\"'”?.,!]{2,40})", nq)
+    if not m: return None
+    name = re.sub(r"\b(no|na|do|da|de|que|para|pra|onde|como|fica|esta|nao|existe|aparece|site)\b.*$", "", m.group(1)).strip()
+    W = set(" ".join(_LN).split()) | {"grupo","grupos","acoes","acao","filtro","filtros","favorito","favoritos","previsao","aluguel","rentabilidade","comparar","chat","busca","estrela","o","a","os","as","e"}
+    if len(name) < 2 or any(name in l for l in _LN) or all(w in W for w in name.split()): return None
+    import difflib
+    near = difflib.get_close_matches(name, _LN, 1, 0.55)
+    sug = f" A opção real mais próxima parece ser \"{LABELS[_LN.index(near[0])]}\"." if near else ""
+    return (f"Não encontrei a opção \"{m.group(1).strip()}\" no site. Pode olhar de novo e me descrever exatamente o que aparece na tela "
+            f"(nome do botão/texto), ou contar passo a passo como chegou nesse lugar? Assim consigo verificar se há alguma divergência.{sug}")
+
 def local(q, D, ret_fn, cx):
     """Respostas prontas sem IA. Retorna texto ou None."""
     nq = norm(q); T = _tickers(q, D); I = _idx(q); k = _metric(q, D)
     if any(w in nq for w in WRONG): return None
+    fk = fake_label(q)
+    if fk: return fk
     if any(w in nq for w in COMPLEX) and not any(w in nq for w in HOWW): return None
     if any(w in nq for w in SCREEN) and not any(w in nq for w in HOWW): return None
     if "cor" in nq.split() or "cores" in nq or "colorid" in nq: return COLORS
@@ -354,7 +380,7 @@ def ground(q, ctx, hist):
     if not key: raise RuntimeError("sem chave")
     contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
     contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
-    sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, conciso. Use os DADOS DO SITE e, quando faltarem ou parecerem errados, "
+    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE; nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, conciso. Use os DADOS DO SITE e, quando faltarem ou parecerem errados, "
              "a busca na web. " + TRUST + " Sem recomendação personalizada.\n\nDADOS DO SITE:\n" + ctx[:60000])
     err = None
     for model in [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]:
@@ -381,7 +407,7 @@ def gemini2(q, ctx, hist):
                               json={"model": "models/gemini-3.5-flash", "systemInstruction": {"parts": [{"text": "GUIA DO SITE:\n" + guide()}]}, "ttl": "86400s"}, timeout=20)
             _CACHE["ok"] = r.status_code == 200 and r.json().get("name"); log.info("cachedContents: %s", r.status_code)
         except Exception: _CACHE["ok"] = False
-    sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo. "
+    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE; nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo. "
              "Pode filtrar, ranquear e cruzar critérios na tabela e deve explicar os critérios usados. Diga quais ações atendem aos critérios, "
              "sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. Números no formato brasileiro.\n\nDADOS DO SITE:\n" + ctx)
     contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
