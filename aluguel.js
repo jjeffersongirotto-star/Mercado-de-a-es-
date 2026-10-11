@@ -1,7 +1,7 @@
 // Previsão aluguel (empréstimo de ações, BTB): renda de aluguel mês a mês de várias ações.
 // Cálculo puro (testado em tests/test_aluguel.js): aluguelSim(items, opts) → {rows: total por mês, per: por ação e mês}
 function aluguelSim(items, o) {
-  const N = o.months || 360, fee = (o.fee || 0) / 100, desc = o.desc !== false;
+  const N = o.months || 960, fee = (o.fee || 0) / 100, desc = o.desc !== false;
   const per = items.map(() => []), rows = [];
   let acc = 0;
   for (let m = 1; m <= N; m++) {
@@ -67,17 +67,19 @@ if (typeof document !== 'undefined') (function () {
       <label class="pv-f"><span>Ações (+ adiciona, − retira)</span><input class="pv-in" data-xf="q" inputmode="numeric" value="${e.q ? N0.format(e.q) : ''}"></label><button type="button" class="gx" data-xdel="${k}" aria-label="Remover">✕</button></div>`).join('');
   }
   const perB = (I, R, m0) => I.length ? R.per.map(p => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${m0}</td><td><b>${esc(x.t)}</b></td><td>${N0.format(Math.round(x.sh))}</td><td>${brl.format(x.val)}</td><td>${N0.format(Math.round(x.lent))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td></tr>`; }).join('') : '';
-  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${N0.format(Math.round(r.q))}</td><td>${brl.format(r.val)}</td><td>${N0.format(Math.round(r.ql))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
+  let shown = 240;
+  const moreB = (I, R, m0) => I.length && m0 - 1 + shown < R.rows.length ? '<button type="button" class="gbtn" data-a="more">Mostrar mais meses</button>' : '';
+  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1, m0 - 1 + shown).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${N0.format(Math.round(r.q))}</td><td>${brl.format(r.val)}</td><td>${N0.format(Math.round(r.ql))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
   // Só as tabelas são refeitas enquanto digita: o campo ativo não é recriado (mantém foco, cursor e seleção)
   function tables() {
     const pb = document.getElementById('alPerB'); if (!pb) return render();
-    const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, ex: st.ex.filter(e => e.t && e.m > 0) }), m0 = Math.max(1, Math.min(360, parseInt(st.mes, 10) || 1));
-    pb.innerHTML = perB(I, R, m0); document.getElementById('alMainB').innerHTML = mainB(I, R, m0);
+    const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, ex: st.ex.filter(e => e.t && e.m > 0) }), m0 = Math.max(1, Math.min(960, parseInt(st.mes, 10) || 1));
+    pb.innerHTML = perB(I, R, m0); document.getElementById('alMainB').innerHTML = mainB(I, R, m0); document.getElementById('alMore').innerHTML = moreB(I, R, m0);
   }
   function render() {
     if (!BTB || typeof state === 'undefined' || !state.data) { root.innerHTML = loaderHTML('Carregando…'); if (!BTB) { if (!loading) { loading = true; load(); } } else setTimeout(render, 600); return; }
     const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, ex: st.ex.filter(e => e.t && e.m > 0) });
-    const m0 = Math.max(1, Math.min(360, parseInt(st.mes, 10) || 1)), dv = false;
+    const m0 = Math.max(1, Math.min(960, parseInt(st.mes, 10) || 1)), dv = false;
     root.innerHTML = `<section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4 space-y-2">
       <div class="flex items-baseline justify-between gap-2"><h2 class="text-base font-bold">Ações para alugar</h2><button type="button" class="gbtn pri" data-a="new">＋ Ação</button></div>
       ${BTB.err ? '<p class="gt-help">Dados de aluguel da B3 indisponíveis agora: informe a taxa manualmente.</p>' : ''}<div id="alItems" class="space-y-2">${inputsHtml()}</div>
@@ -89,7 +91,7 @@ if (typeof document !== 'undefined') (function () {
       <div class="pv-scroll"><table class="pv-t pv-sum"><thead><tr><th class="pv-c-m">Mês<br><input id="alMes" class="pv-in" inputmode="numeric" maxlength="3" style="width:3.6em;text-align:center" value="${esc(st.mes)}" placeholder="1" aria-label="Mês"></th><th>Ação</th><th>Nº de ações</th><th>Valor das ações</th><th>Ações totais alugadas</th><th>Valor recebido</th><th>Descontos</th>${dv ? '<th>Dividendos</th>' : ''}</tr></thead>
         <tbody id="alPerB">${perB(I, R, m0)}</tbody></table></div>
       <div class="pv-scroll pv-main"><table class="pv-t"><thead><tr><th class="pv-c-m">Mês</th><th>Nº de ações</th><th>Valor das ações</th><th>Ações alugadas</th><th>Valor recebido</th><th>Descontos</th><th>Líquido</th>${dv ? '<th>Dividendos</th>' : ''}<th>Total acumulado</th></tr></thead>
-        <tbody id="alMainB">${mainB(I, R, m0)}</tbody></table></div></section>`;
+        <tbody id="alMainB">${mainB(I, R, m0)}</tbody></table></div><div id="alMore" class="text-center mt-2">${moreB(I, R, m0)}</div></section>`;
     root.querySelectorAll('.al-t').forEach(inp => window.pvCombo && pvCombo(inp, (t) => { st.draft.t = t; const r = rateOf(t); if (r != null) st.draft.rate = r; save(); render(); }));
   }
   let tm = null; const later = () => { clearTimeout(tm); tm = setTimeout(() => { save(); tables(); }, 200); };
@@ -101,7 +103,7 @@ if (typeof document !== 'undefined') (function () {
     if (t.id === 'alFee') { st.fee = num(t.value); later(); return; }
     if (t.dataset.f && st.draft) { st.draft[t.dataset.f] = t.dataset.f === 'rate' ? num(t.value) : t.dataset.f === 'nl' ? Math.max(0, Math.min(100, num(t.value))) : Math.round(num(t.value)); save(); return; }
     if (x && t.dataset.xf === 'q') { st.ex[+x.dataset.x].q = Math.round(num(t.value.replace(/^−/, '-'))); later(); }
-    if (x && t.dataset.xf === 'm') { st.ex[+x.dataset.x].m = Math.min(360, Math.round(num(t.value))); later(); }
+    if (x && t.dataset.xf === 'm') { st.ex[+x.dataset.x].m = Math.min(960, Math.round(num(t.value))); later(); }
   });
   root.addEventListener('change', (e) => {
     const t = e.target, x = t.closest('[data-x]');
@@ -111,6 +113,7 @@ if (typeof document !== 'undefined') (function () {
   root.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-a],[data-xdel]'); if (!b) return;
     const k = b.closest('[data-k]'), a = b.dataset.a;
+    if (a === 'more') { shown += 240; tables(); return; }
     if (a === 'new') st.draft = { t: '', q: 100, add: 0, rate: null, prazo: 1, nl: 0, idx: -1 };
     else if (a === 'cancel') st.draft = null;
     else if (a === 'edit') { const i = +k.dataset.k; st.draft = { ...st.items[i], idx: i }; }
