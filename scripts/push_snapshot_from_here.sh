@@ -40,6 +40,7 @@ for s in $STEPS; do
     dadosdemercado) run "Dados de Mercado" "$PY" "$HERE/scripts/fetch_dadosdemercado.py" "$TMP/data" ;;
   esac
 done
+[ -n "$(ls "$TMP/data/history4" 2>/dev/null | head -1)" ] && "$PY" "$HERE/scripts/build_closes_bundle.py" "$TMP/data"
 # Prioridade B3: com o histórico COTAHIST publicado, apaga o histórico Yahoo das ações brasileiras (fica só o Ibovespa)
 if [ -n "$(ls "$TMP/data/history4" 2>/dev/null | head -1)" ]; then
   for d in history history2 history3; do [ -d "$TMP/data/$d" ] && find "$TMP/data/$d" -type f ! -name 'IBOV*' ! -name 'gold*' ! -name 'bcb_*' -delete; done

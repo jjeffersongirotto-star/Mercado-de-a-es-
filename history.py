@@ -362,6 +362,15 @@ def all_closes(tickers):
     if time.time() - _allc["at"] > 6 * 3600:
         _allc["d"] = {}; _allc["at"] = time.time()
     miss = [t for t in tickers if t not in _allc["d"]]
+    if len(miss) > 20 and not _allc.get("bundle"):
+        try:  # arquivo único com o histórico de todas as ações (um download em vez de ~360)
+            r = requests.get(f"{RAW}/history4_all.json.gz", timeout=(6, 60)); r.raise_for_status()
+            B = json.loads(gzip.decompress(r.content)); _allc["bundle"] = True
+            old = time.time() - 3 * 3600 - 1  # força só a atualização incremental (arquivos diários) depois
+            for t, h in B.items():
+                if t not in _h4: _h4[t] = (old, h)
+        except Exception as e:
+            log.warning("bundle de histórico: %s", e)
     if miss:
         with ThreadPoolExecutor(16) as ex:
             for t, v in ex.map(_load_both, miss):
