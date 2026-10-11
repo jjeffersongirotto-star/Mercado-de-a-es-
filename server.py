@@ -746,7 +746,7 @@ def api_flow():
 
 @app.get("/static/{name}.js")
 def extra_js(name: str):
-    if name not in ("app", "previsao", "grafico", "grupos", "ui", "comparar", "aluguel"):
+    if name not in ("app", "previsao", "grafico", "grupos", "ui", "comparar", "aluguel", "chatui"):
         return JSONResponse({"error": "não encontrado"}, status_code=404)
     return FileResponse(os.path.join(BASE, name + ".js"), media_type="application/javascript",
                         headers={"Cache-Control": "no-cache"})
