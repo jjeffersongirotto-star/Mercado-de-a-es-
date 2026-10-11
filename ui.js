@@ -66,7 +66,7 @@ window.avgLastMonths = function (t, c, n) {
 if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths };
 
 // Versão nova publicada: ao voltar para o app (aba/celular), recarrega se os scripts mudaram
-(function () {
+if (typeof document !== 'undefined') (function () {
   const mine = [...document.scripts].map(x => x.src).filter(x => x.includes('/static/')).join('|');
   let busy = false;
   document.addEventListener('visibilitychange', async () => {

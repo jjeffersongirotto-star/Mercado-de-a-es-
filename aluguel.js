@@ -73,7 +73,7 @@ if (typeof document !== 'undefined') (function () {
     pb.innerHTML = perB(I, R, m0); document.getElementById('alMainB').innerHTML = mainB(I, R, m0);
   }
   function render() {
-    if (!BTB) { root.innerHTML = loaderHTML('Carregando dados de aluguel da B3…'); load(); return; }
+    if (!BTB || typeof state === 'undefined' || !state.data) { root.innerHTML = loaderHTML('Carregando…'); if (!BTB) load(); else setTimeout(render, 800); return; }
     const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, ex: st.ex.filter(e => e.t && e.m > 0) });
     const m0 = Math.max(1, Math.min(360, parseInt(st.mes, 10) || 1)), dv = false;
     root.innerHTML = `<section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4 space-y-2">
