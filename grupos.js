@@ -148,15 +148,22 @@
       ${f.tab !== 'prov' ? `<select class="gper" data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>Média ${n} ${n > 1 ? 'meses' : 'mês'}</option>`).join('')}</select>
       <select class="gper" data-fsort aria-label="Ordenar favoritos"><option value="preco"${f.sort === 'preco' ? ' selected' : ''}>Preço da ação</option>${[1, 2, 3, 4, 5].map(n => `<option value="v${n}"${f.sort === 'v' + n ? ' selected' : ''}>Maiores valorizações ${n} ano${n > 1 ? 's' : ''}</option>`).join('')}</select>` : ''}</div>`;
   }
-  function favBody(full) {
-    const f = ui.fav;
-    if (f.tab === 'prov') {
+  function provCols(list0, empty) {
       const parse = (s) => { const [d, m, y] = s.split('/'); return (y || '') + m + d; };
-      const L = favList().map(r => { const p = r.v.preco || MX(r.ticker).p || 0; return [r, (MX(r.ticker).ytd || []).slice().sort((a, b) => parse(b[0]).localeCompare(parse(a[0]))), p]; }).filter(x => x[1].length);
-      if (!L.length) return '<p class="gt-empty">Nenhum provento dos favoritos neste ano.</p>';
+      const L = list0.map(r => { const p = r.v.preco || MX(r.ticker).p || 0; return [r, (MX(r.ticker).ytd || []).slice().sort((a, b) => parse(b[0]).localeCompare(parse(a[0]))), p]; }).filter(x => x[1].length);
+      if (!L.length) return `<p class="gt-empty">${empty}</p>`;
       return '<div class="pcols">' + L.map(([r, ev, p]) => `<div class="pcol"><div class="pcol-h">${escH(r.ticker)}</div>${ev.map(e => e[2] === 'bonificação' || e[2] === 'desdobramento' || e[2] === 'grupamento'
         ? `<div class="pcard bon"><span>${e[0].slice(0, 5)}</span><b>${e[2] === 'bonificação' ? 'Bonif. ' + F2.format((e[1] - 1) * 100) + '%' : e[2] + ' ' + F2.format(e[1]) + ':1'}</b></div>`
         : `<div class="pcard"><span>${e[0].slice(0, 5)}${e[3] ? ' · ' + escH(e[3]) : ''}</span><b>R$ ${e[1] < 0.1 ? e[1].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : F2.format(e[1])}</b><em>${F2.format(p ? e[1] / p * 100 : 0)}%</em></div>`).join('')}</div>`).join('') + '</div>';
+  }
+  // Sub-abas Todos / Proventos no ano dos grupos de proventos
+  const PTAB = ['dy', 'prov'], ptabOf = (p) => p && PTAB.includes(p.id) ? ((ui.ptab || {})[p.id] || 'all') : null;
+  const ptabBar = (p) => ptabOf(p) ? `<div class="gt-tabs">${[['all', 'Todos'], ['prov', 'Proventos no ano']].map(([k, l]) => `<button type="button" class="${ptabOf(p) === k ? 'on' : ''}" data-ptab="${p.id}:${k}">${l}</button>`).join('')}</div>` : '';
+  const grpBody = (d, full) => ptabOf(d.p) === 'prov' ? provCols(d.rows.map(x => x[0]), 'Nenhum provento destas empresas neste ano.') : (d.rows.length ? tbl(d.rows, d.h, full) : '<p class="gt-empty">Sem dados suficientes.</p>');
+  function favBody(full) {
+    const f = ui.fav;
+    if (f.tab === 'prov') {
+      return provCols(favList(), 'Nenhum provento dos favoritos neste ano.');
     }
     const R = favRows();
     if (!R.length) return '<p class="gt-empty">Toque na ☆ de uma empresa para favoritar.</p>';
@@ -176,8 +183,8 @@
     const d = groupData(id); if (!d) return '';
     if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
     return `<div class="gt" data-id="${escH(id)}"><div class="gt-head" data-open="${escH(id)}">${starB(id)}<span class="gt-name">${escH(d.title)}</span></div>
-      ${d.p ? perSel(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
-      <div class="gt-list">${d.rows.length ? tbl(d.rows, d.h, false) : '<p class="gt-empty">Sem dados suficientes.</p>'}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
+      ${d.p ? perSel(d.p) + ptabBar(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
+      <div class="gt-list">${grpBody(d, false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
   }
   // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
   let FLOW = null, flowLoading = false;
@@ -202,12 +209,12 @@
       <div class="gt-tabs">${FP.map(([k, , l]) => `<button type="button" class="${k === pk ? 'on' : ''}" data-flowp="${k}">${l}</button>`).join('')}</div>
       <div class="gt-list"><table class="gtab gflow"><thead><tr><th>Investidor</th><th>Saldo (${sel.length > 1 ? fd(sel[0]) + '–' : ''}${fd(sel[sel.length - 1])})</th></tr></thead><tbody>
       ${cats.map(c => { const v = sum(c); return `<tr><td>${nm[c]}</td><td class="gc2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${bi(v)}</td></tr>`; }).join('')}</tbody></table>
-      ${chart}${short}${updTxt() ? `<div class="gt-upd">${updTxt()}</div>` : ''}</div></div>`;
+      ${chart}${short}${updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div></div>`;
   }
   let sortable = null, reorg = false, fullId = null, lastY = 0;
   function fullHtml(id) {
     const d = groupData(id); if (!d) { fullId = null; return ''; }
-    const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? perSel(d.p) : '') + (d.rows.length ? tbl(d.rows, d.h, true) : '<p class="gt-empty">Sem dados suficientes.</p>');
+    const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? perSel(d.p) + ptabBar(d.p) : '') + grpBody(d, true);
     return `<section class="gfull"><div class="gfull-head"><b>${escH(d.title)}</b><button type="button" class="gx" data-gclose aria-label="Fechar grupo">✕</button></div>${body}</section>`;
   }
   async function list() {
@@ -263,6 +270,8 @@
     det.remove(); if (tr) { tr.classList.remove('sel'); state.expanded.delete(tr.dataset.row); }
   }, true);
   $g('#gruposRoot').addEventListener('click', async (e) => {
+    const pt = e.target.closest('[data-ptab]');
+    if (pt) { e.stopPropagation(); const [gid, k] = pt.dataset.ptab.split(':'); ui.ptab = Object.assign({}, ui.ptab, { [gid]: k }); saveUI(); list(); return; }
     const st = e.target.closest('[data-gstar]');
     if (st) { e.stopPropagation(); const id = st.dataset.gstar; ui.gstar = ui.gstar.includes(id) ? ui.gstar.filter(x => x !== id) : ui.gstar.concat(id); saveUI(); list(); return; }
     if (e.target.closest('[data-gclose]')) { const id = fullId, y = lastY; fullId = null; list(); requestAnimationFrame(() => { window.scrollTo(0, y); const t = document.querySelector(`.gt[data-id="${CSS.escape(id || '')}"]`); if (t) t.classList.add('hl'); }); return; }
