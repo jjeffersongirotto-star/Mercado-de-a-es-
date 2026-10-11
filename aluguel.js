@@ -28,6 +28,9 @@ if (typeof document !== 'undefined') (function () {
   const KEY = 'screenerB3.aluguel.v1', root = document.getElementById('alugRoot'); if (!root) return;
   const st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })() || { items: [], fee: 0, desc: true, div: false, ex: [], mes: '' };
   st.items = (st.items || []).filter(i => i.t && i.ok !== false).map(({ ok, ...i }) => i); delete st.div; if (st.draft === undefined) st.draft = null;
+  // Prazos usuais de contrato BTC na B3 (dias): 30, 60, 90, 180, 360 -> meses de contrato
+  const PRZ = [1, 2, 3, 6, 12], nearP = (m) => PRZ.reduce((a, b) => Math.abs(b - (m || 1)) < Math.abs(a - (m || 1)) ? b : a, 1);
+  st.items.forEach(i => i.prazo = nearP(i.prazo)); if (st.draft) st.draft.prazo = nearP(st.draft.prazo);
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }), N0 = new Intl.NumberFormat('pt-BR');
   const num = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
@@ -46,7 +49,7 @@ if (typeof document !== 'undefined') (function () {
   const pct = (v) => v == null ? '—' : String(v).replace('.', ',') + '% a.a.';
   // Ações confirmadas: lista compacta (editar/excluir). Formulário só aparece com "+ Ação" ou "editar".
   function inputsHtml() {
-    const list = st.items.map((it, k) => `<div class="al-row" data-k="${k}"><div class="min-w-0"><b>${esc(it.t)}</b> <span class="al-sub">${N0.format(it.q)} ações${it.add ? ' · +' + N0.format(it.add) + '/mês' : ''} · ${pct(it.rate)} · ${it.prazo || 1} ${(it.prazo || 1) > 1 ? 'meses' : 'mês'}${it.nl ? ' · ' + String(it.nl).replace('.', ',') + '% não alugado' : ''}</span>${lowDemand(it.t) ? '<span class="al-warn"> ⚠ pouca demanda</span>' : ''}</div>
+    const list = st.items.map((it, k) => `<div class="al-row" data-k="${k}"><div class="min-w-0"><b>${esc(it.t)}</b> <span class="al-sub">${N0.format(it.q)} ações${it.add ? ' · +' + N0.format(it.add) + '/mês' : ''} · ${pct(it.rate)} · ${(it.prazo || 1) * 30} dias${it.nl ? ' · ' + String(it.nl).replace('.', ',') + '% não alugado' : ''}</span>${lowDemand(it.t) ? '<span class="al-warn"> ⚠ pouca demanda</span>' : ''}</div>
       <div class="al-btns"><button type="button" class="gbtn" data-a="edit" aria-label="Editar ${esc(it.t)}">Editar</button><button type="button" class="gx" data-a="del" aria-label="Excluir ${esc(it.t)}">✕</button></div></div>`).join('');
     const d = st.draft;
     const form = d ? `<div class="al-it" id="alForm">
@@ -54,7 +57,7 @@ if (typeof document !== 'undefined') (function () {
       <label class="pv-f"><span>Quantidade</span><input class="pv-in" data-f="q" inputmode="numeric" value="${d.q ? N0.format(d.q) : ''}"></label>
       <label class="pv-f"><span>Adições mensais</span><input class="pv-in" data-f="add" inputmode="numeric" value="${d.add ? N0.format(d.add) : ''}"></label>
       <label class="pv-f"><span>Taxa (% a.a.)</span><input class="pv-in" data-f="rate" inputmode="decimal" value="${d.rate != null ? String(d.rate).replace('.', ',') : ''}"></label>
-      <label class="pv-f"><span>Prazo (meses)</span><input class="pv-in" data-f="prazo" inputmode="numeric" value="${d.prazo || 1}"></label>
+      <label class="pv-f"><span>Prazo</span><select class="pv-in" data-f="prazo">${PRZ.map(m => `<option value="${m}"${(d.prazo || 1) === m ? ' selected' : ''}>${m * 30} dias</option>`).join('')}</select></label>
       <label class="pv-f"><span>% não alugado</span><input class="pv-in" data-f="nl" inputmode="decimal" value="${d.nl ? String(d.nl).replace('.', ',') : '0'}"></label>
       <div class="al-btns"><button type="button" class="gbtn pri" data-a="ok" aria-label="Confirmar">✓</button><button type="button" class="gx" data-a="cancel" aria-label="Cancelar">✕</button></div>
       ${d.t && b3(d.t) ? `<div class="upd">${(window.updTxt && updTxt()) || 'Atualizado em ' + (BTB.date || '').split('-').reverse().join('/')}</div>` : ''}
