@@ -617,23 +617,80 @@ def api_profiles():
     d, _ = snapshots.load("profiles", max_mem_age=6 * 3600)
     return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=3600"})
 
+def _idx_returns(di, df):
+    """Mesmo cálculo do gráfico (grafico.js pricePts/ratePts) para Ibovespa, dólar, CDB 100% CDI, IPCA, poupança e ouro."""
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+    st = _dt.strptime(di, "%Y-%m-%d").replace(tzinfo=_tz.utc).timestamp(); en = _dt.strptime(df, "%Y-%m-%d").replace(tzinfo=_tz.utc).timestamp() + 86399
+    def price(ts, cs):
+        b = e = None
+        for t, c in zip(ts, cs):
+            if c is None: continue
+            if t <= st: b = c
+            elif t <= en:
+                if b is None: b = c
+                e = c
+        return None if b is None else ((e if e is not None else b) / b - 1) * 100
+    def rate(d, v):
+        cum = 1.0
+        if len(d) < 1000:
+            sm = di[:7] + "-01"
+            for x, y in zip(d, v):
+                if x < sm: continue
+                n = _dt.strptime(x, "%Y-%m-%d"); nx = (n.replace(day=1) + _td(days=32)).replace(day=1).replace(tzinfo=_tz.utc).timestamp()
+                if nx > en + 86400: break
+                cum *= 1 + y / 100
+        else:
+            for x, y in zip(d, v):
+                if di <= x <= df: cum *= 1 + y / 100
+        return (cum - 1) * 100
+    dts = lambda d: [_dt.strptime(x, "%Y-%m-%d").replace(tzinfo=_tz.utc).timestamp() for x in d]
+    out = {}
+    for k, f in (("@ibov", lambda: (lambda h: price(h["t"], h["c"]))(history.get("IBOV", "d"))),
+                 ("@usd", lambda: (lambda b: price(dts(b["d"]), b["v"]))(history.bcb("usd"))),
+                 ("@gold", lambda: (lambda b: price(dts(b["d"]), b["v"]))(history.gold())),
+                 ("@cdi", lambda: (lambda b: rate(b["d"], b["v"]))(history.bcb("cdi"))),
+                 ("@ipca", lambda: (lambda b: rate(b["d"], b["v"]))(history.bcb("ipca"))),
+                 ("@poup", lambda: (lambda b: rate(b["d"], b["v"]))(history.bcb("poup")))):
+        try:
+            v = f()
+            if v is not None: out[k] = round(v, 4)
+        except Exception as e:
+            log.warning("retorno %s: %s", k, e)
+    return out
+
+_retw = {"busy": False}
+
 @app.get("/api/returns")
 def api_returns(di: str, df: str):
-    """Variação % de todas as ações mantidas entre di e df (diário quando há; senão mensal)."""
+    """Variação % de todas as ações mantidas + índices entre di e df. Se o histórico ainda está aquecendo
+    (servidor recém-iniciado), responde 202 {warming} na hora e aquece em segundo plano; o app tenta de novo."""
     from datetime import datetime as _dt
     rows = (cache.data or {}).get("rows") or []
     import sys as _s
     if os.path.join(BASE, "scripts") not in _s.path:
         _s.path.insert(0, os.path.join(BASE, "scripts"))
     import universe as _u
+    if not rows:
+        return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
     rows, _, _ = _u.universe(rows)
+    tick = [r["ticker"] for r in rows]
+    miss = [t for t in tick if t not in history._allc["d"]]
+    if len(miss) > 20:
+        if not _retw["busy"]:
+            _retw["busy"] = True
+            def _bg():
+                try: history.all_closes(tick)
+                finally: _retw["busy"] = False
+            threading.Thread(target=_bg, daemon=True).start()
+        return JSONResponse({"warming": True, "faltam": len(miss)}, status_code=202, headers={"Cache-Control": "no-store"})
     s0 = _dt.strptime(di, "%Y-%m-%d").timestamp() - 1
     e0 = _dt.strptime(df, "%Y-%m-%d").timestamp() + 86399
-    tick = [r["ticker"] for r in rows]
     H = history.all_closes(tick)
     live = {r["ticker"]: (r.get("v") or {}).get("preco") for r in rows}
     out = {t: history.period_return(H.get(t), s0, e0, live.get(t)) for t in tick}
-    return JSONResponse({k: v for k, v in out.items() if v is not None}, headers={"Cache-Control": "public, max-age=600"})
+    out = {k: v for k, v in out.items() if v is not None}
+    out.update(_idx_returns(di, df))
+    return JSONResponse(out, headers={"Cache-Control": "public, max-age=600"})
 
 @app.get("/api/metrics")
 def api_metrics():

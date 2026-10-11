@@ -28,8 +28,8 @@
       <div class="cmp-srch" data-w="q"><input id="cmpQ" type="search" placeholder="Adicionar ação ou índice…" autocomplete="off"><div class="pv-combo hidden"></div></div>
       <div class="cmp-row"><label>Critério<select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
         <label>Início<input id="cmpDi" type="date" class="sel"></label><label>Fim<input id="cmpDf" type="date" class="sel"></label></div>
-      <div id="cmpChips" class="cmp-chips"></div></section>
-      <div class="cmp-bar"><button type="button" id="cmpAll" class="cmp-allb"></button><button type="button" id="cmpMin" class="cmp-minb"></button></div>
+      <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpAll" class="cmp-allb"></button></section>
+      <div class="cmp-bar"><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
       <section class="cmp-cols"><div class="cmp-col"><h3 class="dn">Renderam menos</h3><input class="cmp-f" data-q="qa" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpLess"></div></div>
         <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>`;
@@ -80,6 +80,18 @@
     if (S.all) { $c('#cmpLess').innerHTML = loaderHTML('Comparando…'); $c('#cmpMore').innerHTML = ''; }
     const t0 = performance.now();
     if (!S.items.length) { chart.querySelector('.gc-plot').innerHTML = ''; chart.querySelector('.gc-leg').innerHTML = ''; cols(); return; }
+    if (S.all) {
+      // Comparar tudo: uma chamada traz ações + índices (sem gráfico). Servidor aquecendo (202): mantém a animação e tenta de novo.
+      let R = null;
+      for (let k = 0; k < 60 && my === seq; k++) {
+        try { const r = await fetch(`/api/returns?di=${S.di}&df=${S.df}`, { cache: 'no-store' }); if (r.status === 200) { R = await r.json(); break; } } catch (e) { }
+        await new Promise(res => setTimeout(res, 3000));
+      }
+      if (my !== seq) return;
+      S._miss = !R; R = R || {};
+      for (const [id, v] of Object.entries(R)) vals[id] = v;
+      cols(); chips(); window.__cmpMs = Math.round(performance.now() - t0); return;
+    }
     const start = Date.parse(S.di), end = Date.parse(S.df) + 864e5 - 1;
     const kind = (Date.now() - start) > 5 * 365 * 864e5 ? 'm' : 'd';
     chart.querySelector('.gc-plot').innerHTML = loaderHTML('');
