@@ -175,7 +175,7 @@ function clearFilters() { prefs.values = {}; changed(); renderFilterUI(); }
 // ---------- Ordenação ----------
 function buildSortOptions() {
   const sel = $('#sortKey');
-  const opts = [{ key: 'ticker', label: 'Ticker' }, { key: 'nome', label: 'Empresa' }, { key: 'var', label: 'Alta do dia (%)' }, ...state.data.fields];
+  const opts = [{ key: 'ticker', label: 'Ticker' }, { key: 'nome', label: 'Empresa' }, { key: 'var', label: 'Alta do dia (%)' }, ...(state.country === 'br' || (state.data.sources || []).length > 1 ? [{ key: 'conf', label: 'Confiança das fontes' }] : []), ...state.data.fields];
   sel.innerHTML = opts.map(o => `<option value="${o.key}">${esc(o.label)}</option>`).join('');
   if (!opts.some(o => o.key === state.sortKey)) { state.sortKey = state.data.fields.some(f => f.key === 'liq2m') ? 'liq2m' : 'ticker'; updateSortDir(); }
   sel.value = state.sortKey;
@@ -193,7 +193,20 @@ function buildSort() {
   updateSortDir();
 }
 function updateSortDir() { $('#sortDir').innerHTML = state.sortDir > 0 ? '<span class="sd-ic">1→9</span> Menor → maior' : '<span class="sd-ic">9→1</span> Maior → menor'; }
-const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' ? r.var : val(r, k));
+// Confiança do consenso: N = fontes com dados da empresa; A = fontes que nunca ficaram fora da maioria
+// em nenhum indicador com maioria (âmbar). Indicadores sem maioria (vermelho) e de bancos não contam.
+function conf(r) {
+  if (r._cf) return r._cf;
+  const S = r.S || {}, ids = Object.keys(S), bad = new Set(), bk = new Set(r.bk || []);
+  for (const [k, st] of Object.entries(r.st || {})) {
+    if (st !== 'amb' || bk.has(k)) continue;
+    const ag = (r.ag || {})[k] || [], xv = (r.xv || {})[k] || [];
+    for (const id of ids) if (S[id] && S[id][k] != null && !ag.includes(id) && !xv.includes(id)) bad.add(id);
+  }
+  return (r._cf = { A: ids.length - bad.size, N: ids.length });
+}
+const confTxt = (r) => { const c = conf(r); return c.N < 2 ? `${c.N} fonte` : c.A === c.N ? `${c.N}/${c.N} fontes` : `${c.A}/${c.N} com divergência`; };
+const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : k === 'var' ? r.var : k === 'conf' ? (c => c.N ? c.A / c.N + c.N / 1000 : null)(conf(r)) : val(r, k);
 
 // Ordem das buscas: 0 ticker começa com · 1 ticker contém · 2 nome · 3 setor · 4 descrição/atividade · 9 sem relação
 function searchRank(r, q) { return ((typeof FAVS !== 'undefined' && FAVS.has(r.ticker)) ? 0 : 100) + searchRank0(r, q); }
@@ -315,7 +328,7 @@ function blockHtml(r) {
                  (nRes ? `<span class="hb hb-res" title="${nRes} indicador(es) com maioria, mas alguma fonte discorda">maioria ${nRes}</span>` : '') +
                  (nBank ? `<span class="hb hb-bank" title="${nBank} indicador(es) baseados em EBIT/receita não comparáveis (banco/seguradora)">banco ${nBank}</span>` : '') +
                  (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) em que CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado">aj ${nAdj}</span>` : '');
-  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('');
+  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag ${conf(r).A === conf(r).N ? 'ctag-ok' : 'ctag-dv'}" title="Fontes que concordam com a maioria em todos os indicadores / fontes com dados">${confTxt(r)}</span>` : '');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
@@ -423,10 +436,10 @@ function ruleText() {
 function exportCsv() {
   const fields = state.data.fields;
   const q = (s) => { s = s == null ? '' : String(s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : f.unit === '$' ? ` (${state.data.currency})` : ''))];
+  const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', 'Confiança das fontes', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : f.unit === '$' ? ` (${state.data.currency})` : ''))];
   const lines = [head.map(q).join(';')];
   const n = (v) => v == null ? '' : String(v).replace('.', ',');
-  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
+  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), r.S ? confTxt(r) : '', ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
   const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`; a.click(); URL.revokeObjectURL(a.href);

@@ -533,6 +533,7 @@
       <li>Tudo que vem de arquivos/APIs oficiais da B3 tem prioridade máxima: em qualquer divergência com outra fonte, vale o valor da B3.</li>
       <li><b>Histórico de preços</b> das ações brasileiras: arquivos oficiais COTAHIST da B3 (fechamento diário do mercado à vista, lote padrão, desde 1994), agrupados pelo ISIN. Ajuste por desdobramento, grupamento e bonificação com os eventos oficiais da B3 (conferidos com o salto do preço); Yahoo só completa eventos antigos que a B3 não lista. Não usamos mais histórico do Yahoo para ações brasileiras (só para ações estrangeiras).</li>
       <li><b>Proventos</b>: lista oficial da B3 (com tipo: dividendo, JCP, rendimento); datas anteriores à lista da B3 vêm do Yahoo.</li>
+      <li><b>Confiança das fontes</b> (etiqueta no card, ordenação e CSV): N = fontes com dados da empresa; A = fontes que concordam com a maioria em todos os indicadores com maioria. “N/N fontes” = todas concordam; “A/N com divergência” = N − A fontes ficaram fora da maioria em pelo menos um indicador. Indicadores sem maioria (vermelhos) e os de bancos não entram nessa conta. Ordenar por ela usa A ÷ N.</li>
       <li><b>Uma ação por empresa</b>: em <b>Ações, Comparar e Previsão</b> aparecem <b>todas as classes negociadas na B3</b> (ex.: PETR3 e PETR4; SANB3, SANB4 e SANB11), cada uma com preço, volume e histórico próprios (COTAHIST); os fundamentos são os da empresa. Nos <b>grupos prontos</b> entra só 1 ticker por empresa: a classe com maior volume financeiro médio dos últimos 30 pregões (B3); sem volume: 11 &gt; 4 &gt; 3 &gt; 5 &gt; 6. Favoritos guardam exatamente o ticker marcado. O filtro de iliquidez vale por ticker. Nome e setor que faltam vêm do cadastro oficial da B3; papel sem nome ou sem nenhum indicador fundamentalista sai da lista.</li>
       <li><b>Empresas exibidas</b>: papel que não aparece negociado no COTAHIST nos últimos 90 dias é tratado como não negociado e sai da lista.</li>
       <li><b>Índices</b> (etiquetas IBOV, SMLL, IDIV…, filtro "Índice B3" e peso no Ibovespa no card aberto): carteira do dia oficial da B3, atualizada diariamente e guardada com data. Vale para a empresa (qualquer classe); quando a classe no índice é outra, ela aparece entre parênteses.</li>
@@ -644,7 +645,7 @@
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/ui.js?v=c27"></script>
-<script src="/static/app.js?v=c8"></script>
+<script src="/static/app.js?v=c9"></script>
 <script src="/static/previsao.js?v=c27"></script>
 <script src="/static/grafico.js?v=c7"></script>
 <script src="/static/grupos.js?v=c37"></script>
