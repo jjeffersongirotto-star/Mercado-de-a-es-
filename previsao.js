@@ -175,7 +175,7 @@ if (typeof document !== 'undefined') {
     return { reg: w > 0 ? 0 : reg, extra };
   }
   // mensal: vale do mês indicado até a próxima mensal (0 encerra) e zera o aporte; única/período somam no mês
-  const wAt = (m) => { if (st.proj) return { reg: 0, extra: 0 }; let reg = 0, extra = 0;
+  const wAt = (m) => { let reg = 0, extra = 0;
     for (const r of st.ret.filter(x => x.ok).sort((a, b) => a.m - b.m)) { const t = r.t || 'm';
       if (t === 'm' && r.m <= m) reg = r.v; else if (t === 'u' && r.m === m) extra += r.v; else if (t === 'p' && r.n >= 2 && m >= r.m && (m - r.m) % r.n === 0) extra += r.v; }
     return { reg, extra }; };
@@ -266,8 +266,8 @@ if (typeof document !== 'undefined') {
     el('pvMode').textContent = P ? 'Projeção com médias de ' + st.proj : T ? 'Simulação histórica com ' + st.ticker : 'Projeção futura';
     ['pvDm', 'pvDa', 'pvRm', 'pvRa'].forEach(id => el(id).disabled = P || T);
     el('pvTicker').disabled = P; el('pvClearT').disabled = P; el('pvProj').disabled = T; el('pvClearP').disabled = T;
-    el('pvRetBox').classList.toggle('pv-off', P);
-    el('pvRetBox').querySelectorAll('input,button').forEach(x => x.disabled = P);
+    el('pvRetBox').classList.remove('pv-off');
+    el('pvRetBox').querySelectorAll('input,button,select').forEach(x => x.disabled = false);
     el('pvDates').classList.toggle('hidden', !T);
   }
   el('pvClearT').addEventListener('click', () => { st.ticker = ''; el('pvTicker').value = ''; loadHist(); save(); });
@@ -311,7 +311,7 @@ if (typeof document !== 'undefined') {
 
   const COLS = [['m', 'Mês', 'pv-c-m'], ['va', 'Valorização total', 'pv-c-p'], ['pa', '% Aporte', 'pv-c-p'], ['pv', '% Valorização', 'pv-c-p'], ['pd', '% Dividendos', 'pv-c-p'], ['ap', 'Aporte mensal', 'pv-c-ap'], ['apT', 'Aporte total', 'pv-c-ap'], ['rent', 'Rentabilidade mensal', 'pv-c-r'],
     ['div', 'Dividendo mensal', 'pv-c-d'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Patrimônio total', 'pv-c-r'], ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d']];
-  const hasW = () => !st.proj && st.ret.some(r => r.ok && r.v > 0);
+  const hasW = () => st.ret.some(r => r.ok && r.v > 0);
   const cols = () => hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS;
   const PP = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const pcell = (r, k) => { const p = pvPcts(r.apT, r.sem, r.com)[k]; if (p == null) return ['—', '']; const cls = k === 'pa' ? (p > 1 ? 'neg' : 'pos') : (p < 0 ? 'neg' : p > 0 ? 'pos' : ''); return [PP.format(p * 100) + '%', cls]; };
