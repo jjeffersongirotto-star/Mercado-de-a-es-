@@ -65,13 +65,23 @@ window.avgLastMonths = function (t, c, n) {
 };
 if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths };
 
-// Versão nova publicada: ao voltar para o app (aba/celular), recarrega se os scripts mudaram
+// Volta ao app: < 10 min fora não faz nada. >= 10 min: atualiza os dados em segundo plano mantendo aba, cards e rolagem;
+// só recarrega a página se saiu versão nova, e restaura aba + rolagem depois (sessionStorage).
 if (typeof document !== 'undefined') (function () {
   const mine = [...document.scripts].map(x => x.src).filter(x => x.includes('/static/')).join('|');
-  let busy = false;
+  const RK = 'screenerB3.restore.v1';
+  try { const r = JSON.parse(sessionStorage.getItem(RK) || 'null'); sessionStorage.removeItem(RK);
+    if (r && Date.now() - r.at < 120000) { let n = 0; const go = () => { window.scrollTo(0, r.y); if (Math.abs(window.scrollY - r.y) > 5 && ++n < 40) setTimeout(go, 250); }; setTimeout(go, 300); } } catch (e) { }
+  let hiddenAt = 0, busy = false;
   document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState !== 'visible' || busy) return; busy = true;
-    try { const h = await (await fetch('/', { cache: 'no-store' })).text(); const vs = [...h.matchAll(/src="(\/static\/[^"]+)"/g)].map(m => location.origin + m[1]).join('|');
-      if (vs && mine && vs !== mine) location.reload(); } catch (e) { } busy = false;
+    if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+    if (busy || !hiddenAt || Date.now() - hiddenAt < 10 * 60 * 1000) return; busy = true;
+    const y = window.scrollY;
+    try {
+      const h = await (await fetch('/', { cache: 'no-store' })).text(); const vs = [...h.matchAll(/src="(\/static\/[^"]+)"/g)].map(m => location.origin + m[1]).join('|');
+      if (vs && mine && vs !== mine) { try { sessionStorage.setItem(RK, JSON.stringify({ y, at: Date.now() })); } catch (e) { } location.reload(); return; }
+      if (typeof window.load === 'function') { await window.load(); requestAnimationFrame(() => window.scrollTo(0, y)); }
+    } catch (e) { }
+    busy = false;
   });
 })();

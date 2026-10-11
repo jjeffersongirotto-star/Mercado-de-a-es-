@@ -19,6 +19,7 @@ rows = json.load(open(os.environ["DATA_JSON"]))["rows"] if os.environ.get("DATA_
     requests.get("https://mercado-de-acoes.onrender.com/api/data", timeout=120).json()["rows"]
 kept, _, _ = universe.universe(rows)
 TICK = [r["ticker"] for r in kept]
+if os.environ.get("ONLY"): TICK = [t for t in TICK if t in os.environ["ONLY"].split(",")]
 UA = {"User-Agent": "Mozilla/5.0"}
 
 def lines(path):
@@ -54,9 +55,9 @@ for y in years:
     if y < 1994:
         continue
     for l in lines(os.path.join(ZD, f"COTAHIST_A{y}.ZIP")):
-        if l[24:27] != "010" or l[10:12] != "02":
+        if l[24:27] != "010" or l[10:12] in ("96", "10", "14", "22"):  # à vista: lote padrão e também papéis em recuperação judicial/situação especial (BDI 08 etc.); fora fracionário e direitos
             continue
-        t = want.get(l[230:242])
+        t = want.get(l[230:242]) or (l[12:24].strip() if l[12:24].strip() in data else None)  # ISIN atual ou mesmo código (ISIN muda em grupamentos)
         if not t:
             continue
         r = rec(l)
@@ -64,7 +65,7 @@ for y in years:
             continue
         prev = data[t].get(r["d"])
         if prev is None or r["vol"] > prev[2]:
-            data[t][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"])
+            data[t][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"])
         last_day = max(last_day, r["d"])
 # dias depois do arquivo anual (arquivos diários)
 d0 = datetime.strptime(last_day, "%Y%m%d") + timedelta(days=1)
@@ -76,8 +77,9 @@ while d0.date() <= datetime.now().date():
             if rr.status_code == 200 and rr.content[:2] == b"PK":
                 p = os.path.join(ZD, f"COTAHIST_D{d0:%d%m%Y}.ZIP"); open(p, "wb").write(rr.content)
                 for l in lines(p):
-                    if l[24:27] == "010" and l[10:12] == "02" and want.get(l[230:242]):
-                        r = rec(l); data[want[l[230:242]]][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"])
+                    tk = want.get(l[230:242]) or (l[12:24].strip() if l[12:24].strip() in data else None)
+                    if l[24:27] == "010" and l[10:12] not in ("96", "10", "14", "22") and tk:
+                        r = rec(l); data[tk][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"])
         except Exception as e:
             print("diário", d0.date(), e, file=sys.stderr)
     d0 += timedelta(days=1)
@@ -105,8 +107,9 @@ for t, days in data.items():
         continue
     code4 = t[:4]
     ev = evcache.get(code4) or evcache.setdefault(code4, b3_events(code4)); time.sleep(0.4)
-    my = isin[t]
     keys = sorted(days)
+    my = days[keys[-1]][3]; isin[t] = my  # ISIN do último pregão (após troca de ISIN por grupamento)
+    isins = {v[3] for v in days.values()}
     import math
     def plaus(dc, m):  # confere o evento com o salto do preço bruto em torno da data-com
         pre = [d for d in keys if d <= dc]; pos = [d for d in keys if d > dc]
@@ -125,7 +128,7 @@ for t, days in data.items():
     bydc = {}
     for x in ev.get("stockDividends") or []:
         lab = (x.get("label") or "").upper()
-        if x.get("isinCode") != my or not lab.startswith(("DESD", "GRUP", "BONIF")):
+        if x.get("isinCode") not in isins or not lab.startswith(("DESD", "GRUP", "BONIF")):
             continue
         f = num(x["factor"])
         mult = f if lab.startswith("GRUP") else 1 + f / 100  # grupamento: fator direto; desdobramento/bonificação: +f%
@@ -147,6 +150,16 @@ for t, days in data.items():
         pre = [d for d in keys if d < ex.strftime("%Y%m%d")]
         if pre and m > 0 and plaus(pre[-1], m):
             spl.append((pre[-1], m, "EVENTO (Yahoo)"))
+    # Troca de ISIN sem evento listado: o salto do preço bruto na troca é o fator (arredondado a uma proporção usual)
+    NICE = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200, 250, 300, 400, 500, 1000]
+    for a, b in zip(keys, keys[1:]):
+        if days[a][3] == days[b][3]: continue
+        if any(abs((datetime.strptime(e, "%Y%m%d") - datetime.strptime(a, "%Y%m%d")).days) <= 7 for e, _, _ in spl): continue
+        r = days[a][0] / days[b][0]
+        if abs(math.log(r)) < math.log(1.5): continue
+        n = min(NICE, key=lambda x: abs(math.log(max(r, 1 / r) / x)))
+        if abs(math.log(max(r, 1 / r) / n)) > 0.25: continue
+        spl.append((a, n if r > 1 else 1 / n, "TROCA DE ISIN")); spl.sort()
     adj = []
     for d in keys:
         k = 1.0
@@ -155,9 +168,12 @@ for t, days in data.items():
                 k *= m
         adj.append(round(days[d][0] / k, 4))
     # proventos: B3 (recentes, ajustados por eventos posteriores) + Yahoo (anteriores)
+    # conferência: salto diário > 50% sem evento correspondente
+    flags = [(keys[i], round(adj[i] / adj[i - 1], 3)) for i in range(1, len(adj)) if adj[i - 1] and abs(math.log(adj[i] / adj[i - 1])) > math.log(1.5)]
+    if flags: print("SALTO>50% sem evento", t, flags[-5:], file=sys.stderr)
     divs, b3min = [], None
     for x in ev.get("cashDividends") or []:
-        if x.get("isinCode") != my:
+        if x.get("isinCode") not in isins:
             continue
         dc = datetime.strptime(x["lastDatePrior"], "%d/%m/%Y").strftime("%Y%m%d")
         k = 1.0
@@ -180,7 +196,8 @@ for t, days in data.items():
     src = "B3 (COTAHIST)"
     pay = {"d": {"t": tt, "c": adj, "vol": [round(days[d][2]) for d in keys], "div": [[a, b] for a, b, _ in divs], "source": src, "at": at},
            "m": {"t": [mm[k_][0] for k_ in mk], "c": [mm[k_][1] for k_ in mk], "div": [[a, b] for a, b, _ in divs], "source": src, "at": at},
-           "divs": divs, "splits": [[ts_of(dc), m, lab] for dc, m, lab in spl], "isin": my}
+           "divs": divs, "splits": [[ts_of(dc), m, lab] for dc, m, lab in spl], "isin": my,
+           "flags": [[ts_of(d), r] for d, r in flags]}
     with open(os.path.join(OUT, "history4", t + ".json.gz"), "wb") as f:
         f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
     ok += 1

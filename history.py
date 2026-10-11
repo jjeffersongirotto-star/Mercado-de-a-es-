@@ -146,7 +146,7 @@ def _cota_day(d):
                 return None
             z = _zf.ZipFile(_io.BytesIO(r.content)); out = {}
             for l in z.read(z.namelist()[0]).decode("latin1").splitlines():
-                if l.startswith("01") and l[24:27] == "010" and l[10:12] == "02":
+                if l.startswith("01") and l[24:27] == "010" and l[10:12] not in ("96", "10", "14", "22"):
                     out[l[230:242]] = round(int(l[108:121]) / 100 / (int(l[210:217]) or 1), 4)
             _cotad[k] = out; _dsave("cotad_" + k, out)
             return out
@@ -393,6 +393,9 @@ def period_return(h, start_ts, end_ts, live=None):
                 b = c
             if ts <= end_ts:
                 e = c
+        stale = min(end_ts, time.time()) - x["t"][-1] > 12 * 86400
+        if stale and end_ts > x["t"][-1] + 12 * 86400:
+            return None  # série parada (ex.: troca de ISIN sem histórico novo): não mistura com o preço atual
         if live and end_ts >= x["t"][-1]:
             e = live
         if b and e:
