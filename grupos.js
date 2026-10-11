@@ -145,12 +145,12 @@
     const f = ui.fav, tabs = [['all', 'Todos']].concat(f.tabs.map(t => [t.id, t.name]), [['prov', 'Proventos no ano']]), ut = f.tabs.find(t => t.id === f.tab);
     return `<div class="gt-tabs">${tabs.map(([k, l]) => `<button type="button" class="${f.tab === k ? 'on' : ''}" data-ftab="${k}">${escH(l)}</button>`).join('')}<button type="button" data-ftab="+" aria-label="Nova aba">＋</button>
       ${ut ? `<button type="button" data-fren="${ut.id}">Renomear</button><button type="button" data-fdel="${ut.id}" class="dan">Excluir aba</button>` : ''}
-      ${f.tab !== 'prov' ? `<select class="gper" data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>Média ${n} ${n > 1 ? 'meses' : 'mês'}</option>`).join('')}</select>
-      <select class="gper" data-fsort aria-label="Ordenar favoritos"><option value="preco"${f.sort === 'preco' ? ' selected' : ''}>Preço da ação</option>${[1, 2, 3, 4, 5].map(n => `<option value="v${n}"${f.sort === 'v' + n ? ' selected' : ''}>Maiores valorizações ${n} ano${n > 1 ? 's' : ''}</option>`).join('')}</select>` : ''}</div>`;
+      ${f.tab !== 'prov' ? `<div class="gfav-sel"><select class="gper" data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>Média ${n} ${n > 1 ? 'meses' : 'mês'}</option>`).join('')}</select>
+      <select class="gper" data-fsort aria-label="Ordenar favoritos"><option value="preco"${f.sort === 'preco' ? ' selected' : ''}>Preço da ação</option>${[1, 2, 3, 4, 5].map(n => `<option value="v${n}"${f.sort === 'v' + n ? ' selected' : ''}>Maiores valorizações ${n} ano${n > 1 ? 's' : ''}</option>`).join('')}</select></div>` : ''}</div>`;
   }
   function provCols(list0, empty) {
       const parse = (s) => { const [d, m, y] = s.split('/'); return (y || '') + m + d; };
-      const L = list0.map(r => { const p = r.v.preco || MX(r.ticker).p || 0; return [r, (MX(r.ticker).ytd || []).slice().sort((a, b) => parse(b[0]).localeCompare(parse(a[0]))), p]; }).filter(x => x[1].length);
+      const L = list0.map(r => { const p = r.v.preco || MX(r.ticker).p || 0; return [r, (MX(r.ticker).ytd || []).filter(e => e[2] !== 'grupamento' && e[2] !== 'desdobramento').sort((a, b) => parse(b[0]).localeCompare(parse(a[0]))), p]; }).filter(x => x[1].length);
       if (!L.length) return `<p class="gt-empty">${empty}</p>`;
       return '<div class="pcols">' + L.map(([r, ev, p]) => `<div class="pcol"><div class="pcol-h">${escH(r.ticker)}</div>${ev.map(e => e[2] === 'bonificação' || e[2] === 'desdobramento' || e[2] === 'grupamento'
         ? `<div class="pcard bon"><span>${e[0].slice(0, 5)}</span><b>${e[2] === 'bonificação' ? 'Bonif. ' + F2.format((e[1] - 1) * 100) + '%' : e[2] + ' ' + F2.format(e[1]) + ':1'}</b></div>`
