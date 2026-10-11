@@ -13,6 +13,7 @@
   const PERIODS = [['1d', '1 dia'], ['7d', '7 dias'], ['1m', '1 mês'], ['1y', '1 ano'], ['2y', '2 anos'], ['3y', '3 anos'], ['4y', '4 anos'], ['5y', '5 anos']];
   const DAY = 864e5;
   const P2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' });
+  const RS = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const cache = {};
   const getJSON = (u) => cache[u] || (cache[u] = fetch(u).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); return d; }).catch(e => { delete cache[u]; throw e; }));
   const hist = (t, k) => getJSON(`/api/history/${encodeURIComponent(t)}?kind=${k}`);
@@ -70,7 +71,11 @@
         else series.push({ ...L, pts: ratePts(d, start, end) });
       }
       if (!series.length) { plot.innerHTML = '<div class="gc-load">Marque ao menos uma linha.</div>'; q('.gc-leg').innerHTML = ''; }
-      else render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind);
+      else {
+        // Eixo Y em R$ da ação: as outras linhas são rebaseadas no preço inicial da ação (mesma escala)
+        let base = null; if (S.on.stock && sd.t && sd.t.length) { for (let i = 0; i < sd.t.length; i++) { if (sd.t[i] * 1000 <= start || base == null) base = sd.c[i]; if (sd.t[i] * 1000 > start) break; } }
+        render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind, base);
+      }
       const notes = [];
       if (skipped.length) notes.push((kind === 'i' ? 'Sem dados intradiários: ' : 'Ocultos: ') + skipped.join(', ') + '.');
       if (kind === 'i') notes.push('Hoje (5 em 5 min). Toque em ⟳ para atualizar.');
@@ -156,22 +161,23 @@
     return out;
   }
   window.gcPts = { pricePts, ratePts };
-  function render(plot, leg, series, start, end, kind) {
+  function render(plot, leg, series, start, end, kind, base) {
     const W = 600, H = 240, pad = 4;
     if (!series.length || !series[0].pts.length) { plot.innerHTML = '<div class="gc-load">Sem dados no período.</div>'; leg.innerHTML = ''; return; }
-    const xs = series.flatMap(s => s.pts.map(p => p[0])), ys = series.flatMap(s => s.pts.map(p => p[1])).concat([0]);
+    const B = base > 0 ? base : null, toY = (p) => B ? B * (1 + p / 100) : p;
+    const xs = series.flatMap(s => s.pts.map(p => p[0])), ys = series.flatMap(s => s.pts.map(p => toY(p[1]))).concat(B ? [] : [0]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1;
-    let y0 = Math.min(...ys), y1 = Math.max(...ys); if (y1 - y0 < 0.5) { y0 -= .25; y1 += .25; }
+    let y0 = Math.min(...ys), y1 = Math.max(...ys); const mn = B ? B * 0.005 : 0.5; if (y1 - y0 < mn) { y0 -= mn / 2; y1 += mn / 2; }
     const yr = (y1 - y0) * 0.06; y0 -= yr; y1 += yr;
     const X = (v) => pad + (v - x0) / ((x1 - x0) || 1) * (W - 2 * pad), Y = (v) => H - pad - (v - y0) / (y1 - y0) * (H - 2 * pad);
     const ticks = []; const step = niceStep((y1 - y0) / 4);
     for (let v = Math.ceil(y0 / step) * step; v <= y1; v += step) ticks.push(Math.abs(v) < step / 1e6 ? 0 : v);
     const fmtX = (ms) => kind === 'i' ? new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : new Date(ms).toLocaleDateString('pt-BR', x1 - x0 > 400 * DAY ? { month: '2-digit', year: '2-digit' } : { day: '2-digit', month: '2-digit' });
-    plot.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="gc-svg" role="img" aria-label="Variação percentual no período">
-      ${ticks.map(v => `<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" class="${Math.abs(v) < 1e-9 ? 'gc-zero' : 'gc-grid'}"/>`).join('')}
-      ${series.slice().reverse().map(s => `<polyline fill="none" stroke="${s.color}" stroke-width="${s.id === 'stock' ? 2.4 : 1.6}" vector-effect="non-scaling-stroke" stroke-linejoin="round" points="${s.pts.map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ')}"/>`).join('')}
+    plot.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="gc-svg" role="img" aria-label="Preço da ação no período (R$); demais linhas rebaseadas no preço inicial">
+      ${ticks.map(v => `<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" class="${!B && Math.abs(v) < 1e-9 ? 'gc-zero' : 'gc-grid'}"/>`).join('')}${B ? `<line x1="0" x2="${W}" y1="${Y(B)}" y2="${Y(B)}" class="gc-zero"/>` : ''}
+      ${series.slice().reverse().map(s => `<polyline fill="none" stroke="${s.color}" stroke-width="${s.id === 'stock' ? 2.4 : 1.6}" vector-effect="non-scaling-stroke" stroke-linejoin="round" points="${s.pts.map(p => X(p[0]).toFixed(1) + ',' + Y(toY(p[1])).toFixed(1)).join(' ')}"/>`).join('')}
     </svg>
-    <div class="gc-yl">${ticks.map(v => `<span style="top:${(Y(v) / H * 100).toFixed(2)}%">${P2.format(v).replace(',00', '')}%</span>`).join('')}</div>
+    <div class="gc-yl">${ticks.map(v => `<span style="top:${(Y(v) / H * 100).toFixed(2)}%">${B ? 'R$ ' + RS.format(v) : P2.format(v).replace(',00', '') + '%'}</span>`).join('')}</div>
     <div class="gc-xl"><span>${fmtX(x0)}</span><span>${fmtX((x0 + x1) / 2)}</span><span>${fmtX(x1)}</span></div>`;
     leg.innerHTML = series.map(s => { const v = s.pts[s.pts.length - 1][1]; return `<div style="--lc:${s.color}"><b>${P2.format(v)}%</b><span>${s.label}</span></div>`; }).join('');
   }
