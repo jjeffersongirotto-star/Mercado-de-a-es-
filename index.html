@@ -514,11 +514,12 @@
     <h2 class="text-lg font-bold text-slate-100 mb-1">Informações</h2>
     <details class="icard"><summary>Aluguel e Fluxo da bolsa</summary><div class="ib"><ul>
       <li><b>Fluxo da bolsa</b> (Grupos): saldo compras − vendas por tipo de investidor, do Boletim Diário da B3 (participação dos investidores). A B3 publica o acumulado do mês com cerca de 2 pregões de defasagem; o saldo do dia é a diferença entre publicações. A B3 guarda só ~21 pregões, então o histórico de 1 ano vai se formando a cada dia.</li>
-      <li><b>Previsão aluguel</b>: taxa sugerida = média ponderada do doador nos empréstimos registrados na B3 no último pregão (editável). Renda bruta = ações × preço atual × taxa a.a. ÷ 12, paga ao fim de cada contrato (prazo em meses). Descontos (opcionais) = taxa da corretora (% do aluguel) + IR de 15% sobre o restante. Alerta de pouca demanda: menos de 500 mil ações alugadas ou menos de 20 contratos no dia. Dividendos (opcional) pelo DY dos últimos 12 meses, sem desconto.</li></ul></div></details>
+      <li><b>Previsão aluguel</b>: taxa sugerida = média ponderada do doador nos empréstimos registrados na B3 no último pregão (editável). Renda bruta = ações × preço atual × taxa a.a. ÷ 12, paga ao fim de cada contrato (prazo em meses). Descontos (opcionais) = taxa da corretora (% do aluguel) + IR de 15% sobre o restante. Alerta de pouca demanda: menos de 500 mil ações alugadas ou menos de 20 contratos no dia. Dividendos não entram na Previsão aluguel (já são considerados na Previsão rentabilidade).</li></ul></div></details>
     <details class="icard"><summary>Prioridade dos dados da B3</summary><div class="ib"><ul>
       <li>Tudo que vem de arquivos/APIs oficiais da B3 tem prioridade máxima: em qualquer divergência com outra fonte, vale o valor da B3.</li>
       <li><b>Histórico de preços</b> das ações brasileiras: arquivos oficiais COTAHIST da B3 (fechamento diário do mercado à vista, lote padrão, desde 1994), agrupados pelo ISIN. Ajuste por desdobramento, grupamento e bonificação com os eventos oficiais da B3 (conferidos com o salto do preço); Yahoo só completa eventos antigos que a B3 não lista. Não usamos mais histórico do Yahoo para ações brasileiras (só para ações estrangeiras).</li>
       <li><b>Proventos</b>: lista oficial da B3 (com tipo: dividendo, JCP, rendimento); datas anteriores à lista da B3 vêm do Yahoo.</li>
+      <li><b>Uma ação por empresa</b>: só ON (3) &gt; PN (4) &gt; Unit (11); outras classes (5, 6, sufixo B, BDR) aparecem só quando a empresa não tem 3, 4 ou 11. Nome e setor que faltam vêm do cadastro oficial da B3; papel sem nome ou sem nenhum indicador fundamentalista sai da lista.</li>
       <li><b>Empresas exibidas</b>: papel que não aparece negociado no COTAHIST nos últimos 90 dias é tratado como não negociado e sai da lista.</li>
       <li><b>Índices</b> (etiquetas IBOV, SMLL, IDIV…, filtro "Índice B3" e peso no Ibovespa no card aberto): carteira do dia oficial da B3, atualizada diariamente e guardada com data. Vale para a empresa (qualquer classe); quando a classe no índice é outra, ela aparece entre parênteses.</li>
       <li>Índices de mercado (Ibovespa, dólar, CDI, IPCA, poupança, ouro) seguem as fontes de antes (Banco Central / Yahoo).</li></ul></div></details>
@@ -623,11 +624,11 @@
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/ui.js?v=b34"></script>
-<script src="/static/app.js?v=b325"></script>
+<script src="/static/app.js?v=b326"></script>
 <script src="/static/previsao.js?v=b38"></script>
 <script src="/static/grafico.js?v=b38"></script>
 <script src="/static/grupos.js?v=b39"></script>
-<script src="/static/aluguel.js?v=2"></script>
+<script src="/static/aluguel.js?v=3"></script>
 <script src="/static/comparar.js?v=b35"></script>
 
 </body>

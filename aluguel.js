@@ -5,7 +5,7 @@ function aluguelSim(items, o) {
   const per = items.map(() => []), rows = [];
   let acc = 0;
   for (let m = 1; m <= N; m++) {
-    let q = 0, rec = 0, dsc = 0, dv = 0;
+    let q = 0, rec = 0, dsc = 0;
     items.forEach((it, k) => {
       const ex = (o.ex || []).filter(e => e.t === it.t && e.m <= m).reduce((a, e) => a + e.q, 0);
       const sh = Math.max(0, it.q + (it.add || 0) * (m - 1) + ex);
@@ -14,12 +14,11 @@ function aluguelSim(items, o) {
       const acr = sh * it.p * (it.rate / 100) / 12; it._acr = (m === 1 ? 0 : it._acr || 0) + acr;
       let g = 0; if (m % P === 0) { g = it._acr; it._acr = 0; }
       const fe = desc ? g * fee : 0, ir = desc ? (g - fe) * 0.15 : 0;
-      const d = o.div ? sh * it.p * (it.dy || 0) / 100 / 12 : 0;
-      per[k].push({ m, t: it.t, sh, rec: g, dsc: fe + ir, div: d });
-      q += sh; rec += g; dsc += fe + ir; dv += d;
+      per[k].push({ m, t: it.t, sh, rec: g, dsc: fe + ir });
+      q += sh; rec += g; dsc += fe + ir;
     });
-    acc += rec - dsc + dv;
-    rows.push({ m, q, rec, dsc, liq: rec - dsc, div: dv, acc });
+    acc += rec - dsc;
+    rows.push({ m, q, rec, dsc, liq: rec - dsc, acc });
   }
   return { rows, per };
 }
@@ -41,7 +40,7 @@ if (typeof document !== 'undefined') (function () {
     try { MET = (await (await fetch('/api/metrics')).json()).metrics || {}; } catch (e) { MET = {}; }
     render();
   }
-  function items() { return st.items.filter(i => i.ok && row(i.t)).map(i => ({ ...i, p: row(i.t).v.preco || 0, dy: (MET[i.t] || {}).dy1 || 0 })); }
+  function items() { return st.items.filter(i => i.ok && row(i.t)).map(i => ({ ...i, p: row(i.t).v.preco || 0 })); }
   function inputsHtml() {
     return st.items.map((it, k) => `<div class="al-it${it.ok ? ' ok' : ''}" data-k="${k}">
       <label class="pv-f"><span>Ação</span><input class="pv-in al-t" value="${esc(it.t)}" placeholder="Buscar…" autocomplete="off"></label>
@@ -60,17 +59,16 @@ if (typeof document !== 'undefined') (function () {
   }
   function render() {
     if (!BTB) { root.innerHTML = loaderHTML('Carregando dados de aluguel da B3…'); load(); return; }
-    const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, div: st.div, ex: st.ex.filter(e => e.t && e.m > 0) });
-    const m0 = Math.max(1, Math.min(360, parseInt(st.mes, 10) || 1)), dv = st.div;
+    const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, ex: st.ex.filter(e => e.t && e.m > 0) });
+    const m0 = Math.max(1, Math.min(360, parseInt(st.mes, 10) || 1)), dv = false;
     root.innerHTML = `<section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4 space-y-2">
       <div class="flex items-baseline justify-between gap-2"><h2 class="text-base font-bold">Ações para alugar</h2><button type="button" class="gbtn pri" data-a="new">＋ Ação</button></div>
       <div id="alItems" class="space-y-2">${inputsHtml() || '<p class="gt-empty">Adicione uma ação para simular o aluguel.</p>'}</div>
       <div class="al-opts"><label class="pv-f"><span>Taxa da corretora (% do aluguel)</span><input id="alFee" class="pv-in" inputmode="decimal" value="${String(st.fee).replace('.', ',')}"></label>
-        <label class="al-ck"><input id="alDesc" type="checkbox" class="accent-emerald-500 w-4 h-4"${st.desc ? ' checked' : ''}> Descontar automaticamente taxa da corretora + IR 15%</label>
-        <label class="al-ck"><input id="alDiv" type="checkbox" class="accent-emerald-500 w-4 h-4"${dv ? ' checked' : ''}> Incluir dividendos (DY dos últimos 12 meses)</label></div>
+        <label class="al-ck"><input id="alDesc" type="checkbox" class="accent-emerald-500 w-4 h-4"${st.desc ? ' checked' : ''}> Descontar automaticamente taxa da corretora + IR 15%</label></div>
       <div><div class="flex items-center justify-between"><h3 class="text-sm font-bold">Adições e retiradas extraordinárias</h3><button type="button" class="gbtn" data-a="exnew">＋</button></div>
         <div class="flex flex-col gap-1.5 mt-1">${exHtml()}</div></div>
-      <p class="gt-help">Renda bruta = ações × preço atual × taxa a.a. ÷ 12, paga ao fim de cada contrato (prazo). Descontos = taxa da corretora + IR de 15% sobre o restante. Taxa sugerida = média ponderada do doador na B3 (editável).</p></section>
+      <p class="gt-help">Renda bruta = ações × preço atual × taxa a.a. ÷ 12, paga ao fim de cada contrato (prazo). Descontos = taxa da corretora + IR de 15% sobre o restante. Taxa sugerida = média ponderada do doador na B3 (editável). Dividendos não entram aqui: já estão na Previsão rentabilidade.</p></section>
     <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-2 sm:p-3 space-y-3">
       <div class="pv-scroll"><table class="pv-t pv-sum"><thead><tr><th class="pv-c-m">Mês</th><th>Ação</th><th>Ações totais alugadas</th><th>Valor recebido</th><th>Descontos</th>${dv ? '<th>Dividendos</th>' : ''}</tr></thead>
         <tbody>${I.length ? R.per.map((p, k) => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${k ? m0 : '<input id="alMes" class="pv-in" inputmode="numeric" maxlength="3" style="width:3.6em;text-align:center" value="' + esc(st.mes) + '" placeholder="1">'}</td><td><b>${esc(x.t)}</b></td><td>${N0.format(Math.round(x.sh))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td>${dv ? `<td class="pos">${brl.format(x.div)}</td>` : ''}</tr>`; }).join('') : `<tr><td colspan="${dv ? 6 : 5}" class="gt-empty">Nenhuma ação confirmada.</td></tr>`}</tbody></table></div>
@@ -93,7 +91,6 @@ if (typeof document !== 'undefined') (function () {
   root.addEventListener('change', (e) => {
     const t = e.target, x = t.closest('[data-x]');
     if (t.id === 'alDesc') { st.desc = t.checked; save(); render(); }
-    if (t.id === 'alDiv') { st.div = t.checked; save(); render(); }
     if (x && t.dataset.xf === 't') { st.ex[+x.dataset.x].t = t.value; save(); render(); }
   });
   root.addEventListener('click', async (e) => {

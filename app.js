@@ -471,12 +471,15 @@ $('#sourceMenu').addEventListener('click', (e) => {
 // ---------- Universo: 1 ticker por empresa; remove ilíquidas sem bons resultados (igual a scripts/universe.py) ----------
 const isIlliq = (r) => { const v = r.v || {}, liq = v.vol30 != null ? v.vol30 : v.liq2m; return !(v.liq2m > 0) || liq == null || liq < 50000; };
 const isPromising = (r) => { const v = r.v || {}; return v.lpa > 0 && v.roe >= 10 && !(v.lucro5a < 0); };
-const clsRank = (t) => { const m = /^[A-Z]{4}(\d+)/.exec(t); return ({ '3': 0, '4': 1, '11': 2 })[m ? m[1] : ''] ?? 3; };
+const clsRank = (t) => { const m = /^[A-Z0-9]{4}(\d+)$/.exec(t); return ({ '3': 0, '4': 1, '11': 2 })[m ? m[1] : ''] ?? 3; };
+// 1 ticker por empresa: só ON (3) > PN (4) > Unit (11); outras classes (5, 6, sufixo B, BDR…) só se a empresa não tem 3/4/11.
 function universe(rows) {
-  const best = {};
+  const best = {}, main = new Set(rows.filter(r => clsRank(r.ticker) < 3).map(r => r.ticker.slice(0, 4)));
   for (const r of rows) {
+    const k = r.ticker.slice(0, 4), cr = clsRank(r.ticker);
+    if (cr === 3 && main.has(k)) continue;
     if (isIlliq(r) && !isPromising(r)) continue;
-    const k = r.ticker.slice(0, 4), key = [clsRank(r.ticker), -((r.v || {}).liq2m || 0)], b = best[k];
+    const key = [cr, -((r.v || {}).liq2m || 0)], b = best[k];
     if (!b || key[0] < b[0][0] || (key[0] === b[0][0] && key[1] < b[0][1])) best[k] = [key, r];
   }
   const keep = new Set(Object.values(best).map(b => b[1]));

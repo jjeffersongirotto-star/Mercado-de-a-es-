@@ -15,7 +15,7 @@ def promising(r):
     return lpa is not None and lpa > 0 and roe is not None and roe >= 10 and not (l5 is not None and l5 < 0)
 
 def cls_rank(t):
-    m = re.match(r"^[A-Z]{4}(\d+)", t)
+    m = re.match(r"^[A-Z0-9]{4}(\d+)$", t)
     n = m.group(1) if m else ""
     return {"3": 0, "4": 1, "11": 2}.get(n, 3)
 
@@ -23,9 +23,10 @@ def universe(rows):
     removed = [r["ticker"] for r in rows if illiquid(r) and not promising(r)]
     rem = set(removed)
     best = {}
+    main = {r["ticker"][:4] for r in rows if cls_rank(r["ticker"]) < 3}
     for r in rows:
-        if r["ticker"] in rem:
-            continue
+        if r["ticker"] in rem or (cls_rank(r["ticker"]) == 3 and r["ticker"][:4] in main):
+            continue  # classes 5/6/sufixo B/BDR só quando a empresa não tem 3/4/11
         k = r["ticker"][:4]
         key = (cls_rank(r["ticker"]), -((r.get("v") or {}).get("liq2m") or 0))
         if k not in best or key < best[k][0]:

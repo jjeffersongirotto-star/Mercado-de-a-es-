@@ -339,6 +339,7 @@ def finalize(base, yf_store=None):
     for ix, comp in ((b3i or {}).get("indices") or {}).items():
         for cod, part in comp.items():
             IXC.setdefault(cod[:4], {}).setdefault(ix, (cod, part))
+    CAD = (((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}) if isbr else {}
     MXB = (((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}) if isbr else {}
     for r in base["rows"]:
         if listed is not None and r["ticker"] not in listed and r["ticker"][-1:].isdigit():
@@ -355,6 +356,13 @@ def finalize(base, yf_store=None):
         if ixs:  # índices da empresa (qualquer classe; mostra a classe quando diferente da exibida)
             nr["ix"] = {k: ([p, c] if c != r["ticker"] else [p]) for k, (c, p) in ixs.items()}
         consensus.apply_row(nr, CMP_FIELDS, divergente)
+        if isbr:  # cadastro oficial da B3 completa nome/setor; sem nome ou sem nenhum fundamento, o papel sai
+            cd = CAD.get(r["ticker"][:4])
+            if cd and not nr.get("nome"): nr["nome"] = cd[0]
+            if cd and not nr.get("setor") and cd[1] and cd[1] != "Não Classificados": nr["setor"] = cd[1]
+            vv = nr.get("v") or {}
+            if not nr.get("nome") or all(vv.get(k) is None for k in ("pl", "pvp", "roe", "lpa", "vpa")):
+                continue
         b3v = (MXB.get(r["ticker"]) or {}).get("v30")
         if b3v and nr.get("v") is not None: nr["v"]["vol30"] = b3v  # volume oficial B3 (COTAHIST, 30 pregões) prevalece
         bkk = set(nr.get("bk") or [])
