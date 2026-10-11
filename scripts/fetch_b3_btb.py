@@ -40,6 +40,7 @@ for d in days[:6]:
             elif r[1] is None:
                 r[1], r[2] = v[9], v[12]
         for v in table("BTBLendingOpenPosition", d):
+            if v[6] != "Total": continue  # a B3 já traz a linha Total (somar os mercados + Total dobrava o saldo)
             if v[2] in res: res[v[2]][0] += v[7] or 0
             else: res[v[2]] = [v[7] or 0, None, None, 0, 0, 0.0]
         btb = {"date": d, "source": "B3 BDI (Empréstimos registrados + Posições em aberto)",
