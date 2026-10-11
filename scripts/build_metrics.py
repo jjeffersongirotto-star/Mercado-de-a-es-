@@ -23,7 +23,7 @@ else:
         if rows:
             break
         time.sleep(20)
-kept, _, _ = universe.universe(rows)
+kept = universe.tradable(rows)  # todas as classes negociadas
 now = datetime.now(timezone.utc); Y = now.year
 res, fail = {}, 0
 for r in kept:

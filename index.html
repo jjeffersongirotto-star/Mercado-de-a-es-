@@ -533,7 +533,7 @@
       <li>Tudo que vem de arquivos/APIs oficiais da B3 tem prioridade máxima: em qualquer divergência com outra fonte, vale o valor da B3.</li>
       <li><b>Histórico de preços</b> das ações brasileiras: arquivos oficiais COTAHIST da B3 (fechamento diário do mercado à vista, lote padrão, desde 1994), agrupados pelo ISIN. Ajuste por desdobramento, grupamento e bonificação com os eventos oficiais da B3 (conferidos com o salto do preço); Yahoo só completa eventos antigos que a B3 não lista. Não usamos mais histórico do Yahoo para ações brasileiras (só para ações estrangeiras).</li>
       <li><b>Proventos</b>: lista oficial da B3 (com tipo: dividendo, JCP, rendimento); datas anteriores à lista da B3 vêm do Yahoo.</li>
-      <li><b>Uma ação por empresa</b>: a classe com <b>maior volume financeiro médio dos últimos 30 pregões</b> (COTAHIST oficial da B3); sem volume: Unit (11) &gt; PN (4) &gt; ON (3) &gt; 5 &gt; 6; outras classes (sufixo B, BDR) só quando a empresa não tem essas. Favoritos e grupos com uma classe trocada migram sozinhos para o ticker exibido. Nome e setor que faltam vêm do cadastro oficial da B3; papel sem nome ou sem nenhum indicador fundamentalista sai da lista.</li>
+      <li><b>Uma ação por empresa</b>: em <b>Ações, Comparar e Previsão</b> aparecem <b>todas as classes negociadas na B3</b> (ex.: PETR3 e PETR4; SANB3, SANB4 e SANB11), cada uma com preço, volume e histórico próprios (COTAHIST); os fundamentos são os da empresa. Nos <b>grupos prontos</b> entra só 1 ticker por empresa: a classe com maior volume financeiro médio dos últimos 30 pregões (B3); sem volume: 11 &gt; 4 &gt; 3 &gt; 5 &gt; 6. Favoritos guardam exatamente o ticker marcado. O filtro de iliquidez vale por ticker. Nome e setor que faltam vêm do cadastro oficial da B3; papel sem nome ou sem nenhum indicador fundamentalista sai da lista.</li>
       <li><b>Empresas exibidas</b>: papel que não aparece negociado no COTAHIST nos últimos 90 dias é tratado como não negociado e sai da lista.</li>
       <li><b>Índices</b> (etiquetas IBOV, SMLL, IDIV…, filtro "Índice B3" e peso no Ibovespa no card aberto): carteira do dia oficial da B3, atualizada diariamente e guardada com data. Vale para a empresa (qualquer classe); quando a classe no índice é outra, ela aparece entre parênteses.</li>
       <li>Índices de mercado (Ibovespa, dólar, CDI, IPCA, poupança, ouro) seguem as fontes de antes (Banco Central / Yahoo).</li></ul></div></details>
@@ -625,7 +625,7 @@
     <details class="icard"><summary>Etiquetas e empresas exibidas</summary><div class="ib">
     <h3>Empresas exibidas</h3>
     <ul>
-      <li><b>Um ticker por empresa</b> (mesmas 4 letras): a classe com <b>maior volume financeiro médio dos últimos 30 pregões</b> (COTAHIST oficial da B3); sem volume: Unit (11) &gt; PN (4) &gt; ON (3) &gt; 5 &gt; 6; outras classes (sufixo B, BDR) só quando a empresa não tem essas. Favoritos e grupos com uma classe trocada migram sozinhos para o ticker exibido.</li>
+      <li><b>Um ticker por empresa</b> (mesmas 4 letras): em <b>Ações, Comparar e Previsão</b> aparecem <b>todas as classes negociadas na B3</b> (ex.: PETR3 e PETR4; SANB3, SANB4 e SANB11), cada uma com preço, volume e histórico próprios (COTAHIST); os fundamentos são os da empresa. Nos <b>grupos prontos</b> entra só 1 ticker por empresa: a classe com maior volume financeiro médio dos últimos 30 pregões (B3); sem volume: 11 &gt; 4 &gt; 3 &gt; 5 &gt; 6. Favoritos guardam exatamente o ticker marcado. O filtro de iliquidez vale por ticker.</li>
       <li><b>Ilíquidas removidas</b>: média diária negociada &lt; R$ 50 mil (30 dias, TradingView; sem TV, liquidez 2 meses do Fundamentus) ou sem negócios em 2 meses — <b>exceto</b> se tiverem bons resultados recentes: LPA &gt; 0, ROE ≥ 10% e lucro 5a não negativo.</li>
       <li>A busca ignora acentos e maiúsculas e procura em ticker, nome, setor, subsetor e descrição da empresa (Investidor10).</li></ul>
     <h3>Classificação (no máximo 2 etiquetas, por prioridade)</h3>
@@ -644,10 +644,10 @@
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/ui.js?v=c27"></script>
-<script src="/static/app.js?v=c7"></script>
+<script src="/static/app.js?v=c8"></script>
 <script src="/static/previsao.js?v=c27"></script>
 <script src="/static/grafico.js?v=c7"></script>
-<script src="/static/grupos.js?v=c36"></script>
+<script src="/static/grupos.js?v=c37"></script>
 <script src="/static/aluguel.js?v=c25"></script>
 <script src="/static/comparar.js?v=c25"></script>
 

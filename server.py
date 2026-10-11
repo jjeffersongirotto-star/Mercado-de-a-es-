@@ -673,7 +673,7 @@ def api_returns(di: str, df: str):
     import universe as _u
     if not rows:
         return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
-    rows, _, _ = _u.universe(rows)
+    rows = _u.tradable(rows)
     tick = [r["ticker"] for r in rows]
     miss = [t for t in tick if t not in history._allc["d"]]
     if len(miss) > 20:

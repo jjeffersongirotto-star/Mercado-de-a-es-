@@ -476,6 +476,9 @@ const isIlliq = (r) => { const v = r.v || {}, liq = v.vol30 != null ? v.vol30 : 
 const isPromising = (r) => { const v = r.v || {}; return v.lpa > 0 && v.roe >= 10 && !(v.lucro5a < 0); };
 const clsRank = (t) => { const m = /^[A-Z0-9]{4}(\d+)$/.exec(t); return ({ '11': 0, '4': 1, '3': 2, '5': 3, '6': 4 })[m ? m[1] : ''] ?? 5; };
 // 1 ticker por empresa: classe com maior volume médio 30 pregões (B3); sem volume 11>4>3>5>6; sufixo B/BDR só se não houver essas.
+function tradable(rows) { // todas as classes; sai só papel ilíquido sem bons resultados (por ticker)
+  return rows.filter(r => !(isIlliq(r) && !isPromising(r)));
+}
 function universe(rows) {
   const best = {}, main = new Set(rows.filter(r => clsRank(r.ticker) < 5).map(r => r.ticker.slice(0, 4)));
   for (const r of rows) {
@@ -577,7 +580,7 @@ async function load() {
     if (r.status === 503) { $('#updated').textContent = 'Buscando dados nas fontes…'; setTimeout(load, 3000); return; }
     if (!r.ok) { const j = await r.json().catch(() => ({})); $('#updated').textContent = 'Fonte indisponível: ' + (j.error || r.status); setTimeout(load, 15000); return; }
     const d = await r.json();
-    if (country === 'br') { const all = d.rows; d.rows = universe(d.rows); migrateTickers(all, d.rows); await loadProfiles(d.rows); }
+    if (country === 'br') { d.rowsK = universe(d.rows); d.rows = tradable(d.rows); await loadProfiles(d.rows); } // todas as classes negociadas; grupos prontos usam rowsK (1 por empresa)
     d.rows.forEach(prepRow);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');

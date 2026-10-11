@@ -35,3 +35,8 @@ def universe(rows):
     kept = [b[1] for b in best.values()]
     dups = sorted(r["ticker"] for r in rows if r["ticker"] not in rem and r not in kept)
     return kept, sorted(removed), dups
+
+
+def tradable(rows):
+    """Todas as classes negociadas; sai só o papel ilíquido sem resultados promissores (por ticker)."""
+    return [r for r in rows if not (illiquid(r) and not promising(r))]
