@@ -202,7 +202,7 @@
       <div class="flow-ch"><span class="gt-help">Saldo diário dos estrangeiros</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}"><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" stroke="rgb(71 85 105)" stroke-width="0.6"/>${bars}</svg></div>
       ${short}<p class="gt-help">Fonte: B3, participação dos investidores (compras − vendas), publicada com cerca de 2 pregões de defasagem.</p></div></div>`;
   }
-  let sortable = null, reorg = false, fullId = null;
+  let sortable = null, reorg = false, fullId = null, lastY = 0;
   function fullHtml(id) {
     const d = groupData(id); if (!d) { fullId = null; return ''; }
     const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? perSel(d.p) : '') + (d.rows.length ? tbl(d.rows, d.h, true) : '<p class="gt-empty">Sem dados suficientes.</p>');
@@ -257,7 +257,7 @@
   $g('#gruposRoot').addEventListener('click', async (e) => {
     const st = e.target.closest('[data-gstar]');
     if (st) { e.stopPropagation(); const id = st.dataset.gstar; ui.gstar = ui.gstar.includes(id) ? ui.gstar.filter(x => x !== id) : ui.gstar.concat(id); saveUI(); list(); return; }
-    if (e.target.closest('[data-gclose]')) { fullId = null; list(); window.scrollTo(0, 0); return; }
+    if (e.target.closest('[data-gclose]')) { const id = fullId, y = lastY; fullId = null; list(); requestAnimationFrame(() => { window.scrollTo(0, y); const t = document.querySelector(`.gt[data-id="${CSS.escape(id || '')}"]`); if (t) t.classList.add('hl'); }); return; }
     const tr = e.target.closest('tr.tap[data-row]');
     if (tr) {
       const nx = tr.nextElementSibling; if (nx && nx.classList.contains('gdet')) { nx.remove(); tr.classList.remove('sel'); return; }
@@ -266,7 +266,7 @@
       tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="3">${blockHtml(r)}</td></tr>`); return;
     }
     const h = e.target.closest('[data-open]');
-    if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { fullId = h.dataset.open; list(); window.scrollTo(0, 0); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
+    if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { lastY = window.scrollY; fullId = h.dataset.open; list(); window.scrollTo(0, 0); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
     const fp = e.target.closest('[data-flowp]'); if (fp) { ui.flowP = fp.dataset.flowp; saveUI(); list(); return; }
     const ft = e.target.closest('[data-ftab]');
     if (ft) { const k = ft.dataset.ftab; if (k === '+') { const n = ((await uiPrompt('Nome da nova aba:', '', { ok: 'Criar' })) || '').trim().slice(0, 30); if (!n) return; const id = 't' + Date.now().toString(36); ui.fav.tabs.push({ id, name: n }); ui.fav.tab = id; } else ui.fav.tab = k; saveUI(); list(); return; }
