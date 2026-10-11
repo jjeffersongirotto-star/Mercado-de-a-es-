@@ -250,6 +250,12 @@
   .gmv { margin: 0 0 0 .3rem; max-width: 80px; }
   .gt-tabs { display: flex; flex-wrap: wrap; gap: .25rem; padding: .35rem .45rem 0; align-items: center; }
   .gflow th:last-child, .gflow td:last-child { text-align: right; } .gflow td.pos { color: var(--c-pos, rgb(52 211 153)); } .gflow td.neg { color: var(--c-neg, rgb(248 113 113)); }
+  .pv-sub { padding: 0 0 .25rem; } .al-it { border: 1px solid rgb(51 65 85); border-radius: .75rem; padding: .5rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+  .al-it.ok { border-color: rgb(16 185 129 / .55); } .al-it > label:first-child { grid-column: 1 / -1; } .al-btns { display: flex; gap: .4rem; align-items: end; justify-content: flex-end; }
+  .al-info, .al-warn { grid-column: 1 / -1; } .al-warn { font-size: 11.5px; color: rgb(251 191 36); margin: 0; }
+  .al-opts { display: grid; gap: .4rem; } .al-ck { display: flex; gap: .5rem; align-items: center; font-size: 13px; }
+  .al-ex { display: grid; grid-template-columns: 4.5em 1fr 1fr auto; gap: .35rem; align-items: end; }
+  @media (min-width: 900px) { .al-it { grid-template-columns: 2fr repeat(4, 1fr) auto; } .al-it > label:first-child { grid-column: auto; } }
   .flow-ch { padding: .4rem .55rem 0; } .gt-help { font-size: 11px; color: rgb(100 116 139); padding: .2rem .55rem; margin: 0; font-weight: 400; } .gt-flow .ldr svg { width: 110px; height: 75px; }
   .gt-tabs button { font-size: 11px; padding: .15rem .5rem; border-radius: 9999px; border: 1px solid rgb(51 65 85); color: rgb(203 213 225); background: rgb(2 6 23); }
   .gt-tabs button.on { border-color: rgb(250 204 21); color: rgb(250 204 21); } .gt-tabs button.dan { color: rgb(253 164 175); }
@@ -453,6 +459,8 @@
   <div data-tabpane="grupos" class="hidden space-y-3"><div id="gruposRoot"></div></div>
   <div data-tabpane="comparar" class="hidden space-y-3"><div id="compRoot"></div></div>
   <div data-tabpane="previsao" class="hidden space-y-3">
+    <div class="gt-tabs pv-sub" role="tablist"><button type="button" data-pvsub="rent" class="on">Previsão rentabilidade</button><button type="button" data-pvsub="alug">Previsão aluguel</button></div>
+    <div id="pvRent" class="space-y-3">
     <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4">
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <h2 class="text-base font-bold">Referências</h2><span id="pvMode" class="text-xs text-slate-400"></span></div>
@@ -494,6 +502,8 @@
       <div class="flex flex-col items-center gap-1 pb-1"><span id="pvCount" class="text-xs text-slate-500"></span>
         <div id="pvMore"><button id="pvMoreBtn" type="button" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Mostrar mais meses</button></div></div>
     </section>
+    </div>
+    <div id="alugRoot" class="hidden space-y-3"></div>
   </div>
 </main>
 
@@ -501,6 +511,9 @@
   <div class="info-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-6 text-sm text-slate-300 shadow-2xl">
     <button type="button" data-close class="sticky top-0 float-right -mt-1 -mr-1" aria-label="Fechar">✕</button>
     <h2 class="text-lg font-bold text-slate-100 mb-1">Informações</h2>
+    <details class="icard"><summary>Aluguel e Fluxo da bolsa</summary><div class="ib"><ul>
+      <li><b>Fluxo da bolsa</b> (Grupos): saldo compras − vendas por tipo de investidor, do Boletim Diário da B3 (participação dos investidores). A B3 publica o acumulado do mês com cerca de 2 pregões de defasagem; o saldo do dia é a diferença entre publicações. A B3 guarda só ~21 pregões, então o histórico de 1 ano vai se formando a cada dia.</li>
+      <li><b>Previsão aluguel</b>: taxa sugerida = média ponderada do doador nos empréstimos registrados na B3 no último pregão (editável). Renda bruta = ações × preço atual × taxa a.a. ÷ 12, paga ao fim de cada contrato (prazo em meses). Descontos (opcionais) = taxa da corretora (% do aluguel) + IR de 15% sobre o restante. Alerta de pouca demanda: menos de 500 mil ações alugadas ou menos de 20 contratos no dia. Dividendos (opcional) pelo DY dos últimos 12 meses, sem desconto.</li></ul></div></details>
     <details class="icard"><summary>Prioridade dos dados da B3</summary><div class="ib"><ul>
       <li>Tudo que vem de arquivos/APIs oficiais da B3 tem prioridade máxima: em qualquer divergência com outra fonte, vale o valor da B3.</li>
       <li><b>Histórico de preços</b> das ações brasileiras: arquivos oficiais COTAHIST da B3 (fechamento diário do mercado à vista, lote padrão, desde 1994), agrupados pelo ISIN. Ajuste por desdobramento, grupamento e bonificação com os eventos oficiais da B3 (conferidos com o salto do preço); Yahoo só completa eventos antigos que a B3 não lista. Não usamos mais histórico do Yahoo para ações brasileiras (só para ações estrangeiras).</li>
@@ -610,9 +623,10 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/ui.js?v=b34"></script>
 <script src="/static/app.js?v=b325"></script>
-<script src="/static/previsao.js?v=b37"></script>
+<script src="/static/previsao.js?v=b38"></script>
 <script src="/static/grafico.js?v=b38"></script>
 <script src="/static/grupos.js?v=b39"></script>
+<script src="/static/aluguel.js?v=1"></script>
 <script src="/static/comparar.js?v=b35"></script>
 
 </body>

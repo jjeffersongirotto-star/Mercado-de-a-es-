@@ -21,6 +21,15 @@ if (typeof document !== 'undefined') {
   showTab(t0);
 })();
 
+// Sub-abas da Previsão
+(function () {
+  const K = 'screenerB3.pvsub.v1'; let cur = 'rent'; try { cur = localStorage.getItem(K) || 'rent'; } catch (e) { }
+  const set = (id) => { cur = id; document.querySelectorAll('[data-pvsub]').forEach(b => b.classList.toggle('on', b.dataset.pvsub === id));
+    document.getElementById('pvRent').classList.toggle('hidden', id !== 'rent'); document.getElementById('alugRoot').classList.toggle('hidden', id !== 'alug');
+    try { localStorage.setItem(K, id); } catch (e) { } document.dispatchEvent(new CustomEvent('pvsub', { detail: id })); };
+  document.querySelectorAll('[data-pvsub]').forEach(b => b.addEventListener('click', () => set(b.dataset.pvsub)));
+  setTimeout(() => set(cur), 0);
+})();
 // ---------- Previsão ----------
 (function () {
   const KEY = 'screenerB3.previsao.v1';
@@ -166,6 +175,7 @@ if (typeof document !== 'undefined') {
   // Combobox com busca a cada caractere (ticker, nome, setor, descrição; sem acento)
   const nrm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const escP = (x) => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  window.pvCombo = (i, f) => combo(i, f);
   function combo(inp, onPick) {
     const box = document.createElement('div'); box.className = 'pv-combo hidden'; box.setAttribute('role', 'listbox');
     inp.parentNode.style.position = 'relative'; inp.parentNode.appendChild(box);
