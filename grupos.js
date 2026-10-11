@@ -101,7 +101,7 @@
       const a = pctRank(c, r => r.v.roe), b = pctRank(c, r => r.v.lucro5a ?? -1e9), d = pctRank(c, r => r.v.pl > 0 ? 1 / r.v.pl : 0);
       return c.map(r => [r, (a.get(r) + b.get(r) + d.get(r)) / 3 * 100]).sort((x, y) => y[1] - x[1]).map(([r, v]) => [r, F2.format(v), v]); } },
     { id: 'magic', name: 'Magic Formula', t: 'últimos 12 meses', h: 'ROIC · EV/EBIT', calc: () => {
-      const c = rowsK().filter(r => r.v.evebit >= 1 && r.v.roic != null && r.v.roic < 150);
+      const c = rowsK().filter(r => !r.fin && r.v.evebit >= 1 && r.v.roic != null && r.v.roic < 150);
       const r1 = new Map(c.slice().sort((a, b) => b.v.roic - a.v.roic).map((r, i) => [r, i])), r2 = new Map(c.slice().sort((a, b) => a.v.evebit - b.v.evebit).map((r, i) => [r, i]));
       return c.map(r => [r, r1.get(r) + r2.get(r)]).sort((a, b) => a[1] - b[1]).map(([r]) => [r, F2.format(r.v.roic) + '% · ' + F2.format(r.v.evebit)]); } },
     { id: 'graham', name: 'Baratas pelo Graham', t: 'últimos 12 meses', h: 'Desconto', calc: () => rowsK().filter(r => r.v.lpa > 0 && r.v.vpa > 0 && r.v.preco > 0 && r.v.pl >= 2).map(r => [r, (Math.sqrt(22.5 * r.v.lpa * r.v.vpa) / r.v.preco - 1) * 100]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
@@ -156,7 +156,7 @@
       if (!L.length) return '<p class="gt-empty">Nenhum provento dos favoritos neste ano.</p>';
       return '<div class="pcols">' + L.map(([r, ev, p]) => `<div class="pcol"><div class="pcol-h">${escH(r.ticker)}</div>${ev.map(e => e[2] === 'bonificação' || e[2] === 'desdobramento' || e[2] === 'grupamento'
         ? `<div class="pcard bon"><span>${e[0].slice(0, 5)}</span><b>${e[2] === 'bonificação' ? 'Bonif. ' + F2.format((e[1] - 1) * 100) + '%' : e[2] + ' ' + F2.format(e[1]) + ':1'}</b></div>`
-        : `<div class="pcard"><span>${e[0].slice(0, 5)}${e[3] ? ' · ' + escH(e[3]) : ''}</span><b>R$ ${F2.format(e[1])}</b><em>${F2.format(p ? e[1] / p * 100 : 0)}%</em></div>`).join('')}</div>`).join('') + '</div>';
+        : `<div class="pcard"><span>${e[0].slice(0, 5)}${e[3] ? ' · ' + escH(e[3]) : ''}</span><b>R$ ${e[1] < 0.1 ? e[1].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : F2.format(e[1])}</b><em>${F2.format(p ? e[1] / p * 100 : 0)}%</em></div>`).join('')}</div>`).join('') + '</div>';
     }
     const R = favRows();
     if (!R.length) return '<p class="gt-empty">Toque na ☆ de uma empresa para favoritar.</p>';

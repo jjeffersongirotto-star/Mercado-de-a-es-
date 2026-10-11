@@ -129,6 +129,7 @@ def _cota_day(d):
     try:
         r = requests.get(f"https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D{d:%d%m%Y}.ZIP", headers=UA, timeout=(6, 40))
         if r.status_code != 200 or r.content[:2] != b"PK":
+            if (datetime.utcnow() - d).days >= 3: _cotad[k] = None  # feriado/sem pregão: não tenta de novo
             return None
         z = _zf.ZipFile(_io.BytesIO(r.content)); out = {}
         for l in z.read(z.namelist()[0]).decode("latin1").splitlines():
@@ -153,6 +154,8 @@ def b3hist(t):
     if d["t"]:
         day = datetime.utcfromtimestamp(d["t"][-1]).date() + timedelta(days=1)
         today = datetime.utcnow().date(); n = 0
+        if (today - day).days > 12:  # série parada (deslistada/troca de código): não busca arquivos diários antigos
+            day = today + timedelta(days=1)
         while day <= today and n < 15:
             if day.weekday() < 5:
                 f = _cota_day(datetime(day.year, day.month, day.day))
