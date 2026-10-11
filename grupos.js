@@ -174,10 +174,10 @@
   const starB = (id) => id === 'fav' ? '' : `<button type="button" class="gstar${ui.gstar.includes(id) ? ' on' : ''}" data-gstar="${escH(id)}" aria-label="Destacar grupo">${ui.gstar.includes(id) ? '★' : '☆'}</button>`;
   function tileHtml(id) {
     const d = groupData(id); if (!d) return '';
-    if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div></div>`;
+    if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
     return `<div class="gt" data-id="${escH(id)}"><div class="gt-head" data-open="${escH(id)}">${starB(id)}<span class="gt-name">${escH(d.title)}</span></div>
       ${d.p ? perSel(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
-      <div class="gt-list">${d.rows.length ? tbl(d.rows, d.h, false) : '<p class="gt-empty">Sem dados suficientes.</p>'}</div></div>`;
+      <div class="gt-list">${d.rows.length ? tbl(d.rows, d.h, false) : '<p class="gt-empty">Sem dados suficientes.</p>'}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
   }
   // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
   let FLOW = null, flowLoading = false;

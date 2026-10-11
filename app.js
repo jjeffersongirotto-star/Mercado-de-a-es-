@@ -325,7 +325,7 @@ function blockHtml(r) {
       <div class="flex items-center gap-3 mt-1">
         <div class="min-w-0 flex-1">
           <div class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</div>
-          <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
+          <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>${updTxt() ? `<div class="upd">${updTxt()}</div>` : ''}
         </div>
         <button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
       </div>
@@ -337,6 +337,8 @@ function blockHtml(r) {
 const IX_SHOW = ['IBOV', 'IBXX', 'IBXL', 'SMLL', 'MLCX', 'IDIV', 'UTIL', 'IFNC', 'IMAT'];
 function ixTags(r) { return r.ix ? IX_SHOW.filter(k => r.ix[k]).map(k => `<span class="ctag ctag-ix" title="Índice B3 ${k}${r.ix[k][1] ? ' (' + r.ix[k][1] + ')' : ''}">${k}</span>`).join('') : ''; }
 function ibovW(r) { const x = r.ix && r.ix.IBOV; return x ? `<div class="text-xs text-slate-400 px-1 py-1">Peso no Ibovespa (B3): <b class="text-slate-100">${x[0].toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}%</b>${x[1] ? ` (via ${x[1]})` : ''}</div>` : ''; }
+function updTxt() { const u = state.data && state.data.updated_at_sp; return u ? 'Atualizado em ' + u.slice(0, 16) : ''; }
+window.updTxt = updTxt;
 function setBlockOpen(art, open) {
   const t = art.dataset.ticker, inner = art.querySelector('.collapse-inner'), btn = art.querySelector('.tgl');
   if (open) {
