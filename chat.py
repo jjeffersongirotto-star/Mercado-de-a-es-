@@ -235,7 +235,18 @@ GLOSS = {
 COLORS = ("Cores no site: verde = positivo/ganho/confirmar; vermelho = negativo/perda/sem maioria entre as fontes; âmbar/laranja = maioria com divergência; "
           "azul = informação/EBIT ajustado; azul-escuro = bancos/seguradoras (indicador não comparável); violeta = Valorização total na Previsão; "
           "amarelo = imposto (Previsão).")
-HOWW = ("como usar", "como funciona", "como faco", "como faço", "como uso", "para que serve", "onde fica", "explica a aba", "o que faz a aba")
+HOWTO = [
+ (("previsao aluguel","previsao de aluguel","aluguel"), "Aba Previsão → Aluguel:\n1. Abra a aba Previsão e escolha o modo Aluguel.\n2. Selecione a ação e informe a quantidade de ações (ou valor investido).\n3. Defina o período e a taxa de aluguel (vem preenchida pelos dados da B3, pode editar).\n4. Veja a renda estimada do aluguel, já com o imposto descontado (amarelo)."),
+ (("previsao rentab","rentabilidade","previsao","simula"), "Aba Previsão → Rentabilidade:\n1. Abra a aba Previsão e escolha Rentabilidade.\n2. Selecione a ação, o valor investido e o período.\n3. Opcional: aportes mensais e reinvestimento de dividendos.\n4. O resultado mostra valorização, dividendos, imposto (amarelo) e Valorização total (violeta), baseado no histórico."),
+ (("compar",), "Aba Comparar:\n1. Abra a aba Comparar.\n2. Digite e adicione 2 ou mais ações (qualquer classe: ON, PN, units).\n3. Veja os indicadores lado a lado; o melhor de cada linha fica destacado.\n4. Remova ou troque ações pelo X de cada coluna."),
+ (("favorit",), "Favoritos:\n1. Na aba Ações, clique na estrela ☆ do card para favoritar o ticker.\n2. Os favoritos ficam salvos no navegador.\n3. Use o filtro/grupo Favoritos para ver só eles; clique na estrela de novo para remover."),
+ (("reorganiz","arrastar","reordenar"), "Reorganizar:\n1. Clique em Reorganizar.\n2. Arraste os cards/abas para a ordem desejada.\n3. Clique em Concluir para salvar a ordem (fica salva no navegador)."),
+ (("grupo",), "Aba Grupos:\n1. Abra a aba Grupos e clique em Novo grupo.\n2. Dê um nome e adicione empresas (uma ação por empresa, a mais negociada).\n3. Veja os indicadores médios e o desempenho do grupo.\n4. Edite ou exclua o grupo pelos botões do próprio grupo."),
+ (("filtr","ordenar","ordena","busca","pesquis"), "Filtros e ordenação (aba Ações):\n1. Digite na busca o nome ou ticker – a lista filtra enquanto você digita.\n2. Escolha país, fonte e índice (ex.: Ibovespa) nos seletores.\n3. Abra Filtros e defina mínimos/máximos dos indicadores (P/L, DY, ROE, volume...).\n4. Em Ordenar, escolha o indicador e a direção (crescente/decrescente).\n5. Exporte o resultado em CSV se quiser."),
+ (("chat",), "Aba Chat:\n1. Digite sua pergunta em português (ex.: 'P/L da PETR4', 'compare VALE3 e ITUB4', 'maiores DY').\n2. Perguntas simples são respondidas na hora pelo próprio site; as abertas usam IA com os dados do site.\n3. Se achar que algo está errado, diga e ele revisa."),
+ (("acoes","acao","aba acoes","cards"), "Aba Ações:\n1. Cada card mostra preço, variação e indicadores de consenso das fontes.\n2. Escolha a fonte (ou Todos para consenso) e o país no topo.\n3. Clique no card para expandir: histórico, peso no Ibovespa, índices e todas as classes da ação.\n4. As cores indicam concordância das fontes (pergunte 'o que significam as cores').\n5. Use Filtros/Ordenar para refinar a lista."),
+]
+HOWW = ("como usar", "como funciona", "como faco", "como faço", "como uso", "para que serve", "onde fica", "explica a aba", "o que faz a aba", "como mexer", "passo a passo", "como adicion", "como cri", "como favorit", "como filtr", "como orden", "como compar", "como reorganiz", "tutorial")
 SCREEN = ("qual acao", "quais acoes", "que acao", "que acoes", "melhores", "melhor acao", "descontad", "barat", "desvaloriz", "potencial", "crescimento",
           "recomend", "ranking", "liste", "listar", "filtr", "quais empresas", "qual empresa", "sugest", "oportunidade", "subvaloriz")
 COMPLEX = ("por que", "porque", "explique", "analise", "analisa", "devo", "vale a pena", "compensa", "opiniao", "sugest", "e se", "minha", "meu ", "previs", "aluguel", "simula")
@@ -246,14 +257,11 @@ def local(q, D, ret_fn, cx):
     nq = norm(q); T = _tickers(q, D); I = _idx(q); k = _metric(q, D)
     if any(w in nq for w in WRONG): return None
     if any(w in nq for w in COMPLEX) and not any(w in nq for w in HOWW): return None
-    if any(w in nq for w in SCREEN): return None
+    if any(w in nq for w in SCREEN) and not any(w in nq for w in HOWW): return None
     if "cor" in nq.split() or "cores" in nq or "colorid" in nq: return COLORS
     if any(w in nq for w in HOWW) or re.search(r"\baba\b", nq):
-        secs = guide_sections()
-        for w, tab in TABS.items():
-            if w in nq:
-                hit = [f"## {h}\n{b}" for h, b in secs.items() if norm(tab) in norm(h) or w in norm(h)]
-                if hit: return "\n\n".join(hit)[:3500]
+        for keys, txt in HOWTO:
+            if any(w in nq for w in keys): return txt
         return None
     m = re.search(r"\b(o que (e|significa|quer dizer)|significado d[eo]|defin[ae])\b\s*(o |a |um |uma )?(.+?)\??$", nq)
     if m and not T:
