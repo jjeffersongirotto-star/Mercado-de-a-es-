@@ -64,3 +64,14 @@ window.avgLastMonths = function (t, c, n) {
   return k ? s / k : null;
 };
 if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths };
+
+// Versão nova publicada: ao voltar para o app (aba/celular), recarrega se os scripts mudaram
+(function () {
+  const mine = [...document.scripts].map(x => x.src).filter(x => x.includes('/static/')).join('|');
+  let busy = false;
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || busy) return; busy = true;
+    try { const h = await (await fetch('/', { cache: 'no-store' })).text(); const vs = [...h.matchAll(/src="(\/static\/[^"]+)"/g)].map(m => location.origin + m[1]).join('|');
+      if (vs && mine && vs !== mine) location.reload(); } catch (e) { } busy = false;
+  });
+})();

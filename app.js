@@ -196,7 +196,8 @@ function updateSortDir() { $('#sortDir').innerHTML = state.sortDir > 0 ? '<span 
 const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : (k === 'var' ? r.var : val(r, k));
 
 // Ordem das buscas: 0 ticker começa com · 1 ticker contém · 2 nome · 3 setor · 4 descrição/atividade · 9 sem relação
-function searchRank(r, q) {
+function searchRank(r, q) { return ((typeof FAVS !== 'undefined' && FAVS.has(r.ticker)) ? 0 : 100) + searchRank0(r, q); }
+function searchRank0(r, q) {
   if (!q) return 0;
   const t = norm(r.ticker);
   if (t.startsWith(q)) return 0;
