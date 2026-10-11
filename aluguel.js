@@ -55,7 +55,7 @@ if (typeof document !== 'undefined') (function () {
       <label class="pv-f"><span>Taxa (% a.a.)</span><input class="pv-in" data-f="rate" inputmode="decimal" value="${d.rate != null ? String(d.rate).replace('.', ',') : ''}"></label>
       <label class="pv-f"><span>Prazo (meses)</span><input class="pv-in" data-f="prazo" inputmode="numeric" value="${d.prazo || 1}"></label>
       <div class="al-btns"><button type="button" class="gbtn pri" data-a="ok" aria-label="Confirmar">✓</button><button type="button" class="gx" data-a="cancel" aria-label="Cancelar">✕</button></div>
-      ${d.t && b3(d.t) ? `<p class="gt-help al-info">B3 (${(BTB.date || '').split('-').reverse().join('/')}): ${N0.format(b3(d.t)[0])} ações alugadas · taxa média doador ${pct(rateOf(d.t))} · ${N0.format(b3(d.t)[3])} contratos no dia</p>` : ''}
+      ${d.t && b3(d.t) ? `<div class="upd">${(window.updTxt && updTxt()) || 'Atualizado em ' + (BTB.date || '').split('-').reverse().join('/')}</div>` : ''}
       ${d.t && lowDemand(d.t) ? '<p class="al-warn">⚠ Pouca demanda de aluguel para esta ação na B3: o empréstimo pode não acontecer ou demorar.</p>' : ''}</div>` : '';
     return list + form;
   }
