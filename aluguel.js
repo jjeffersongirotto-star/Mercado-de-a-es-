@@ -5,7 +5,7 @@ function aluguelSim(items, o) {
   const per = items.map(() => []), rows = [];
   let acc = 0;
   for (let m = 1; m <= N; m++) {
-    let q = 0, ql = 0, rec = 0, dsc = 0;
+    let q = 0, ql = 0, val = 0, rec = 0, dsc = 0;
     items.forEach((it, k) => {
       const ex = (o.ex || []).filter(e => e.t === it.t && e.m <= m).reduce((a, e) => a + e.q, 0);
       const sh = Math.max(0, it.q + (it.add || 0) * (m - 1) + ex);
@@ -15,11 +15,11 @@ function aluguelSim(items, o) {
       const acr = lent * it.p * (it.rate / 100) / 12; it._acr = (m === 1 ? 0 : it._acr || 0) + acr;
       let g = 0; if (m % P === 0) { g = it._acr; it._acr = 0; }
       const fe = desc ? g * fee : 0, ir = desc ? (g - fe) * 0.15 : 0;
-      per[k].push({ m, t: it.t, sh, lent, rec: g, dsc: fe + ir });
-      q += sh; ql += lent; rec += g; dsc += fe + ir;
+      per[k].push({ m, t: it.t, sh, val: sh * it.p, lent, rec: g, dsc: fe + ir });
+      q += sh; val += sh * it.p; ql += lent; rec += g; dsc += fe + ir;
     });
     acc += rec - dsc;
-    rows.push({ m, q, ql, rec, dsc, liq: rec - dsc, acc });
+    rows.push({ m, q, ql, val, rec, dsc, liq: rec - dsc, acc });
   }
   return { rows, per };
 }
@@ -66,8 +66,8 @@ if (typeof document !== 'undefined') (function () {
       <label class="pv-f"><span>Ação</span><select class="pv-in" data-xf="t">${[...new Set(st.items.map(i => i.t))].map(t => ({ t })).map(i => `<option${i.t === e.t ? ' selected' : ''}>${esc(i.t)}</option>`).join('')}</select></label>
       <label class="pv-f"><span>Ações (+ adiciona, − retira)</span><input class="pv-in" data-xf="q" inputmode="numeric" value="${e.q ? N0.format(e.q) : ''}"></label><button type="button" class="gx" data-xdel="${k}" aria-label="Remover">✕</button></div>`).join('');
   }
-  const perB = (I, R, m0) => I.length ? R.per.map(p => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${m0}</td><td><b>${esc(x.t)}</b></td><td>${N0.format(Math.round(x.sh))}</td><td>${N0.format(Math.round(x.lent))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td></tr>`; }).join('') : '';
-  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${N0.format(Math.round(r.q))}</td><td>${N0.format(Math.round(r.ql))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
+  const perB = (I, R, m0) => I.length ? R.per.map(p => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${m0}</td><td><b>${esc(x.t)}</b></td><td>${N0.format(Math.round(x.sh))}</td><td>${brl.format(x.val)}</td><td>${N0.format(Math.round(x.lent))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td></tr>`; }).join('') : '';
+  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${N0.format(Math.round(r.q))}</td><td>${brl.format(r.val)}</td><td>${N0.format(Math.round(r.ql))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
   // Só as tabelas são refeitas enquanto digita: o campo ativo não é recriado (mantém foco, cursor e seleção)
   function tables() {
     const pb = document.getElementById('alPerB'); if (!pb) return render();
@@ -86,9 +86,9 @@ if (typeof document !== 'undefined') (function () {
       <div><div class="flex items-center justify-between"><h3 class="text-sm font-bold">Adições e retiradas extraordinárias</h3><button type="button" class="gbtn" data-a="exnew">＋</button></div>
         <div class="flex flex-col gap-1.5 mt-1">${exHtml()}</div></div></section>
     <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-2 sm:p-3 space-y-3">
-      <div class="pv-scroll"><table class="pv-t pv-sum"><thead><tr><th class="pv-c-m">Mês<br><input id="alMes" class="pv-in" inputmode="numeric" maxlength="3" style="width:3.6em;text-align:center" value="${esc(st.mes)}" placeholder="1" aria-label="Mês"></th><th>Ação</th><th>Nº de ações</th><th>Ações totais alugadas</th><th>Valor recebido</th><th>Descontos</th>${dv ? '<th>Dividendos</th>' : ''}</tr></thead>
+      <div class="pv-scroll"><table class="pv-t pv-sum"><thead><tr><th class="pv-c-m">Mês<br><input id="alMes" class="pv-in" inputmode="numeric" maxlength="3" style="width:3.6em;text-align:center" value="${esc(st.mes)}" placeholder="1" aria-label="Mês"></th><th>Ação</th><th>Nº de ações</th><th>Valor das ações</th><th>Ações totais alugadas</th><th>Valor recebido</th><th>Descontos</th>${dv ? '<th>Dividendos</th>' : ''}</tr></thead>
         <tbody id="alPerB">${perB(I, R, m0)}</tbody></table></div>
-      <div class="pv-scroll pv-main"><table class="pv-t"><thead><tr><th class="pv-c-m">Mês</th><th>Nº de ações</th><th>Ações alugadas</th><th>Valor recebido</th><th>Descontos</th><th>Líquido</th>${dv ? '<th>Dividendos</th>' : ''}<th>Total acumulado</th></tr></thead>
+      <div class="pv-scroll pv-main"><table class="pv-t"><thead><tr><th class="pv-c-m">Mês</th><th>Nº de ações</th><th>Valor das ações</th><th>Ações alugadas</th><th>Valor recebido</th><th>Descontos</th><th>Líquido</th>${dv ? '<th>Dividendos</th>' : ''}<th>Total acumulado</th></tr></thead>
         <tbody id="alMainB">${mainB(I, R, m0)}</tbody></table></div></section>`;
     root.querySelectorAll('.al-t').forEach(inp => window.pvCombo && pvCombo(inp, (t) => { st.draft.t = t; const r = rateOf(t); if (r != null) st.draft.rate = r; save(); render(); }));
   }
