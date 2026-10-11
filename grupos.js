@@ -179,6 +179,29 @@
       ${d.p ? perSel(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
       <div class="gt-list">${d.rows.length ? tbl(d.rows, d.h, false) : '<p class="gt-empty">Sem dados suficientes.</p>'}</div></div>`;
   }
+  // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
+  let FLOW = null, flowLoading = false;
+  const FP = [['1d', 1, '1 dia'], ['7d', 5, '7 dias'], ['1m', 21, '1 mês'], ['1a', 252, '1 ano']];
+  function flowHtml() {
+    if (state.country !== 'br') return '';
+    if (!FLOW) { if (!flowLoading) { flowLoading = true; fetch('/api/flow').then(x => x.json()).then(d => { FLOW = d || {}; list(); }).catch(() => { FLOW = {}; }); } return `<div class="gt gt-flow"><div class="gt-head"><span class="gt-name">Fluxo da bolsa</span></div>${loaderHTML('')}</div>`; }
+    const days = Object.keys(FLOW.days || {}).sort(); if (!days.length) return '';
+    const pk = ui.flowP || '1d', n = (FP.find(x => x[0] === pk) || FP[0])[1], sel = days.slice(-n);
+    const cats = ['Investidor Estrangeiro', 'Institucionais', 'Investidores Individuais', 'Instituições Financeiras', 'Outros'];
+    const nm = { 'Investidor Estrangeiro': 'Estrangeiros', 'Institucionais': 'Institucionais', 'Investidores Individuais': 'Pessoas físicas', 'Instituições Financeiras': 'Instituições financeiras', 'Outros': 'Outros' };
+    const sum = (c) => sel.reduce((a, d) => a + ((FLOW.days[d][c] || [])[2] || 0), 0);
+    const bi = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + 'R$ ' + (Math.abs(v) / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' bi';
+    const fd = (d) => d.split('-').reverse().slice(0, 2).join('/');
+    const fx = sel.map(d => (FLOW.days[d]['Investidor Estrangeiro'] || [])[2] || 0), mx = Math.max(1, ...fx.map(Math.abs)), W = 300, H = 56, bw = W / Math.max(fx.length, 1);
+    const bars = fx.map((v, i) => { const h = Math.abs(v) / mx * (H / 2 - 2); return `<rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${(v >= 0 ? H / 2 - h : H / 2).toFixed(1)}" width="${Math.max(1, bw * 0.7).toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}" fill="${v >= 0 ? 'rgb(16 185 129)' : 'rgb(239 68 68)'}"><title>${fd(sel[i])}: ${bi(v)}</title></rect>`; }).join('');
+    const short = days.length < n ? `<p class="gt-help">Histórico disponível: ${days.length} pregões (desde ${fd(days[0])}).</p>` : '';
+    return `<div class="gt gt-flow"><div class="gt-head"><span class="gt-name">Fluxo da bolsa</span></div>
+      <div class="gt-tabs">${FP.map(([k, , l]) => `<button type="button" class="${k === pk ? 'on' : ''}" data-flowp="${k}">${l}</button>`).join('')}</div>
+      <div class="gt-list"><table class="gtab gflow"><thead><tr><th>Investidor</th><th>Saldo (${sel.length > 1 ? fd(sel[0]) + '–' : ''}${fd(sel[sel.length - 1])})</th></tr></thead><tbody>
+      ${cats.map(c => { const v = sum(c); return `<tr><td>${nm[c]}</td><td class="gc2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${bi(v)}</td></tr>`; }).join('')}</tbody></table>
+      <div class="flow-ch"><span class="gt-help">Saldo diário dos estrangeiros</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}"><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" stroke="rgb(71 85 105)" stroke-width="0.6"/>${bars}</svg></div>
+      ${short}<p class="gt-help">Fonte: B3, participação dos investidores (compras − vendas), publicada com cerca de 2 pregões de defasagem.</p></div></div>`;
+  }
   let sortable = null, reorg = false, fullId = null;
   function fullHtml(id) {
     const d = groupData(id); if (!d) { fullId = null; return ''; }
@@ -197,7 +220,7 @@
         <button type="button" class="gbtn" data-g="export" title="Exportar grupos" aria-label="Exportar grupos">↓</button>
         <button type="button" class="gbtn" data-g="import" title="Importar grupos" aria-label="Importar grupos">↑</button>` : ''}
         <input id="gFile" type="file" accept=".json,application/json,text/plain,*/*" class="hidden"></div>
-      <div id="gGrid" class="ggrid${reorg ? ' reorg' : ''}">${tileIds().map(tileHtml).join('')}</div></section>`;
+      <div id="gGrid" class="ggrid${reorg ? ' reorg' : ''}">${tileIds().map(id => tileHtml(id) + (id === 'fav' && !reorg ? flowHtml() : '')).join('')}</div></section>`;
     $g('#gFile').addEventListener('change', importG);
     if (sortable) { sortable.destroy(); sortable = null; }
     if (reorg && window.Sortable) sortable = Sortable.create($g('#gGrid'), { animation: 150, filter: '.gt-fav', preventOnFilter: false, onMove: (e) => !e.related.classList.contains('gt-fav'),
@@ -244,6 +267,7 @@
     }
     const h = e.target.closest('[data-open]');
     if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { fullId = h.dataset.open; list(); window.scrollTo(0, 0); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
+    const fp = e.target.closest('[data-flowp]'); if (fp) { ui.flowP = fp.dataset.flowp; saveUI(); list(); return; }
     const ft = e.target.closest('[data-ftab]');
     if (ft) { const k = ft.dataset.ftab; if (k === '+') { const n = ((await uiPrompt('Nome da nova aba:', '', { ok: 'Criar' })) || '').trim().slice(0, 30); if (!n) return; const id = 't' + Date.now().toString(36); ui.fav.tabs.push({ id, name: n }); ui.fav.tab = id; } else ui.fav.tab = k; saveUI(); list(); return; }
     const fr = e.target.closest('[data-fren]'); if (fr) { const t = ui.fav.tabs.find(x => x.id === fr.dataset.fren); const n = ((await uiPrompt('Novo nome da aba:', t.name)) || '').trim().slice(0, 30); if (n) { t.name = n; saveUI(); list(); } return; }

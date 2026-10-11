@@ -641,9 +641,21 @@ def api_indices(name: str):
     except Exception as e:
         return JSONResponse({"error": "Banco Central indisponível: " + str(e)[:200]}, status_code=502)
 
+@app.get("/api/btb")
+def api_btb():
+    """Aluguel de ações (B3): saldo em aberto, taxas médias doador/tomador (% a.a.)."""
+    d, _ = snapshots.load("b3_btb", max_mem_age=3 * 3600)
+    return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=1800"})
+
+@app.get("/api/flow")
+def api_flow():
+    """Fluxo diário por tipo de investidor (B3, R$ mil): compras, vendas, saldo."""
+    d, _ = snapshots.load("b3_flow", max_mem_age=3 * 3600)
+    return JSONResponse({k: v for k, v in (d or {}).items() if k != "mtd"}, headers={"Cache-Control": "public, max-age=1800"})
+
 @app.get("/static/{name}.js")
 def extra_js(name: str):
-    if name not in ("app", "previsao", "grafico", "grupos", "ui", "comparar"):
+    if name not in ("app", "previsao", "grafico", "grupos", "ui", "comparar", "aluguel"):
         return JSONResponse({"error": "não encontrado"}, status_code=404)
     return FileResponse(os.path.join(BASE, name + ".js"), media_type="application/javascript",
                         headers={"Cache-Control": "no-cache"})
