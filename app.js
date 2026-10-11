@@ -474,15 +474,15 @@ $('#sourceMenu').addEventListener('click', (e) => {
 // ---------- Universo: 1 ticker por empresa; remove ilíquidas sem bons resultados (igual a scripts/universe.py) ----------
 const isIlliq = (r) => { const v = r.v || {}, liq = v.vol30 != null ? v.vol30 : v.liq2m; return !(v.liq2m > 0) || liq == null || liq < 50000; };
 const isPromising = (r) => { const v = r.v || {}; return v.lpa > 0 && v.roe >= 10 && !(v.lucro5a < 0); };
-const clsRank = (t) => { const m = /^[A-Z0-9]{4}(\d+)$/.exec(t); return ({ '3': 0, '4': 1, '11': 2 })[m ? m[1] : ''] ?? 3; };
-// 1 ticker por empresa: só ON (3) > PN (4) > Unit (11); outras classes (5, 6, sufixo B, BDR…) só se a empresa não tem 3/4/11.
+const clsRank = (t) => { const m = /^[A-Z0-9]{4}(\d+)$/.exec(t); return ({ '11': 0, '4': 1, '3': 2, '5': 3, '6': 4 })[m ? m[1] : ''] ?? 5; };
+// 1 ticker por empresa: classe com maior volume médio 30 pregões (B3); sem volume 11>4>3>5>6; sufixo B/BDR só se não houver essas.
 function universe(rows) {
-  const best = {}, main = new Set(rows.filter(r => clsRank(r.ticker) < 3).map(r => r.ticker.slice(0, 4)));
+  const best = {}, main = new Set(rows.filter(r => clsRank(r.ticker) < 5).map(r => r.ticker.slice(0, 4)));
   for (const r of rows) {
     const k = r.ticker.slice(0, 4), cr = clsRank(r.ticker);
-    if (cr === 3 && main.has(k)) continue;
+    if (cr === 5 && main.has(k)) continue;
     if (isIlliq(r) && !isPromising(r)) continue;
-    const key = [cr, -((r.v || {}).liq2m || 0)], b = best[k];
+    const key = [-((r.v || {}).vol30 || 0), cr, -((r.v || {}).liq2m || 0)], b = best[k];
     if (!b || key[0] < b[0][0] || (key[0] === b[0][0] && key[1] < b[0][1])) best[k] = [key, r];
   }
   const keep = new Set(Object.values(best).map(b => b[1]));
@@ -548,6 +548,13 @@ function friendlyStatus(s, upd) {
 })();
 
 // ---------- Favoritos (estrela) ----------
+function migrateTickers(all, kept) { // favorito/grupo com classe que deixou de ser a exibida -> ticker exibido da mesma empresa
+  const by = {}; for (const r of kept) by[r.ticker.slice(0, 4)] = r.ticker; const ks = new Set(kept.map(r => r.ticker)), mp = {};
+  for (const r of all) { const n = by[r.ticker.slice(0, 4)]; if (!ks.has(r.ticker) && n) mp[r.ticker] = n; }
+  let ch = false; for (const t of [...FAVS]) if (mp[t]) { FAVS.delete(t); FAVS.add(mp[t]); ch = true; }
+  if (ch) try { localStorage.setItem(FAV_KEY, JSON.stringify([...FAVS])); } catch (e) { }
+  if (window.gMigrate) window.gMigrate(mp);
+}
 const FAV_KEY = 'screenerB3.favs.v1';
 const FAVS = new Set((() => { try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) { return []; } })());
 function toggleFav(t) {
@@ -570,7 +577,7 @@ async function load() {
     if (r.status === 503) { $('#updated').textContent = 'Buscando dados nas fontes…'; setTimeout(load, 3000); return; }
     if (!r.ok) { const j = await r.json().catch(() => ({})); $('#updated').textContent = 'Fonte indisponível: ' + (j.error || r.status); setTimeout(load, 15000); return; }
     const d = await r.json();
-    if (country === 'br') { d.rows = universe(d.rows); await loadProfiles(d.rows); }
+    if (country === 'br') { const all = d.rows; d.rows = universe(d.rows); migrateTickers(all, d.rows); await loadProfiles(d.rows); }
     d.rows.forEach(prepRow);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
     $('#updated').innerHTML = `<span class="hidden sm:inline">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="hidden sm:inline">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');

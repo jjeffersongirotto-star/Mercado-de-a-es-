@@ -116,6 +116,12 @@
   const ui = (() => { try { return JSON.parse(localStorage.getItem(UKEY) || '{}') || {}; } catch (e) { return {}; } })();
   ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tabs: [], assign: {}, tab: 'all', sort: 'preco' }; ui.fav.avg = ui.fav.avg || 1;
   const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } };
+  window.gMigrate = (mp) => { // classe trocada (1 ticker por empresa) -> migra grupos e abas dos favoritos
+    let ch = false; const m = (t) => mp[t] || t;
+    for (const g of groups) { const n = [...new Set(g.tickers.map(m))]; if (n.join() !== g.tickers.join()) { g.tickers = n; ch = true; } }
+    const as = ui.fav.assign || {}; for (const t of Object.keys(as)) if (mp[t]) { if (!as[mp[t]]) as[mp[t]] = as[t]; delete as[t]; ch = true; }
+    if (ch) { save(); saveUI(); }
+  };
   const favList = () => rowsAll().filter(r => FAVS.has(r.ticker));
   // Preço médio: média dos fechamentos DIÁRIOS dos últimos n meses (histórico diário atualizado do servidor)
   const DAILY = {}, pend = new Set(); let rt = null;

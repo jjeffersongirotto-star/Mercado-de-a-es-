@@ -340,6 +340,7 @@ def finalize(base, yf_store=None):
         for cod, part in comp.items():
             IXC.setdefault(cod[:4], {}).setdefault(ix, (cod, part))
     CAD = (((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}) if isbr else {}
+    V30 = (((snapshots.load("b3_vol30", max_mem_age=12 * 3600)[0] or {}).get("v")) or {}) if isbr else {}
     MXB = (((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}) if isbr else {}
     for r in base["rows"]:
         if listed is not None and r["ticker"] not in listed and r["ticker"][-1:].isdigit():
@@ -363,7 +364,7 @@ def finalize(base, yf_store=None):
             vv = nr.get("v") or {}
             if not nr.get("nome") or all(vv.get(k) is None for k in ("pl", "pvp", "roe", "lpa", "vpa")):
                 continue
-        b3v = (MXB.get(r["ticker"]) or {}).get("v30")
+        b3v = V30.get(r["ticker"]) or (MXB.get(r["ticker"]) or {}).get("v30")
         if b3v and nr.get("v") is not None: nr["v"]["vol30"] = b3v  # volume oficial B3 (COTAHIST, 30 pregões) prevalece
         bkk = set(nr.get("bk") or [])
         cnt["two"] = cnt.get("two", 0) + sum(1 for k_, m in (nr.get("cm") or {}).items() if m.get("t") == "pri" and k_ not in bkk and k_ not in nr["st"])

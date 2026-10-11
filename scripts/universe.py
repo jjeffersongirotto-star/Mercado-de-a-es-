@@ -17,18 +17,19 @@ def promising(r):
 def cls_rank(t):
     m = re.match(r"^[A-Z0-9]{4}(\d+)$", t)
     n = m.group(1) if m else ""
-    return {"3": 0, "4": 1, "11": 2}.get(n, 3)
+    return {"11": 0, "4": 1, "3": 2, "5": 3, "6": 4}.get(n, 5)
 
 def universe(rows):
     removed = [r["ticker"] for r in rows if illiquid(r) and not promising(r)]
     rem = set(removed)
     best = {}
-    main = {r["ticker"][:4] for r in rows if cls_rank(r["ticker"]) < 3}
+    main = {r["ticker"][:4] for r in rows if cls_rank(r["ticker"]) < 5}
     for r in rows:
-        if r["ticker"] in rem or (cls_rank(r["ticker"]) == 3 and r["ticker"][:4] in main):
+        if r["ticker"] in rem or (cls_rank(r["ticker"]) == 5 and r["ticker"][:4] in main):
             continue  # classes 5/6/sufixo B/BDR só quando a empresa não tem 3/4/11
         k = r["ticker"][:4]
-        key = (cls_rank(r["ticker"]), -((r.get("v") or {}).get("liq2m") or 0))
+        vv = r.get("v") or {}
+        key = (-(vv.get("vol30") or 0), cls_rank(r["ticker"]), -(vv.get("liq2m") or 0))  # classe mais negociada (B3, 30 pregões); sem volume: 11>4>3>5>6
         if k not in best or key < best[k][0]:
             best[k] = (key, r)
     kept = [b[1] for b in best.values()]

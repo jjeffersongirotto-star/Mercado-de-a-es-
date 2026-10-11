@@ -14,7 +14,7 @@ PY="${PYTHON:-}"
 if [ -z "$PY" ]; then
   if [ -x /workspace/b3-api/.venv/bin/python ]; then PY=/workspace/b3-api/.venv/bin/python; else PY=python3; fi
 fi
-STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb cotahist history metrics}"
+STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics}"
 TMP="$(mktemp -d)"
 git clone -q --depth 1 --branch data "$REPO_URL" "$TMP" 2>/dev/null || { git -C "$TMP" init -q -b data; git -C "$TMP" remote add origin "$REPO_URL"; }
 mkdir -p "$TMP/data"
@@ -35,6 +35,7 @@ for s in $STEPS; do
     b3indices)      run "Índices B3" "$PY" "$HERE/scripts/fetch_b3_indices.py" "$TMP/data" ;;
     b3cad)          run "Cadastro B3" "$PY" "$HERE/scripts/fetch_b3_cadastro.py" "$TMP/data" ;;
     b3btb)          run "Aluguel e fluxo B3" "$PY" "$HERE/scripts/fetch_b3_btb.py" "$TMP/data" ;;
+    vol30)          run "Volume 30 pregões B3" "$PY" "$HERE/scripts/build_vol30.py" "${COTA_DIR:-/workspace/scratch/cotahist}" "$TMP/data" ;;
     cotahist)       run "B3 COTAHIST" "$PY" "$HERE/scripts/build_cotahist.py" "${COTA_DIR:-/workspace/scratch/cotahist}" "$TMP/data" ;;
     metrics)        run "Métricas Grupos" "$PY" "$HERE/scripts/build_metrics.py" "$TMP/data" ;;
     dadosdemercado) run "Dados de Mercado" "$PY" "$HERE/scripts/fetch_dadosdemercado.py" "$TMP/data" ;;
