@@ -36,7 +36,7 @@
     L.insertAdjacentHTML('beforeend', `<div class="cht-m a cht-w">${window.loaderHTML ? loaderHTML('Pensando…') : '…'}</div>`); L.scrollTop = L.scrollHeight;
     const btn = root.querySelector('#chtS'); btn.disabled = true;
     try {
-      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 60000);
+      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 150000);
       const r = await fetch('api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q, hist, ctx: ctxNow() }), signal: ac.signal });
       clearTimeout(to); const d = await r.json(); H.push({ r: 'a', t: d.a || 'Sem resposta.', mode: d.mode });
     } catch (err) { H.push({ r: 'a', t: 'Não foi possível responder agora. Tente de novo.', mode: '' }); }

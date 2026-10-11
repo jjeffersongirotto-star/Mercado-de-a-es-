@@ -169,7 +169,7 @@ def gemini(q, ctx, hist):
             r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                               headers={"x-goog-api-key": key, "Content-Type": "application/json"},
                               json={"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": contents,
-                                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048}}, timeout=45)
+                                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 8192}}, timeout=90)
         except requests.RequestException as e:
             err = type(e).__name__; continue
         if r.status_code != 200: err = f"http {r.status_code}"; continue
