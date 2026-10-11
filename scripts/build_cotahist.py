@@ -65,7 +65,7 @@ for y in years:
             continue
         prev = data[t].get(r["d"])
         if prev is None or r["vol"] > prev[2]:
-            data[t][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"])
+            data[t][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"], r["fat"])
         last_day = max(last_day, r["d"])
 # dias depois do arquivo anual (arquivos diários)
 d0 = datetime.strptime(last_day, "%Y%m%d") + timedelta(days=1)
@@ -79,7 +79,7 @@ while d0.date() <= datetime.now().date():
                 for l in lines(p):
                     tk = want.get(l[230:242]) or (l[12:24].strip() if l[12:24].strip() in data else None)
                     if l[24:27] == "010" and l[10:12] not in ("96", "10", "14", "22") and tk:
-                        r = rec(l); data[tk][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"])
+                        r = rec(l); data[tk][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"], r["fat"])
         except Exception as e:
             print("diário", d0.date(), e, file=sys.stderr)
     d0 += timedelta(days=1)
@@ -153,15 +153,16 @@ for t, days in data.items():
         if pre and m > 0 and plaus(pre[-1], m):
             spl.append((pre[-1], m, "EVENTO (Yahoo)"))
     # Troca de ISIN sem evento listado: o salto do preço bruto na troca é o fator (arredondado a uma proporção usual)
-    NICE = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200, 250, 300, 400, 500, 1000]
+    NICE = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200, 250, 300, 400, 500, 1000, 2000, 5000, 10000, 100000]
     for a, b in zip(keys, keys[1:]):
-        if days[a][3] == days[b][3]: continue
+        fa, fb = (days[a][4] if len(days[a]) > 4 else 1), (days[b][4] if len(days[b]) > 4 else 1)
+        if days[a][3] == days[b][3] and fa == fb: continue  # troca de ISIN ou de fator de cotação (lote de mil -> unitário, ex.: BBDC4 2004)
         if any(abs((datetime.strptime(e, "%Y%m%d") - datetime.strptime(a, "%Y%m%d")).days) <= 7 for e, _, _ in spl): continue
         r = days[a][0] / days[b][0]
         if abs(math.log(r)) < math.log(1.5): continue
         n = min(NICE, key=lambda x: abs(math.log(max(r, 1 / r) / x)))
         if abs(math.log(max(r, 1 / r) / n)) > 0.25: continue
-        spl.append((a, n if r > 1 else 1 / n, "TROCA DE ISIN")); spl.sort()
+        spl.append((a, n if r > 1 else 1 / n, "TROCA DE ISIN" if days[a][3] != days[b][3] else "TROCA DE FATOR DE COTAÇÃO")); spl.sort()
     adj = []
     for d in keys:
         k = 1.0
