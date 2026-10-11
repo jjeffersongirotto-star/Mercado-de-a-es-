@@ -105,6 +105,8 @@ evcache = {}
 for t, days in data.items():
     if not days:
         continue
+    if os.environ.get("SKIP_NEWER") and os.path.exists(os.path.join(OUT, "history4", t + ".json.gz")) and os.path.getmtime(os.path.join(OUT, "history4", t + ".json.gz")) > float(os.environ["SKIP_NEWER"]):
+        ok += 1; continue
     code4 = t[:4]
     ev = evcache.get(code4) or evcache.setdefault(code4, b3_events(code4)); time.sleep(0.4)
     keys = sorted(days)
@@ -169,7 +171,7 @@ for t, days in data.items():
         adj.append(round(days[d][0] / k, 4))
     # proventos: B3 (recentes, ajustados por eventos posteriores) + Yahoo (anteriores)
     # conferência: salto diário > 50% sem evento correspondente
-    flags = [(keys[i], round(adj[i] / adj[i - 1], 3)) for i in range(1, len(adj)) if adj[i - 1] and abs(math.log(adj[i] / adj[i - 1])) > math.log(1.5)]
+    flags = [(keys[i], round(adj[i] / adj[i - 1], 3)) for i in range(1, len(adj)) if adj[i - 1] > 0 and adj[i] > 0 and abs(math.log(adj[i] / adj[i - 1])) > math.log(1.5)]
     if flags: print("SALTO>50% sem evento", t, flags[-5:], file=sys.stderr)
     divs, b3min = [], None
     for x in ev.get("cashDividends") or []:

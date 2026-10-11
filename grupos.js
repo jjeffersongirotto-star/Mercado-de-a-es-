@@ -256,6 +256,12 @@
     });
   }
   window.gruposRefresh = () => { if (!$g('[data-tabpane="grupos"]').classList.contains('hidden')) list(); };
+  // Card aberto dentro do grupo: tocar no cabeçalho para fechar remove o card inteiro (fica só a linha)
+  $g('#gruposRoot').addEventListener('click', (e) => {
+    const head = e.target.closest('.gdet .blk-head'); if (!head || e.target.closest('.gsel')) return;
+    e.stopPropagation(); const det = head.closest('.gdet'), tr = det.previousElementSibling;
+    det.remove(); if (tr) { tr.classList.remove('sel'); state.expanded.delete(tr.dataset.row); }
+  }, true);
   $g('#gruposRoot').addEventListener('click', async (e) => {
     const st = e.target.closest('[data-gstar]');
     if (st) { e.stopPropagation(); const id = st.dataset.gstar; ui.gstar = ui.gstar.includes(id) ? ui.gstar.filter(x => x !== id) : ui.gstar.concat(id); saveUI(); list(); return; }
@@ -264,6 +270,7 @@
     if (tr) {
       const nx = tr.nextElementSibling; if (nx && nx.classList.contains('gdet')) { nx.remove(); tr.classList.remove('sel'); return; }
       const r = rowsAll().find(x => x.ticker === tr.dataset.row); if (!r) return;
+      $g('#gruposRoot').querySelectorAll('tr.gdet').forEach(d => { const p = d.previousElementSibling; if (p) { p.classList.remove('sel'); state.expanded.delete(p.dataset.row); } d.remove(); });
       state.expanded.add(r.ticker); tr.classList.add('sel');
       tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="3">${blockHtml(r)}</td></tr>`); return;
     }
