@@ -143,10 +143,11 @@
   const perSel = (p) => p.per ? `<select class="gper" data-per="${p.id}" aria-label="Período">${[1, 2, 3, 4, 5].map(k => `<option value="${k}"${k === (ui.per[p.id] || 1) ? ' selected' : ''}>${k} ano${k > 1 ? 's' : ''}</option>`).join('')}</select>` : '';
   function favControls() {
     const f = ui.fav, tabs = [['all', 'Todos']].concat(f.tabs.map(t => [t.id, t.name]), [['prov', 'Proventos no ano']]), ut = f.tabs.find(t => t.id === f.tab);
-    return `<div class="gt-tabs">${tabs.map(([k, l]) => `<button type="button" class="${f.tab === k ? 'on' : ''}" data-ftab="${k}">${escH(l)}</button>`).join('')}<button type="button" data-ftab="+" aria-label="Nova aba">＋</button>
-      ${ut ? `<button type="button" data-fren="${ut.id}">Renomear</button><button type="button" data-fdel="${ut.id}" class="dan">Excluir aba</button>` : ''}
-      ${f.tab !== 'prov' ? `<div class="gfav-sel"><select class="gper" data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>Média ${n} ${n > 1 ? 'meses' : 'mês'}</option>`).join('')}</select>
-      <select class="gper" data-fsort aria-label="Ordenar favoritos"><option value="preco"${f.sort === 'preco' ? ' selected' : ''}>Preço da ação</option>${[1, 2, 3, 4, 5].map(n => `<option value="v${n}"${f.sort === 'v' + n ? ' selected' : ''}>Maiores valorizações ${n} ano${n > 1 ? 's' : ''}</option>`).join('')}</select></div>` : ''}</div>`;
+    const two = (l) => { const w = String(l).split(' '); return w.length < 2 ? escH(l) : escH(w[0]) + '<br>' + escH(w.slice(1).join(' ')); };
+    const avgL = (n) => `Média ${n} ${n > 1 ? 'meses' : 'mês'}`, sortL = (v) => v === 'preco' ? 'Preço da ação' : `Maiores valorizações ${v.slice(1)} ano${+v.slice(1) > 1 ? 's' : ''}`;
+    const twoS = (l) => { const m = l.match(/^(.*?) (\d.*)$/); return m ? escH(m[1]) + '<br>' + escH(m[2]) : two(l); };
+    return `<div class="gt-tabs gfav-row">${tabs.map(([k, l]) => `<button type="button" class="${f.tab === k ? 'on' : ''}" data-ftab="${k}">${two(l)}</button>`).join('')}<button type="button" data-ftab="+" aria-label="Nova aba">＋</button>
+      ${f.tab !== 'prov' ? `<label class="g2sel"><span>${twoS(avgL(f.avg || 1))}</span><select data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>${avgL(n)}</option>`).join('')}</select></label><label class="g2sel"><span>${twoS(sortL(f.sort || 'preco'))}</span><select data-fsort aria-label="Ordenar favoritos">${['preco', 'v1', 'v2', 'v3', 'v4', 'v5'].map(v => `<option value="${v}"${(f.sort || 'preco') === v ? ' selected' : ''}>${sortL(v)}</option>`).join('')}</select></label>` : ''}</div>`;
   }
   function provCols(list0, empty) {
       const parse = (s) => { const [d, m, y] = s.split('/'); return (y || '') + m + d; };
@@ -299,6 +300,7 @@
   });
   $g('#gruposRoot').addEventListener('change', (e) => {
     const p = e.target.dataset.per; if (p) { ui.per[p] = +e.target.value; saveUI(); list(); return; }
+    if (e.target.closest('.g2sel')) { const o = e.target.selectedOptions[0]; if (o) { const m = o.text.match(/^(.*?) (\d.*)$/); e.target.previousElementSibling.innerHTML = m ? m[1] + '<br>' + m[2] : o.text; } }
     if (e.target.hasAttribute('data-fsort')) { ui.fav.sort = e.target.value; saveUI(); list(); return; }
     if (e.target.hasAttribute('data-favg')) { ui.fav.avg = +e.target.value; saveUI(); list(); return; }
     const mv = e.target.dataset.mv; if (mv) { if (e.target.value) ui.fav.assign[mv] = e.target.value; else delete ui.fav.assign[mv]; saveUI(); }
