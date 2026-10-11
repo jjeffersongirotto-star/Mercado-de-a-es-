@@ -118,28 +118,42 @@ _cotad = {}
 def is_br(t):
     return bool(_BR.fullmatch(t))
 
+_cotal = __import__("threading").Lock()
+_cotan = {}  # dia ainda não publicado -> momento da última tentativa
+
 def _cota_day(d):
-    """Arquivo diário COTAHIST_D{ddmmaaaa}: {isin: (fechamento por ação, ts)}; None se ainda não publicado."""
+    """Arquivo diário COTAHIST_D{ddmmaaaa}: {isin: (fechamento por ação, ts)}; None se ainda não publicado.
+    Um download por dia para todas as ações (trava) e, se ainda não saiu, só tenta de novo após 30 min
+    (antes cada uma das ~360 ações baixava/esperava o mesmo arquivo: 'Comparar tudo' levava minutos)."""
     k = d.strftime("%Y%m%d")
     if k in _cotad:
         return _cotad[k]
-    disk = _dload("cotad_" + k)
-    if disk is not None:
-        _cotad[k] = disk; return disk
-    try:
-        r = requests.get(f"https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D{d:%d%m%Y}.ZIP", headers=UA, timeout=(6, 40))
-        if r.status_code != 200 or r.content[:2] != b"PK":
-            if (datetime.utcnow() - d).days >= 3: _cotad[k] = None  # feriado/sem pregão: não tenta de novo
-            return None
-        z = _zf.ZipFile(_io.BytesIO(r.content)); out = {}
-        for l in z.read(z.namelist()[0]).decode("latin1").splitlines():
-            if l.startswith("01") and l[24:27] == "010" and l[10:12] == "02":
-                out[l[230:242]] = round(int(l[108:121]) / 100 / (int(l[210:217]) or 1), 4)
-        _cotad[k] = out; _dsave("cotad_" + k, out)
-        return out
-    except Exception as e:
-        log.warning("COTAHIST diário %s: %s", k, e)
+    if time.time() - _cotan.get(k, 0) < 1800:
         return None
+    with _cotal:
+        if k in _cotad:
+            return _cotad[k]
+        if time.time() - _cotan.get(k, 0) < 1800:
+            return None
+        disk = _dload("cotad_" + k)
+        if disk is not None:
+            _cotad[k] = disk; return disk
+        try:
+            r = requests.get(f"https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D{d:%d%m%Y}.ZIP", headers=UA, timeout=(5, 25))
+            if r.status_code != 200 or r.content[:2] != b"PK":
+                if (datetime.utcnow() - d).days >= 3: _cotad[k] = None  # feriado/sem pregão: não tenta de novo
+                else: _cotan[k] = time.time()
+                return None
+            z = _zf.ZipFile(_io.BytesIO(r.content)); out = {}
+            for l in z.read(z.namelist()[0]).decode("latin1").splitlines():
+                if l.startswith("01") and l[24:27] == "010" and l[10:12] == "02":
+                    out[l[230:242]] = round(int(l[108:121]) / 100 / (int(l[210:217]) or 1), 4)
+            _cotad[k] = out; _dsave("cotad_" + k, out)
+            return out
+        except Exception as e:
+            log.warning("COTAHIST diário %s: %s", k, e)
+            _cotan[k] = time.time()
+            return None
 
 def b3hist(t):
     c = _h4.get(t)
