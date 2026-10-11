@@ -19,7 +19,7 @@ rows = json.load(open(os.environ["DATA_JSON"]))["rows"] if os.environ.get("DATA_
     requests.get("https://mercado-de-acoes.onrender.com/api/data", timeout=120).json()["rows"]
 kept, _, _ = universe.universe(rows)
 TICK = [r["ticker"] for r in kept]
-if os.environ.get("ONLY"): TICK = [t for t in TICK if t in os.environ["ONLY"].split(",")]
+if os.environ.get("COTA_ONLY"): TICK = [t for t in TICK if t in os.environ["COTA_ONLY"].split(",")]
 UA = {"User-Agent": "Mozilla/5.0"}
 
 def lines(path):
