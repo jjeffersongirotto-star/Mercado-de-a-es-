@@ -101,7 +101,7 @@ if (typeof document !== 'undefined') {
   const RTT = [['m', 'Retirada mensal'], ['u', 'Retirada única'], ['p', 'Retirada por período']];
   function renderRet() {
     const box = el('pvRet');
-    if (!st.ret.length) { box.innerHTML = ''; return; }
+    if (!st.ret.length) { box.innerHTML = '<p class="text-xs text-slate-500">Nenhuma retirada extra. Toque em <b>+</b> para adicionar.</p>'; return; }
     const rTxt = (r) => (r.t || 'm') === 'm' ? (r.v > 0 ? `Retirada mensal de ${brl.format(r.v)} a partir do mês <b>${r.m}</b>` : `Encerrar retiradas mensais a partir do mês <b>${r.m}</b>`)
       : r.t === 'u' ? `Retirada única de ${brl.format(r.v)} no mês <b>${r.m}</b>` : `Retirada de ${brl.format(r.v)} a cada ${r.n} meses a partir do mês <b>${r.m}</b>`;
     box.innerHTML = st.ret.map((r, i) => r.ok ? `<div class="pv-saved" data-i="${i}"><span>${rTxt(r)}</span>
