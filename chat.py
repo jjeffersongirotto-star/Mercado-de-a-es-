@@ -156,7 +156,7 @@ def gemini(q, ctx, hist):
     key = os.environ.get("GEMINI_API_KEY")
     if not key: raise RuntimeError("sem chave")
     models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]
-    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE; nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo "
+    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: " + ", ".join(LABELS) + ". Nunca invente. " "Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo "
              "(dados do site: tabela de todas as ações, grupos, índices e o que o usuário preencheu em Previsão e Comparar). "
              "Você pode filtrar, ranquear e cruzar critérios na tabela (ex.: P/L baixo + LPA positivo + crescimento) e deve explicar os critérios usados. "
              "Diga quais ações atendem aos critérios, sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. "
@@ -380,7 +380,7 @@ def ground(q, ctx, hist):
     if not key: raise RuntimeError("sem chave")
     contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
     contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
-    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE; nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, conciso. Use os DADOS DO SITE e, quando faltarem ou parecerem errados, "
+    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: " + ", ".join(LABELS) + ". Nunca invente. " "Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, conciso. Use os DADOS DO SITE e, quando faltarem ou parecerem errados, "
              "a busca na web. " + TRUST + " Sem recomendação personalizada.\n\nDADOS DO SITE:\n" + ctx[:60000])
     err = None
     for model in [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]:
@@ -407,7 +407,7 @@ def gemini2(q, ctx, hist):
                               json={"model": "models/gemini-3.5-flash", "systemInstruction": {"parts": [{"text": "GUIA DO SITE:\n" + guide()}]}, "ttl": "86400s"}, timeout=20)
             _CACHE["ok"] = r.status_code == 200 and r.json().get("name"); log.info("cachedContents: %s", r.status_code)
         except Exception: _CACHE["ok"] = False
-    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE; nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo. "
+    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: " + ", ".join(LABELS) + ". Nunca invente. " "Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo. "
              "Pode filtrar, ranquear e cruzar critérios na tabela e deve explicar os critérios usados. Diga quais ações atendem aos critérios, "
              "sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. Números no formato brasileiro.\n\nDADOS DO SITE:\n" + ctx)
     contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
