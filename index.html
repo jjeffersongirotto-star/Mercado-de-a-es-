@@ -104,7 +104,7 @@
   .pv-mini .pv-in { width: auto; }
   .pv-x, .pv-i, .pv-plus { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: .5rem; background: rgb(30 41 59); border: 1px solid rgb(51 65 85); color: rgb(203 213 225); }
   .pv-plus { color: rgb(110 231 183); font-size: 18px; font-weight: 700; }
-  .pv-c-ap { --c: 16 185 129; } .pv-c-d { --c: 56 189 248; } .pv-c-r { --c: 245 158 11; } .pv-c-t { --c: 167 139 250; } .pv-c-w { --c: 244 63 94; } .pv-c-m { --c: 148 163 184; }
+  .pv-c-ap { --c: 16 185 129; } .pv-c-d { --c: 56 189 248; } .pv-c-r { --c: 245 158 11; } .pv-c-t { --c: 167 139 250; } .pv-c-w { --c: 244 63 94; } .pv-c-m { --c: 148 163 184; } .pv-c-va { --c: 192 132 252; }
   .pv-f { border-color: rgb(var(--c) / .45); background: rgb(var(--c) / .08); } .pv-f > span { color: rgb(var(--c)); }
   .pv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: .6rem; border: 1px solid rgb(30 41 59); }
   .pv-main { max-height: 70vh; overflow-y: auto; }
@@ -146,7 +146,7 @@
   .pv-t th:first-child { z-index: 3; }
   .pv-t tbody tr:nth-child(even) td { background-color: rgb(30 41 59 / .25); }
   .pv-t tbody tr:nth-child(even) td:first-child { background: rgb(22 31 48); }
-  .pv-t td.pv-c-r, .pv-t td.pv-c-d, .pv-t td.pv-c-ap { color: rgb(226 232 240); }
+  .pv-t td.pv-c-r, .pv-t td.pv-c-va, .pv-t td.pv-c-d, .pv-t td.pv-c-ap { color: rgb(226 232 240); }
   .pv-t td.pv-c-w { color: rgb(253 164 175); }
   .pv-sum td { background: rgb(var(--c) / .12) !important; font-weight: 700; font-size: 13px; }
   .pv-sum td:first-child { background: rgb(15 23 42) !important; }
@@ -592,10 +592,10 @@
     <h3>Colunas</h3>
     <ul>
       <li><b>Imposto sobre dividendos (%)</b>: no modo automático (padrão) o campo mostra 10% travado e o imposto só é cobrado nos meses em que o dividendo mensal passa de R$ 50 mil (regra brasileira desde 2026); nos demais meses é 0. <i>Alterar</i> destrava o campo e a alíquota digitada vale para todos os meses; <i>Automático</i> volta à regra. (No Brasil, dividendos comuns são isentos para pessoa física; desde 2026 há 10% só acima de R$ 50 mil/mês por empresa; JCP tem 15% retido na fonte). A coluna amarela <b>Imposto</b> = dividendo mensal × alíquota; reinveste-se o dividendo líquido (dividendo − imposto), e <b>Dividendos total</b> soma os valores líquidos.</li>
-      <li><b>Ordem das colunas</b>: % Aporte após Aporte total; Valorização total e % Valorização após Patrimônio total; % Dividendos após Patrimônio total com dividendos.</li>
+      <li><b>Ordem das colunas</b>: Valorização total (violeta) logo após Mês; % Aporte após Aporte total; Rentabilidade % após Rentabilidade total (antes “Patrimônio total”: patrimônio só com a rentabilidade, sem dividendos); % Dividendos após Patrimônio total com dividendos.</li>
       <li><b>Valorização total</b> = (com dividendos − aporte total) ÷ aporte total.</li>
       <li><b>% Aporte</b> = aporte total ÷ com dividendos — verde até 100%, vermelho acima (patrimônio abaixo do investido).</li>
-      <li><b>% Valorização</b> = (patrimônio total − aporte total) ÷ com dividendos; <b>% Dividendos</b> = (com dividendos − patrimônio total) ÷ com dividendos. % Aporte + % Valorização + % Dividendos = 100%. Positivo em verde, negativo em vermelho; “—” quando o patrimônio é zero.</li>
+      <li><b>Rentabilidade %</b> (antes “% Valorização”) = (rentabilidade total − aporte total) ÷ com dividendos; <b>% Dividendos</b> = (com dividendos − patrimônio total) ÷ com dividendos. % Aporte + % Valorização + % Dividendos = 100%. Positivo em verde, negativo em vermelho; “—” quando o patrimônio é zero.</li>
       <li><b>Aporte mensal</b>: aporte do mês (regular + extraordinários). <b>Aporte total</b>: tudo aportado desde o início, incluindo o valor inicial.</li>
       <li><b>Rentabilidade mensal</b> = patrimônio total do mês anterior × taxa. <b>Dividendo mensal</b> = patrimônio com dividendos do mês anterior × taxa de dividendos. <b>Dividendos total</b>: soma desde o início.</li>
       <li><b>Patrimônio total</b>: só a rentabilidade, sem dividendos. <b>Patrimônio total com dividendos</b>: rentabilidade + dividendos reinvestidos todo mês.</li>
@@ -645,7 +645,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/ui.js?v=c27"></script>
 <script src="/static/app.js?v=c7"></script>
-<script src="/static/previsao.js?v=c26"></script>
+<script src="/static/previsao.js?v=c27"></script>
 <script src="/static/grafico.js?v=c7"></script>
 <script src="/static/grupos.js?v=c36"></script>
 <script src="/static/aluguel.js?v=c25"></script>

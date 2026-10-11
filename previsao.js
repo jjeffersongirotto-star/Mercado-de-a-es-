@@ -311,8 +311,8 @@ if (typeof document !== 'undefined') {
     shownRows = PAGE_ROWS; renderAll();
   }
 
-  const COLS = [['m', 'Mês', 'pv-c-m'], ['ap', 'Aporte mensal', 'pv-c-ap'], ['apT', 'Aporte total', 'pv-c-ap'], ['pa', '% Aporte', 'pv-c-ap'], ['rent', 'Rentabilidade mensal', 'pv-c-r'],
-    ['div', 'Dividendo mensal', 'pv-c-d'], ['tax', 'Imposto', 'pv-c-tx'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Patrimônio total', 'pv-c-r'], ['va', 'Valorização total', 'pv-c-r'], ['pv', '% Valorização', 'pv-c-r'],
+  const COLS = [['m', 'Mês', 'pv-c-m'], ['va', 'Valorização total', 'pv-c-va'], ['ap', 'Aporte mensal', 'pv-c-ap'], ['apT', 'Aporte total', 'pv-c-ap'], ['pa', '% Aporte', 'pv-c-ap'], ['rent', 'Rentabilidade mensal', 'pv-c-r'],
+    ['div', 'Dividendo mensal', 'pv-c-d'], ['tax', 'Imposto', 'pv-c-tx'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Rentabilidade total', 'pv-c-r'], ['pv', 'Rentabilidade %', 'pv-c-r'],
     ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d'], ['pd', '% Dividendos', 'pv-c-d']];
   const hasW = () => st.ret.some(r => r.ok && r.v > 0);
   const cols = () => hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS;
