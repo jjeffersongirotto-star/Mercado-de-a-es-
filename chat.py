@@ -187,3 +187,167 @@ def answer(q, hist, D, ret_fn, cx=None):
     except Exception as e:
         log.info("chat fallback: %s", str(e)[:80])
         return {"a": rules(q, D, ret_fn), "mode": "regras"}
+
+
+# ================= Economia de tokens: respostas locais, contexto relevante, cache diário =================
+import hashlib, html as _html, time as _time
+_GUIDE = None
+def guide():
+    """Guia do site extraído do painel ⓘ (index.html)."""
+    global _GUIDE
+    if _GUIDE is None:
+        try:
+            s = open(os.path.join(os.path.dirname(__file__), "index.html"), encoding="utf-8").read()
+            i = s.index('<div id="infoModal"'); j = s.index("<script", i); t = s[i:j]
+            t = re.sub(r"<(summary|h\d)[^>]*>", "\n## ", t); t = re.sub(r"<li[^>]*>", "\n- ", t); t = re.sub(r"<[^>]+>", "", t)
+            t = _html.unescape(t); t = re.sub(r"[ \t]+", " ", t); _GUIDE = re.sub(r"\n\s*\n+", "\n", t).replace("✕", "").strip()
+        except Exception: _GUIDE = ""
+    return _GUIDE
+def guide_sections():
+    out, cur = {}, None
+    for l in guide().split("\n"):
+        if l.startswith("## "): cur = l[3:].strip(); out[cur] = []
+        elif cur: out[cur].append(l)
+    return {k: "\n".join(v).strip() for k, v in out.items()}
+
+GLOSS = {
+    "p/l": "P/L (preço/lucro): preço da ação ÷ lucro por ação. Quantos anos de lucro atual pagariam o preço; menor = mais barata (só faz sentido com lucro positivo).",
+    "p/vp": "P/VP (preço/valor patrimonial): preço ÷ patrimônio líquido por ação. Abaixo de 1 = negocia abaixo do patrimônio contábil.",
+    "dy": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
+    "dividend yield": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
+    "roe": "ROE (retorno sobre o patrimônio): lucro líquido ÷ patrimônio líquido, em %. Mede a rentabilidade do capital dos acionistas.",
+    "roic": "ROIC (retorno sobre o capital investido): lucro operacional após impostos ÷ capital investido (dívida + patrimônio), em %.",
+    "lpa": "LPA (lucro por ação): lucro líquido dos últimos 12 meses ÷ número de ações.",
+    "vpa": "VPA (valor patrimonial por ação): patrimônio líquido ÷ número de ações.",
+    "ev/ebitda": "EV/EBITDA: valor da firma (valor de mercado + dívida líquida) ÷ EBITDA. Menor = mais barata em relação à geração de caixa operacional.",
+    "ev/ebit": "EV/EBIT: valor da firma ÷ EBIT (lucro operacional).",
+    "psr": "PSR: valor de mercado ÷ receita líquida dos últimos 12 meses.",
+    "margem liquida": "Margem líquida: lucro líquido ÷ receita líquida, em %.",
+    "margem bruta": "Margem bruta: lucro bruto ÷ receita líquida, em %.",
+    "liquidez": "Liquidez (2 meses): volume financeiro médio negociado por dia na bolsa nos últimos 2 meses, em R$.",
+    "cdi": "CDI: taxa de juros entre bancos, referência da renda fixa. No site os gráficos usam 'CDB 100% do CDI' (CDI diário acumulado).",
+    "ipca": "IPCA: índice oficial de inflação do Brasil (IBGE), mensal.",
+    "graham": "Preço justo de Graham = √(22,5 × LPA × VPA). 'Baratas pelo Graham' = maior desconto do preço em relação a esse valor (só LPA>0, VPA>0, P/L≥2).",
+    "magic formula": "Magic Formula (Greenblatt): soma do ranking de earnings yield (EBIT/EV) e do ranking de ROIC; menor soma = melhor posição.",
+    "consenso": "Consenso entre fontes: para cada indicador o site compara as fontes (Fundamentus, Status Invest etc.) e exibe o valor da maioria; cores indicam divergência.",
+    "bonificacao": "Bonificação: a empresa entrega ações novas aos acionistas (registrada pela B3 como BONIFICAÇÃO). Desdobramento/grupamento só mudam quantidade e preço.",
+}
+COLORS = ("Cores no site: verde = positivo/ganho/confirmar; vermelho = negativo/perda/sem maioria entre as fontes; âmbar/laranja = maioria com divergência; "
+          "azul = informação/EBIT ajustado; azul-escuro = bancos/seguradoras (indicador não comparável); violeta = Valorização total na Previsão; "
+          "amarelo = imposto (Previsão).")
+HOWW = ("como usar", "como funciona", "como faco", "como faço", "como uso", "para que serve", "onde fica", "explica a aba", "o que faz a aba")
+SCREEN = ("qual acao", "quais acoes", "que acao", "que acoes", "melhores", "melhor acao", "descontad", "barat", "desvaloriz", "potencial", "crescimento",
+          "recomend", "ranking", "liste", "listar", "filtr", "quais empresas", "qual empresa", "sugest", "oportunidade", "subvaloriz")
+COMPLEX = ("por que", "porque", "explique", "analise", "analisa", "devo", "vale a pena", "compensa", "opiniao", "sugest", "e se", "minha", "meu ", "previs", "aluguel", "simula")
+TABS = {"aluguel": "Aluguel", "previsao": "Previsão", "comparar": "Comparar", "grupos": "Grupos", "acoes": "Ações", "chat": "Chat", "filtro": "Ações", "favorit": "Grupos"}
+
+def local(q, D, ret_fn, cx):
+    """Respostas prontas sem IA. Retorna texto ou None."""
+    nq = norm(q); T = _tickers(q, D); I = _idx(q); k = _metric(q, D)
+    if any(w in nq for w in COMPLEX) and not any(w in nq for w in HOWW): return None
+    if any(w in nq for w in SCREEN): return None
+    if "cor" in nq.split() or "cores" in nq or "colorid" in nq: return COLORS
+    if any(w in nq for w in HOWW) or re.search(r"\baba\b", nq):
+        secs = guide_sections()
+        for w, tab in TABS.items():
+            if w in nq:
+                hit = [f"## {h}\n{b}" for h, b in secs.items() if norm(tab) in norm(h) or w in norm(h)]
+                if hit: return "\n\n".join(hit)[:3500]
+        return None
+    m = re.search(r"\b(o que (e|significa|quer dizer)|significado d[eo]|defin[ae])\b\s*(o |a |um |uma )?(.+?)\??$", nq)
+    if m and not T:
+        term = m.group(4).strip()
+        for g, txt in sorted(GLOSS.items(), key=lambda x: -len(x[0])):
+            if norm(g) in term or term in norm(g): return txt
+        return None
+    if cx.get("groups") and ("grupo" in nq or "quem esta" in nq or "quais estao" in nq):
+        for line in str(cx["groups"]).split("\n"):
+            name = norm(line.split(":")[0].split("[")[0]).strip()
+            if name and name in nq: return line
+    if T and not k and re.search(r"\b(preco|cotacao|quanto (esta|ta|custa)|valor da acao|variacao do dia|subiu hoje|caiu hoje|hoje)\b", nq):
+        r = D["by"][T[0]]; v = r.get("v") or {}
+        return f"{T[0]}: R$ {br(v.get('preco'))} ({'+' if (r.get('var') or 0) >= 0 else ''}{br(r.get('var'))}% no dia)."
+    if (len(T) + len(I) >= 2) or (T and re.search(r"\b(rendeu|rentabilidade|valorizou|variacao|retorno|subiu|caiu)\b", nq)) or (I and not T and not k):
+        return rules(q, D, ret_fn)
+    if T and k: return rules(q, D, ret_fn)
+    if k and re.search(r"\b(maiores|menores|top|maior|menor)\b", nq): return rules(q, D, ret_fn)
+    return None
+
+def rel_context(q, D, ret_fn, cx):
+    """Só o contexto necessário à pergunta."""
+    nq = norm(q); T = _tickers(q, D); I = _idx(q); parts = []
+    screen = any(w in nq for w in SCREEN) or not (T or I)
+    if screen: parts.append("TABELA DE TODAS AS AÇÕES (CSV; vazio = sem dado):\n" + table(D, cx))
+    else:
+        tb = table(D, cx).split("\n"); parts.append("AÇÕES CITADAS (CSV):\n" + "\n".join([tb[0]] + [l for l in tb[1:] if l.split(",")[0] in T]))
+        for t in T[:4]: parts.append("DETALHE " + card(D, t))
+    if cx.get("groups") and (screen or "grupo" in nq): parts.append("GRUPOS PRONTOS DO SITE (top 10):\n" + str(cx["groups"])[:8000])
+    if T or I or "indice" in nq or "ibov" in nq:
+        di, df = _period(q); R = ret_fn(di, df, T)
+        parts.append(f"Variação no período {di} a {df}: " + "; ".join(f"{IDXN.get(x, x)} {br(R.get(x))}%" for x in T + list(IDXN) if x in R))
+    for kk, lab, ws in (("prev", "PREVISÃO RENTABILIDADE (entradas, JSON)", ("previs", "simula", "aporte", "minha", "meu")),
+                        ("prevRes", "PREVISÃO RENTABILIDADE (resultado na tela)", ("previs", "simula", "aporte", "minha", "meu")),
+                        ("alug", "PREVISÃO ALUGUEL (entradas, JSON)", ("aluguel", "alugar", "btc")),
+                        ("alugRes", "PREVISÃO ALUGUEL (resultado na tela)", ("aluguel", "alugar", "btc")),
+                        ("comp", "COMPARAR (seleção, JSON)", ("compar", "rendeu mais", "rendeu menos")),
+                        ("compRes", "COMPARAR (resultado na tela)", ("compar", "rendeu mais", "rendeu menos"))):
+        if cx.get(kk) and any(w in nq for w in ws): parts.append(lab + ":\n" + str(cx[kk])[:5000])
+    if any(w in nq for w in ("como", "aba", "funciona", "significa", "regra", "cor", "calcul", "fonte", "previs", "aluguel", "compar", "grupo")):
+        parts.append("GUIA DO SITE (painel ⓘ):\n" + guide())
+    return "\n\n".join(parts)
+
+_QA = {}  # mesma pergunta no mesmo dia
+_CACHE = {"day": None, "ok": False}
+def answer2(q, hist, D, ret_fn, cx=None):
+    cx = cx or {}; nq = norm(q).strip(" ?!.")
+    rel = "|".join(str(cx.get(k, ""))[:3000] for k in ("prev", "alug", "comp") if any(w in nq for w in ("previs", "aluguel", "compar", "minha", "meu")))
+    key = date.today().isoformat() + "|" + hashlib.sha1((nq + "|" + rel).encode()).hexdigest()
+    if key in _QA and not hist: return dict(_QA[key], cached=True)
+    loc = None
+    try: loc = local(q, D, ret_fn, cx)
+    except Exception as e: log.info("local: %s", e)
+    if loc:
+        out = {"a": loc, "mode": "regras", "tok": 0}
+    else:
+        ctx = rel_context(q, D, ret_fn, cx)
+        try:
+            a, tok = gemini2(q, ctx, hist)
+            out = {"a": a, "mode": "gemini", "tok": tok}
+        except Exception as e:
+            log.info("chat fallback: %s", str(e)[:80]); out = {"a": rules(q, D, ret_fn), "mode": "regras", "tok": 0}
+    if out["mode"] == "gemini" or loc: _QA[key] = out
+    if len(_QA) > 2000: _QA.clear()
+    return out
+
+def gemini2(q, ctx, hist):
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key: raise RuntimeError("sem chave")
+    # cache de contexto do Gemini (cachedContents): no plano gratuito o limite é 0 -> tenta 1x por dia e usa contexto inline
+    if _CACHE["day"] != date.today().isoformat():
+        _CACHE["day"] = date.today().isoformat()
+        try:
+            r = requests.post("https://generativelanguage.googleapis.com/v1beta/cachedContents", headers={"x-goog-api-key": key},
+                              json={"model": "models/gemini-3.5-flash", "systemInstruction": {"parts": [{"text": "GUIA DO SITE:\n" + guide()}]}, "ttl": "86400s"}, timeout=20)
+            _CACHE["ok"] = r.status_code == 200 and r.json().get("name"); log.info("cachedContents: %s", r.status_code)
+        except Exception: _CACHE["ok"] = False
+    sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo. "
+             "Pode filtrar, ranquear e cruzar critérios na tabela e deve explicar os critérios usados. Diga quais ações atendem aos critérios, "
+             "sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. Números no formato brasileiro.\n\nDADOS DO SITE:\n" + ctx)
+    contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
+    contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
+    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]
+    err = None
+    for model, th in [(m, True) for m in models] + [("gemini-flash-latest", False)]:
+        body = {"contents": contents, "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, **({"thinkingConfig": {"thinkingBudget": 0}} if th else {})}}
+        if _CACHE["ok"] and model == "gemini-3.5-flash": body["cachedContent"] = _CACHE["ok"]; body["systemInstruction"] = {"parts": [{"text": sys_t}]}
+        else: body["systemInstruction"] = {"parts": [{"text": sys_t}]}
+        try:
+            r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                              headers={"x-goog-api-key": key, "Content-Type": "application/json"}, json=body, timeout=90)
+        except requests.RequestException as e: err = type(e).__name__; continue
+        if r.status_code != 200: err = f"http {r.status_code}"; continue
+        j = r.json(); c = j["candidates"][0]["content"]["parts"]
+        t = "".join(p.get("text", "") for p in c if not p.get("thought")).strip()
+        if t: return t, (j.get("usageMetadata") or {}).get("promptTokenCount")
+        err = "vazio"
+    raise RuntimeError(f"gemini {err}")
