@@ -70,7 +70,7 @@ if (typeof document !== 'undefined') {
 
   function fill() {
     el('pvIni').value = fmtIn(st.ini, 2); el('pvAp').value = fmtIn(st.ap, 2);
-    el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2); el('pvTx').value = st.txc ? fmtIn(st.tx, 2) : fmtIn(10, 2); el('pvTx').disabled = !st.txc; el('pvTxBtn').textContent = st.txc ? 'Automático' : 'Alterar';
+    el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2); el('pvTx').value = st.txc ? fmtIn(st.tx, 2) : fmtIn(10, 2); el('pvTx').disabled = !st.txc; el('pvTxAuto').checked = !st.txc;
     el('pvRm').value = fmtIn(st.rm, 3); el('pvRa').value = fmtIn(st.ra, 2);
     el('pvTicker').value = st.ticker || ''; el('pvProj').value = st.proj || '';
     renderRet(); renderEx(); applyMode();
@@ -83,7 +83,7 @@ if (typeof document !== 'undefined') {
     i.addEventListener('change', () => { f(num(i.value)); save(); setTimeout(() => { fill(); compute(); }, 0); });
   }
   bind('pvIni', v => st.ini = Math.max(0, v)); bind('pvTx', v => st.tx = Math.max(0, Math.min(100, v)));
-  el('pvTxBtn').addEventListener('click', (e) => { e.preventDefault(); st.txc = !st.txc; save(); fill(); compute(); if (st.txc) el('pvTx').focus(); }); bind('pvAp', v => st.ap = Math.max(0, v));
+  el('pvTxAuto').addEventListener('change', () => { st.txc = !el('pvTxAuto').checked; save(); fill(); compute(); if (st.txc) el('pvTx').focus(); }); bind('pvAp', v => st.ap = Math.max(0, v));
   bind('pvDm', v => { st.dm = v; st.da = m2a(v); }, 'pvDa', ['da', 2]); bind('pvDa', v => { st.da = v; st.dm = a2m(v); }, 'pvDm', ['dm', 3]);
   bind('pvRm', v => { st.rm = v; st.ra = m2a(v); }, 'pvRa', ['ra', 2]); bind('pvRa', v => { st.ra = v; st.rm = a2m(v); }, 'pvRm', ['rm', 3]);
   // 1º toque seleciona tudo (digitar substitui); toque seguinte posiciona o cursor normalmente
