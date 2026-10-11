@@ -31,14 +31,14 @@ if (typeof document !== 'undefined') (function () {
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }), N0 = new Intl.NumberFormat('pt-BR');
   const num = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  let BTB = null, MET = null;
+  let BTB = null, loading = false;
   const row = (t) => (typeof state !== 'undefined' && state.data ? state.data.rows : []).find(r => r.ticker === t);
   const b3 = (t) => BTB && BTB.t ? BTB.t[t] : null;
   const rateOf = (t) => { const x = b3(t); return x && x[1] != null ? +(x[1] * 100).toFixed(2) : null; };
   const lowDemand = (t) => { const x = b3(t); return !x || (x[0] || 0) < 500000 || (x[3] || 0) < 20; };
   async function load() {
-    try { BTB = await (await fetch('/api/btb')).json(); } catch (e) { BTB = {}; }
-    try { MET = (await (await fetch('/api/metrics')).json()).metrics || {}; } catch (e) { MET = {}; }
+    const get = async (u) => { const c = new AbortController(), h = setTimeout(() => c.abort(), 8000); try { const r = await fetch(u, { signal: c.signal }); return r.ok ? await r.json() : null; } catch (e) { return null; } finally { clearTimeout(h); } };
+    const j = await get('/api/btb'); BTB = j && j.t ? j : { t: {}, err: true };
     render();
   }
   function items() { return st.items.filter(i => row(i.t)).map(i => ({ ...i, p: row(i.t).v.preco || 0 })); }
@@ -73,12 +73,12 @@ if (typeof document !== 'undefined') (function () {
     pb.innerHTML = perB(I, R, m0); document.getElementById('alMainB').innerHTML = mainB(I, R, m0);
   }
   function render() {
-    if (!BTB || typeof state === 'undefined' || !state.data) { root.innerHTML = loaderHTML('Carregando…'); if (!BTB) load(); else setTimeout(render, 800); return; }
+    if (!BTB || typeof state === 'undefined' || !state.data) { root.innerHTML = loaderHTML('Carregando…'); if (!BTB) { if (!loading) { loading = true; load(); } } else setTimeout(render, 600); return; }
     const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, ex: st.ex.filter(e => e.t && e.m > 0) });
     const m0 = Math.max(1, Math.min(360, parseInt(st.mes, 10) || 1)), dv = false;
     root.innerHTML = `<section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4 space-y-2">
       <div class="flex items-baseline justify-between gap-2"><h2 class="text-base font-bold">Ações para alugar</h2><button type="button" class="gbtn pri" data-a="new">＋ Ação</button></div>
-      <div id="alItems" class="space-y-2">${inputsHtml()}</div>
+      ${BTB.err ? '<p class="gt-help">Dados de aluguel da B3 indisponíveis agora: informe a taxa manualmente.</p>' : ''}<div id="alItems" class="space-y-2">${inputsHtml()}</div>
       <div class="al-opts"><label class="pv-f"><span>Taxa da corretora (% do aluguel)</span><input id="alFee" class="pv-in" inputmode="decimal" value="${String(st.fee).replace('.', ',')}"></label>
         <label class="al-ck"><input id="alDesc" type="checkbox" class="accent-emerald-500 w-4 h-4"${st.desc ? ' checked' : ''}> Descontar automaticamente taxa da corretora + IR 15%</label></div>
       <div><div class="flex items-center justify-between"><h3 class="text-sm font-bold">Adições e retiradas extraordinárias</h3><button type="button" class="gbtn" data-a="exnew">＋</button></div>
@@ -123,4 +123,6 @@ if (typeof document !== 'undefined') (function () {
   });
   document.addEventListener('pvsub', (e) => { if (e.detail === 'alug') render(); });
   window.aluguelRender = render;
+  // o evento da sub-aba pode ter disparado antes deste script carregar
+  if (!root.classList.contains('hidden')) render();
 })();
