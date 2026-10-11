@@ -5,20 +5,21 @@ function aluguelSim(items, o) {
   const per = items.map(() => []), rows = [];
   let acc = 0;
   for (let m = 1; m <= N; m++) {
-    let q = 0, rec = 0, dsc = 0;
+    let q = 0, ql = 0, rec = 0, dsc = 0;
     items.forEach((it, k) => {
       const ex = (o.ex || []).filter(e => e.t === it.t && e.m <= m).reduce((a, e) => a + e.q, 0);
       const sh = Math.max(0, it.q + (it.add || 0) * (m - 1) + ex);
+      const lent = sh * (1 - Math.max(0, Math.min(100, it.nl || 0)) / 100); // só a parte alugada rende
       const P = Math.max(1, Math.round(it.prazo || 1));
       // renda bruta do mês = ações × preço × taxa a.a./12; paga ao fim de cada contrato (a cada P meses)
-      const acr = sh * it.p * (it.rate / 100) / 12; it._acr = (m === 1 ? 0 : it._acr || 0) + acr;
+      const acr = lent * it.p * (it.rate / 100) / 12; it._acr = (m === 1 ? 0 : it._acr || 0) + acr;
       let g = 0; if (m % P === 0) { g = it._acr; it._acr = 0; }
       const fe = desc ? g * fee : 0, ir = desc ? (g - fe) * 0.15 : 0;
-      per[k].push({ m, t: it.t, sh, rec: g, dsc: fe + ir });
-      q += sh; rec += g; dsc += fe + ir;
+      per[k].push({ m, t: it.t, sh, lent, rec: g, dsc: fe + ir });
+      q += sh; ql += lent; rec += g; dsc += fe + ir;
     });
     acc += rec - dsc;
-    rows.push({ m, q, rec, dsc, liq: rec - dsc, acc });
+    rows.push({ m, q, ql, rec, dsc, liq: rec - dsc, acc });
   }
   return { rows, per };
 }
@@ -45,7 +46,7 @@ if (typeof document !== 'undefined') (function () {
   const pct = (v) => v == null ? '—' : String(v).replace('.', ',') + '% a.a.';
   // Ações confirmadas: lista compacta (editar/excluir). Formulário só aparece com "+ Ação" ou "editar".
   function inputsHtml() {
-    const list = st.items.map((it, k) => `<div class="al-row" data-k="${k}"><div class="min-w-0"><b>${esc(it.t)}</b> <span class="al-sub">${N0.format(it.q)} ações${it.add ? ' · +' + N0.format(it.add) + '/mês' : ''} · ${pct(it.rate)} · ${it.prazo || 1} ${(it.prazo || 1) > 1 ? 'meses' : 'mês'}</span>${lowDemand(it.t) ? '<span class="al-warn"> ⚠ pouca demanda</span>' : ''}</div>
+    const list = st.items.map((it, k) => `<div class="al-row" data-k="${k}"><div class="min-w-0"><b>${esc(it.t)}</b> <span class="al-sub">${N0.format(it.q)} ações${it.add ? ' · +' + N0.format(it.add) + '/mês' : ''} · ${pct(it.rate)} · ${it.prazo || 1} ${(it.prazo || 1) > 1 ? 'meses' : 'mês'}${it.nl ? ' · ' + String(it.nl).replace('.', ',') + '% não alugado' : ''}</span>${lowDemand(it.t) ? '<span class="al-warn"> ⚠ pouca demanda</span>' : ''}</div>
       <div class="al-btns"><button type="button" class="gbtn" data-a="edit" aria-label="Editar ${esc(it.t)}">Editar</button><button type="button" class="gx" data-a="del" aria-label="Excluir ${esc(it.t)}">✕</button></div></div>`).join('');
     const d = st.draft;
     const form = d ? `<div class="al-it" id="alForm">
@@ -54,6 +55,7 @@ if (typeof document !== 'undefined') (function () {
       <label class="pv-f"><span>Adições mensais</span><input class="pv-in" data-f="add" inputmode="numeric" value="${d.add ? N0.format(d.add) : ''}"></label>
       <label class="pv-f"><span>Taxa (% a.a.)</span><input class="pv-in" data-f="rate" inputmode="decimal" value="${d.rate != null ? String(d.rate).replace('.', ',') : ''}"></label>
       <label class="pv-f"><span>Prazo (meses)</span><input class="pv-in" data-f="prazo" inputmode="numeric" value="${d.prazo || 1}"></label>
+      <label class="pv-f"><span>% não alugado</span><input class="pv-in" data-f="nl" inputmode="decimal" value="${d.nl ? String(d.nl).replace('.', ',') : '0'}"></label>
       <div class="al-btns"><button type="button" class="gbtn pri" data-a="ok" aria-label="Confirmar">✓</button><button type="button" class="gx" data-a="cancel" aria-label="Cancelar">✕</button></div>
       ${d.t && b3(d.t) ? `<div class="upd">${(window.updTxt && updTxt()) || 'Atualizado em ' + (BTB.date || '').split('-').reverse().join('/')}</div>` : ''}
       ${d.t && lowDemand(d.t) ? '<p class="al-warn">⚠ Pouca demanda de aluguel para esta ação na B3: o empréstimo pode não acontecer ou demorar.</p>' : ''}</div>` : '';
@@ -64,8 +66,8 @@ if (typeof document !== 'undefined') (function () {
       <label class="pv-f"><span>Ação</span><select class="pv-in" data-xf="t">${[...new Set(st.items.map(i => i.t))].map(t => ({ t })).map(i => `<option${i.t === e.t ? ' selected' : ''}>${esc(i.t)}</option>`).join('')}</select></label>
       <label class="pv-f"><span>Ações (+ adiciona, − retira)</span><input class="pv-in" data-xf="q" inputmode="numeric" value="${e.q ? N0.format(e.q) : ''}"></label><button type="button" class="gx" data-xdel="${k}" aria-label="Remover">✕</button></div>`).join('');
   }
-  const perB = (I, R, m0) => I.length ? R.per.map(p => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${m0}</td><td><b>${esc(x.t)}</b></td><td>${N0.format(Math.round(x.sh))}</td><td>${N0.format(Math.round(x.sh))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td></tr>`; }).join('') : '';
-  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${N0.format(Math.round(r.q))}</td><td>${N0.format(Math.round(r.q))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
+  const perB = (I, R, m0) => I.length ? R.per.map(p => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${m0}</td><td><b>${esc(x.t)}</b></td><td>${N0.format(Math.round(x.sh))}</td><td>${N0.format(Math.round(x.lent))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td></tr>`; }).join('') : '';
+  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${N0.format(Math.round(r.q))}</td><td>${N0.format(Math.round(r.ql))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
   // Só as tabelas são refeitas enquanto digita: o campo ativo não é recriado (mantém foco, cursor e seleção)
   function tables() {
     const pb = document.getElementById('alPerB'); if (!pb) return render();
@@ -97,7 +99,7 @@ if (typeof document !== 'undefined') (function () {
     const t = e.target, k = t.closest('[data-k]'), x = t.closest('[data-x]');
     if (t.id === 'alMes') { st.mes = t.value.replace(/\D/g, '').slice(0, 3); later(); return; }
     if (t.id === 'alFee') { st.fee = num(t.value); later(); return; }
-    if (t.dataset.f && st.draft) { st.draft[t.dataset.f] = t.dataset.f === 'rate' ? num(t.value) : Math.round(num(t.value)); save(); return; }
+    if (t.dataset.f && st.draft) { st.draft[t.dataset.f] = t.dataset.f === 'rate' ? num(t.value) : t.dataset.f === 'nl' ? Math.max(0, Math.min(100, num(t.value))) : Math.round(num(t.value)); save(); return; }
     if (x && t.dataset.xf === 'q') { st.ex[+x.dataset.x].q = Math.round(num(t.value.replace(/^−/, '-'))); later(); }
     if (x && t.dataset.xf === 'm') { st.ex[+x.dataset.x].m = Math.min(360, Math.round(num(t.value))); later(); }
   });
@@ -109,12 +111,12 @@ if (typeof document !== 'undefined') (function () {
   root.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-a],[data-xdel]'); if (!b) return;
     const k = b.closest('[data-k]'), a = b.dataset.a;
-    if (a === 'new') st.draft = { t: '', q: 100, add: 0, rate: null, prazo: 1, idx: -1 };
+    if (a === 'new') st.draft = { t: '', q: 100, add: 0, rate: null, prazo: 1, nl: 0, idx: -1 };
     else if (a === 'cancel') st.draft = null;
     else if (a === 'edit') { const i = +k.dataset.k; st.draft = { ...st.items[i], idx: i }; }
     else if (a === 'exnew') { const t = (st.items[0] || {}).t; if (!t) { uiToast('Confirme uma ação primeiro'); return; } st.ex.push({ m: 12, t, q: 100 }); }
     else if (a === 'ok') { const d = st.draft; if (!row(d.t)) { uiAlert('Escolha uma ação da lista.'); return; } if (!(d.q > 0)) { uiAlert('Informe a quantidade de ações.'); return; } if (d.rate == null || !(d.rate > 0)) { uiAlert('Informe a taxa de aluguel (% a.a.).'); return; }
-      const it = { t: d.t, q: d.q, add: d.add || 0, rate: d.rate, prazo: Math.max(1, d.prazo || 1) };
+      const it = { t: d.t, q: d.q, add: d.add || 0, rate: d.rate, prazo: Math.max(1, d.prazo || 1), nl: Math.max(0, Math.min(100, d.nl || 0)) };
       if (d.idx >= 0 && st.items[d.idx]) st.items[d.idx] = it; else st.items.push(it);
       st.draft = null; uiToast(it.t + ' adicionada'); }
     else if (a === 'del') { if (!(await uiConfirm('Remover esta ação da simulação?', { ok: 'Remover', danger: true }))) return; const t = st.items[+k.dataset.k].t; st.items.splice(+k.dataset.k, 1); if (!st.items.some(i => i.t === t)) st.ex = st.ex.filter(x => x.t !== t); }

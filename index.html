@@ -516,7 +516,7 @@
     <h2 class="text-lg font-bold text-slate-100 mb-1">Informações</h2>
     <details class="icard"><summary>Aluguel e Fluxo da bolsa</summary><div class="ib"><ul>
       <li><b>Fluxo da bolsa</b> (Grupos): saldo compras − vendas por tipo de investidor, do Boletim Diário da B3 (participação dos investidores). A B3 publica o acumulado do mês com cerca de 2 pregões de defasagem; o saldo do dia é a diferença entre publicações. A B3 guarda só ~21 pregões, então o histórico de 1 ano vai se formando a cada dia.</li>
-      <li><b>Previsão aluguel</b>: taxa sugerida = média ponderada do doador nos empréstimos registrados na B3 no último pregão (editável). Renda bruta = ações × preço atual × taxa a.a. ÷ 12, paga ao fim de cada contrato (prazo em meses). Descontos (opcionais) = taxa da corretora (% do aluguel) + IR de 15% sobre o restante. Alerta de pouca demanda: menos de 500 mil ações alugadas ou menos de 20 contratos no dia. Dividendos não entram na Previsão aluguel (já são considerados na Previsão rentabilidade).</li></ul></div></details>
+      <li><b>Previsão aluguel</b>: <i>% não alugado</i> (padrão 0) define a parte das ações que fica fora do aluguel: ações alugadas = Nº de ações × (1 − %), e a renda é calculada só sobre as alugadas; <i>Nº de ações</i> é o total em carteira. Adições mensais aceitam qualquer quantidade inteira (mercado fracionário). taxa sugerida = média ponderada do doador nos empréstimos registrados na B3 no último pregão (editável). Renda bruta = ações × preço atual × taxa a.a. ÷ 12, paga ao fim de cada contrato (prazo em meses). Descontos (opcionais) = taxa da corretora (% do aluguel) + IR de 15% sobre o restante. Alerta de pouca demanda: menos de 500 mil ações alugadas ou menos de 20 contratos no dia. Dividendos não entram na Previsão aluguel (já são considerados na Previsão rentabilidade).</li></ul></div></details>
     <details class="icard"><summary>Prioridade dos dados da B3</summary><div class="ib"><ul>
       <li>Tudo que vem de arquivos/APIs oficiais da B3 tem prioridade máxima: em qualquer divergência com outra fonte, vale o valor da B3.</li>
       <li><b>Histórico de preços</b> das ações brasileiras: arquivos oficiais COTAHIST da B3 (fechamento diário do mercado à vista, lote padrão, desde 1994), agrupados pelo ISIN. Ajuste por desdobramento, grupamento e bonificação com os eventos oficiais da B3 (conferidos com o salto do preço); Yahoo só completa eventos antigos que a B3 não lista. Não usamos mais histórico do Yahoo para ações brasileiras (só para ações estrangeiras).</li>
@@ -636,7 +636,7 @@
 <script src="/static/previsao.js?v=c14"></script>
 <script src="/static/grafico.js?v=c6"></script>
 <script src="/static/grupos.js?v=c6"></script>
-<script src="/static/aluguel.js?v=c14"></script>
+<script src="/static/aluguel.js?v=c15"></script>
 <script src="/static/comparar.js?v=c6"></script>
 
 </body>

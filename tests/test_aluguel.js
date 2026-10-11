@@ -6,3 +6,5 @@ assert.strictEqual(Math.round(r.rows[0].rec * 100) / 100, 100); assert.strictEqu
 r = aluguelSim([{ t: 'X', q: 1000, add: 100, p: 10, rate: 12, prazo: 3 }], { fee: 0, desc: false, months: 3, ex: [{ m: 3, t: 'X', q: -200 }] });
 assert.strictEqual(r.rows[1].rec, 0); assert.strictEqual(Math.round(r.rows[2].rec * 100) / 100, 100 + 110 + 100); assert.strictEqual(r.per[0][2].sh, 1000);
 console.log('test_aluguel ok');
+{ const { aluguelSim } = require('../aluguel.js'); const r = aluguelSim([{ t: 'X', q: 1000, add: 10, rate: 12, prazo: 1, p: 30, nl: 25 }], { fee: 0.5, desc: true, months: 2 });
+  if (Math.abs(r.rows[0].rec - 225) > 1e-9 || r.rows[0].ql !== 750 || r.rows[1].q !== 1010) throw new Error('nl falhou'); console.log('nl ok'); }
