@@ -474,7 +474,7 @@
         <label class="pv-f pv-c-ap"><span>Aporte mensal (R$)</span><input id="pvAp" inputmode="decimal" class="pv-in"></label>
         <label class="pv-f pv-c-d"><span>Dividendos MÊS (%)</span><input id="pvDm" inputmode="decimal" class="pv-in"></label>
         <label class="pv-f pv-c-d"><span>Dividendos ANO (%)</span><input id="pvDa" inputmode="decimal" class="pv-in"></label>
-        <label class="pv-f pv-c-tx"><span>Imposto sobre dividendos (%)</span><input id="pvTx" inputmode="decimal" class="pv-in"></label>
+        <label class="pv-f pv-c-tx"><span class="flex items-center justify-between gap-1">Imposto sobre dividendos (%)<button type="button" id="pvTxBtn" class="pv-lnk">Alterar</button></span><input id="pvTx" inputmode="decimal" class="pv-in"></label>
         <label class="pv-f pv-c-r"><span>Rentabilidade MÊS (%)</span><input id="pvRm" inputmode="decimal" class="pv-in"></label>
         <label class="pv-f pv-c-r"><span>Rentabilidade ANO (%)</span><input id="pvRa" inputmode="decimal" class="pv-in"></label>
         <div class="pv-f pv-c-pj pv-wide"><span>Projeções</span>
@@ -579,7 +579,7 @@
       <li>A tabela mostra 240 meses por vez; “Mostrar mais meses” acrescenta mais 240 (até 960).</li></ul>
     <h3>Colunas</h3>
     <ul>
-      <li><b>Imposto sobre dividendos (%)</b>: padrão 0 (no Brasil, dividendos comuns são isentos para pessoa física; desde 2026 há 10% só acima de R$ 50 mil/mês por empresa; JCP tem 15% retido na fonte). A coluna amarela <b>Imposto</b> = dividendo mensal × alíquota; reinveste-se o dividendo líquido (dividendo − imposto), e <b>Dividendos total</b> soma os valores líquidos.</li>
+      <li><b>Imposto sobre dividendos (%)</b>: no modo automático (padrão) o campo mostra 10% travado e o imposto só é cobrado nos meses em que o dividendo mensal passa de R$ 50 mil (regra brasileira desde 2026); nos demais meses é 0. <i>Alterar</i> destrava o campo e a alíquota digitada vale para todos os meses; <i>Automático</i> volta à regra. (No Brasil, dividendos comuns são isentos para pessoa física; desde 2026 há 10% só acima de R$ 50 mil/mês por empresa; JCP tem 15% retido na fonte). A coluna amarela <b>Imposto</b> = dividendo mensal × alíquota; reinveste-se o dividendo líquido (dividendo − imposto), e <b>Dividendos total</b> soma os valores líquidos.</li>
       <li><b>Ordem das colunas</b>: % Aporte após Aporte total; Valorização total e % Valorização após Patrimônio total; % Dividendos após Patrimônio total com dividendos.</li>
       <li><b>Valorização total</b> = (com dividendos − aporte total) ÷ aporte total.</li>
       <li><b>% Aporte</b> = aporte total ÷ com dividendos — verde até 100%, vermelho acima (patrimônio abaixo do investido).</li>
@@ -633,7 +633,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/ui.js?v=c6"></script>
 <script src="/static/app.js?v=c6"></script>
-<script src="/static/previsao.js?v=c12"></script>
+<script src="/static/previsao.js?v=c13"></script>
 <script src="/static/grafico.js?v=c6"></script>
 <script src="/static/grupos.js?v=c6"></script>
 <script src="/static/aluguel.js?v=c6"></script>

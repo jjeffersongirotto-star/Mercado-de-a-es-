@@ -42,7 +42,7 @@ if (typeof document !== 'undefined') {
   const st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })() ||
     { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
   if (!Array.isArray(st.ex)) st.ex = [];
-  if (!(st.tx >= 0)) st.tx = 0;
+  if (!(st.tx >= 0)) st.tx = 0; st.txc = !!st.txc; // txc=false: automático (10% só em meses com dividendo > R$ 50 mil)
   st.ret.forEach(r => { if (r.ok === undefined) r.ok = true; }); st.ex.forEach(r => { if (r.ok === undefined) r.ok = true; });
   function toast(msg) {
     let t = document.getElementById('pvToast');
@@ -70,7 +70,7 @@ if (typeof document !== 'undefined') {
 
   function fill() {
     el('pvIni').value = fmtIn(st.ini, 2); el('pvAp').value = fmtIn(st.ap, 2);
-    el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2); el('pvTx').value = fmtIn(st.tx, 2);
+    el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2); el('pvTx').value = st.txc ? fmtIn(st.tx, 2) : fmtIn(10, 2); el('pvTx').disabled = !st.txc; el('pvTxBtn').textContent = st.txc ? 'Automático' : 'Alterar';
     el('pvRm').value = fmtIn(st.rm, 3); el('pvRa').value = fmtIn(st.ra, 2);
     el('pvTicker').value = st.ticker || ''; el('pvProj').value = st.proj || '';
     renderRet(); renderEx(); applyMode();
@@ -82,7 +82,8 @@ if (typeof document !== 'undefined') {
     i.addEventListener('input', () => { f(num(i.value)); if (pair) el(pair).value = fmtIn(st[pd[0]], pd[1]); liveCompute(); });
     i.addEventListener('change', () => { f(num(i.value)); save(); setTimeout(() => { fill(); compute(); }, 0); });
   }
-  bind('pvIni', v => st.ini = Math.max(0, v)); bind('pvTx', v => st.tx = Math.max(0, Math.min(100, v))); bind('pvAp', v => st.ap = Math.max(0, v));
+  bind('pvIni', v => st.ini = Math.max(0, v)); bind('pvTx', v => st.tx = Math.max(0, Math.min(100, v)));
+  el('pvTxBtn').addEventListener('click', (e) => { e.preventDefault(); st.txc = !st.txc; save(); fill(); compute(); if (st.txc) el('pvTx').focus(); }); bind('pvAp', v => st.ap = Math.max(0, v));
   bind('pvDm', v => { st.dm = v; st.da = m2a(v); }, 'pvDa', ['da', 2]); bind('pvDa', v => { st.da = v; st.dm = a2m(v); }, 'pvDm', ['dm', 3]);
   bind('pvRm', v => { st.rm = v; st.ra = m2a(v); }, 'pvRa', ['ra', 2]); bind('pvRa', v => { st.ra = v; st.rm = a2m(v); }, 'pvRm', ['rm', 3]);
   // 1º toque seleciona tudo (digitar substitui); toque seguinte posiciona o cursor normalmente
@@ -301,7 +302,7 @@ if (typeof document !== 'undefined') {
     for (let m = 2; m <= n; m++) {
       const r = steps ? steps[m - 1].r : r0, d = steps ? steps[m - 1].d : d0;
       const W = wAt(m), W0 = W.reg + W.extra, A = apAt(m, 0), A0 = A.reg + A.extra, ap = W0 > 0 ? 0 : A0, w = W0; // mês com retirada: aporte 0 (inclusive extraordinários) e sai a retirada inteira
-      const rent = sem * r, div = com * d, rentC = com * r, tax = div * (st.tx || 0) / 100; // reinveste o dividendo líquido do imposto
+      const rent = sem * r, div = com * d, rentC = com * r, tax = st.txc ? div * (st.tx || 0) / 100 : (div > 50000 ? div * 0.10 : 0); // reinveste o dividendo líquido do imposto
       sem = Math.max(0, sem + rent + ap - w);
       com = Math.max(0, com + rentC + div - tax + ap - w);
       apT += ap; divT += div - tax;
