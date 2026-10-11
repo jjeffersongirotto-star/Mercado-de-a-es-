@@ -192,15 +192,17 @@
     const sum = (c) => sel.reduce((a, d) => a + ((FLOW.days[d][c] || [])[2] || 0), 0);
     const bi = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + 'R$ ' + (Math.abs(v) / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' bi';
     const fd = (d) => d.split('-').reverse().slice(0, 2).join('/');
-    const fx = sel.map(d => (FLOW.days[d]['Investidor Estrangeiro'] || [])[2] || 0), mx = Math.max(1, ...fx.map(Math.abs)), W = 300, H = 56, bw = W / Math.max(fx.length, 1);
-    const bars = fx.map((v, i) => { const h = Math.abs(v) / mx * (H / 2 - 2); return `<rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${(v >= 0 ? H / 2 - h : H / 2).toFixed(1)}" width="${Math.max(1, bw * 0.7).toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}" fill="${v >= 0 ? 'rgb(16 185 129)' : 'rgb(239 68 68)'}"><title>${fd(sel[i])}: ${bi(v)}</title></rect>`; }).join('');
+    const fx = sel.map(d => (FLOW.days[d]['Investidor Estrangeiro'] || [])[2] || 0), mx = Math.max(1, ...fx.map(Math.abs)), W = 300, H = 64, bw = W / Math.max(fx.length, 1), w0 = Math.max(1, Math.min(6, bw * 0.6));
+    const bars = fx.map((v, i) => { const h = Math.abs(v) / mx * (H / 2 - 4); return `<rect x="${(i * bw + (bw - w0) / 2).toFixed(1)}" y="${(v >= 0 ? H / 2 - h : H / 2).toFixed(1)}" width="${w0.toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}" fill="${v >= 0 ? 'rgb(16 185 129)' : 'rgb(239 68 68)'}"><title>${fd(sel[i])}: ${bi(v)}</title></rect>`; }).join('');
+    // 1 dia: sem gráfico (uma barra só ocupava a largura toda)
+    const chart = fx.length > 1 ? `<div class="flow-ch"><span class="gt-help">Saldo diário dos estrangeiros</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}"><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" stroke="rgb(100 116 139)" stroke-width="0.8"/>${bars}</svg>
+      <div class="flow-lb"><span>${fd(sel[0])}</span><span>máx. ${bi(mx).replace(/^[+−]/, '±')}</span><span>${fd(sel[sel.length - 1])}</span></div></div>` : '';
     const short = days.length < n ? `<p class="gt-help">Histórico disponível: ${days.length} pregões (desde ${fd(days[0])}).</p>` : '';
     return `<div class="gt gt-flow"><div class="gt-head"><span class="gt-name">Fluxo da bolsa</span></div>
       <div class="gt-tabs">${FP.map(([k, , l]) => `<button type="button" class="${k === pk ? 'on' : ''}" data-flowp="${k}">${l}</button>`).join('')}</div>
       <div class="gt-list"><table class="gtab gflow"><thead><tr><th>Investidor</th><th>Saldo (${sel.length > 1 ? fd(sel[0]) + '–' : ''}${fd(sel[sel.length - 1])})</th></tr></thead><tbody>
       ${cats.map(c => { const v = sum(c); return `<tr><td>${nm[c]}</td><td class="gc2 ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${bi(v)}</td></tr>`; }).join('')}</tbody></table>
-      <div class="flow-ch"><span class="gt-help">Saldo diário dos estrangeiros</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}"><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" stroke="rgb(71 85 105)" stroke-width="0.6"/>${bars}</svg></div>
-      ${short}<p class="gt-help">Fonte: B3, participação dos investidores (compras − vendas), publicada com cerca de 2 pregões de defasagem.</p></div></div>`;
+      ${chart}${short}${updTxt() ? `<div class="gt-upd">${updTxt()}</div>` : ''}</div></div>`;
   }
   let sortable = null, reorg = false, fullId = null, lastY = 0;
   function fullHtml(id) {
