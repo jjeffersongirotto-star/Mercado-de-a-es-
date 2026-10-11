@@ -164,6 +164,7 @@
   function render(plot, leg, series, start, end, kind, base) {
     const W = 600, H = 240, pad = 4;
     if (!series.length || !series[0].pts.length) { plot.innerHTML = '<div class="gc-load">Sem dados no período.</div>'; leg.innerHTML = ''; return; }
+    { const xe = Math.max(...series.map(s => s.pts.length ? s.pts[s.pts.length - 1][0] : -Infinity)); series = series.map(s => { const l = s.pts[s.pts.length - 1]; return l && l[0] < xe ? { ...s, pts: s.pts.concat([[xe, l[1]]]) } : s; }); }
     const B = base > 0 ? base : null, toY = (p) => B ? B * (1 + p / 100) : p;
     const xs = series.flatMap(s => s.pts.map(p => p[0])), ys = series.flatMap(s => s.pts.map(p => toY(p[1]))).concat(B ? [] : [0]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1;
