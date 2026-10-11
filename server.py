@@ -716,7 +716,7 @@ def api_chat(body: dict):
         except Exception: pass
         return out
     chat_D = chat.build(rows, FIELDS, MX)
-    return JSONResponse(chat.answer(q, (body or {}).get("hist") or [], chat_D, ret_fn), headers={"Cache-Control": "no-store"})
+    return JSONResponse(chat.answer(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}), headers={"Cache-Control": "no-store"})
 
 @app.get("/api/metrics")
 def api_metrics():

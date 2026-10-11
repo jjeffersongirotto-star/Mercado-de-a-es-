@@ -92,6 +92,7 @@
   const listDate = (r) => r.ipo || MX(r.ticker).ftd || null;
   window.isNova = (r) => { const d = listDate(r); return !!d && (Date.now() - Date.parse(d)) < 92 * 864e5; };
   const fmtD = (d) => d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '—';
+  window.gTop10 = () => PRE.filter(p => preOk(p) && !p.fav).map(p => { let L = []; try { L = (p.calc(p.per ? 1 : undefined) || []).slice(0, 10); } catch (e) { } return `${p.name}${p.h ? ' [' + p.h + ']' : ''}: ` + L.map(x => Array.isArray(x) ? x[0].ticker + ' ' + (x[1] ?? '') : x.ticker).join('; '); }).join('\n');
   const PRE = [
     { id: 'valor', m: 1, name: 'Maior valorização', h: 'Valorização', per: true, calc: (n) => rowsK().filter(r => MX(r.ticker)['ret' + n] != null).map(r => [r, MX(r.ticker)['ret' + n]]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, pc(v), v]) },
     { id: 'rent', name: 'Maior rentabilidade', t: 'últimos 12 meses', h: 'Lucro/valor', calc: () => rowsK().filter(r => r.v.pl >= 2).map(r => [r, 100 / r.v.pl]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },

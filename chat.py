@@ -74,7 +74,48 @@ def top(D, k, n=10, asc=None):
     L.sort(key=lambda z: z[1], reverse=not asc)
     return L[:n]
 
-def context(q, D, ret_fn):
+COLS = [("preco", 2), ("pl", 1), ("pvp", 2), ("dy", 1), ("roe", 1), ("roic", 1), ("mbruta", 0), ("mliq", 1), ("dlebit", 1), ("dlpl", 2),
+        ("cresc5a", 0), ("lucro5a", 0), ("lpa", 2), ("valmerc", -6), ("liq2m", -3)]
+def table(D, cx):
+    tg = {}
+    for it in str(cx.get("tags") or "").split(";"):
+        if ":" in it: a, b = it.split(":", 1); tg[a] = b
+    head = "ticker,nome,setor,var_dia%,P/L,P/VP,DY%,ROE%,ROIC%,MargBruta%,MargLiq%,DivLiq/EBIT,DivLiq/PL,CrescReceita5a%,CrescLucro5a%,LPA,ValorMercado(R$mi),Liquidez2m(R$mil),preco,ret1a%,indices,etiquetas|confianca"
+    out = [head]
+    for r in D["rows"]:
+        v = r.get("v") or {}; m = D["M"].get(r["ticker"]) or {}
+        def f(k, d):
+            x = v.get(k)
+            if not isinstance(x, (int, float)): return ""
+            if d < 0: return str(round(x / 10 ** -d))
+            return str(round(x, d)) if d else str(round(x))
+        cells = [r["ticker"], (r.get("nome") or "")[:22].replace(",", " "), (r.get("setor") or "")[:20].replace(",", " "),
+                 str(round(r["var"], 1)) if isinstance(r.get("var"), (int, float)) else ""] + [f(k, d) for k, d in COLS if k != "preco"] + \
+                [f("preco", 2), str(round(m["ret1"])) if isinstance(m.get("ret1"), (int, float)) else "", "/".join((r.get("ix") or {}).keys()), tg.get(r["ticker"], "")]
+        out.append(",".join(cells))
+    return "\n".join(out)
+
+def context(q, D, ret_fn, cx=None):
+    cx = cx or {}
+    parts = ["TABELA DE TODAS AS AÇÕES (CSV; vazio = sem dado):\n" + table(D, cx)]
+    if cx.get("groups"): parts.append("GRUPOS PRONTOS DO SITE (top 10):\n" + str(cx["groups"])[:8000])
+    try:
+        from datetime import date as _d, timedelta as _t
+        R = ret_fn((_d.today() - _t(days=365)).isoformat(), _d.today().isoformat(), [])
+        parts.append("ÍNDICES, variação em 1 ano: " + "; ".join(f"{IDXN[k]} {br(R[k],1)}%" for k in IDXN if k in R))
+    except Exception: pass
+    for k, lab in (("prev", "PREVISÃO RENTABILIDADE (entradas do usuário, JSON)"), ("prevRes", "PREVISÃO RENTABILIDADE (resultado na tela)"),
+                   ("alug", "PREVISÃO ALUGUEL (entradas, JSON)"), ("alugRes", "PREVISÃO ALUGUEL (resultado na tela)"),
+                   ("comp", "COMPARAR (seleção, JSON)"), ("compRes", "COMPARAR (resultado na tela)")):
+        if cx.get(k): parts.append(lab + ":\n" + str(cx[k])[:5000])
+    T = _tickers(q, D); I = _idx(q)
+    for t in T[:3]: parts.append("DETALHE " + card(D, t))
+    if T or I:
+        di, df = _period(q); R = ret_fn(di, df, T)
+        parts.append(f"Variação no período {di} a {df}: " + "; ".join(f"{IDXN.get(x, x)} {br(R.get(x))}%" for x in T + I if x in R))
+    return "\n\n".join(parts)[:300000], T, I, None
+
+def context_old(q, D, ret_fn):
     T = _tickers(q, D); I = _idx(q); k = _metric(q, D); parts = []
     for t in T: parts.append(card(D, t))
     if T or I:
@@ -115,8 +156,10 @@ def gemini(q, ctx, hist):
     key = os.environ.get("GEMINI_API_KEY")
     if not key: raise RuntimeError("sem chave")
     models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-3.5-flash", "gemini-flash-lite-latest"] if m]
-    sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, curto e direto, usando SOMENTE os dados abaixo "
-             "(dados do site). Se a informação não estiver nos dados, diga que o site não tem esse dado. Não dê recomendação de compra/venda. "
+    sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo "
+             "(dados do site: tabela de todas as ações, grupos, índices e o que o usuário preencheu em Previsão e Comparar). "
+             "Você pode filtrar, ranquear e cruzar critérios na tabela (ex.: P/L baixo + LPA positivo + crescimento) e deve explicar os critérios usados. "
+             "Diga quais ações atendem aos critérios, sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. "
              "Números no formato brasileiro.\n\nDADOS DO SITE:\n" + ctx)
     contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-6:]]
     contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
@@ -126,7 +169,7 @@ def gemini(q, ctx, hist):
             r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                               headers={"x-goog-api-key": key, "Content-Type": "application/json"},
                               json={"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": contents,
-                                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048}}, timeout=20)
+                                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048}}, timeout=45)
         except requests.RequestException as e:
             err = type(e).__name__; continue
         if r.status_code != 200: err = f"http {r.status_code}"; continue
@@ -136,9 +179,9 @@ def gemini(q, ctx, hist):
         err = "vazio"
     raise RuntimeError(f"gemini {err}")
 
-def answer(q, hist, D, ret_fn):
+def answer(q, hist, D, ret_fn, cx=None):
     try:
-        ctx = context(q, D, ret_fn)[0]
+        ctx = context(q, D, ret_fn, cx)[0]
         return {"a": gemini(q, ctx, hist), "mode": "gemini"}
     except Exception as e:
         log.info("chat fallback: %s", str(e)[:80])
