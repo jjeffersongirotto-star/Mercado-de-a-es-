@@ -106,7 +106,7 @@ if (typeof document !== 'undefined') {
       <label class="pv-mini">R$<input inputmode="decimal" class="pv-in" style="width:7.5em" data-f="v" value="${fmtIn(r.v, 2)}"></label>
       <label class="pv-mini">mês<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="m" value="${r.m || ''}"></label>
       <button type="button" class="pv-x" data-del="${i}" aria-label="Remover retirada">✕</button>
-      <button type="button" class="pv-ok" data-rowact="ret:save:${i}">Retirada</button><span class="text-[10.5px] text-slate-500">rascunho (não entra no cálculo)</span></div>`).join('');
+      <button type="button" class="pv-ok" data-rowact="ret:save:${i}">Retirada</button></div>`).join('');
   }
   el('pvRet').addEventListener('change', (e) => {
     const row = e.target.closest('[data-i]'); if (!row) return;
@@ -143,7 +143,7 @@ if (typeof document !== 'undefined') {
       <label class="pv-mini">mês<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="m" value="${r.m || ''}"></label>
       ${r.t === 'p' ? `<label class="pv-mini">a cada<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="n" value="${r.n || ''}">meses</label>` : ''}
       <button type="button" class="pv-x" data-xdel="${i}" aria-label="Remover aporte">✕</button>
-      <button type="button" class="pv-ok" data-rowact="ex:save:${i}">Aporte</button><span class="text-[10.5px] text-slate-500">rascunho</span>
+      <button type="button" class="pv-ok" data-rowact="ex:save:${i}">Aporte</button>
       ${r.t === 'p' && !(r.n >= 2) ? '<span class="text-[11px] text-rose-300 basis-full">Intervalo deve ser um número inteiro de meses ≥ 2.</span>' : ''}</div>`).join('');
   }
   function setEx(e, final) {
