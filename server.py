@@ -693,6 +693,31 @@ def api_returns(di: str, df: str):
     out.update(_idx_returns(di, df))
     return JSONResponse(out, headers={"Cache-Control": "public, max-age=600"})
 
+@app.post("/api/chat")
+def api_chat(body: dict):
+    import chat
+    q = str((body or {}).get("q") or "").strip()[:1000]
+    if not q: return JSONResponse({"a": "Escreva uma pergunta.", "mode": "regras"})
+    rows = [r for r in ((cache.data or {}).get("rows") or [])]
+    if not rows: return JSONResponse({"a": "Os dados ainda estão carregando; tente de novo em instantes.", "mode": "regras"})
+    MX = ((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}
+    def ret_fn(di, df, T):
+        from datetime import datetime as _dt
+        s0 = _dt.strptime(di, "%Y-%m-%d").timestamp() - 1; e0 = _dt.strptime(df, "%Y-%m-%d").timestamp() + 86399
+        out = {}
+        for t in T:
+            try:
+                h = history.all_closes([t]).get(t)
+                live = ((chat_D["by"].get(t) or {}).get("v") or {}).get("preco")
+                v = history.period_return(h, s0, e0, live)
+                if v is not None: out[t] = v
+            except Exception as e: log.warning("chat ret %s: %s", t, e)
+        try: out.update(_idx_returns(di, df))
+        except Exception: pass
+        return out
+    chat_D = chat.build(rows, FIELDS, MX)
+    return JSONResponse(chat.answer(q, (body or {}).get("hist") or [], chat_D, ret_fn), headers={"Cache-Control": "no-store"})
+
 @app.get("/api/metrics")
 def api_metrics():
     d, _ = snapshots.load("metrics", max_mem_age=3 * 3600)
