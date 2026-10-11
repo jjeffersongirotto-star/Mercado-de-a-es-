@@ -262,7 +262,7 @@
   .flow-ch { padding: .4rem .55rem 0; } .gt-help { font-size: 11px; color: rgb(100 116 139); padding: .2rem .55rem; margin: 0; font-weight: 400; } .gt-flow .ldr svg { width: 110px; height: 75px; }
   .gt-tabs button { font-size: 11px; padding: .15rem .5rem; border-radius: 9999px; border: 1px solid rgb(51 65 85); color: rgb(203 213 225); background: rgb(2 6 23); }
   .gt-tabs button.on { border-color: rgb(250 204 21); color: rgb(250 204 21); } .gt-tabs button.dan { color: rgb(253 164 175); }
-  .gt-tabs .gper { margin: 0 0 0 auto; }
+  .gt-tabs .gper { margin: 0 0 0 auto; } .gt-tabs .gper + .gper { margin-left: 0; } .gt-tabs { row-gap: .3rem; }
   .ggrid.reorg .gt { cursor: grab; } .ggrid.reorg .gt:not(.gt-fav) { outline: 1px dashed rgb(16 185 129 / .6); }
   .gx { width: 34px; height: 34px; border-radius: 9999px; display: grid; place-items: center; background: rgb(30 41 59); border: 1px solid rgb(71 85 105); color: rgb(226 232 240); font-size: 16px; }
   .cmp-top { min-height: 30vh; border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .6); border-radius: 1rem; padding: .7rem; display: flex; flex-direction: column; gap: .55rem; }
@@ -333,6 +333,7 @@
   body .ricon, body .gc-bar .gc-ref.ricon { width: var(--h); height: var(--h); background: none; border: 0; color: rgb(203 213 225); }
   body .star { width: var(--h-sm); height: var(--h-sm); }
   body [data-g="export"], body [data-g="import"] { width: var(--h); padding: 0; font-variant-emoji: text; font-family: system-ui, sans-serif; }
+  body .gt-tabs .gper { margin: 0 0 0 auto; width: auto; max-width: 48%; } body .gt-tabs .gper + .gper { margin-left: 0; }
   body .gt > .gper, body .gfull > .gper { align-self: flex-start; width: auto; margin: .4rem .5rem 0; }
   /* Segmentados: abas, períodos, direção da ordem, abas internas */
   body .tabs button, body .gc-bar button[data-per], body #sortDir, body .gt-tabs button { min-height: var(--h); border-radius: var(--r); font-size: 13px; font-weight: 600; }
@@ -637,7 +638,7 @@
 <script src="/static/app.js?v=c6"></script>
 <script src="/static/previsao.js?v=c26"></script>
 <script src="/static/grafico.js?v=c6"></script>
-<script src="/static/grupos.js?v=c29"></script>
+<script src="/static/grupos.js?v=c30"></script>
 <script src="/static/aluguel.js?v=c25"></script>
 <script src="/static/comparar.js?v=c24"></script>
 

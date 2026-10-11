@@ -159,6 +159,8 @@
   // Sub-abas Todos / Proventos no ano dos grupos de proventos
   const PTAB = ['dy', 'prov'], ptabOf = (p) => p && PTAB.includes(p.id) ? ((ui.ptab || {})[p.id] || 'all') : null;
   const ptabBar = (p) => ptabOf(p) ? `<div class="gt-tabs">${[['all', 'Todos'], ['prov', 'Proventos no ano']].map(([k, l]) => `<button type="button" class="${ptabOf(p) === k ? 'on' : ''}" data-ptab="${p.id}:${k}">${l}</button>`).join('')}</div>` : '';
+  // Abas à esquerda e seletor de período à direita na mesma linha
+  const ctlRow = (p) => ptabOf(p) ? ptabBar(p).replace(/<\/div>$/, perSel(p) + '</div>') : (p.per ? `<div class="gt-tabs">${perSel(p)}</div>` : '');
   const grpBody = (d, full) => ptabOf(d.p) === 'prov' ? provCols(d.rows.map(x => x[0]), 'Nenhum provento destas empresas neste ano.') : (d.rows.length ? tbl(d.rows, d.h, full) : '<p class="gt-empty">Sem dados suficientes.</p>');
   function favBody(full) {
     const f = ui.fav;
@@ -183,7 +185,7 @@
     const d = groupData(id); if (!d) return '';
     if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
     return `<div class="gt" data-id="${escH(id)}"><div class="gt-head" data-open="${escH(id)}">${starB(id)}<span class="gt-name">${escH(d.title)}</span></div>
-      ${d.p ? perSel(d.p) + ptabBar(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
+      ${d.p ? ctlRow(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
       <div class="gt-list">${grpBody(d, false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
   }
   // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
@@ -214,7 +216,7 @@
   let sortable = null, reorg = false, fullId = null, lastY = 0;
   function fullHtml(id) {
     const d = groupData(id); if (!d) { fullId = null; return ''; }
-    const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? perSel(d.p) + ptabBar(d.p) : '') + grpBody(d, true);
+    const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? ctlRow(d.p) : '') + grpBody(d, true);
     return `<section class="gfull"><div class="gfull-head"><b>${escH(d.title)}</b><button type="button" class="gx" data-gclose aria-label="Fechar grupo">✕</button></div>${body}</section>`;
   }
   async function list() {
