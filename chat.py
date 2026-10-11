@@ -155,7 +155,7 @@ def rules(q, D, ret_fn):
 def gemini(q, ctx, hist):
     key = os.environ.get("GEMINI_API_KEY")
     if not key: raise RuntimeError("sem chave")
-    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-3.5-flash", "gemini-flash-lite-latest"] if m]
+    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]
     sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo "
              "(dados do site: tabela de todas as ações, grupos, índices e o que o usuário preencheu em Previsão e Comparar). "
              "Você pode filtrar, ranquear e cruzar critérios na tabela (ex.: P/L baixo + LPA positivo + crescimento) e deve explicar os critérios usados. "
@@ -164,12 +164,13 @@ def gemini(q, ctx, hist):
     contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-6:]]
     contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
     err = None
-    for model in models:  # modelo indisponível/sobrecarregado: tenta o próximo
+    tries = [(m, True) for m in models] + [("gemini-flash-latest", False)]  # sem raciocínio (rápido); por último, com raciocínio padrão
+    for model, think0 in tries:  # modelo indisponível/sobrecarregado: tenta o próximo
         try:
             r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                               headers={"x-goog-api-key": key, "Content-Type": "application/json"},
                               json={"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": contents,
-                                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 8192}}, timeout=90)
+                                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, **({"thinkingConfig": {"thinkingBudget": 0}} if think0 else {})}}, timeout=90)
         except requests.RequestException as e:
             err = type(e).__name__; continue
         if r.status_code != 200: err = f"http {r.status_code}"; continue
