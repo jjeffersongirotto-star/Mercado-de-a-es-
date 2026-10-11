@@ -339,6 +339,7 @@ def finalize(base, yf_store=None):
     for ix, comp in ((b3i or {}).get("indices") or {}).items():
         for cod, part in comp.items():
             IXC.setdefault(cod[:4], {}).setdefault(ix, (cod, part))
+    MXB = (((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}) if isbr else {}
     for r in base["rows"]:
         if listed is not None and r["ticker"] not in listed and r["ticker"][-1:].isdigit():
             continue
@@ -354,6 +355,8 @@ def finalize(base, yf_store=None):
         if ixs:  # índices da empresa (qualquer classe; mostra a classe quando diferente da exibida)
             nr["ix"] = {k: ([p, c] if c != r["ticker"] else [p]) for k, (c, p) in ixs.items()}
         consensus.apply_row(nr, CMP_FIELDS, divergente)
+        b3v = (MXB.get(r["ticker"]) or {}).get("v30")
+        if b3v and nr.get("v") is not None: nr["v"]["vol30"] = b3v  # volume oficial B3 (COTAHIST, 30 pregões) prevalece
         bkk = set(nr.get("bk") or [])
         cnt["two"] = cnt.get("two", 0) + sum(1 for k_, m in (nr.get("cm") or {}).items() if m.get("t") == "pri" and k_ not in bkk and k_ not in nr["st"])
         cnt["bank"] = cnt.get("bank", 0) + sum(1 for k_ in bkk if k_ not in nr["st"])

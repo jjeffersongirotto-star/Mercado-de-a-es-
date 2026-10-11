@@ -35,13 +35,15 @@ for r in kept:
         if len(pts) < 2:
             raise ValueError("vazio")
         divs = [(a, b) for a, b, *_ in H["divs"]]
+        vv = [x for x in (H["d"].get("vol") or []) if x is not None]
+        v30 = round(sum(vv[-30:]) / len(vv[-30:])) if vv else None  # volume financeiro médio dos últimos 30 pregões (B3)
         lab = {a: (x[2] if len(x) > 2 else "") for a, *x in [[d[0], d[1], d[2] if len(d) > 2 else ""] for d in H["divs"]]}
         spl = [(a, m_, l_) for a, m_, l_ in H.get("splits", [])]
         x = {"meta": {}}
         p = pts[-1][1]; tnow = pts[-1][0]
         ftd = (x.get("meta") or {}).get("firstTradeDate") or pts[0][0]
         m = {"p": round(p, 2), "first": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m"),
-             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"),              "mc0": None, "mc": None}
+             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"),              "mc0": None, "mc": None, "v30": v30}
         mm = {}
         for ts, c in pts: mm[datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m")] = c
         ks = sorted(mm); m["mc0"] = ks[0]; m["mc"] = [round(mm[k], 2) for k in ks]
