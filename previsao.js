@@ -53,7 +53,7 @@ if (typeof document !== 'undefined') {
     const b = e.target.closest('[data-rowact]'); if (!b) return;
     const [kind, act, i] = b.dataset.rowact.split(':'), arr = kind === 'ret' ? st.ret : st.ex, r = arr[+i]; if (!r) return;
     if (act === 'save') {
-      if (kind === 'ex' && r.t === 'p' && !(r.n >= 2)) { toast('Intervalo deve ser inteiro ≥ 2'); return; }
+      if (r.t === 'p' && !(r.n >= 2)) { toast('Intervalo deve ser inteiro ≥ 2'); return; }
       r.ok = true; toast(kind === 'ret' ? 'Retirada salva' : 'Aporte salvo');
     } else if (act === 'edit') r.ok = false;
     else if (act === 'del') { if (!(await uiConfirm(kind === 'ret' ? 'Apagar esta retirada?' : 'Apagar este aporte?', { ok: 'Apagar', danger: true }))) return; arr.splice(+i, 1); toast(kind === 'ret' ? 'Retirada apagada' : 'Aporte apagado'); }
@@ -97,36 +97,42 @@ if (typeof document !== 'undefined') {
   document.querySelector('[data-tabpane="previsao"]').addEventListener('keydown', (e) => { if (e.target.dataset) delete e.target.dataset.fsel; });
 
   // Retiradas
+  // Retiradas extraordinárias: t = 'm' (mensal, vale até a próxima/0), 'u' (única), 'p' (por período, a cada n meses)
+  const RTT = [['m', 'Retirada mensal'], ['u', 'Retirada única'], ['p', 'Retirada por período']];
   function renderRet() {
     const box = el('pvRet');
-    if (!st.ret.length) { box.innerHTML = '<p class="text-xs text-slate-500">Nenhuma retirada. Toque em <b>+</b> para adicionar.</p>'; return; }
-    box.innerHTML = st.ret.map((r, i) => r.ok ? `<div class="pv-saved" data-i="${i}"><span>${r.v > 0 ? brl.format(r.v) + '/mês' : 'Encerrar retiradas'} a partir do mês <b>${r.m}</b></span>
+    if (!st.ret.length) { box.innerHTML = ''; return; }
+    const rTxt = (r) => (r.t || 'm') === 'm' ? (r.v > 0 ? `Retirada mensal de ${brl.format(r.v)} a partir do mês <b>${r.m}</b>` : `Encerrar retiradas mensais a partir do mês <b>${r.m}</b>`)
+      : r.t === 'u' ? `Retirada única de ${brl.format(r.v)} no mês <b>${r.m}</b>` : `Retirada de ${brl.format(r.v)} a cada ${r.n} meses a partir do mês <b>${r.m}</b>`;
+    box.innerHTML = st.ret.map((r, i) => r.ok ? `<div class="pv-saved" data-i="${i}"><span>${rTxt(r)}</span>
         <button type="button" class="pv-lnk" data-rowact="ret:edit:${i}">Editar</button><button type="button" class="pv-lnk dan" data-rowact="ret:del:${i}">Apagar</button></div>`
-      : `<div class="flex flex-wrap items-center gap-1.5" data-i="${i}">
-      <label class="pv-mini">R$<input inputmode="decimal" class="pv-in" style="width:7.5em" data-f="v" value="${fmtIn(r.v, 2)}"></label>
+      : `<div class="pv-ex-row" data-i="${i}">
+      <select data-f="t" aria-label="Tipo">${RTT.map(([k, l]) => `<option value="${k}"${(r.t || 'm') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      <label class="pv-mini">R$<input inputmode="decimal" class="pv-in" style="width:7em" data-f="v" value="${fmtIn(r.v, 2)}"></label>
       <label class="pv-mini">mês<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="m" value="${r.m || ''}"></label>
+      ${r.t === 'p' ? `<label class="pv-mini">a cada<input inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.6em" data-f="n" value="${r.n || ''}">meses</label>` : ''}
       <button type="button" class="pv-x" data-del="${i}" aria-label="Remover retirada">✕</button>
-      <button type="button" class="pv-ok" data-rowact="ret:save:${i}">Retirada</button></div>`).join('');
+      <button type="button" class="pv-ok" data-rowact="ret:save:${i}">Retirada</button>
+      ${r.t === 'p' && !(r.n >= 2) ? '<span class="text-[11px] text-rose-300 basis-full">Intervalo deve ser um número inteiro de meses ≥ 2.</span>' : ''}</div>`).join('');
   }
-  el('pvRet').addEventListener('change', (e) => {
+  function setRet(e, final) {
     const row = e.target.closest('[data-i]'); if (!row) return;
-    const r = st.ret[+row.dataset.i]; const f = e.target.dataset.f;
-    r[f] = f === 'm' ? Math.max(1, Math.min(MAXM, Math.round(num(e.target.value)))) : Math.max(0, num(e.target.value));
-    save(); setTimeout(() => { compute(); }, 0);
-  });
-  el('pvRet').addEventListener('input', (e) => {
-    const row = e.target.closest('[data-i]'); if (!row) return;
-    const r = st.ret[+row.dataset.i]; const f = e.target.dataset.f;
-    r[f] = f === 'm' ? Math.max(1, Math.min(MAXM, Math.round(num(e.target.value)) || 1)) : Math.max(0, num(e.target.value));
-    liveCompute();
-  });
+    const r = st.ret[+row.dataset.i], f = e.target.dataset.f, raw = e.target.value; if (!r || !f) return;
+    if (f === 't') { r.t = raw; if (r.t === 'p' && !r.n) r.n = 12; save(); renderRet(); compute(); return; }
+    if (f === 'v') r.v = Math.max(0, num(raw));
+    if (f === 'm') r.m = Math.max(1, Math.min(MAXM, Math.round(num(raw)) || 1));
+    if (f === 'n') { const n = Number(String(raw).replace(',', '.')); r.n = Number.isInteger(n) && n >= 2 ? n : null; }
+    save(); liveCompute(); if (final && f === 'n' && r.n >= 2) row.querySelector('.text-rose-300')?.remove();
+  }
+  el('pvRet').addEventListener('input', (e) => { if (e.target.tagName === 'INPUT') setRet(e, false); });
+  el('pvRet').addEventListener('change', (e) => setRet(e, true));
   el('pvRet').addEventListener('click', (e) => {
     const b = e.target.closest('[data-del]'); if (!b) return;
     st.ret.splice(+b.dataset.del, 1); fill(); compute(); save();
   });
   el('pvAddRet').addEventListener('click', () => {
     const last = st.ret[st.ret.length - 1];
-    st.ret.push({ v: 0, m: last ? Math.min(MAXM, last.m + 12) : 180, ok: false }); fill(); save();
+    st.ret.push({ t: 'm', v: 0, m: last ? Math.min(MAXM, last.m + 12) : 180, ok: false }); fill(); save();
     const ins = el('pvRet').querySelectorAll('input[data-f="v"]'); ins[ins.length - 1]?.focus();
   });
   // Aportes extraordinários: t = 'm' (mensal, substitui), 'u' (único), 'p' (por período, a cada n meses)
@@ -168,7 +174,11 @@ if (typeof document !== 'undefined') {
     }
     return { reg: w > 0 ? 0 : reg, extra };
   }
-  const wAt = (m) => { if (st.proj) return 0; let w = 0; for (const r of st.ret.filter(x => x.ok).sort((a, b) => a.m - b.m)) if (r.m <= m) w = r.v; return w; };
+  // mensal: vale do mês indicado até a próxima mensal (0 encerra) e zera o aporte; única/período somam no mês
+  const wAt = (m) => { if (st.proj) return { reg: 0, extra: 0 }; let reg = 0, extra = 0;
+    for (const r of st.ret.filter(x => x.ok).sort((a, b) => a.m - b.m)) { const t = r.t || 'm';
+      if (t === 'm' && r.m <= m) reg = r.v; else if (t === 'u' && r.m === m) extra += r.v; else if (t === 'p' && r.n >= 2 && m >= r.m && (m - r.m) % r.n === 0) extra += r.v; }
+    return { reg, extra }; };
 
   // Ação (modo histórico)
   function tickerList() { }
@@ -289,7 +299,7 @@ if (typeof document !== 'undefined') {
     rows.push({ m: 1, ap: st.ini + x1, apT, rent: 0, div: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
     for (let m = 2; m <= n; m++) {
       const r = steps ? steps[m - 1].r : r0, d = steps ? steps[m - 1].d : d0;
-      const w = wAt(m), A = apAt(m, w), ap = A.reg + A.extra;
+      const W = wAt(m), w = W.reg + W.extra, A = apAt(m, W.reg), ap = A.reg + A.extra;
       const rent = sem * r, div = com * d, rentC = com * r;
       sem = Math.max(0, sem + rent + ap - w);
       com = Math.max(0, com + rentC + div + ap - w);

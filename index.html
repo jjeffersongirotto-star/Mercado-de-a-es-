@@ -493,7 +493,7 @@
         <div id="pvExBox" class="pv-f pv-c-ap pv-wide"><span class="flex items-center justify-between">Aportes extraordinários
           <button id="pvAddEx" type="button" class="pv-plus" aria-label="Adicionar aporte extraordinário">+</button></span>
           <div id="pvEx" class="flex flex-col gap-1.5"></div></div>
-        <div id="pvRetBox" class="pv-f pv-c-w pv-wide"><span class="flex items-center justify-between">Retiradas
+        <div id="pvRetBox" class="pv-f pv-c-w pv-wide"><span class="flex items-center justify-between">Retiradas extraordinárias
           <button id="pvAddRet" type="button" class="pv-plus" aria-label="Adicionar retirada">+</button></span>
           <div id="pvRet" class="flex flex-col gap-1.5"></div></div>
       </div>
@@ -572,7 +572,7 @@
       <li><b>E se eu tivesse investido?</b>: usa preços e dividendos reais do histórico entre as datas escolhidas.</li>
       <li><b>Mês na tabela pequena</b>: mostra a linha desse mês e esconde os anteriores (vazio ou 1 mostra tudo).</li>
       <li><b>Rascunho</b>: linhas de retirada ou aporte só entram no cálculo depois de tocar no botão de salvar da linha.</li>
-      <li><b>Retiradas</b>: valor e mês de início; vale até a próxima linha; valor 0 encerra. Durante a retirada o aporte mensal é 0 e o dinheiro sai dos dividendos, depois da rentabilidade e por fim do patrimônio.</li>
+      <li><b>Retiradas extraordinárias</b>: <i>Retirada mensal</i> vale do mês indicado até a próxima retirada mensal (valor 0 encerra) e, enquanto dura, o aporte mensal é 0. <i>Retirada única</i>: uma vez no mês indicado. <i>Retirada por período</i>: a cada N meses (inteiro ≥ 2, ex.: 2, 6, 12, 24) a partir do mês indicado. Em todas, o dinheiro sai primeiro dos dividendos, depois da rentabilidade e por fim do patrimônio.</li>
       <li><b>Aportes extraordinários</b>: <i>Aporte mensal</i> substitui o aporte regular do mês indicado até a próxima linha desse tipo (0 encerra; durante retiradas vira 0). <i>Aporte único</i> entra uma vez no mês indicado. <i>Aporte por período</i> entra a cada N meses (N inteiro ≥ 2) a partir do mês indicado. Único e por período entram mesmo durante retiradas. Todos somam no aporte do mês e no aporte total.</li>
       <li><b>Célula Mês do resumo</b>: digite um mês para ver a linha dele no resumo e esconder os meses anteriores na tabela; vazio ou 1 mostra tudo.</li>
       <li>A tabela mostra 240 meses por vez; “Mostrar mais meses” acrescenta mais 240 (até 960).</li></ul>
@@ -628,13 +628,13 @@
 
 <div id="tooltip" class="hidden fixed z-50 max-w-sm text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 shadow-xl"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script src="/static/ui.js?v=c5"></script>
-<script src="/static/app.js?v=c5"></script>
-<script src="/static/previsao.js?v=c5"></script>
-<script src="/static/grafico.js?v=c5"></script>
-<script src="/static/grupos.js?v=c5"></script>
-<script src="/static/aluguel.js?v=c5"></script>
-<script src="/static/comparar.js?v=c5"></script>
+<script src="/static/ui.js?v=c6"></script>
+<script src="/static/app.js?v=c6"></script>
+<script src="/static/previsao.js?v=c6"></script>
+<script src="/static/grafico.js?v=c6"></script>
+<script src="/static/grupos.js?v=c6"></script>
+<script src="/static/aluguel.js?v=c6"></script>
+<script src="/static/comparar.js?v=c6"></script>
 
 </body>
 </html>
