@@ -5,7 +5,7 @@
   let H = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(H.slice(-60))); } catch (e) { } };
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^\s*[*•-]\s+/gm, '• ').replace(/\n/g, '<br>');
+  const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^\s*[*•-]\s+/gm, '• ').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="text-sky-300 underline">link</a>').replace(/\n/g, '<br>');
   root.innerHTML = `<div class="cht"><div class="cht-h"><b>Chat</b><button type="button" class="gbtn" id="chtClr">Limpar</button></div>
     <div class="cht-l" id="chtL"></div>
     <form class="cht-f" id="chtF" autocomplete="off"><input id="chtQ" class="pv-in" placeholder="Pergunte sobre as ações do site…" maxlength="500" enterkeyhint="send"><button type="submit" class="gbtn pri" id="chtS">Enviar</button></form></div>`;
@@ -23,7 +23,7 @@
       comp: ls('screenerB3.comparar.v1', 1500), compRes: txt('#compRoot .cmp-cols', 5000) };
   }
   const draw = () => {
-    L.innerHTML = H.length ? H.map(m => `<div class="cht-m ${m.r === 'u' ? 'u' : 'a'}">${m.r === 'u' ? esc(m.t) : md(m.t)}${m.mode ? `<div class="cht-n">${m.mode === 'gemini' ? 'respondido por IA (Gemini) com os dados do site' : 'resposta automática (regras) com os dados do site'}</div>` : ''}</div>`).join('')
+    L.innerHTML = H.length ? H.map(m => `<div class="cht-m ${m.r === 'u' ? 'u' : 'a'}">${m.r === 'u' ? esc(m.t) : md(m.t)}${m.mode ? `<div class="cht-n">${m.mode === 'gemini+web' ? 'respondido por IA (Gemini) com dados do site + busca na web' : m.mode === 'gemini' ? 'respondido por IA (Gemini) com os dados do site' : 'resposta automática (regras) com os dados do site'}</div>` : ''}</div>`).join('')
       : '<div class="cht-e">Exemplos: “DY do BBAS3”, “maiores dividend yield”, “PETR4 vs Ibovespa 2 anos”, “menores P/L”.</div>';
     L.scrollTop = L.scrollHeight;
   };

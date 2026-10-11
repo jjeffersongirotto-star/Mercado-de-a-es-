@@ -244,6 +244,7 @@ TABS = {"aluguel": "Aluguel", "previsao": "Previsão", "comparar": "Comparar", "
 def local(q, D, ret_fn, cx):
     """Respostas prontas sem IA. Retorna texto ou None."""
     nq = norm(q); T = _tickers(q, D); I = _idx(q); k = _metric(q, D)
+    if any(w in nq for w in WRONG): return None
     if any(w in nq for w in COMPLEX) and not any(w in nq for w in HOWW): return None
     if any(w in nq for w in SCREEN): return None
     if "cor" in nq.split() or "cores" in nq or "colorid" in nq: return COLORS
@@ -310,14 +311,56 @@ def answer2(q, hist, D, ret_fn, cx=None):
         out = {"a": loc, "mode": "regras", "tok": 0}
     else:
         ctx = rel_context(q, D, ret_fn, cx)
-        try:
-            a, tok = gemini2(q, ctx, hist)
-            out = {"a": a, "mode": "gemini", "tok": tok}
-        except Exception as e:
-            log.info("chat fallback: %s", str(e)[:80]); out = {"a": rules(q, D, ret_fn), "mode": "regras", "tok": 0}
+        T = _tickers(q, D)
+        want = any(w in nq for w in WRONG) or any("red" in ((D["by"].get(t) or {}).get("st") or {}).values() for t in T)
+        out = None
+        if not want:
+            try:
+                a, tok = gemini2(q, ctx, hist)
+                out = {"a": a, "mode": "gemini", "tok": tok}
+                if any(w in norm(a) for w in MISSING): want = True
+            except Exception as e:
+                log.info("chat fallback: %s", str(e)[:80])
+        if want:  # (a) falta dado, (b) divergência entre fontes, (c) usuário diz que está errado
+            try:
+                a, tok = ground(q, ctx, hist); out = {"a": a, "mode": "gemini+web", "tok": tok}
+            except Exception as e:
+                log.info("busca web: %s", str(e)[:60])
+                note = "\n\n(Busca na web indisponível agora — plano gratuito/cota do Gemini; resposta com os dados do site.)"
+                if out is None:
+                    try: a, tok = gemini2(q, ctx, hist); out = {"a": a, "mode": "gemini", "tok": tok}
+                    except Exception: out = {"a": rules(q, D, ret_fn), "mode": "regras", "tok": 0}
+                out = dict(out, a=out["a"] + note)
+        if out is None: out = {"a": rules(q, D, ret_fn), "mode": "regras", "tok": 0}
     if out["mode"] == "gemini" or loc: _QA[key] = out
     if len(_QA) > 2000: _QA.clear()
     return out
+
+WRONG = ("esta errado", "ta errado", "errado", "nao e isso", "incorreto", "confere", "confira", "verifica", "verifique", "nao bate", "desatualizado")
+MISSING = ("nao tem esse dado", "nao possui", "nao ha informac", "nao contem", "nao dispoe", "nao tem informac", "nao consta", "nao encontrei")
+TRUST = ("Ao pesquisar na web, prefira fontes confiáveis: B3 (b3.com.br), CVM (gov.br/cvm, rad.cvm.gov.br), sites de RI das empresas, "
+         "Status Invest, Fundamentus. Diga claramente o que veio da web e o que veio do site.")
+def ground(q, ctx, hist):
+    """Gemini com busca Google. Retorna (texto com fontes, tokens) ou levanta erro."""
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key: raise RuntimeError("sem chave")
+    contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
+    contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
+    sys_t = ("Você é o assistente do site Screener B3. Responda em português do Brasil, conciso. Use os DADOS DO SITE e, quando faltarem ou parecerem errados, "
+             "a busca na web. " + TRUST + " Sem recomendação personalizada.\n\nDADOS DO SITE:\n" + ctx[:60000])
+    err = None
+    for model in [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]:
+        r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent", headers={"x-goog-api-key": key},
+                          json={"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": contents, "tools": [{"google_search": {}}],
+                                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, "thinkingConfig": {"thinkingBudget": 0}}}, timeout=90)
+        if r.status_code != 200: err = r.status_code; continue
+        j = r.json(); c = j["candidates"][0]
+        t = "".join(p.get("text", "") for p in c["content"]["parts"] if not p.get("thought")).strip()
+        src = [(x.get("web") or {}) for x in (c.get("groundingMetadata") or {}).get("groundingChunks", [])]
+        src = [w for w in src if w.get("uri")][:6]
+        if src: t += "\n\nFontes da web:\n" + "\n".join(f"• {w.get('title') or 'fonte'}: {w['uri']}" for w in src)
+        if t: return t, (j.get("usageMetadata") or {}).get("promptTokenCount")
+    raise RuntimeError(f"busca {err}")
 
 def gemini2(q, ctx, hist):
     key = os.environ.get("GEMINI_API_KEY")
