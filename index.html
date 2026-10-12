@@ -61,10 +61,10 @@
   #hiddenFolder:not(.open) #hiddenList .fitem { display: none; }
   #hiddenFolder.open .folder-hint { display: none; }
   @media (max-width: 639px) {  /* topo no celular em pé: faixa; bandeira | Fonte | data (dd/mm/aa, quebra em 2 linhas) | botões — mesma altura */
-    #hdr { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "brand brand brand brand" "flag src upd btns"; column-gap: .4rem; }
+    #hdr { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; grid-template-areas: "brand brand brand brand" "flag src upd btns"; column-gap: .2rem; }
     #hdr > h1 { grid-area: brand; } #hdrSrc { display: contents; } #ddCountry { grid-area: flag; } #hdrBtns { grid-area: btns; gap: .3rem; }
     #ddSource { grid-area: src; } #updated { grid-area: upd; justify-self: center; text-align: center; white-space: normal; line-height: 1.25; }
-    body #hdrBtns .ricon { width: 26px; } body #hdr #btnCsv { padding: 0 .4rem; } body #hdr #btnCountry { padding: 0 .3rem; } #updated { font-size: 10.5px; }
+    body #hdrBtns .ricon { width: 24px; } body #hdr #btnCsv { padding: 0 .3rem; white-space: nowrap; } body #hdr #btnInfo { width: 34px; min-width: 34px; } body #hdr #btnCountry { padding: 0 .2rem; } #updated { font-size: clamp(11px, 3.2vw, 14px); min-width: max-content; overflow: visible; } #ddCountry, #ddSource { width: max-content; } body #hdr #btnSource { padding: 0 .35rem; } #updated .upd-t { display: block; }
   }
 
   #hiddenFolder:not(.open) #hiddenList { min-height: 0; padding-bottom: 0; }
@@ -614,7 +614,7 @@
 <li><b>Patrimônio líquido</b>: ativos − passivos; o capital que pertence aos acionistas.</li>
 <li><b>ON, PN e Unit</b>: ON (final 3): ação ordinária, com direito a voto. PN (final 4, 5, 6): preferencial, prioridade nos dividendos e geralmente sem voto. Unit (final 11): pacote de ações ON e PN negociado como um só papel.</li>
 <li><b>Ibovespa</b>: principal índice da B3, carteira das ações mais negociadas.</li>
-<li><b>CDI</b>: taxa de juros entre bancos, referência da renda fixa. No site os gráficos usam 'CDB 100% do CDI' (CDI diário acumulado).</li>
+<li><b>CDI</b>: taxa de juros entre bancos, referência da renda fixa. No site os gráficos usam 'CDB' = CDB que rende 100% do CDI (CDI diário acumulado).</li>
 <li><b>Selic</b>: taxa básica de juros do Brasil, definida pelo Copom. O CDI fica muito próximo dela.</li>
 <li><b>IPCA</b>: índice oficial de inflação do Brasil (IBGE), mensal.</li>
 <li><b>Poupança</b>: rende 0,5% ao mês + TR quando a Selic está acima de 8,5% a.a.; senão 70% da Selic + TR.</li>
@@ -701,9 +701,9 @@
       <li><b>Retirada</b> (aparece se houver): valor retirado no mês. Com retiradas, as fórmulas de % continuam as mesmas (o aporte total não desconta retiradas).</li></ul>
     </div></details>
     <details class="icard"><summary>Comparar, Novidades, CDB e Ouro</summary><div class="ib"><ul>
-      <li><b>Comparar</b>: busque e adicione ações e índices (Ibovespa, Dólar, CDB 100% do CDI, IPCA, Poupança, Ouro). O primeiro item é a referência (⇅ troca). Com o critério <b>Preço da ação</b>, compara a variação % entre as datas; com um indicador (DY, P/L, ROE…), compara os valores atuais só entre ações (índices e datas ficam bloqueados). “Renderam menos/mais” mostram cada item e a diferença em pontos para a referência; favoritos primeiro, depois a maior diferença. <b>Comparar com tudo</b> coloca nas colunas todas as ações mantidas e todos os índices (o gráfico mostra só os itens escolhidos); a variação usa fechamentos diários (até 10 anos; antes disso, mensais) e o preço atual quando o fim é hoje.</li>
+      <li><b>Comparar</b>: busque e adicione ações e índices (Ibovespa, Dólar, CDB, IPCA, Poupança, Ouro). O primeiro item é a referência (⇅ troca). Com o critério <b>Preço da ação</b>, compara a variação % entre as datas; com um indicador (DY, P/L, ROE…), compara os valores atuais só entre ações (índices e datas ficam bloqueados). “Renderam menos/mais” mostram cada item e a diferença em pontos para a referência; favoritos primeiro, depois a maior diferença. <b>Comparar com tudo</b> coloca nas colunas todas as ações mantidas e todos os índices (o gráfico mostra só os itens escolhidos); a variação usa fechamentos diários (até 10 anos; antes disso, mensais) e o preço atual quando o fim é hoje.</li>
       <li><b>Novidades</b>: as 10 listagens mais recentes pela primeira data de negociação (B3/COTAHIST, no Brasil; data de IPO do TradingView, no exterior). Etiqueta <b>NOVA</b> = listada há menos de 3 meses. Mudanças de ticker podem aparecer como listagem nova.</li>
-      <li><b>CDB 100% do CDI</b>: acumula a taxa CDI diária do Banco Central (SGS 12) × 100%, sem impostos.</li>
+      <li><b>CDB</b> (rende 100% do CDI): acumula a taxa CDI diária do Banco Central (SGS 12) × 100%, sem impostos.</li>
       <li><b>Ouro</b>: contrato futuro de ouro (Yahoo, GC=F, US$/onça) × dólar PTAX do Banco Central, em R$ por onça; desde 11/2006.</li></ul></div></details>
     <details class="icard"><summary>Grupos</summary><div class="ib">
     <ul>

@@ -4,7 +4,7 @@
     { id: 'stock', label: 'Ação', color: '#34d399' },
     { id: 'ibov', label: 'Ibovespa', color: '#60a5fa' },
     { id: 'usd', label: 'Dólar', color: '#facc15' },
-    { id: 'cdi', label: 'CDB 100% do CDI', color: '#f472b6' },
+    { id: 'cdi', label: 'CDB', color: '#f472b6' },
     { id: 'ipca', label: 'Inflação (IPCA)', color: '#fb923c' },
     { id: 'poup', label: 'Poupança', color: '#a78bfa' },
     { id: 'gold', label: 'Ouro', color: '#d4a373' },
