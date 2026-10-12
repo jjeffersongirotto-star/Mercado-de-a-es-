@@ -547,6 +547,7 @@ app = FastAPI(title="Screener B3")
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.mount("/static/logos", StaticFiles(directory=os.path.join(BASE, "static", "logos")), name="logos")
 app.mount("/static/flags", StaticFiles(directory=os.path.join(BASE, "static", "flags")), name="flags")
+app.mount("/static/icons", StaticFiles(directory=os.path.join(BASE, "static", "icons")), name="icons")
 
 @app.on_event("startup")
 def _start():
@@ -795,6 +796,22 @@ def _index_html():
                        f'<link rel="stylesheet" href="/static/tw.css?v={_hash(TW_CSS)}">', h, count=1)
         _INDEX.update(key=key, html=h.encode("utf-8"))
     return _INDEX["html"]
+
+@app.get("/manifest.webmanifest")
+def manifest():
+    """Manifesto do app instalável. Nome = <title> e cor = <meta name="theme-color"> do index.html (fonte única)."""
+    h = open(os.path.join(BASE, "index.html"), encoding="utf-8").read()
+    title = re.search(r"<title>(.*?)</title>", h).group(1)
+    color = re.search(r'<meta name="theme-color" content="([^"]+)"', h).group(1)
+    icon = lambda f, s, p="any": {"src": f"/static/icons/{f}", "sizes": s, "type": "image/png", "purpose": p}
+    m = {"name": title, "short_name": title.split(" — ")[0], "start_url": "/", "scope": "/", "display": "standalone",
+         "lang": "pt-BR", "background_color": color, "theme_color": color,
+         "icons": [icon("icon-192.png", "192x192"), icon("icon-512.png", "512x512"), icon("maskable-512.png", "512x512", "maskable")]}
+    return JSONResponse(m, media_type="application/manifest+json", headers={"Cache-Control": "no-cache"})
+
+@app.get("/sw.js")
+def service_worker():
+    return FileResponse(os.path.join(BASE, "sw.js"), media_type="application/javascript", headers={"Cache-Control": "no-cache"})
 
 @app.get("/tailwind.config.js")
 def tw_config():  # mesma configuração do build (tailwind.config.js), usada só quando o CSS gerado não existe
