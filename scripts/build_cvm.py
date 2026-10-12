@@ -94,17 +94,19 @@ def main(outdir, cache):
     dfp = get_zip(cache, "DFP", fy)
     if dfp is None or len(read(dfp, f"dfp_cia_aberta_DRE_con_{fy}.csv", ["3.01"])) < 100:
         fy -= 1; dfp = get_zip(cache, "DFP", fy)
-    dfp5 = get_zip(cache, "DFP", fy - 5)
+    dfpn = {n: get_zip(cache, "DFP", fy - n) for n in range(1, 6)}  # exercícios anteriores (crescimento 1 a 5 anos)
     itr = get_zip(cache, "ITR", fy + 1)
     fca = get_zip(cache, "FCA", today.year)
-    print(f"DFP {fy} / {fy-5}, ITR {fy+1}", flush=True)
+    print(f"DFP {fy} / {fy-5}..{fy-1}, ITR {fy+1}", flush=True)
 
     # --- DFP (exercício fy e fy-5)
     dre_f = stmts(dfp, "dfp", fy, "DRE", DRE_C)
     FY = pivot(dre_f, (dre_f["ORDEM_EXERC"] == "ÚLTIMO"))
     ds305 = {c: s for c, k, s in zip(dre_f["CNPJ_CIA"], dre_f["CD_CONTA"], dre_f["DS_CONTA"]) if k == "3.05"}
-    dre_5 = stmts(dfp5, "dfp", fy - 5, "DRE", ["3.01", "3.11", "3.11.01"]) if dfp5 else pd.DataFrame()
-    FY5 = pivot(dre_5, dre_5["ORDEM_EXERC"] == "ÚLTIMO") if len(dre_5) else {}
+    FYN = {}
+    for n, z in dfpn.items():
+        dre_n = stmts(z, "dfp", fy - n, "DRE", ["3.01", "3.11", "3.11.01"]) if z else pd.DataFrame()
+        FYN[n] = pivot(dre_n, dre_n["ORDEM_EXERC"] == "ÚLTIMO") if len(dre_n) else {}
     bal_f = pd.concat([stmts(dfp, "dfp", fy, "BPA", BPA_C), stmts(dfp, "dfp", fy, "BPP", BPP_C)])
     BALF = pivot(bal_f, bal_f["ORDEM_EXERC"] == "ÚLTIMO")
     # --- ITR do ano corrente
@@ -175,11 +177,12 @@ def main(outdir, cache):
                        "mliq": div(ni, rev, 100), "liqcorr": div(bal["1.01"], bal["2.01"]),
                        "dlpl": div(debt - cash, eq) if eq and eq > 0 else None, "dlebit": div(debt - cash, ebit) if ebit and ebit > 0 else None,
                        "roic": div(ebit, inv, 100) if inv > 0 else None, "roic_adj": div(ebit_adj, inv, 100) if inv > 0 else None})
-        # CAGR 5 anos (exercícios fy vs fy-5)
-        for key, k in (("cresc5a", "3.01"), ("lucro5a", "3.11.01")):
-            a, b = FY.get((cnpj, k)), FY5.get((cnpj, k))
-            if k == "3.11.01" and (a is None or b is None): a, b = FY.get((cnpj, "3.11")), FY5.get((cnpj, "3.11"))
-            if a and b and a > 0 and b > 0 and not (fin and key == "cresc5a"): r[key] = round(((a / b) ** 0.2 - 1) * 100, 2)
+        # crescimento médio por ano (CAGR) em n anos: exercício fy vs fy-n (receita de banco/seguradora não é comparável)
+        for n, FN in FYN.items():
+            for key, k in (("cresc", "3.01"), ("lucro", "3.11.01")):
+                a, b = FY.get((cnpj, k)), FN.get((cnpj, k))
+                if k == "3.11.01" and (a is None or b is None): a, b = FY.get((cnpj, "3.11")), FN.get((cnpj, "3.11"))
+                if a and b and a > 0 and b > 0 and not (fin and key == "cresc"): r[f"{key}{n}a"] = round(((a / b) ** (1 / n) - 1) * 100, 2)
         rows[t] = {k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items() if v is not None}
     save(os.path.join(outdir, "cvm.json"), "cvm", rows, {"fy": fy, "itr_year": fy + 1})
     print(f"CVM: {len(rows)} tickers ({len(cache_co)} empresas)")

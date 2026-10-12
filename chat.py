@@ -25,8 +25,8 @@ IDXN = {"@ibov": "Ibovespa", "@usd": "Dólar", "@cdi": "CDB 100% do CDI", "@ipca
 # métricas calculadas do histórico (snapshot metrics): rótulo, unidade
 MX = {"ret1": ("Valorização 1 ano", "%"), "ret2": ("Valorização 2 anos", "%"), "ret3": ("Valorização 3 anos", "%"),
       "ret4": ("Valorização 4 anos", "%"), "ret5": ("Valorização 5 anos", "%"), "dy1": ("DY médio 1 ano", "%"),
-      "prov12": ("Proventos 12m ÷ preço", "%"), "avg1": ("Preço médio 1 mês", "R$"), "v30": ("Volume médio 30 pregões", "$")}
-BIG = {"valmerc", "patrliq", "liq2m", "v30", "voldia", "vol10", "vol30", "vol90"}
+      "prov12": ("Proventos 12m ÷ preço", "%"), "avg1": ("Preço médio 1 mês", "R$")}
+BIG = {"valmerc", "patrliq"}  # + campos de volume (grp "vol" em /api/data)
 RET = "ret"  # pseudo-indicador: variação de preço no período (calculada pelo histórico)
 
 # indicador -> sinônimos (texto normalizado: sem acento, minúsculo). Casam por palavra inteira, o mais longo primeiro.
@@ -51,8 +51,8 @@ SYN = {
     "dlpl": ["divida liquida/patrimonio", "divida liquida / patrimonio", "divida liquida sobre patrimonio", "div liq/pl", "div liq/patrim",
              "dl/pl", "divida/pl", "divida/patrimonio", "divida sobre patrimonio", "divida liquida", "divida", "dividas", "endividamento",
              "endividada", "endividadas", "endividado", "alavancagem", "alavancada", "alavancadas"],
-    "liq2m": ["liquidez diaria", "liquidez 2 meses", "liquidez media", "liquidez", "liquidas", "liquida", "negociacao"],
-    "v30": ["volume financeiro", "volume medio", "volume"],
+    "liq2m": ["liquidez diaria", "liquidez 2 meses", "liquidez media", "liquidez", "liquidas", "liquida", "negociacao", "volume 2 meses"],
+    "vol30": ["volume financeiro", "volume medio", "volume", "volume 1 mes", "volume mensal"],
     "cresc5a": ["crescimento de receita", "crescimento da receita", "crescimento das receitas", "cresc receita", "cagr receita", "cagr receitas",
                 "cagr de receita", "receita cresceu", "crescimento de receitas"],
     "lucro5a": ["crescimento de lucro", "crescimento do lucro", "crescimento dos lucros", "cresc lucro", "cagr lucro", "cagr lucros",
@@ -207,7 +207,7 @@ def build(rows, fields, metrics, cad=None):
 
     def liq(r):
         v = r.get("v") or {}
-        return (M.get(r["ticker"]) or {}).get("v30") or v.get("vol30") or v.get("liq2m") or 0
+        return v.get("vol30") or 0
     roots = {}
     for r in rows: roots.setdefault(r["ticker"][:4], []).append(r["ticker"])
     for k in roots: roots[k].sort(key=lambda t: -liq(by[t]))
@@ -239,7 +239,7 @@ comunicacoes cia companhias ordinaria preferencial units cons class classe each 
 
 def fmt(D, k, x):
     if x is None: return "—"
-    if k in BIG: return money_big(x)
+    if k in BIG or (D["F"].get(k) or {}).get("grp") == "vol": return money_big(x)
     unit = (D["F"].get(k) or {}).get("unit") or (MX.get(k) or ("", ""))[1]
     if unit == "%": return br(x) + "%"
     if unit in ("R$", "$"): return "R$ " + br(x)
@@ -577,7 +577,7 @@ def ranking(P, D):
     crit = []
     if P["sector"]: crit.append(f"setor {P['sector']}")
     if not P["illiquid"]:
-        rows = [r for r in rows if (val(D, r, "liq2m") or 0) >= 5e5 or (D["M"].get(r["ticker"]) or {}).get("v30", 0) >= 5e5]
+        rows = [r for r in rows if (val(D, r, "liq2m") or 0) >= 5e5]
         crit.append("liquidez ≥ R$ 500 mil/dia")
     if k == "dy" and not P["illiquid"]:
         rows = [r for r in rows if (val(D, r, "dy") or 0) < 40]; crit.append("DY < 40% (evita distorções, como nos grupos)")
@@ -803,7 +803,7 @@ GLOSS_SYN = {"pl": "p/l", "preco/lucro": "p/l", "preco lucro": "p/l", "pvp": "p/
              "ibov": "ibovespa", "juros sobre capital proprio": "jcp", "juros sobre capital": "jcp", "data ex": "data com", "split": "desdobramento",
              "inplit": "grupamento", "lucro por acao": "lpa", "valor patrimonial": "vpa", "valor patrimonial por acao": "vpa", "crescimento": "cagr",
              "cagr receita": "cagr", "cagr lucro": "cagr", "proventos": "dy", "ebit ajustado": "ebit", "small cap": "small caps",
-             "liquidez": "liquidez 2 meses", "magic": "magic formula", "preco justo": "graham"}
+             "liquidez": "volume", "magic": "magic formula", "preco justo": "graham"}
 # assunto da pergunta -> seções do painel ⓘ (títulos <h3>/<summary>); o texto fica só no painel
 HOWTO_KEYS = [
     (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), ["Previsão aluguel"]),
@@ -1009,7 +1009,7 @@ Use "ret" como indicador para variação de preço/rentabilidade. Responda só o
 def interpret(q, hist, D, deadline):
     """IA só para entender a pergunta (JSON). -> dict parse-compatível ou None."""
     if not os.environ.get("GEMINI_API_KEY"): return None
-    keys = ", ".join(f"{k} ({label(D, k)})" for k in list(D["F"]) + ["ret1", "ret5", "prov12", "v30", RET] if k in D["F"] or k in MX or k == RET)
+    keys = ", ".join(f"{k} ({label(D, k)})" for k in list(D["F"]) + ["ret1", "ret5", "prov12", RET] if k in D["F"] or k in MX or k == RET)
     sys_t = INTERP.format(hoje=date.today().isoformat(), idx=", ".join(f"{k} ({v})" for k, v in IDXN.items()), keys=keys,
                           sect=", ".join(SECTORS))
     body = {"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": _contents(q, hist, 4),
