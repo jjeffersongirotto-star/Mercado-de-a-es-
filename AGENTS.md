@@ -127,12 +127,13 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
 
 ## 5. Fluxo de trabalho
 
-1. Parta da `main` atualizada (`git fetch origin main` e crie/atualize sua branch a partir dela).
+0. Monte a lista do que vai mudar e **aguarde a mensagem "Pode fazer"** (seção 7). Pergunta se responde, sem executar.
+1. Parta da `main` atualizada (`git fetch origin main` e crie/atualize sua branch a partir dela). Antes, confira se a publicação anterior no Render entrou no ar.
 2. Faça a mudança seguindo as seções 1–4. Confira: a mudança copiou alguma informação que já existia? Se sim, troque por leitura da fonte.
 3. Rode os testes (comandos no README → **Testes**). Corrigiu um bug do chat? Acrescente a pergunta que falhava em `tests/test_chat.py`.
 4. Mudou algo visual? Confira no celular (aba afetada, tema escuro, textos sem cortar).
 5. Commit com mensagem em português dizendo **o que** mudou e **por quê**. Um assunto por commit/PR.
-6. PR para a `main`, merge, e publique no Render (README → **Publicar**). Depois do deploy, confira `/api/status` e a aba alterada.
+6. PR para a `main`, merge, e dispare a publicação no Render (README → **Publicar**). Não fique acompanhando o deploy: ele é conferido no passo 1 da próxima alteração.
 7. Atualize o README se mudou algo que o usuário ou quem publica precisa saber; atualize este arquivo se mudou uma regra ou a fonte de uma informação.
 
 ---
@@ -146,3 +147,14 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
 - Colocar segredos no repositório.
 - Trazer bibliotecas novas sem necessidade (cada uma pesa no carregamento e no build do Render).
 - Desligar, pular ou apagar testes para passar.
+
+---
+
+## 7. Trabalho com assistentes (Claude, Grok etc.)
+
+- Pedido de alteração → o assistente responde com a **lista** do que vai mudar e só executa depois da mensagem **"Pode fazer"**.
+  Pergunta → só responde e aguarda.
+- Depois do merge, só dispara a publicação; confere se entrou no ar antes da próxima alteração.
+- Captura de tela só em mudança de layout: poucas, recortadas na parte alterada. Mudança de texto/dado se confere sem imagem.
+- Leia só o trecho necessário dos arquivos (`grep` e intervalos de linhas), não o arquivo inteiro.
+- Respostas e descrições de PR curtas; alterações pequenas aprovadas juntas vão num só PR.

@@ -24,7 +24,7 @@
   const EX = ['DY do Itaú', 'Maiores DY dos bancos', 'PETR4 vs Ibovespa em 2024', 'Ações com ROE acima de 20 e P/L abaixo de 8', 'O que significam as cores?'];
   const MODE = { 'gemini+web': 'respondido por IA (Gemini) com dados do site + busca na web', gemini: 'respondido por IA (Gemini) com os dados do site',
     'ia+dados': 'pergunta interpretada por IA; números calculados com os dados do site', regras: 'resposta automática com os dados do site' };
-  const chips = (list) => list && list.length ? `<div class="cht-s">${list.map(x => `<button type="button" class="cht-c" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
+  const chips = (list) => list && list.length ? `<div class="cht-s">${list.map(x => `<button type="button" class="cht-c" data-q="${esc(x.q || x)}">${esc(x.l || x)}</button>`).join('')}</div>` : '';  // x = texto ou {l: rótulo, q: pergunta}
   const draw = () => {
     const last = H.length - 1;
     L.innerHTML = H.length ? H.map((m, i) => `<div class="cht-m ${m.r === 'u' ? 'u' : 'a'}">${m.r === 'u' ? esc(m.t) : md(m.t)}${m.mode ? `<div class="cht-n">${MODE[m.mode] || MODE.regras}</div>` : ''}${i === last && m.r === 'a' ? chips(m.sug) : ''}</div>`).join('')

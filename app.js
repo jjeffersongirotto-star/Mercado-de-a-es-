@@ -90,7 +90,7 @@ function orderedKeys() {
   const keys = itemIds();
   const base = keys.slice();
   const pos = (k) => { const i = prefs.order.indexOf(k); return i < 0 ? 1e6 + base.indexOf(k) : i; };
-  return keys.sort((a, b) => (prefs.fav[b] ? 1 : 0) - (prefs.fav[a] ? 1 : 0) || pos(a) - pos(b));
+  return keys.sort((a, b) => (GROUPS[a] ? 1 : 0) - (GROUPS[b] ? 1 : 0) || (prefs.fav[b] ? 1 : 0) - (prefs.fav[a] ? 1 : 0) || pos(a) - pos(b));  // grupos (com Período) sempre no fim
 }
 // aplicados = com valor e não ocultos
 function computeFilters() {
@@ -119,7 +119,7 @@ function itemHtml(id, inFolder) {
     sel = `<div class="flex gap-1">${subs.length ? `<select class="fsub sel flex-1 min-w-0" data-key="${k}" aria-label="Receita ou lucro">${subs.map(x => opt(x, x === f.sub, x)).join('')}</select>` : ''}
       <select class="fper sel flex-1 min-w-0" data-key="${k}" aria-label="Período">${fs.filter(x => x.sub === f.sub).map(x => opt(x.key, x.key === f.key, x.per)).join('')}</select></div>`;
   }
-  return `<div class="fitem flex flex-col gap-1 bg-slate-950/60 border ${active ? 'border-emerald-600' : 'border-slate-800'} rounded-lg px-2 py-1.5${GROUPS[id] ? ' col-span-2' : ''}" data-key="${k}" title="${esc(h.txt + (f.unit === '%' ? ' — digite 8 para 8%' : ''))}">
+  return `<div class="fitem flex flex-col gap-1 bg-slate-950/60 border ${active ? 'border-emerald-600' : 'border-slate-800'} rounded-lg px-2 py-1.5${GROUPS[id] ? ' col-span-2 sm:col-span-3 md:col-span-2 xl:col-span-3 fgrp' : ''}" data-key="${k}" title="${esc(h.txt + (f.unit === '%' ? ' — digite 8 para 8%' : ''))}">
     <div class="flex items-center gap-1 text-[11px] text-slate-400">
       <span class="drag-handle cursor-grab select-none text-slate-500 text-sm leading-none px-0.5" title="Arraste para reordenar ou para 'Filtros ocultos'">⠿</span>
       <span class="truncate flex-1">${esc(label)}${f.unit === '%' ? ' (%)' : f.scale ? ` (${curSym()} mi)` : ''}</span>
@@ -134,7 +134,7 @@ function itemHtml(id, inFolder) {
 function renderFilterUI() {
   const keys = orderedKeys();
   const visible = keys.filter(k => !prefs.hidden[k]), hidden = keys.filter(k => prefs.hidden[k]);
-  $('#filters').innerHTML = visible.map(k => itemHtml(k, false)).join('');
+  $('#filters').innerHTML = visible.map(k => itemHtml(k, false)).join('').replace('fgrp"', 'fgrp col-start-1"');  // 1º grupo começa linha nova
   $('#filtersEmpty').classList.toggle('hidden', visible.length > 0);
   $('#hiddenList').innerHTML = hidden.map(k => itemHtml(k, true)).join('');
   $('#hiddenCount').textContent = hidden.length;
@@ -223,9 +223,10 @@ function buildSort() {
   updateSortDir();
 }
 function updateSortDir() {  // no celular só o ícone (o nome fica no aria-label/título)
-  const t = state.sortDir > 0 ? ['1→9', 'Menor → maior'] : ['9→1', 'Maior → menor'];
-  $('#sortDir').innerHTML = `<span class="sd-ic">${t[0]}</span><span class="max-sm:hidden"> ${t[1]}</span>`;
-  $('#sortDir').setAttribute('aria-label', t[1]); $('#sortDir').title = t[1] + ' (toque para inverter)';
+  const t = state.sortDir > 0 ? 'Menor → maior' : 'Maior → menor';
+  const up = state.sortDir > 0;  // seta ativa em verde: ˄ menor → maior · ˅ maior → menor
+  $('#sortDir').innerHTML = `<svg class="sd-ic" viewBox="0 0 16 18" width="16" height="18" aria-hidden="true"><path class="${up ? 'on' : ''}" d="M4 7 8 3l4 4"/><path class="${up ? '' : 'on'}" d="M4 11l4 4 4-4"/></svg><span class="max-sm:hidden">${t}</span>`;
+  $('#sortDir').setAttribute('aria-label', t); $('#sortDir').title = t + ' (toque para inverter)';
 }
 // Confiança do consenso: N = fontes com dados da empresa; A = fontes que nunca ficaram fora da maioria
 // em nenhum indicador com maioria (âmbar). Indicadores sem maioria (vermelho) e de bancos não contam.
@@ -611,7 +612,7 @@ async function load() {
     if (country === 'br') { d.rowsK = universe(d.rows); d.rows = tradable(d.rows); await loadProfiles(d.rows); } // todas as classes negociadas; grupos prontos usam rowsK (1 por empresa)
     d.rows.forEach(prepRow); d.hasLiq = d.rows.some(x => x.v.liq2m != null);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
-    $('#updated').innerHTML = `<span class="max-sm:hidden">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="max-sm:hidden">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
+    $('#updated').innerHTML = `<span class="max-sm:hidden">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp.replace(/^(\d\d\/\d\d\/)\d\d(\d\d) (.*)$/, '$1$2 <span class="whitespace-nowrap">$3</span>')}</b> <span class="max-sm:hidden">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
     $('#srcStatus').innerHTML = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `<div><b class="text-slate-300">${n}</b>: ${friendlyStatus(st[k], d.updated_at_sp)}</div>`).join('');

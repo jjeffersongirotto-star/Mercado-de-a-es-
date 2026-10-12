@@ -187,12 +187,14 @@
     return { title: gg.name, g: gg, rows: gg.tickers.map(t => byT.get(t)).filter(Boolean).map(r => [r, r.v.valmerc ? 'R$ ' + (r.v.valmerc / 1e9).toFixed(1).replace('.', ',') + ' bi' : '—']), h: 'Valor de mercado' };
   }
   const starB = (id) => id === 'fav' ? '' : `<button type="button" class="gstar${ui.gstar.includes(id) ? ' on' : ''}" data-gstar="${esc(id)}" aria-label="Destacar grupo">${ui.gstar.includes(id) ? '★' : '☆'}</button>`;
+  // ícone de arquivo com seta: para baixo = exportar (baixar), para cima = importar
+  const fileIc = (down) => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>${down ? '<path d="M12 11v6m-3-3 3 3 3-3"/>' : '<path d="M12 17v-6m-3 3 3-3 3 3"/>'}</svg>`;
   function tileHtml(id) {
     const d = groupData(id); if (!d) return '';
     if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
     return `<div class="gt" data-id="${esc(id)}"><div class="gt-head" data-open="${esc(id)}">${starB(id)}<span class="gt-name">${esc(d.title)}</span></div>
-      ${d.p ? ctlRow(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${esc(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button></div>`}
-      <div class="gt-list">${grpBody(d, false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
+      ${d.p ? ctlRow(d.p) : ''}
+      <div class="gt-list">${grpBody(d, false)}</div><div class="gt-foot">${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}${d.p ? '' : `<button type="button" class="gt-act" data-g="edit" data-n="${esc(d.g.name)}">Editar</button><button type="button" class="gt-act dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button>`}</div></div>`;
   }
   // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
   let FLOW = null, flowLoading = false;
@@ -231,11 +233,11 @@
     if (!state.data) { r.innerHTML = loaderHTML('Carregando dados…'); setTimeout(list, 1500); return; }
     if (fullId) { r.innerHTML = fullHtml(fullId); if (fullId) return; }
     r.innerHTML = `<section class="space-y-2">
-      <div class="flex flex-wrap items-center gap-2"><h2 class="text-base font-bold mr-auto">Grupos</h2>
+      <div class="flex flex-wrap items-center gap-2">
+        ${state.country === 'br' ? '<button type="button" class="gbtn pri" data-g="new">＋ Criar</button>' : ''}
         <button type="button" class="gbtn" data-g="reorg">⇅ Reorganizar</button>
-        ${state.country === 'br' ? `<button type="button" class="gbtn pri" data-g="new">＋ Criar</button>
-        <button type="button" class="gbtn" data-g="export" title="Exportar grupos" aria-label="Exportar grupos">↓</button>
-        <button type="button" class="gbtn" data-g="import" title="Importar grupos" aria-label="Importar grupos">↑</button>` : ''}
+        ${state.country === 'br' ? `<button type="button" class="gbtn" data-g="export" title="Exportar grupos" aria-label="Exportar grupos">${fileIc(1)}<span class="max-sm:hidden">Exportar</span></button>
+        <button type="button" class="gbtn" data-g="import" title="Importar grupos" aria-label="Importar grupos">${fileIc(0)}<span class="max-sm:hidden">Importar</span></button>` : ''}
         <input id="gFile" type="file" accept=".json,application/json,text/plain,*/*" class="hidden"></div>
       <div id="gGrid" class="ggrid${reorg ? ' reorg' : ''}">${tileIds().map(id => tileHtml(id) + (id === 'fav' && !reorg ? flowHtml() : '')).join('')}</div></section>`;
     $g('#gFile').addEventListener('change', importG);
