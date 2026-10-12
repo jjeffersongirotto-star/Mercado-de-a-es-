@@ -60,6 +60,13 @@
   #tooltip { pointer-events: none; }
   #hiddenFolder:not(.open) #hiddenList .fitem { display: none; }
   #hiddenFolder.open .folder-hint { display: none; }
+  @media (max-width: 639px) {  /* topo no celular em pé: faixa; bandeira | Fonte (metade de cima) e data (metade de baixo) | botões */
+    #hdr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "brand brand brand" "flag src btns" "flag upd btns"; row-gap: 0; }
+    #hdr > h1 { grid-area: brand; margin-bottom: .4rem; } #hdrSrc { display: contents; } #ddCountry { grid-area: flag; } #hdrBtns { grid-area: btns; gap: .35rem; }
+    #ddSource { grid-area: src; min-width: 0; justify-self: start; max-width: 100%; } #updated { grid-area: upd; align-self: start; line-height: 1.2; margin-top: 2px; }
+    body #hdr #btnSource { height: 22px; padding: 0 .45rem; border-radius: .45rem; max-width: 100%; overflow: hidden; } #sourceLabel { min-width: 0; overflow: hidden; white-space: nowrap; }
+    body #hdr #btnCountry { height: calc(22px + 2px + 1.2 * 11px); } body #hdrBtns .ricon { width: 30px; }
+  }
   #hiddenFolder:not(.open) #hiddenList { min-height: 0; padding-bottom: 0; }
   .sortable-fallback { opacity: .9 !important; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   .drag-handle { touch-action: none; }
@@ -400,15 +407,15 @@
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 <header class="border-b border-slate-800 bg-slate-900/80">
-  <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+  <div id="hdr" class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
       <h1 class="m-0 order-1 w-full sm:w-auto sm:flex-1 min-w-0"><picture><source media="(min-width: 640px)" srcset="/static/brand/jg-investing-wide.webp" width="2111" height="115"><img src="/static/brand/jg-investing.webp" alt="JG Investing" width="411" height="56" class="block w-full h-auto"></picture></h1>
-      <div class="order-3 sm:order-2 ml-auto flex-none flex items-center gap-2 text-sm">
+      <div id="hdrBtns" class="order-3 sm:order-2 ml-auto flex-none flex items-center gap-2 text-sm">
         <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button id="btnCsv">↓ CSV</button>
         <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
       </div>
       <div class="order-3 basis-full h-0 max-sm:hidden"></div>
-      <div class="order-2 sm:order-4 flex items-center gap-2 min-w-0">
+      <div id="hdrSrc" class="order-2 sm:order-4 flex items-center gap-2 min-w-0">
       <div id="ddCountry" class="dd">
         <button id="btnCountry" type="button" title="País" aria-haspopup="listbox" class="px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5">
           <img id="countryFlag" class="flag" src="/static/flags/br.png" alt="Brasil"><span class="chev text-[10px] text-slate-400">▾</span></button>
