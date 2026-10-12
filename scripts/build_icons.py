@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Gera os ícones do app instalável em static/icons/ a partir da arte "JG Investing" (scripts/icon-source.jpg,
-fonte única do desenho). Uso: python scripts/build_icons.py   (requer Pillow).
+"""Gera os ícones do app instalável em static/icons/ a partir da arte "JG Investing" (fonte única do desenho):
+scripts/icon-source.jpg (botão quadrado: ícones normais e iPhone) e scripts/icon-source-round.jpg (botão redondo: Android). Uso: python scripts/build_icons.py   (requer Pillow).
 Para trocar o ícone: substitua scripts/icon-source.jpg (botão quadrado sobre fundo escuro) e ajuste BOTAO se o recorte mudar."""
 import os
 from PIL import Image, ImageDraw, ImageFilter
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 FONTE = os.path.join(AQUI, "icon-source.jpg")
+FONTE_REDONDA = os.path.join(AQUI, "icon-source-round.jpg")
+CIRCULO = (139, 132, 1274, 1269)  # caixa do botão redondo dentro da imagem redonda
 OUT = os.path.join(AQUI, "..", "static", "icons")
 BOTAO = (206, 102, 1305, 1201)   # caixa do botão dentro da imagem (x0, y0, x1, y1)
 RAIO = 0.14                       # raio dos cantos do botão (fração do lado)
@@ -31,6 +33,17 @@ def cheio(size, k):
     return fundo.resize((size, size), Image.LANCZOS)
 
 
+def redondo(size, k=0.8):
+    """Android (maskable): botão redondo inteiro dentro da área segura (k do lado), sobre o fundo escuro do botão.
+    Em celulares de ícone redondo ele aparece como está; nos de outra forma, fica um círculo sobre o fundo escuro."""
+    b = Image.open(FONTE_REDONDA).convert("RGB").crop(CIRCULO); L = b.size[0]
+    C = size * 4; im = Image.new("RGB", (C, C), FUNDO)
+    n = int(C * k); arte = b.resize((n, n), Image.LANCZOS)
+    m = Image.new("L", (n, n), 0); ImageDraw.Draw(m).ellipse([0, 0, n - 1, n - 1], fill=255)
+    im.paste(arte, ((C - n) // 2, (C - n) // 2), m.filter(ImageFilter.GaussianBlur(n * 0.004)))
+    return im.resize((size, size), Image.LANCZOS)
+
+
 def icone(size, maskable=False, k=0.8):
     if maskable:
         return cheio(size, k)
@@ -42,8 +55,8 @@ def icone(size, maskable=False, k=0.8):
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    # maskable: Android recorta em círculo (área segura = 80%); Apple: iOS arredonda os cantos (cabe 92%)
+    # Apple: iOS arredonda os cantos (cabe 92% do botão quadrado); Android (maskable): versão redonda em 90% (o texto fica dentro da área segura de 80%)
     for nome, size, mask, k in (("icon-192.png", 192, False, 0), ("icon-512.png", 512, False, 0),
-                                ("maskable-512.png", 512, True, 0.8), ("apple-touch-icon.png", 180, True, 0.92)):
-        icone(size, mask, k).save(os.path.join(OUT, nome), optimize=True)
-        print(nome)
+                                ("apple-touch-icon.png", 180, True, 0.92)):
+        icone(size, mask, k).save(os.path.join(OUT, nome), optimize=True); print(nome)
+    redondo(512, 0.9).save(os.path.join(OUT, "maskable-512.png"), optimize=True); print("maskable-512.png")
