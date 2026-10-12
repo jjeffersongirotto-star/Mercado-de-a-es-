@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """Gera os ícones do app instalável em static/icons/ (fonte única do desenho do ícone).
-Uso: python scripts/build_icons.py   (requer Pillow). Fonte: Montserrat Italic (scripts/fonts/, licença OFL)."""
+Uso: python scripts/build_icons.py   (requer Pillow). Fonte: Montserrat Italic (scripts/fonts/, licença OFL).
+Desenho: fundo escuro inteiro, "JG Investing" em branco com o pingo do "i" em laranja, linha fina de alta com área sombreada."""
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 OUT = os.path.join(ROOT, "static", "icons")
 FONTE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "Montserrat-Italic.ttf")
 MARCA, SUB = "JG", "Investing"
-# cores do site (design system do index.html): fundo, cartão, borda, verde; dourado e cinza-claro para a marca
-BG, CARD, BORDA = (2, 6, 23), (15, 23, 42), (51, 65, 85)
-VERDE, VERDE2, BARRA = (52, 211, 153), (16, 185, 129), (6, 78, 59)
-OURO, CINZA = (251, 191, 36), (203, 213, 225)
+BG = (2, 6, 23)            # fundo do site (theme-color)
+AREA = (22, 34, 52)        # área sob a linha
+BRANCO = (248, 250, 252)
+LINHA = (52, 211, 153)     # verde do site
+PINGO = (249, 115, 22)     # laranja de destaque (pingo do "i")
 
 
 def fonte(peso, px):
@@ -20,32 +22,46 @@ def fonte(peso, px):
     return f
 
 
+def arte(S, z=1.0):
+    """Desenho S×S. z < 1 encolhe texto e gráfico para o centro (área segura do ícone maskable); o fundo e a área
+    sombreada continuam indo até as bordas."""
+    im = Image.new("RGBA", (S, S), BG); d = ImageDraw.Draw(im)
+    o = S * (1 - z) / 2; X = lambda x: o + x * S * z  # coordenadas 0–1 dentro da área útil
+    # linha de alta (fina, sem ponto final) com área sombreada até a base; sai pelas bordas
+    pts = [(0.0, 0.88), (0.22, 0.73), (0.38, 0.80), (0.60, 0.60), (0.74, 0.67), (1.0, 0.42)]
+    P = [(X(x), X(y)) for x, y in pts]
+    ext = lambda a, b, x: (x, a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]))  # prolonga o segmento a→b até x
+    P = [ext(P[0], P[1], -0.02 * S)] + P + [ext(P[-2], P[-1], 1.02 * S)]  # linha e área até as bordas, na mesma inclinação
+    d.polygon(P + [(1.02 * S, 1.02 * S), (-0.02 * S, 1.02 * S)], fill=AREA)
+    d.line(P, fill=LINHA, width=max(2, int(S * z * 0.022)), joint="curve")
+    # marca: JG + Investing, o "i" sem pingo (ı) e o pingo desenhado em laranja no lugar do original
+    S0 = S; S = S * z
+    tx, ty = X(0.11), X(0.10)
+    fm = fonte(800, S * 0.25)
+    d.text((tx, ty), MARCA, font=fm, fill=BRANCO)
+    by = d.textbbox((tx, ty), MARCA, font=fm)[3] + S * 0.015
+    fs = fonte(700, S * 0.135)
+    k = SUB.index("i")  # primeira letra "i" minúscula
+    sub = SUB[:k] + "ı" + SUB[k + 1:]
+    d.text((tx, by), sub, font=fs, fill=BRANCO)
+    xi = tx + d.textlength(SUB[:k], font=fs)
+    com, sem = Image.new("L", (S0, S0)), Image.new("L", (S0, S0))
+    ImageDraw.Draw(com).text((xi, by), "i", font=fs, fill=255)
+    ImageDraw.Draw(sem).text((xi, by), "ı", font=fs, fill=255)
+    bx0, by0, bx1, by1 = ImageChops.subtract(com, sem).getbbox()  # onde fica o pingo original
+    cx, cy, r = (bx0 + bx1) / 2, (by0 + by1) / 2, max(bx1 - bx0, by1 - by0) * 0.62  # um pouco maior que o original
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=PINGO)
+    return im
+
+
 def icone(size, maskable=False):
     S = 4 * size  # desenha em 4x e reduz: bordas suaves
-    im = Image.new("RGBA", (S, S), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    if maskable:  # Android recorta o ícone em círculo/forma própria: conteúdo dentro da área segura
-        d.rectangle([0, 0, S, S], fill=BG); pad = S * 0.20
+    if maskable:  # Android recorta em círculo/forma própria: conteúdo dentro da área segura (80%)
+        im = arte(S, 0.8)
     else:
-        d.rounded_rectangle([0, 0, S - 1, S - 1], radius=S * 0.22, fill=BG); pad = S * 0.14
-    w = S - 2 * pad
-    d.rounded_rectangle([pad, pad, S - pad, S - pad], radius=w * 0.12, fill=CARD, outline=BORDA, width=int(S * 0.012))
-    x0, y0, x1, y1 = pad + w * 0.14, pad + w * 0.14, S - pad - w * 0.14, S - pad - w * 0.16
-    # barras de volume
-    bw = (x1 - x0) / 9
-    for i, h in enumerate([0.25, 0.4, 0.32, 0.55, 0.48, 0.7, 0.62, 0.85, 1.0]):
-        bx = x0 + i * bw; top = y1 - (y1 - y0) * h * 0.45
-        d.rounded_rectangle([bx + bw * 0.18, top, bx + bw * 0.82, y1], radius=bw * 0.15, fill=BARRA)
-    # linha de alta
-    pts = [(x0, y1 - (y1 - y0) * 0.30), (x0 + (x1 - x0) * 0.28, y1 - (y1 - y0) * 0.52), (x0 + (x1 - x0) * 0.48, y1 - (y1 - y0) * 0.42),
-           (x0 + (x1 - x0) * 0.72, y1 - (y1 - y0) * 0.75), (x1, y0 + (y1 - y0) * 0.02)]
-    d.line(pts, fill=VERDE, width=int(S * 0.045), joint="curve")
-    r = S * 0.04; ex, ey = pts[-1]; d.ellipse([ex - r, ey - r, ex + r, ey + r], fill=VERDE2)
-    # marca no canto superior esquerdo (espaço livre acima da linha)
-    tx, ty = pad + w * 0.10, pad + w * 0.06
-    fm = fonte(800, w * 0.22)
-    d.text((tx, ty), MARCA, font=fm, fill=OURO)
-    hm = d.textbbox((tx, ty), MARCA, font=fm)
-    d.text((tx + w * 0.005, hm[3] + w * 0.02), SUB, font=fonte(600, w * 0.085), fill=CINZA)
+        im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        mask = Image.new("L", (S, S)); ImageDraw.Draw(mask).rounded_rectangle([0, 0, S - 1, S - 1], radius=S * 0.22, fill=255)
+        im.paste(arte(S), (0, 0), mask)
     return im.resize((size, size), Image.LANCZOS)
 
 
