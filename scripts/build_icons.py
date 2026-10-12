@@ -15,8 +15,9 @@ BOTAO = (206, 102, 1305, 1201)   # caixa do botão dentro da imagem (x0, y0, x1,
 RAIO = 0.14                       # raio dos cantos do botão (fração do lado)
 MOLDURA = 35                      # espessura da moldura clara do botão (px na arte), removida quando o celular recorta o ícone
 FONTE_MARCA = os.path.join(AQUI, "brand-source.jpg")
-FAIXA = (144, 100, 1980, 786)     # caixa da faixa horizontal dentro da imagem da marca
-MARCA = os.path.join(AQUI, "..", "static", "brand", "jg-investing.png")
+FAIXA = (56, 54, 3404, 510)        # caixa da faixa horizontal dentro da imagem da marca
+RAIO_FAIXA = 0.19                 # raio dos cantos da faixa (fração da altura)
+MARCA = os.path.join(AQUI, "..", "static", "brand", "jg-investing.webp")
 FUNDO = (3, 12, 34)               # cor escura do interior do botão (fundo dos ícones que o celular recorta)
 
 
@@ -48,10 +49,10 @@ def redondo(size, k=0.8):
     return im.resize((size, size), Image.LANCZOS)
 
 
-def marca(altura=120):
-    """Faixa "JG Investing" do topo do site, com os cantos arredondados transparentes (altura em px; exibida a 1/3)."""
+def marca(altura=126):
+    """Faixa "JG Investing" do topo do site, com os cantos arredondados transparentes (altura em px; exibida a até 1/3 no computador)."""
     b = Image.open(FONTE_MARCA).convert("RGB").crop(FAIXA); W, H = b.size
-    m = Image.new("L", (W, H), 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, W - 1, H - 1], radius=H * 0.2, fill=255)
+    m = Image.new("L", (W, H), 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, W - 1, H - 1], radius=H * RAIO_FAIXA, fill=255)
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); im.paste(b, (0, 0), m)
     return im.resize((round(W * altura / H), altura), Image.LANCZOS)
 
@@ -72,4 +73,4 @@ if __name__ == "__main__":
                                 ("apple-touch-icon.png", 180, True, 0.92)):
         icone(size, mask, k).save(os.path.join(OUT, nome), optimize=True); print(nome)
     redondo(512, 0.9).save(os.path.join(OUT, "maskable-512.png"), optimize=True); print("maskable-512.png")
-    os.makedirs(os.path.dirname(MARCA), exist_ok=True); marca().save(MARCA, optimize=True); print(os.path.basename(MARCA))
+    os.makedirs(os.path.dirname(MARCA), exist_ok=True); marca().save(MARCA, quality=90, method=6); print(os.path.basename(MARCA))
