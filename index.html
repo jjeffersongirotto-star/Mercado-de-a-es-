@@ -61,8 +61,8 @@
   #hiddenFolder:not(.open) #hiddenList .fitem { display: none; }
   #hiddenFolder.open .folder-hint { display: none; }
   @media (max-width: 639px) {  /* topo no celular em pé: faixa; bandeira | Fonte | data (dd/mm/aa, quebra em 2 linhas) | botões — mesma altura */
-    #hdr { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; grid-template-areas: "brand brand brand brand" "flag src upd btns"; column-gap: .2rem; }
-    #hdr > h1 { grid-area: brand; } #hdrSrc { display: contents; } #ddCountry { grid-area: flag; } #hdrBtns { grid-area: btns; gap: .3rem; }
+    #hdr { display: grid; grid-template-columns: repeat(6, auto); justify-content: space-between; grid-template-areas: "brand brand brand brand brand brand" "flag src upd ref csv info"; column-gap: 0; }
+    #hdr > h1 { grid-area: brand; contain: inline-size; }  /* a faixa não alarga as colunas: sobra vai para o espaço entre os itens */ #hdrSrc { display: contents; } #ddCountry { grid-area: flag; } #hdrBtns { display: contents; } #btnRefresh { grid-area: ref; } #btnCsv { grid-area: csv; } #btnInfo { grid-area: info; }
     #ddSource { grid-area: src; } #updated { grid-area: upd; justify-self: center; text-align: center; white-space: normal; line-height: 1.25; }
     body #hdrBtns .ricon { width: 24px; } body #hdr #btnCsv { padding: 0 .3rem; white-space: nowrap; } body #hdr #btnInfo { width: 34px; min-width: 34px; } body #hdr #btnCountry { padding: 0 .2rem; } #updated { font-size: clamp(11px, 3.2vw, 14px); min-width: max-content; overflow: visible; } #ddCountry, #ddSource { width: max-content; } body #hdr #btnSource { padding: 0 .35rem; } #updated .upd-t { display: block; }
   }
@@ -181,6 +181,11 @@
   .gc-wrap { display: flex; gap: .5rem; align-items: stretch; }
   .gc-plot { position: relative; flex: 1; min-width: 0; height: 220px; padding-left: 38px; padding-bottom: 18px; }
   @media (min-width: 768px) { .gc-plot { height: 280px; } }
+  .gc-vl { position: absolute; top: 0; bottom: 18px; width: 1px; background: var(--c-mut); pointer-events: none; }
+  .gc-tip { position: absolute; top: 4px; z-index: 5; padding: .35rem .5rem; border-radius: .5rem; background: rgb(15 23 42 / .95); border: 1px solid var(--bd); font-size: 11px; line-height: 1.35; pointer-events: none; white-space: nowrap; }
+  .gc-tip-d { color: var(--c-mut); margin-bottom: .1rem; } .gc-tip > div[style] b { color: var(--lc); }
+  .cmp-vm { display: inline-flex; border: 1px solid var(--bd); border-radius: var(--r); overflow: hidden; } .cmp-vm button { padding: 0 .7rem; min-height: var(--h-sm); font-size: 13px; font-weight: 600; color: var(--c-mut); background: var(--bg-sec); }
+  .cmp-vm button.on { color: #fff; background: var(--c-pos-bg); }
   .gc-svg { width: 100%; height: 100%; display: block; }
   .gc-grid { stroke: rgb(51 65 85 / .5); stroke-width: 1; vector-effect: non-scaling-stroke; }
   .gc-zero { stroke: rgb(148 163 184 / .6); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
@@ -353,7 +358,7 @@
   body .pv-ok { min-height: var(--h-sm); }
   body .gbtn.dan, body .pv-lnk.dan, body .gt-tabs button.dan { color: var(--c-neg); border-color: rgb(159 18 57 / .8); background: rgb(76 5 25 / .35); }
   body .umod-ok.dan { background: var(--c-neg-bg); border-color: var(--c-neg-bd); color: #fff; }
-  body .cmp-allb { display: block; width: 100%; margin-top: .5rem; } body .cmp-allb:not(.on) { background: rgb(16 185 129); color: rgb(2 44 34); border-color: rgb(16 185 129); }
+  body .cmp-allb { display: block; width: 100%; margin-top: .5rem; } 
   body .cmp-allb.on { border-color: var(--c-pos-bd); color: var(--c-pos); background: rgb(6 78 59 / .45); }
   /* Botões de ícone: mesmo tamanho, mesmo traço; fechar ✕ e adicionar + idênticos */
   body .lupa, body .gx, body #btnInfo, body [data-close], body .pv-x, body .pv-i, body .pv-plus, body .cmp-swap, body #btnCountry {
@@ -572,7 +577,7 @@
 <h3>Reorganizar</h3>
 <ol class="list-decimal pl-5"><li>Na aba Grupos, toque em ⇅ Reorganizar.</li><li>Escolha ★ Favoritados ou Demais.</li><li>Arraste os grupos pela alça ⠿ para a ordem desejada e toque em Salvar (ou Cancelar).</li></ol><p class="text-slate-400 text-xs mt-1">Nos filtros da aba Ações, também dá para arrastar pela alça ⠿ para reordenar ou mandar para Filtros ocultos.</p>
 <h3>Comparar</h3>
-<ol class="list-decimal pl-5"><li>Abra a aba Comparar.</li><li>Nas bandeiras (canto direito) escolha o país das ações (começa no Brasil); 🌐 compara ações de todos os países. Cada país tem o seu índice (Brasil: Ibovespa; EUA: S&amp;P 500; Reino Unido: FTSE 100; Alemanha: DAX; Portugal: PSI; Japão: Nikkei 225). Comparar tudo funciona só no Brasil.</li><li>Em 'Buscar ação ou índice principal…' escolha a referência.</li><li>Em 'Adicionar ação ou índice…' inclua as outras para comparar.</li><li>O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens.</li></ol><p class="text-slate-400 text-xs mt-1">Aqui no Chat você também pode perguntar, por exemplo: “PETR4 vs VALE3 vs Ibovespa em 2 anos”.</p>
+<ol class="list-decimal pl-5"><li>Abra a aba Comparar.</li><li>Nas bandeiras (canto direito) escolha o país das ações (começa no Brasil); 🌐 compara ações de todos os países. Cada país tem o seu índice (Brasil: Ibovespa; EUA: S&amp;P 500; Reino Unido: FTSE 100; Alemanha: DAX; Portugal: PSI; Japão: Nikkei 225). Comparar tudo funciona só no Brasil.</li><li>Em 'Buscar ação ou índice principal…' escolha a referência.</li><li>Em 'Adicionar ação ou índice…' inclua as outras para comparar.</li><li>Toque em Pesquisar para comparar (escolher itens, critério ou datas não compara sozinho). Comparar tudo compara com todas as ações; Pesquisar volta a comparar só as escolhidas.</li><li>No gráfico, % mostra quanto cada item rendeu e Valor mostra também o preço no início e no fim; toque ou arraste sobre o gráfico para ver valor e % em cada data.</li><li>O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens.</li></ol><p class="text-slate-400 text-xs mt-1">Aqui no Chat você também pode perguntar, por exemplo: “PETR4 vs VALE3 vs Ibovespa em 2 anos”.</p>
 <h3>Previsão rentabilidade</h3>
 <ol class="list-decimal pl-5"><li>Abra a aba Previsão (sub-aba Previsão rentabilidade).</li><li>Em Referências, preencha Valor inicial, Aporte mensal, Dividendos e Rentabilidade (MÊS ou ANO) e o Imposto s/ dividendo.</li><li>Em Projeções, busque uma empresa para usar os números dela; ou em 'E se eu tivesse investido?' escolha a ação e a Data inicial/final para simular com o histórico real.</li><li>Use + em Aportes extraordinários e Retiradas extraordinárias para lançamentos avulsos.</li><li>A tabela mostra mês a mês (imposto em amarelo, Valorização total em violeta); toque em Mostrar mais meses para continuar.</li></ol>
 <h3>Previsão aluguel</h3>

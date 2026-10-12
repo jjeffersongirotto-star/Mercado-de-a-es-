@@ -52,7 +52,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Nomes de botões, abas, campos e opções | a própria interface (`index.html` e `*.js`) | chat e Gemini (`chat.ui_labels()` lê da interface) |
 | Significado de cada cor | seção **Cores** do painel ⓘ | usuário; chat |
 | Paleta, alturas, raios, sombras | `index.html` → bloco `/* Design system */` (`:root { --c-pos … }`) | todo CSS (`var(--…)`) |
-| Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths` | `ui.js` (topo) | todos os scripts |
+| Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry` | `ui.js` (topo) | todos os scripts |
 | Diálogos, toast, carregamento | `ui.js` → `uiConfirm`, `uiAlert`, `uiPrompt`, `uiChoose`, `uiToast`, `loaderHTML` | todas as abas |
 | Formatação de indicadores (`fmt`, `fmtPrice`, `fmtBig`, `fmtMoneyBig`) | `app.js` | aba Ações, Comparar |
 | Lista de scripts JS | tags `<script src="/static/…">` do `index.html` | servidor (`JS_FILES` é lido delas) |

@@ -6,8 +6,8 @@
   const COLORS = ['#34d399', '#60a5fa', '#facc15', '#f472b6', '#fb923c', '#a78bfa', '#d4a373', '#22d3ee', '#f87171', '#a3e635', '#e879f9', '#94a3b8'];
   const today = new Date().toISOString().slice(0, 10), yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();
-  S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.ct = S.ct || 'br'; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct })); } catch (e) { } };
+  S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.ct = S.ct || 'br'; S.vm = S.vm || 'pct'; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct, vm: S.vm })); } catch (e) { } };
   // País da comparação (bandeiras): 'br' (padrão), outro país ou 'all' (🌐). Ação de fora = "us:AAPL"; índice do país = "@ix:us".
   // Linhas de cada país = mesmo /api/data das abas (carregadas uma vez); Brasil reaproveita state.data quando a aba Ações está no Brasil.
   const RC = {};
@@ -41,8 +41,8 @@
       <div class="cmp-srch" data-w="q"><input id="cmpQ" type="search" placeholder="Adicionar ação ou índice…" autocomplete="off"><div class="pv-combo hidden"></div></div>
       <div class="cmp-row"><label>Critério<select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
         <label>Início<input id="cmpDi" type="date" class="sel"></label><label>Fim<input id="cmpDf" type="date" class="sel"></label></div>
-      <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpAll" class="cmp-allb"></button></section>
-      <div class="cmp-bar"><button type="button" id="cmpMin" class="cmp-minb"></button></div>
+      <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpGo" class="gbtn pri w-full">Pesquisar</button><button type="button" id="cmpAll" class="cmp-allb"></button></section>
+      <div class="cmp-bar"><div class="cmp-vm" role="group" aria-label="Mostrar no gráfico"><button type="button" data-vm="pct">%</button><button type="button" data-vm="val">Valor</button></div><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
       <section class="cmp-cols"><div class="cmp-col"><h3 class="dn">Renderam menos</h3><input class="cmp-f" data-q="qa" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpLess"></div></div>
         <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>`;
@@ -51,6 +51,7 @@
   function chips() {
     const ind = S.crit !== 'preco', ref = S.items[0];
     root.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', b.dataset.ct === S.ct));
+    root.querySelectorAll('[data-vm]').forEach(b => b.classList.toggle('on', b.dataset.vm === S.vm));
     $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br');  // "Comparar tudo" usa o histórico da B3: só no Brasil
     $c('#cmpPrin').innerHTML = ref ? `<span class="cmp-chip ref" style="--cc:${COLORS[0]}">${esc(label(ref))}<b class="cmp-pv ${vals[ref] > 0 ? 'up' : vals[ref] < 0 ? 'dn' : ''}">${vals[ref] != null ? (ind ? F2.format(vals[ref]) : pc(vals[ref])) : ''}</b><button type="button" data-rm="${esc(ref)}" aria-label="Remover principal">✕</button></span>${S.items.length > 1 ? '<button type="button" id="cmpSwap" class="cmp-swap" title="Trocar principal" aria-label="Trocar principal">⇅</button>' : ''}` : '';
     $c('#cmpP').closest('.cmp-srch').classList.toggle('hidden', !!ref);
@@ -113,7 +114,7 @@
     // uma carga por ação; índices vêm da carga de uma ação do mesmo país (ou só do índice: "IBOV" no Brasil, "@IX" fora)
     const stocks = S.items.filter(x => !isIdx(x)), idxC = (id) => id.startsWith('@ix:') ? id.slice(4) : (id === '@usd' || id === '@gold') && S.ct !== 'br' && S.ct !== 'all' ? S.ct : 'br';
     const need = [...stocks]; for (const id of S.items.filter(isIdx)) { const c = idxC(id); if (!need.some(x => cOf(x) === c)) need.push(c === 'br' ? 'IBOV' : c + ':@IX'); }
-    const pays = {}, tget = async (u, ms) => { const ac = new AbortController(), h = setTimeout(() => ac.abort(), ms); try { const r = await fetch(u, { signal: ac.signal }); return r.ok ? await r.json() : null; } catch (e) { return null; } finally { clearTimeout(h); } };
+    const pays = {}, tget = (u, ms) => getRetry(u, 3, ms);  // servidor recém-iniciado: tenta de novo antes de dizer "sem informações"
     // "comparar com tudo": retornos de todas as ações numa chamada só, em paralelo com o gráfico; nada fica carregando para sempre
     const pR = S.all ? tget(`/api/returns?di=${S.di}&df=${S.df}`, 20000) : null;
     await Promise.all(need.map(async id => { const c = cOf(id), j = await tget(`/api/chart/${encodeURIComponent(tOf(id))}?kind=${kind}${c === 'br' ? '' : '&country=' + c}`, 15000); if (j) pays[id] = j; }));
@@ -122,15 +123,18 @@
     const series = [];
     S.items.forEach((id, i) => {
       let pts = [];
-      if (!isIdx(id)) { const p = pays[id]; if (p && p.stock && !p.stock.error) pts = gcPricePts(p.stock, start, end); }
+      let vfmt = null;  // modo Valor: preço da ação na moeda dela, pontos do índice, R$/US$ do dólar e do ouro; CDB/IPCA/poupança só %
+      if (!isIdx(id)) { const p = pays[id], cur = (rows().find(r => r.cid === id) || {}).cur; if (p && p.stock && !p.stock.error) { pts = gcPricePts(p.stock, start, end); vfmt = (v) => fmtPrice(v, cur); } }
       else {
         const k = (idxList().concat(IDX)).find(x => x[0] === id)[2], d = payC(idxC(id))[k];
         if (d && !d.error) pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end);
+        vfmt = k === 'ibov' ? (v) => F2.format(v) + ' pts' : k === 'usd' ? (v) => fmtPrice(v, 'BRL') : k === 'gold' ? (v) => fmtPrice(v, idxC(id) === 'us' ? 'USD' : 'BRL') : null;
       }
-      if (pts.length) { vals[id] = pts[pts.length - 1][1]; series.push({ id: i === 0 ? 'stock' : id, label: label(id), color: COLORS[i % COLORS.length], pts }); }
+      if (pts.length) { vals[id] = pts[pts.length - 1][1]; series.push({ id: i === 0 ? 'stock' : id, label: label(id), color: COLORS[i % COLORS.length], pts, base: pts.base, vfmt }); }
     });
     const plot = chart.querySelector('.gc-plot'), leg = chart.querySelector('.gc-leg');
-    if (series.length) gcRender(plot, leg, series, start, end, kind);
+    LAST = series.length ? [plot, leg, series, start, end, kind] : null;
+    if (series.length) draw();
     else { plot.innerHTML = '<div class="gc-nodata-msg">Sem informações no banco de dados</div>'; leg.innerHTML = ''; }
     if (S.all) {
       const R = (await pR) || {}; S._miss = !Object.keys(R).length || !Object.keys(pays).length;
@@ -158,7 +162,10 @@
     if (S._miss) $c('#cmpLess').insertAdjacentHTML('afterbegin', '<p class="gt-help">Alguns dados não carregaram agora; mostrando o que veio.</p>');
     $c('#cmpMore').innerHTML = (rv != null ? `<p class="cmp-ref">Principal ${esc(label(ref))}: ${fmt(rv)}</p>` : '') + html(M, S.qb, 'up');
   }
+  let LAST = null;
+  const draw = () => LAST && gcRender(...LAST, undefined, { mode: S.vm, cross: true });
   function all() { chips(); compute(); save(); }
+  function prep() { chips(); save(); }  // escolhas mudam só a seleção; o resultado sai ao tocar em Pesquisar
   let built = false, waiting = false;
   function build() {
     if (built) return;
@@ -169,25 +176,27 @@
     root.addEventListener('click', async (e) => {
       if (e.target.closest('#cmpMin')) { S.min = !S.min; $c('#cmpChart').classList.toggle('hidden', S.min || S.all || S.crit !== 'preco'); chips(); save(); return; }
       if (e.target.closest('#cmpAll')) { S.all = !S.all; all(); return; }
+      if (e.target.closest('#cmpGo')) { S.all = false; all(); return; }  // Pesquisar: volta do "Comparar tudo" e compara só os escolhidos
+      const vm = e.target.closest('[data-vm]'); if (vm) { S.vm = vm.dataset.vm; chips(); save(); draw(); return; }
       const fl = e.target.closest('[data-ct]');
       if (fl) {  // país escolhido: só ações dele (e seus índices); 🌐 mantém tudo
         S.ct = fl.dataset.ct; if (S.ct !== 'br') S.all = false;
         if (S.ct !== 'all') S.items = S.items.filter(id => (isIdx(id) ? idxList().some(x => x[0] === id) : cOf(id) === S.ct));
-        all(); await Promise.all(ctList().map(loadRows)); return;
+        prep(); await Promise.all(ctList().map(loadRows)); return;
       }
       const a = e.target.closest('[data-add]');
       if (a) { if (a.dataset.w === 'p') S.items = [a.dataset.add].concat(S.items.filter(x => x !== a.dataset.add)); else S.items.push(a.dataset.add);
-        $c('#cmpP').value = $c('#cmpQ').value = ''; root.querySelectorAll('.cmp-srch .pv-combo').forEach(x => x.classList.add('hidden')); all(); return; }
-      const rm = e.target.closest('[data-rm]'); if (rm) { S.items = S.items.filter(x => x !== rm.dataset.rm); all(); return; }
+        $c('#cmpP').value = $c('#cmpQ').value = ''; root.querySelectorAll('.cmp-srch .pv-combo').forEach(x => x.classList.add('hidden')); prep(); return; }
+      const rm = e.target.closest('[data-rm]'); if (rm) { S.items = S.items.filter(x => x !== rm.dataset.rm); prep(); return; }
       if (e.target.closest('#cmpSwap')) {
                 const v = await uiChoose('Trocar o principal por:', S.items.slice(1).filter(id => !(S.crit !== 'preco' && isIdx(id))).map(id => ({ label: esc(label(id)), value: id })));
-        if (v) { S.items = [v].concat(S.items.filter(x => x !== v)); all(); }
+        if (v) { S.items = [v].concat(S.items.filter(x => x !== v)); prep(); }
       }
     });
     document.addEventListener('click', (e) => { root.querySelectorAll('.cmp-srch').forEach(b => { if (!b.contains(e.target)) b.querySelector('.pv-combo').classList.add('hidden'); }); });
-    $c('#cmpCrit').addEventListener('change', () => { S.crit = $c('#cmpCrit').value; if (S.crit !== 'preco' && S.items[0] && isIdx(S.items[0])) { const f = S.items.find(x => !isIdx(x)); if (f) S.items = [f].concat(S.items.filter(x => x !== f)); } all(); });
-    $c('#cmpDi').addEventListener('change', () => { S.di = $c('#cmpDi').value || yago; all(); });
-    $c('#cmpDf').addEventListener('change', () => { S.df = $c('#cmpDf').value || today; all(); });
+    $c('#cmpCrit').addEventListener('change', () => { S.crit = $c('#cmpCrit').value; if (S.crit !== 'preco' && S.items[0] && isIdx(S.items[0])) { const f = S.items.find(x => !isIdx(x)); if (f) S.items = [f].concat(S.items.filter(x => x !== f)); } prep(); });
+    $c('#cmpDi').addEventListener('change', () => { S.di = $c('#cmpDi').value || yago; prep(); });
+    $c('#cmpDf').addEventListener('change', () => { S.df = $c('#cmpDf').value || today; prep(); });
     root.addEventListener('input', (e) => { const k = e.target.dataset.q; if (k) { S[k] = e.target.value; cols(); } });
     all();
   }
