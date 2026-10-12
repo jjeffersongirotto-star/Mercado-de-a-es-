@@ -400,16 +400,15 @@
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 <header class="border-b border-slate-800 bg-slate-900/80">
-  <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2 space-y-1.5">
-    <div class="flex items-center gap-1">
-      <h1 class="m-0 flex-1 min-w-0"><picture><source media="(min-width: 1024px)" srcset="/static/brand/jg-investing-wide.webp" width="2111" height="115"><img src="/static/brand/jg-investing.webp" alt="JG Investing" width="411" height="56" class="block w-full max-w-[460px] lg:max-w-none h-auto"></picture></h1>
-      <div class="flex-none flex items-center gap-2 text-sm">
+  <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <h1 class="m-0 order-1 w-full sm:w-auto sm:flex-1 min-w-0"><picture><source media="(min-width: 640px)" srcset="/static/brand/jg-investing-wide.webp" width="2111" height="115"><img src="/static/brand/jg-investing.webp" alt="JG Investing" width="411" height="56" class="block w-full h-auto"></picture></h1>
+      <div class="order-3 sm:order-2 ml-auto flex-none flex items-center gap-2 text-sm">
         <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button id="btnCsv">↓ CSV</button>
         <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
       </div>
-    </div>
-    <div class="flex items-center gap-2 min-w-0">
+      <div class="order-3 basis-full h-0 max-sm:hidden"></div>
+      <div class="order-2 sm:order-4 flex items-center gap-2 min-w-0">
       <div id="ddCountry" class="dd">
         <button id="btnCountry" type="button" title="País" aria-haspopup="listbox" class="px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5">
           <img id="countryFlag" class="flag" src="/static/flags/br.png" alt="Brasil"><span class="chev text-[10px] text-slate-400">▾</span></button>
@@ -421,8 +420,8 @@
         <div id="sourceMenu" class="dd-menu hidden left-0" role="listbox"></div>
       </div>
       <p id="subtitle" class="max-sm:hidden text-[11px] text-slate-400 leading-tight">Consenso entre várias fontes</p>
-      <span id="updated" class="ml-auto text-slate-400 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Carregando…</span>
-    </div>
+      </div>
+      <span id="updated" class="order-4 sm:order-5 basis-full sm:basis-auto sm:ml-auto text-slate-400 text-[11px] sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Carregando…</span>
   </div>
 </header>
 
