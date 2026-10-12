@@ -456,7 +456,6 @@ $('#btnSource').addEventListener('click', () => toggleMenu($('#ddSource')));
 function renderCountry() {
   const c = state.countries.find(x => x.id === state.country) || { id: 'br', name: 'Brasil', flag: '/static/flags/br.png' };
   $('#countryFlag').src = c.flag; $('#countryFlag').alt = c.name; $('#btnCountry').title = `País: ${c.name}`;
-  $('#countryTitle').textContent = c.id === 'br' ? 'B3' : c.name;
   $('#countryMenu').innerHTML = state.countries.map(x => `<button type="button" role="option" data-country="${x.id}" class="${x.id === state.country ? 'sel' : ''}"><img class="flag" src="${x.flag}" alt=""> ${esc(x.name)}<span class="cnt">${x.sources.length > 1 ? x.sources.length + ' fontes' : 'TradingView'}</span></button>`).join('');
 }
 $('#countryMenu').addEventListener('click', (e) => {

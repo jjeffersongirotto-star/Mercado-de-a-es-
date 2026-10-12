@@ -1,4 +1,4 @@
-# Diretrizes do projeto — Screener B3
+# Diretrizes do projeto — JG Investing
 
 Regras para quem altera este repositório (pessoas, Claude, Grok ou outro assistente). Leia antes de mudar qualquer coisa.
 O `README.md` explica **o que o site faz e como rodar/publicar**; este arquivo explica **como mudar o código sem quebrar padrões**.
@@ -52,6 +52,8 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Configuração do Tailwind | `tailwind.config.js` | build do CSS e, sem ele, o CDN no navegador |
 | App instalável: nome e cor | `<title>` e `<meta name="theme-color">` do `index.html` | manifesto (`/manifest.webmanifest`, gerado pelo servidor) |
 | App instalável: desenho do ícone ("JG Investing") | `scripts/icon-source.jpg` (quadrada) e `scripts/icon-source-round.jpg` (redonda, Android); `scripts/build_icons.py` gera `static/icons/` — não edite os PNG à mão | manifesto, tela inicial do celular |
+| Marca no topo do site (faixa "JG Investing") | `scripts/brand-source.jpg`; `scripts/build_icons.py` gera `static/brand/jg-investing.png` | cabeçalho do `index.html` (igual em todas as abas) |
+| Nome do site/app ("JG Investing") | `index.html` → `<title>` (parte antes de " — ") | manifesto (`server.manifest`), chat e Gemini (`chat.site_name`) |
 | App instalável: modo sem internet | `sw.js` (registrado no fim do `ui.js`) | celular |
 | Endereços (branch `data`, site no Render), `br_num`, `when_sp` | `snapshots.py` (`RAW`, `APP_URL`) | servidor, `history.py`, `tiebreak.py`, `scripts/`, workflow `keepalive.yml` |
 | Dados de snapshots | `snapshots.load(nome)` | nunca baixe a mesma URL por conta própria |
