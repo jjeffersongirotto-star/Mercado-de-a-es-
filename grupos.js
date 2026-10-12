@@ -83,7 +83,7 @@
   const rowsAll = () => state.data ? state.data.rows : [];
   // grupos pré-definidos: só empresas com negociação média ≥ R$ 500 mil/dia (evita distorções de papéis sem liquidez)
   const rows1 = () => state.data ? (state.data.rowsK || state.data.rows) : []; // grupos prontos: 1 ticker por empresa
-  const rowsK = () => state.country === 'br' ? rows1().filter(r => ((r.v.vol30 ?? r.v.liq2m) || 0) >= 5e5) : rowsAll();
+  const rowsK = () => state.country === 'br' ? rows1().filter(r => (r.v.vol30 || 0) >= 5e5) : rowsAll();
   const MX = (t) => (METRICS || {})[t] || {};
   const pctRank = (arr, key, asc) => { const s = arr.slice().sort((a, b) => asc ? key(a) - key(b) : key(b) - key(a)); const m = new Map(); s.forEach((r, i) => m.set(r, 1 - i / Math.max(1, s.length - 1))); return m; };
   // data de listagem: uma fonte por país, igual para todas as empresas — Brasil: 1º pregão na B3 (COTAHIST); exterior: IPO (TradingView)
@@ -96,7 +96,7 @@
     { id: 'dy', m: 1, name: 'Maiores pagadoras de dividendos', h: 'DY a.a.', per: true, calc: (n) => rowsK().map(r => [r, MX(r.ticker)['dy' + n] ?? (n === 1 ? r.v.dy : null)]).filter(x => x[1] > 0 && x[1] < 40).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
     { id: 'prov', m: 1, name: 'Mais proventos ao investidor', t: '12 meses', h: 'Proventos', calc: () => rowsK().map(r => [r, MX(r.ticker).prov12]).filter(x => x[1] > 0 && x[1] < 60).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%', v]) },
     { id: 'peq', m: 1, name: 'Pequenas e médias promissoras', t: 'últimos 12 meses', h: 'Nota', calc: () => {
-      const c = rows1().filter(r => { const v = r.v; const liq = v.vol30 ?? v.liq2m; return v.valmerc >= 3e8 && v.valmerc <= 1e10 && v.lpa > 0 && v.roe >= 12 && (v.cresc5a > 0 || v.lucro5a > 0) && (v.dlebit == null || v.dlebit < 3) && liq >= 1e6; });
+      const c = rows1().filter(r => { const v = r.v; const liq = v.vol30; return v.valmerc >= 3e8 && v.valmerc <= 1e10 && v.lpa > 0 && v.roe >= 12 && (v.cresc5a > 0 || v.lucro5a > 0) && (v.dlebit == null || v.dlebit < 3) && liq >= 1e6; });
       const a = pctRank(c, r => r.v.roe), b = pctRank(c, r => r.v.lucro5a ?? -1e9), d = pctRank(c, r => r.v.pl > 0 ? 1 / r.v.pl : 0);
       return c.map(r => [r, (a.get(r) + b.get(r) + d.get(r)) / 3 * 100]).sort((x, y) => y[1] - x[1]).map(([r, v]) => [r, F2.format(v), v]); } },
     { id: 'magic', name: 'Magic Formula', t: 'últimos 12 meses', h: 'ROIC · EV/EBIT', calc: () => {
@@ -107,7 +107,7 @@
     { id: 'consist', m: 1, name: 'Pagadoras consistentes', t: 'últimos 5 anos', h: 'DY médio · CV', calc: () => rowsK().map(r => { const an = Object.values(MX(r.ticker).anual || {}); if (an.length < 5 || an.some(x => !(x > 0))) return null; const m = an.reduce((a, b) => a + b, 0) / an.length, sd = Math.sqrt(an.reduce((a, b) => a + (b - m) ** 2, 0) / an.length); return [r, sd / m, m]; }).filter(Boolean).sort((a, b) => a[1] - b[1] || b[2] - a[2]).map(([r, cv, m]) => [r, F2.format(m) + '% · ' + F2.format(cv)]) },
     { id: 'divida', name: 'Menos endividadas', t: 'últimos 12 meses', h: 'Dív.Líq/PL', calc: () => rowsK().filter(r => r.v.lpa > 0 && r.v.dlpl != null).map(r => [r, r.v.dlpl]).sort((a, b) => a[1] - b[1]).map(([r, v]) => [r, F2.format(v)]) },
     { id: 'quedas', m: 1, name: 'Maiores quedas', h: 'Variação', per: true, calc: (n) => rowsK().filter(r => MX(r.ticker)['ret' + n] != null).map(r => [r, MX(r.ticker)['ret' + n]]).filter(x => x[1] < 0).sort((a, b) => a[1] - b[1]).map(([r, v]) => [r, pc(v), v]) },
-    { id: 'negoc', name: 'Mais negociadas', t: '30 dias', h: 'Giro/dia', calc: () => rowsK().filter(r => r.v.valmerc > 0 && (r.v.vol30 ?? r.v.liq2m) > 0).map(r => [r, (r.v.vol30 ?? r.v.liq2m) / r.v.valmerc * 100]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%']) },
+    { id: 'negoc', name: 'Mais negociadas', t: '1 mês', h: 'Giro/dia', calc: () => rowsK().filter(r => r.v.valmerc > 0 && r.v.vol30 > 0).map(r => [r, r.v.vol30 / r.v.valmerc * 100]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%']) },
     { id: 'novas', name: 'Novidades', t: 'listagens recentes', h: 'Listagem', calc: () => rows1().filter(r => listDate(r)).sort((a, b) => listDate(b).localeCompare(listDate(a))).map(r => [r, dataBR(listDate(r))]) },
   ];
   const preOk = (p) => state.country === 'br' || !p.m;

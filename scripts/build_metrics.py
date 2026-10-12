@@ -2,6 +2,7 @@
 """Métricas por ticker para os Grupos (a partir do histórico mensal do Yahoo, range=max, com dividendos e desdobramentos):
 ret{n}: variação % do preço em n anos (1..5) · dy{n}: proventos médios por ano nos últimos n anos ÷ preço atual (%)
 prov12: proventos 12m ÷ preço (%) + bonificações 12m (%) · anual: proventos por ano (5 anos fechados) ÷ preço médio do ano (%)
+vol: volume financeiro médio por pregão (B3) no dia, 10 pregões e 1, 2, 3, 6, 9 e 12 meses (chaves dos campos do servidor).
 ytd: eventos do ano corrente [data-com, valor/ação, tipo, rótulo]. Preços: B3 COTAHIST (ajustados por desdobramentos/grupamentos/bonificações da B3).
 Proventos: B3 (últimos ~12 meses, com tipo JCP/Dividendo) e Yahoo antes disso (dividendos+JCP somados).
 Uso: build_metrics.py OUT_DIR  (grava OUT_DIR/metrics.json). DATA_JSON = /api/data local (senão baixa do app)."""
@@ -36,15 +37,14 @@ for r in kept:
         if len(pts) < 2:
             raise ValueError("vazio")
         divs = [(a, b) for a, b, *_ in H["divs"]]
-        vv = [x for x in (H["d"].get("vol") or []) if x is not None]
-        v30 = round(sum(vv[-30:]) / len(vv[-30:])) if vv else None  # volume financeiro médio dos últimos 30 pregões (B3)
+        vols = [(a, b) for a, b in zip(H["d"]["t"], H["d"].get("vol") or []) if b is not None]
         lab = {a: (x[2] if len(x) > 2 else "") for a, *x in [[d[0], d[1], d[2] if len(d) > 2 else ""] for d in H["divs"]]}
         spl = [(a, m_, l_) for a, m_, l_ in H.get("splits", [])]
         x = {"meta": {}}
         p = pts[-1][1]; tnow = pts[-1][0]
         ftd = (x.get("meta") or {}).get("firstTradeDate") or pts[0][0]
         m = {"p": round(p, 2), "first": datetime.fromtimestamp(pts[0][0], timezone.utc).strftime("%Y-%m"),
-             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"),              "mc0": None, "mc": None, "v30": v30}
+             "ftd": datetime.fromtimestamp(ftd, timezone.utc).strftime("%Y-%m-%d"),              "mc0": None, "mc": None}
         mm = {}
         for ts, c in pts: mm[datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m")] = c
         ks = sorted(mm); m["mc0"] = ks[0]; m["mc"] = [round(mm[k], 2) for k in ks]
@@ -61,6 +61,11 @@ for r in kept:
             if old:
                 s = sum(v for ts, v in divs if ts > b)
                 m[f"dy{n}"] = round(s / n / p * 100, 2)
+        avg = lambda w: round(sum(w) / len(w)) if w else None
+        vol = {"voldia": avg([b for a, b in vols[-1:]]), "vol10": avg([b for a, b in vols[-10:]])}
+        for k, n in (("vol30", 1), ("liq2m", 2), ("vol90", 3), ("vol6m", 6), ("vol9m", 9), ("vol12m", 12)):
+            vol[k] = avg([b for a, b in vols if a > back(months=n)])
+        m["vol"] = {k: x for k, x in vol.items() if x is not None}
         for n in (1, 2, 3, 6, 9):  # média simples dos fechamentos diários dos últimos n meses
             w = [c for ts, c in pts if ts > back(months=n)]
             m[f"avg{n}"] = round(sum(w) / len(w), 2) if w else None

@@ -22,7 +22,7 @@ else:
             break
         time.sleep(20)
     rows = d["rows"]
-kept, _, _ = universe.universe(rows)
+kept = universe.universe(rows)
 tickers = [r["ticker"] for r in kept]
 at = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 ok = fail = 0
