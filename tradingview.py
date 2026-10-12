@@ -14,6 +14,9 @@ COUNTRIES = {
     "pt": ("portugal", "Portugal", "EUR", None),
     "jp": ("japan", "Japão", "JPY", 1500),
 }
+# Yahoo por país: sufixo do ticker, índice principal (símbolo, nome). Histórico de ações/índices de fora (gráficos e Comparar).
+YAHOO = {"br": ("SA", "^BVSP", "Ibovespa"), "us": ("", "^GSPC", "S&P 500"), "gb": ("L", "^FTSE", "FTSE 100"),
+         "de": ("DE", "^GDAXI", "DAX"), "pt": ("LS", "PSI20.LS", "PSI"), "jp": ("T", "^N225", "Nikkei 225")}
 COLS = ["name", "description", "type", "sector", "industry", "close", "change", "currency", "market_cap_basic",
         "average_volume_60d_calc", "dividends_yield_current", "price_earnings_ttm", "price_book_fq", "price_sales_current",
         "enterprise_value_ebitda_ttm", "enterprise_value_to_ebit_ttm", "ebit_ttm", "total_assets", "return_on_equity",

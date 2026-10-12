@@ -10,6 +10,10 @@
     { id: 'gold', label: 'Ouro', color: '#d4a373' },
   ];
   window.GC_LINES = LINES;
+  // Ação de fora do Brasil: índice do país (nome em /api/countries) na linha "ibov", dólar e ouro só nos EUA; sem índices brasileiros
+  const linesFor = (c) => c === 'br' ? LINES : LINES.filter(L => ['stock', 'ibov', 'usd'].includes(L.id) || (L.id === 'gold' && c === 'us'))
+    .map(L => L.id === 'ibov' ? { ...L, label: (((typeof state !== 'undefined' && state.countries) || []).find(x => x.id === c) || {}).index || 'Índice' } : L);
+  window.gcLinesFor = linesFor;
   const PERIODS = [['1d', '1 dia'], ['7d', '7 dias'], ['1m', '1 mês'], ['1y', '1 ano'], ['2y', '2 anos'], ['3y', '3 anos'], ['4y', '4 anos'], ['5y', '5 anos']];
   const DAY = 864e5;
   const P2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' });
@@ -21,14 +25,14 @@
 
   function mount(box) {
     if (box.dataset.m) return; box.dataset.m = '1';
-    const t = box.dataset.gt;
-    const S = Object.assign({ per: '1d', di: '', df: '', on: { stock: true } }, loadPref(t));
-    const persist = () => savePref(t, S);
+    const t = box.dataset.gt, C = box.dataset.gc || 'br', LN = linesFor(C), qs = C === 'br' ? '' : `&country=${C}`, pk = C === 'br' ? t : C + ':' + t;
+    const S = Object.assign({ per: '1d', di: '', df: '', on: { stock: true } }, loadPref(pk));
+    const persist = () => savePref(pk, S);
     box.innerHTML = `<div class="gc">
       <div class="gc-bar">${PERIODS.map(([k, l]) => `<button type="button" data-per="${k}">${l}</button>`).join('')}
         <button type="button" class="gc-ref ricon" title="Atualizar" aria-label="Atualizar gráfico"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
       <div class="gc-dates"><label>Data inicial<input type="date" data-d="di"></label><label>Data final<input type="date" data-d="df"></label></div>
-      <div class="gc-chk">${LINES.map(L => `<label style="--lc:${L.color}"><input type="checkbox" data-l="${L.id}">${L.label}</label>`).join('')}</div>
+      <div class="gc-chk">${LN.map(L => `<label style="--lc:${L.color}"><input type="checkbox" data-l="${L.id}">${L.label}</label>`).join('')}</div>
       <div class="gc-wrap"><div class="gc-plot"></div><div class="gc-leg"></div></div>
       <p class="gc-note"></p></div>`;
     const q = (s) => box.querySelector(s);
@@ -60,7 +64,7 @@
       const sd = pay.stock;
       if (kind === 'i') { start = sd.t[0] * 1000; end = sd.t[sd.t.length - 1] * 1000 + 1; }
       const series = [], skipped = [];
-      for (const L of LINES) {
+      for (const L of LN) {
         if (!S.on[L.id]) continue;
         const d = L.id === 'stock' ? sd : pay[L.id];
         if (!d || d.error) { skipped.push(L.label + (kind === 'i' ? '' : ' (indisponível)')); continue; }
@@ -77,11 +81,11 @@
       const notes = [];
       if (skipped.length) notes.push((kind === 'i' ? 'Sem dados intradiários: ' : 'Ocultos: ') + skipped.join(', ') + '.');
       if (kind === 'i') notes.push('Hoje (5 em 5 min). Toque em ⟳ para atualizar.');
-      notes.push('Fonte: ' + sd.source + (kind !== 'i' ? ' · índices: Banco Central (SGS)' : '') + '.');
+      notes.push('Fonte: ' + sd.source + (kind !== 'i' ? (C === 'br' ? ' · índices: Banco Central (SGS)' : ' · dólar: Banco Central') : '') + '.');
       note.textContent = notes.join(' ');
     }
     async function draw(force) {
-      const my = ++seq, { kind } = range(), key = t + '|' + kind, ref = q('.gc-ref');
+      const my = ++seq, { kind } = range(), key = pk + '|' + kind, ref = q('.gc-ref');
       box.querySelectorAll('[data-per]').forEach(b => b.classList.toggle('on', b.dataset.per === S.per));
       const cached = force ? null : await cget(key);
       if (my !== seq) return;
@@ -91,7 +95,7 @@
       if (fresh && !force) return;
       ref.classList.add('spin');
       try {
-        const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=${kind}`); const pay = await r.json();
+        const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=${kind}${qs}`); const pay = await r.json();
         if (!r.ok || !pay.stock) throw new Error(pay.error || r.status);
         cput(key, pay);
         if (my === seq) { cur = { kind, pay }; paint(); }
@@ -105,7 +109,7 @@
       finally { if (my === seq) ref.classList.remove('spin'); }
     }
     draw();
-    setTimeout(async () => { const k = t + '|d'; if (!(await cget(k))) { try { const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=d`); if (r.ok) cput(k, await r.json()); } catch (e) { } } }, 1200);
+    setTimeout(async () => { const k = pk + '|d'; if (!(await cget(k))) { try { const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=d${qs}`); if (r.ok) cput(k, await r.json()); } catch (e) { } } }, 1200);
   }
 
   const PKEY = 'screenerB3.chart.v1';
