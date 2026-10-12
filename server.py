@@ -3,7 +3,7 @@
 Fonte primária: Fundamentus (resultado.php). Complemento: Status Invest (ao vivo; fallback snapshot diário do GitHub Actions).
 Nomes/setores (opcional): brapi.dev /api/quote/list (público, sem token).
 """
-import io, json, os, threading, time, logging, math
+import io, json, os, threading, time, logging, math, gzip, hashlib, re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -17,7 +17,8 @@ import snapshots
 import consensus
 import history
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -574,20 +575,43 @@ def api_countries():
              "sources": [{"id": i, "name": n, "logo": f"/static/logos/{l}"} for i, n, l, cs in SOURCES if k in cs]}
             for k, v in tradingview.COUNTRIES.items()]
 
+_JSON_CACHE = {}  # id(payload) -> (payload, json bytes, gzip bytes)
+
+def _json_fast(request, d, extra=None):
+    """Payload grande (~1,3 MB): converte para JSON e comprime UMA vez por versão dos dados (antes: a cada visita,
+    ~2 s de CPU no plano gratuito). `extra` = campos pequenos que mudam (refreshing/last_error), emendados no início."""
+    c = _JSON_CACHE.get(id(d))
+    if not c or c[0] is not d:
+        raw = json.dumps(d, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode()
+        c = (d, raw, None)
+        if len(_JSON_CACHE) > 6: _JSON_CACHE.clear()  # só as versões atuais (pouca RAM no plano gratuito)
+        _JSON_CACHE[id(d)] = c
+    raw = c[1]
+    if extra:
+        head = json.dumps(extra, ensure_ascii=False, separators=(",", ":")).encode()[:-1]
+        raw = head + (b"," + raw[1:] if len(raw) > 2 else b"}")
+    gz = "gzip" in (request.headers.get("accept-encoding") or "")
+    if gz:
+        key = (id(d), raw[:200] if extra else b"")
+        hit = _JSON_CACHE.get(("gz",) + key)
+        if hit is None or hit[0] is not d:
+            hit = (d, gzip.compress(raw, 6)); _JSON_CACHE[("gz",) + key] = hit
+        return Response(hit[1], media_type="application/json", headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"})
+    return Response(raw, media_type="application/json")
+
 @app.get("/api/data")
-def api_data(country: str = "br"):
+def api_data(request: Request, country: str = "br"):
     country = (country or "br").lower()
     if country != "br" and country in tradingview.COUNTRIES:
         d = cache.get_foreign(country)
         if not d["rows"]:
             return JSONResponse({"loading": False, "error": d["status"].get("tradingview")}, status_code=502)
-        return d
+        return _json_fast(request, d)
     if cache.data is None:
         if not cache.refreshing:
             cache.refresh_async()
         return JSONResponse({"loading": True, "error": cache.last_error}, status_code=503)
-    d = dict(cache.data); d["refreshing"] = cache.refreshing; d["last_error"] = cache.last_error
-    return d
+    return _json_fast(request, cache.data, {"refreshing": cache.refreshing, "last_error": cache.last_error})
 
 @app.post("/api/refresh")
 def api_refresh():
@@ -765,19 +789,45 @@ def api_flow():
     d, _ = snapshots.load("b3_flow", max_mem_age=3 * 3600)
     return JSONResponse({k: v for k, v in (d or {}).items() if k != "mtd"}, headers={"Cache-Control": "public, max-age=1800"})
 
+JS_FILES = ("app", "previsao", "grafico", "grupos", "ui", "comparar", "aluguel", "chatui")
+TW_CSS = os.path.join(BASE, "static", "tw.css")  # gerado no build do Render (scripts/build_css.sh); sem ele usa o CDN
+IMMUTABLE = {"Cache-Control": "public, max-age=31536000, immutable"}
+_INDEX = {}
+
+def _hash(path):
+    with open(path, "rb") as fh:
+        return hashlib.sha1(fh.read()).hexdigest()[:10]
+
+def _index_html():
+    """index.html com ?v=<hash do arquivo> em cada JS/CSS: o navegador guarda os arquivos por 1 ano e baixa de novo
+    só quando o conteúdo muda. Com static/tw.css, troca o Tailwind do CDN (compila no navegador) pelo CSS pronto."""
+    files = [os.path.join(BASE, "index.html"), TW_CSS] + [os.path.join(BASE, n + ".js") for n in JS_FILES]
+    key = tuple(os.path.getmtime(f) if os.path.exists(f) else 0 for f in files)
+    if _INDEX.get("key") != key:
+        with open(files[0], encoding="utf-8") as fh:
+            h = fh.read()
+        h = re.sub(r'/static/(\w+)\.js(\?v=[^"]*)?"',
+                   lambda m: f'/static/{m.group(1)}.js?v={_hash(os.path.join(BASE, m.group(1) + ".js"))}"'
+                   if m.group(1) in JS_FILES else m.group(0), h)
+        if os.path.exists(TW_CSS) and os.path.getsize(TW_CSS) > 1000 and not os.environ.get("TW_CDN"):  # TW_CDN=1 volta ao CDN
+            h = re.sub(r'<script src="https://cdn\.tailwindcss\.com"></script>\s*<script>tailwind\.config[^<]*</script>',
+                       f'<link rel="stylesheet" href="/static/tw.css?v={_hash(TW_CSS)}">', h, count=1)
+        _INDEX.update(key=key, html=h.encode("utf-8"))
+    return _INDEX["html"]
+
+@app.get("/static/tw.css")
+def tw_css(v: str = ""):
+    if not os.path.exists(TW_CSS):
+        return JSONResponse({"error": "não encontrado"}, status_code=404)
+    return FileResponse(TW_CSS, media_type="text/css", headers=IMMUTABLE if v else {"Cache-Control": "no-cache"})
+
 @app.get("/static/{name}.js")
-def extra_js(name: str):
-    if name not in ("app", "previsao", "grafico", "grupos", "ui", "comparar", "aluguel", "chatui"):
+def extra_js(name: str, v: str = ""):
+    if name not in JS_FILES:
         return JSONResponse({"error": "não encontrado"}, status_code=404)
     return FileResponse(os.path.join(BASE, name + ".js"), media_type="application/javascript",
-                        headers={"Cache-Control": "no-cache"})
-
-@app.get("/static/app.js")
-def app_js():
-    return FileResponse(os.path.join(BASE, "app.js"), media_type="application/javascript",
-                        headers={"Cache-Control": "no-cache"})
+                        headers=IMMUTABLE if v else {"Cache-Control": "no-cache"})
 
 @app.get("/")
 def index():
-    return FileResponse(os.path.join(BASE, "index.html"),
-                        headers={"Cache-Control": "no-cache"})
+    return Response(_index_html(), media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-cache"})

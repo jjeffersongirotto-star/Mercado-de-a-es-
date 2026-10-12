@@ -2,3 +2,5 @@ __pycache__/
 .venv/
 cache/
 *.log
+.tw/
+static/tw.css
