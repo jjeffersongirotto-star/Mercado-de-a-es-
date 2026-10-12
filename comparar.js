@@ -2,7 +2,7 @@
 (function () {
   const $c = (s) => document.querySelector(s);
   const KEY = 'screenerB3.comparar.v1';
-  const IDX = [['@ibov', 'Ibovespa', 'ibov'], ['@usd', 'Dólar', 'usd'], ['@cdi', 'CDB 100% do CDI', 'cdi'], ['@ipca', 'Inflação (IPCA)', 'ipca'], ['@poup', 'Poupança', 'poup'], ['@gold', 'Ouro', 'gold']];
+  const IDX = [['@ibov', 'Ibovespa', 'ibov'], ['@usd', 'Dólar', 'usd'], ['@cdi', 'CDB', 'cdi'], ['@ipca', 'Inflação (IPCA)', 'ipca'], ['@poup', 'Poupança', 'poup'], ['@gold', 'Ouro', 'gold']];
   const COLORS = ['#34d399', '#60a5fa', '#facc15', '#f472b6', '#fb923c', '#a78bfa', '#d4a373', '#22d3ee', '#f87171', '#a3e635', '#e879f9', '#94a3b8'];
   const today = new Date().toISOString().slice(0, 10), yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();

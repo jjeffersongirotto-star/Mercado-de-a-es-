@@ -21,7 +21,7 @@ DEADLINE_S = 120  # tempo total da resposta no servidor (o navegador desiste em 
 # ============================================================ vocabulário
 IDX = {"@ibov": ["ibovespa", "ibov", "indice bovespa"], "@usd": ["dolar", "usd", "cambio"], "@cdi": ["cdi", "cdb", "renda fixa"],
        "@ipca": ["ipca", "inflacao"], "@poup": ["poupanca"], "@gold": ["ouro"]}
-IDXN = {"@ibov": "Ibovespa", "@usd": "Dólar", "@cdi": "CDB 100% do CDI", "@ipca": "IPCA", "@poup": "Poupança", "@gold": "Ouro"}
+IDXN = {"@ibov": "Ibovespa", "@usd": "Dólar", "@cdi": "CDB", "@ipca": "IPCA", "@poup": "Poupança", "@gold": "Ouro"}
 # métricas calculadas do histórico (snapshot metrics): rótulo, unidade
 MX = {"ret1": ("Valorização 1 ano", "%"), "ret2": ("Valorização 2 anos", "%"), "ret3": ("Valorização 3 anos", "%"),
       "ret4": ("Valorização 4 anos", "%"), "ret5": ("Valorização 5 anos", "%"), "dy1": ("DY médio 1 ano", "%"),
