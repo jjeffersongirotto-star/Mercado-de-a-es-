@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """Gera os ícones do app instalável em static/icons/ (fonte única do desenho do ícone).
-Uso: python scripts/build_icons.py   (requer Pillow e a fonte Inter instalada; ajuste FONT_DIR se preciso)."""
+Uso: python scripts/build_icons.py   (requer Pillow). Fonte: Montserrat Italic (scripts/fonts/, licença OFL)."""
 import os
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 OUT = os.path.join(ROOT, "static", "icons")
-FONT_DIR = os.environ.get("FONT_DIR", "/usr/share/fonts/opentype/inter")
-MARCA, SUB = "JG", "INVESTINDO"
+FONTE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "Montserrat-Italic.ttf")
+MARCA, SUB = "JG", "Investing"
 # cores do site (design system do index.html): fundo, cartão, borda, verde; dourado e cinza-claro para a marca
 BG, CARD, BORDA = (2, 6, 23), (15, 23, 42), (51, 65, 85)
 VERDE, VERDE2, BARRA = (52, 211, 153), (16, 185, 129), (6, 78, 59)
 OURO, CINZA = (251, 191, 36), (203, 213, 225)
 
 
-def fonte(nome, px):
-    return ImageFont.truetype(os.path.join(FONT_DIR, nome), int(px))
+def fonte(peso, px):
+    f = ImageFont.truetype(FONTE, int(px))
+    f.set_variation_by_axes([peso])  # fonte variável: peso 100–900
+    return f
 
 
 def icone(size, maskable=False):
@@ -39,14 +41,11 @@ def icone(size, maskable=False):
     d.line(pts, fill=VERDE, width=int(S * 0.045), joint="curve")
     r = S * 0.04; ex, ey = pts[-1]; d.ellipse([ex - r, ey - r, ex + r, ey + r], fill=VERDE2)
     # marca no canto superior esquerdo (espaço livre acima da linha)
-    tx, ty = pad + w * 0.10, pad + w * 0.07
-    fm = fonte("Inter-ExtraBold.otf", w * 0.21)
+    tx, ty = pad + w * 0.10, pad + w * 0.06
+    fm = fonte(800, w * 0.22)
     d.text((tx, ty), MARCA, font=fm, fill=OURO)
     hm = d.textbbox((tx, ty), MARCA, font=fm)
-    fs = fonte("Inter-SemiBold.otf", w * 0.054)
-    sx, sy = tx + w * 0.006, hm[3] + w * 0.025
-    for ch in SUB:  # letras espaçadas
-        d.text((sx, sy), ch, font=fs, fill=CINZA); sx += d.textlength(ch, font=fs) + w * 0.007
+    d.text((tx + w * 0.005, hm[3] + w * 0.02), SUB, font=fonte(600, w * 0.085), fill=CINZA)
     return im.resize((size, size), Image.LANCZOS)
 
 
