@@ -98,3 +98,10 @@ Rotina diária (19:05): `scripts/push_snapshot_from_here.sh` atualiza todos os s
 
 Registro de perguntas: `cache/chat_log.jsonl`, visível em `/api/chat/log` (`?only=sem_resposta` ou `?only=reclamacao`, `&n=500`).
 Testes: `python tests/test_chat.py`.
+
+## Velocidade
+- `/api/data` (~1,3 MB) é convertido para JSON e comprimido **uma vez por atualização dos dados**, não a cada visita.
+- JS e CSS são servidos com `?v=<hash do conteúdo>` (calculado pelo servidor) e cache de 1 ano no navegador: só baixam de novo quando mudam.
+- CSS do Tailwind gerado no build do Render (`scripts/build_css.sh`, comando de build: `pip install -r requirements.txt && bash scripts/build_css.sh`)
+  em vez do CDN que compila no navegador. Sem o arquivo (ou com a variável `TW_CDN=1`), o site volta a usar o CDN.
+- `.github/workflows/keepalive.yml` acessa o site a cada 10 min para o plano gratuito não dormir.
