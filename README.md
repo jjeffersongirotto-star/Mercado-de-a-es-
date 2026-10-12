@@ -27,6 +27,9 @@ O app tem backend em Python, então **não roda no GitHub Pages**. No Render (se
 - Start: `uvicorn server:app --host 0.0.0.0 --port $PORT`
 - Health check: `/api/status`
 
+O site também é um **app instalável** (PWA): manifesto em `/manifest.webmanifest`, ícones em `static/icons/` e `sw.js`.
+Como instalar no celular: painel ⓘ → **Como usar** → **Instalar o app**.
+
 Variáveis de ambiente:
 
 | Variável | Para quê |

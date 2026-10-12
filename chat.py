@@ -162,7 +162,7 @@ COMPLEX = ("por que", "porque", "explique", "explica", "analise", "analisa", "an
 HOWW = ("como usar", "como funciona", "como faco", "como faz", "como uso", "para que serve", "pra que serve", "onde fica", "onde esta",
         "onde encontro", "onde acho", "explica a aba", "o que faz a aba", "como mexer", "passo a passo", "como adicion", "como cri",
         "como favorit", "como filtr", "como orden", "como compar", "como reorganiz", "como export", "como baix", "como atualiz",
-        "como mud", "como troc", "como vejo", "como ver", "tutorial", "nao acho", "nao encontro", "cade")
+        "como mud", "como troc", "como instal", "instalar", "aplicativo", "o app", "baixar app", "como vejo", "como ver", "tutorial", "nao acho", "nao encontro", "cade")
 WRONG = ("esta errado", "ta errado", "errado", "errada", "nao e isso", "incorreto", "incorreta", "confere", "confira", "conferir", "verifica",
          "verifique", "nao bate", "desatualizado", "desatualizada", "mentira", "nao esta certo", "esta certo", "ta certo")
 MISSING = ("nao tem esse dado", "nao possui", "nao ha informac", "nao contem", "nao dispoe", "nao tem informac", "nao consta",
@@ -803,6 +803,7 @@ HOWTO_KEYS = [
     (("compar",), ["Comparar"]),
     (("favorit", "estrela"), ["Favoritos"]),
     (("reorganiz", "arrastar", "reordenar", "mudar a ordem", "trocar a ordem"), ["Reorganizar"]),
+    (("instal", "aplicativo", "baixar o app", "baixar app", "tela inicial", "app no celular", "como app"), ["Instalar o app"]),
     (("importar", "exportar grupo", "exportar os grupos", "backup", "outro aparelho", "outro celular"), ["Grupos (criar e editar)"]),
     (("export", "csv", "baixar", "planilha", "excel", "download"), ["Exportar (CSV)"]),
     (("atualiz", "recarreg", "dados novos", "dados atualizados"), ["Atualizar dados"]),
@@ -1074,7 +1075,7 @@ def rel_context(q, D, ret_fn, cx, P):
                         ("comp", "COMPARAR (seleção, JSON)", ("compar", "rendeu mais", "rendeu menos")),
                         ("compRes", "COMPARAR (resultado na tela)", ("compar", "rendeu mais", "rendeu menos"))):
         if cx.get(kk) and any(w in nq for w in ws): parts.append(lab + ":\n" + str(cx[kk])[:5000])
-    if any(w in nq for w in ("como", "aba", "funciona", "significa", "regra", "cor", "calcul", "fonte", "previs", "aluguel", "compar", "grupo", "etiqueta", "consenso")):
+    if any(w in nq for w in ("como", "aba", "funciona", "significa", "regra", "cor", "calcul", "fonte", "previs", "aluguel", "compar", "grupo", "etiqueta", "consenso", "app", "aplicativo", "instal", "celular")):
         parts.append("GUIA DO SITE (painel ⓘ):\n" + guide())
     return "\n\n".join(parts)
 

@@ -96,3 +96,7 @@ if (typeof document !== 'undefined') (function () {
     busy = false;
   });
 })();
+
+// App instalável (manifesto + service worker): no celular, "Instalar app" / "Adicionar à tela inicial" (passo a passo no painel ⓘ)
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof window !== 'undefined' && window.addEventListener)
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));
