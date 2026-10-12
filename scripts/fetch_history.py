@@ -9,6 +9,7 @@ import requests
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import history, universe
+from snaputil import APP_API
 
 out = sys.argv[1]
 os.makedirs(os.path.join(out, "history"), exist_ok=True); os.makedirs(os.path.join(out, "history3"), exist_ok=True)
@@ -16,7 +17,7 @@ if os.environ.get("DATA_JSON"):
     rows = json.load(open(os.environ["DATA_JSON"]))["rows"]
 else:
     for _ in range(10):
-        d = requests.get(os.environ.get("APP_URL", "https://mercado-de-acoes.onrender.com") + "/api/data", timeout=120).json()
+        d = requests.get(APP_API, timeout=120).json()
         if d.get("rows"):
             break
         time.sleep(20)

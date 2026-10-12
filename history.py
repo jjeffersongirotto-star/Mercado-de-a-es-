@@ -8,8 +8,7 @@ import requests
 
 log = logging.getLogger("screener.hist")
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"}
-RAW = os.environ.get("SNAPSHOT_RAW_BASE",
-                     "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data")
+from snapshots import RAW
 KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("10y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
 _mem = {}
 

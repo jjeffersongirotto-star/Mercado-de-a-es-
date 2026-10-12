@@ -1,4 +1,5 @@
-"""Carrega snapshots gerados na máquina da rotina diária (branch `data` no GitHub -> fallback arquivo local data/)."""
+"""Carrega snapshots gerados na máquina da rotina diária (branch `data` no GitHub -> fallback arquivo local data/).
+Também é a fonte única dos endereços (branch `data`, app no Render) e de utilitários comuns ao servidor e aos scripts."""
 import json, logging, os, time
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -7,7 +8,8 @@ import requests
 log = logging.getLogger("screener.snap")
 BASE = os.path.dirname(os.path.abspath(__file__))
 RAW = os.environ.get("SNAPSHOT_RAW_BASE",
-                     "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data")
+                     "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data")  # branch `data`
+APP_URL = os.environ.get("APP_URL") or os.environ.get("APP_API", "https://mercado-de-acoes.onrender.com").replace("/api/data", "")
 TZ = ZoneInfo("America/Sao_Paulo")
 _mem = {}  # nome -> (instante, payload, origem)
 
@@ -16,6 +18,14 @@ def when_sp(iso):
         return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(TZ).strftime("%d/%m/%Y %H:%M")
     except Exception:
         return "?"
+
+def br_num(s):
+    """Número no formato brasileiro ('1.234,56', '7,12%', 'R$ 10') -> float; vazio/traço/inválido -> None."""
+    if s is None: return None
+    s = str(s).strip().replace("%", "").replace("R$", "").strip()
+    if s in ("", "-", "—", "nan", "N/A"): return None
+    try: return float(s.replace(".", "").replace(",", "."))
+    except ValueError: return None
 
 def load(name, max_mem_age=1800):
     """-> (payload|None, descrição). Cache em memória por 30 min para não baixar a cada reapply."""

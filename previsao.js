@@ -34,11 +34,8 @@ if (typeof document !== 'undefined') {
 (function () {
   const KEY = 'screenerB3.previsao.v1';
   const MAXM = 960, PAGE_ROWS = 240;
-  const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  const pct = (d) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-  const P3 = pct(3), P2 = pct(2);
+  const P3 = nf(3), P2 = nf(2);
   const el = (id) => document.getElementById(id);
-  const num = (s) => { s = String(s ?? '').trim().replace(/\s|R\$/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
   const st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })() ||
     { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
   if (!Array.isArray(st.ex)) st.ex = [];
@@ -66,7 +63,7 @@ if (typeof document !== 'undefined') {
 
   const m2a = (m) => (Math.pow(1 + m / 100, 12) - 1) * 100;
   const a2m = (a) => (Math.pow(1 + a / 100, 1 / 12) - 1) * 100;
-  const fmtIn = (v, d) => (v === '' || v == null) ? '' : pct(d).format(v);
+  const fmtIn = (v, d) => (v === '' || v == null) ? '' : nf(d).format(v);
 
   function fill() {
     el('pvIni').value = fmtIn(st.ini, 2); el('pvAp').value = fmtIn(st.ap, 2);
@@ -79,8 +76,8 @@ if (typeof document !== 'undefined') {
   const liveCompute = deb(() => { compute(); save(); });
   function bind(id, f, pair, pd) {
     const i = el(id);
-    i.addEventListener('input', () => { f(num(i.value)); if (pair) el(pair).value = fmtIn(st[pd[0]], pd[1]); liveCompute(); });
-    i.addEventListener('change', () => { f(num(i.value)); save(); setTimeout(() => { fill(); compute(); }, 0); });
+    i.addEventListener('input', () => { f(parseBR(i.value)); if (pair) el(pair).value = fmtIn(st[pd[0]], pd[1]); liveCompute(); });
+    i.addEventListener('change', () => { f(parseBR(i.value)); save(); setTimeout(() => { fill(); compute(); }, 0); });
   }
   bind('pvIni', v => st.ini = Math.max(0, v)); bind('pvTx', v => st.tx = Math.max(0, Math.min(100, v)));
   el('pvTxAuto').addEventListener('change', () => { st.txc = !el('pvTxAuto').checked; save(); fill(); compute(); if (st.txc) el('pvTx').focus(); }); bind('pvAp', v => st.ap = Math.max(0, v));
@@ -121,8 +118,8 @@ if (typeof document !== 'undefined') {
     const row = e.target.closest('[data-i]'); if (!row) return;
     const r = st.ret[+row.dataset.i], f = e.target.dataset.f, raw = e.target.value; if (!r || !f) return;
     if (f === 't') { r.t = raw; if (r.t === 'p' && !r.n) r.n = 12; save(); renderRet(); compute(); return; }
-    if (f === 'v') r.v = Math.max(0, num(raw));
-    if (f === 'm') r.m = Math.max(1, Math.min(MAXM, Math.round(num(raw)) || 1));
+    if (f === 'v') r.v = Math.max(0, parseBR(raw));
+    if (f === 'm') r.m = Math.max(1, Math.min(MAXM, Math.round(parseBR(raw)) || 1));
     if (f === 'n') { const n = Number(String(raw).replace(',', '.')); r.n = Number.isInteger(n) && n >= 2 ? n : null; }
     save(); liveCompute(); if (final && f === 'n' && r.n >= 2) row.querySelector('.text-rose-300')?.remove();
   }
@@ -158,8 +155,8 @@ if (typeof document !== 'undefined') {
     const row = e.target.closest('[data-x]'); if (!row) return;
     const r = st.ex[+row.dataset.x], f = e.target.dataset.f, raw = e.target.value;
     if (f === 't') { r.t = raw; if (r.t === 'p' && !r.n) r.n = 12; save(); renderEx(); compute(); return; }
-    if (f === 'v') r.v = Math.max(0, num(raw));
-    if (f === 'm') r.m = Math.max(1, Math.min(MAXM, Math.round(num(raw)) || 1));
+    if (f === 'v') r.v = Math.max(0, parseBR(raw));
+    if (f === 'm') r.m = Math.max(1, Math.min(MAXM, Math.round(parseBR(raw)) || 1));
     if (f === 'n') { const n = Number(String(raw).replace(',', '.')); r.n = Number.isInteger(n) && n >= 2 ? n : null; }
     save(); liveCompute(); if (final && f === 'n') { const row2 = e.target.closest('[data-x]'); const warn = row2.querySelector('.text-rose-300'); if (warn && r.n >= 2) warn.remove(); }
   }
@@ -185,8 +182,6 @@ if (typeof document !== 'undefined') {
   // Ação (modo histórico)
   function tickerList() { }
   // Combobox com busca a cada caractere (ticker, nome, setor, descrição; sem acento)
-  const nrm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const escP = (x) => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   window.pvCombo = (i, f) => combo(i, f);
   function combo(inp, onPick) {
     const box = document.createElement('div'); box.className = 'pv-combo hidden'; box.setAttribute('role', 'listbox');
@@ -194,10 +189,10 @@ if (typeof document !== 'undefined') {
     inp.setAttribute('autocomplete', 'off'); inp.setAttribute('role', 'combobox');
     const rowsAll = () => (typeof state !== 'undefined' && state.data && state.country === 'br') ? state.data.rows : [];
     function show() {
-      const q = nrm(inp.value.trim());
-      const list = rowsAll().filter(r => !q || r.ticker.toLowerCase().startsWith(q) || (r._s || nrm(r.ticker + ' ' + r.nome)).includes(q))
+      const q = norm(inp.value.trim());
+      const list = rowsAll().filter(r => !q || r.ticker.toLowerCase().startsWith(q) || (r._s || norm(r.ticker + ' ' + r.nome)).includes(q))
         .map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30);
-      box.innerHTML = list.length ? list.map(r => `<button type="button" data-t="${r.ticker}"><b>${r.ticker}</b><span class="pv-cn">${escP(r.nome || '')}</span><span class="pv-cs">${escP(r.macro || r.setor || '')}</span></button>`).join('')
+      box.innerHTML = list.length ? list.map(r => `<button type="button" data-t="${r.ticker}"><b>${r.ticker}</b><span class="pv-cn">${esc(r.nome || '')}</span><span class="pv-cs">${esc(r.macro || r.setor || '')}</span></button>`).join('')
         : '<div class="pv-cempty">Nenhuma empresa encontrada.</div>';
       box.classList.remove('hidden');
     }
@@ -226,7 +221,7 @@ if (typeof document !== 'undefined') {
       if (!st.di || st.di < lo || st.di > hi) st.di = lo;
       if (!st.df || st.df > hi || st.df < st.di) st.df = hi;
       el('pvDi').value = st.di; el('pvDf').value = st.df;
-      el('pvOldest').dataset.tip = `Data mais antiga disponível para ${t}: ${lo.split('-').reverse().join('/')} (fonte: ${d.source})`;
+      el('pvOldest').dataset.tip = `Data mais antiga disponível para ${t}: ${dataBR(lo)} (fonte: ${d.source})`;
       el('pvStatus').textContent = '';
     } catch (e) { hist = null; el('pvStatus').textContent = 'Histórico indisponível para ' + t + ': ' + e.message; }
     compute(); save();
@@ -256,10 +251,9 @@ if (typeof document !== 'undefined') {
       const dm = ds / n;
       projS = { t, rm: rm * 100, dm: dm * 100, from: yms[i0], to: yms[i1], n };
       if (st.proj !== t) return;
-      const br = (x) => x.split('-').reverse().join('/');
       el('pvProjInfo').innerHTML = `<div class="pv-pstats"><span>Rentab. <b>${P3.format(projS.rm)}% a.m.</b> · ${P2.format(m2a(projS.rm))}% a.a.</span>
         <span>Dividendos <b>${P3.format(projS.dm)}% a.m.</b> · ${P2.format(m2a(projS.dm))}% a.a.</span>
-        <span class="text-slate-500">Período: ${br(yms[i0])} a ${br(yms[i1])} (${n} meses${n < 120 ? ', menos de 10 anos' : ''}) · ${escP(d.source)}</span></div>`;
+        <span class="text-slate-500">Período: ${dataBR(yms[i0])} a ${dataBR(yms[i1])} (${n} meses${n < 120 ? ', menos de 10 anos' : ''}) · ${esc(d.source)}</span></div>`;
     } catch (e) { projS = null; el('pvProjInfo').textContent = 'Histórico indisponível para ' + t + ': ' + e.message; }
     applyMode(); compute();
   }
@@ -316,9 +310,8 @@ if (typeof document !== 'undefined') {
     ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d'], ['pd', '% Dividendos', 'pv-c-d']];
   const hasW = () => st.ret.some(r => r.ok && r.v > 0);
   const cols = () => hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS;
-  const PP = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const pcell = (r, k) => { const p = pvPcts(r.apT, r.sem, r.com)[k]; if (p == null) return ['—', '']; const cls = k === 'pa' ? (p > 1 ? 'neg' : 'pos') : (p < 0 ? 'neg' : p > 0 ? 'pos' : ''); return [PP.format(p * 100) + '%', cls]; };
-  const cell = (r, k) => ['va', 'pa', 'pv', 'pd'].includes(k) ? pcell(r, k)[0] : k === 'm' ? (r.ym ? `${r.m}<span class="pv-ym">${r.ym.split('-').reverse().join('/')}</span>` : r.m) : (k === 'w' && !r.w ? '–' : brl.format(r[k]));
+  const pcell = (r, k) => { const p = pvPcts(r.apT, r.sem, r.com)[k]; if (p == null) return ['—', '']; const cls = k === 'pa' ? (p > 1 ? 'neg' : 'pos') : (p < 0 ? 'neg' : p > 0 ? 'pos' : ''); return [F2.format(p * 100) + '%', cls]; };
+  const cell = (r, k) => ['va', 'pa', 'pv', 'pd'].includes(k) ? pcell(r, k)[0] : k === 'm' ? (r.ym ? `${r.m}<span class="pv-ym">${dataBR(r.ym)}</span>` : r.m) : (k === 'w' && !r.w ? '–' : brl.format(r[k]));
   const head = () => '<tr>' + cols().map(([k, l, c]) => `<th class="${c}">${l}</th>`).join('') + '</tr>';
   const tdc = (r, k, c) => ['va', 'pa', 'pv', 'pd'].includes(k) ? c + ' ' + pcell(r, k)[1] : c;
   const line = (r) => '<tr>' + cols().map(([k, , c]) => `<td class="${tdc(r, k, c)}">${cell(r, k)}</td>`).join('') + '</tr>';
@@ -331,7 +324,7 @@ if (typeof document !== 'undefined') {
     if (el('pvSumHead').innerHTML !== hh || !el('pvMes')) {
       el('pvSumHead').innerHTML = hh; el('pvSumBody').innerHTML = line(r);
       el('pvSumBody').querySelector('td').innerHTML = `<input id="pvMes" inputmode="numeric" maxlength="3" class="pv-in text-center" style="width:3.4em;display:block;margin:0 auto" placeholder="1" value="${st.mes || ''}" aria-label="Mês">`;
-      const upd = deb(() => { st.mes = String(Math.max(0, Math.round(num(el('pvMes').value))) || ''); shownRows = PAGE_ROWS; save(); renderAll(); });
+      const upd = deb(() => { st.mes = String(Math.max(0, Math.round(parseBR(el('pvMes').value))) || ''); shownRows = PAGE_ROWS; save(); renderAll(); });
       el('pvMes').addEventListener('input', upd);
     } else {
       const tmp = document.createElement('tbody'); tmp.innerHTML = line(r);

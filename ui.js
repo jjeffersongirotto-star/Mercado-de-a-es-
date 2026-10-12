@@ -1,3 +1,14 @@
+// ---------- Utilitários compartilhados por todas as abas (fonte única: não recrie em outro arquivo) ----------
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nf = (d) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const F0 = nf(0), F2 = nf(2);
+const pc = (x) => (x > 0 ? '+' : '') + F2.format(x) + '%';  // variação com sinal: +1,23%
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();  // sem acento, minúsculo
+// número digitado no formato brasileiro ("1.234,56", "R$ 10", "8,5%") -> 1234.56; vazio/inválido -> 0
+const dataBR = (iso) => iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '—';  // 2026-10-12 -> 12/10/2026 (2026-10 -> 10/2026)
+const parseBR = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
+
 // Diálogos do site (substituem confirm/alert/prompt), toast e animação de carregamento
 (function () {
   function modal({ title, msg, input, okText = 'OK', cancelText = 'Cancelar', danger = false, noCancel = false, value = '' }) {

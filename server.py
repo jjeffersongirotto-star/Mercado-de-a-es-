@@ -14,6 +14,7 @@ import statusinvest
 import tiebreak
 import tradingview
 import snapshots
+from snapshots import br_num
 import consensus
 import history
 from fastapi import FastAPI
@@ -113,15 +114,6 @@ def num(x):
         return None
     return None if math.isnan(f) or math.isinf(f) else f
 
-def br_num(s):
-    """'1.234,56' / '7,12%' -> float"""
-    if s is None: return None
-    s = str(s).strip().rstrip("%")
-    if s in ("", "-", "nan"): return None
-    try:
-        return float(s.replace(".", "").replace(",", "."))
-    except ValueError:
-        return None
 
 def fetch_fundamentus():
     r = http_get("https://www.fundamentus.com.br/resultado.php")
@@ -140,16 +132,8 @@ def fetch_fundamentus():
         out[t] = rec
     return out
 
-SI_FALLBACK_URL = os.environ.get(
-    "SI_FALLBACK_URL",
-    "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data/statusinvest.csv")
+SI_FALLBACK_URL = os.environ.get("SI_FALLBACK_URL", f"{snapshots.RAW}/statusinvest.csv")
 SI_LOCAL_FILE = os.path.join(BASE, "data", "statusinvest.csv")
-
-def _fmt_sp(iso):
-    try:
-        return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(TZ).strftime("%d/%m/%Y %H:%M")
-    except Exception:
-        return iso or "?"
 
 def fetch_statusinvest():
     """Ordem: ao vivo (export CSV -> JSON paginado, com headers de navegador e cookies)
@@ -168,7 +152,7 @@ def fetch_statusinvest():
         when = "?"
         try:
             m = http_get(SI_FALLBACK_URL.replace("statusinvest.csv", "statusinvest.meta.json"), tries=1).json()
-            when = _fmt_sp(m.get("fetched_at"))
+            when = snapshots.when_sp(m.get("fetched_at"))
         except Exception:
             pass
         return data, f"snapshot GitHub de {when} (ao vivo bloqueado: {errs[0][9:][:80]})"
@@ -180,7 +164,7 @@ def fetch_statusinvest():
         when = "?"
         try:
             with open(SI_LOCAL_FILE.replace(".csv", ".meta.json"), encoding="utf-8") as fh:
-                when = _fmt_sp(json.load(fh).get("fetched_at"))
+                when = snapshots.when_sp(json.load(fh).get("fetched_at"))
         except Exception:
             pass
         return data, f"arquivo local de {when}"
@@ -350,7 +334,8 @@ def finalize(base, yf_store=None):
         if yf_store is not None:
             y = yf_store.get(r["ticker"])
             if y: S["yf"] = {k: x for k, x in y.items() if x is not None}
-        nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur", "ipo")}
+        nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur")}
+        if not isbr and r.get("ipo"): nr["ipo"] = r["ipo"]  # data de listagem no exterior (TradingView); no Brasil vem da B3 (metrics.ftd)
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
         if r["ticker"] in FIN: nr["fin"] = True
@@ -698,7 +683,6 @@ _retw = {"busy": False}
 def api_returns(di: str, df: str):
     """Variação % de todas as ações mantidas + índices entre di e df. Se o histórico ainda está aquecendo
     (servidor recém-iniciado), responde 202 {warming} na hora e aquece em segundo plano; o app tenta de novo."""
-    from datetime import datetime as _dt
     rows = (cache.data or {}).get("rows") or []
     import sys as _s
     if os.path.join(BASE, "scripts") not in _s.path:
@@ -717,14 +701,21 @@ def api_returns(di: str, df: str):
                 finally: _retw["busy"] = False
             threading.Thread(target=_bg, daemon=True).start()
         return JSONResponse({"warming": True, "faltam": len(miss)}, status_code=202, headers={"Cache-Control": "no-store"})
+    return JSONResponse(period_returns(di, df, tick), headers={"Cache-Control": "public, max-age=600"})
+
+def period_returns(di, df, tickers):
+    """Variação % do preço entre di e df (AAAA-MM-DD) de cada ticker + índices. Fonte única: aba Comparar e chat.
+    Base = último fechamento até di; fim = último fechamento até df ou o preço atual da aba Ações."""
+    from datetime import datetime as _dt
     s0 = _dt.strptime(di, "%Y-%m-%d").timestamp() - 1
     e0 = _dt.strptime(df, "%Y-%m-%d").timestamp() + 86399
-    H = history.all_closes(tick)
-    live = {r["ticker"]: (r.get("v") or {}).get("preco") for r in rows}
-    out = {t: history.period_return(H.get(t), s0, e0, live.get(t)) for t in tick}
+    live = {r["ticker"]: (r.get("v") or {}).get("preco") for r in (cache.data or {}).get("rows") or []}
+    H = history.all_closes(list(tickers)) if tickers else {}
+    out = {t: history.period_return(H.get(t), s0, e0, live.get(t)) for t in tickers}
     out = {k: v for k, v in out.items() if v is not None}
-    out.update(_idx_returns(di, df))
-    return JSONResponse(out, headers={"Cache-Control": "public, max-age=600"})
+    try: out.update(_idx_returns(di, df))
+    except Exception as e: log.warning("índices %s..%s: %s", di, df, e)
+    return out
 
 @app.post("/api/chat")
 def api_chat(body: dict):
@@ -734,20 +725,9 @@ def api_chat(body: dict):
     rows = [r for r in ((cache.data or {}).get("rows") or [])]
     if not rows: return JSONResponse({"a": "Os dados ainda estão carregando; tente de novo em instantes.", "mode": "regras"})
     MX = ((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}
-    def ret_fn(di, df, T):
-        from datetime import datetime as _dt
-        s0 = _dt.strptime(di, "%Y-%m-%d").timestamp() - 1; e0 = _dt.strptime(df, "%Y-%m-%d").timestamp() + 86399
-        out = {}
-        for t in T:
-            try:
-                h = history.all_closes([t]).get(t)
-                live = ((chat_D["by"].get(t) or {}).get("v") or {}).get("preco")
-                v = history.period_return(h, s0, e0, live)
-                if v is not None: out[t] = v
-            except Exception as e: log.warning("chat ret %s: %s", t, e)
-        try: out.update(_idx_returns(di, df))
-        except Exception: pass
-        return out
+    def ret_fn(di, df, T):  # mesmo cálculo da aba Comparar
+        try: return period_returns(di, df, T)
+        except Exception as e: log.warning("chat ret: %s", e); return {}
     CAD = ((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}
     key = ((cache.data or {}).get("updated_at"), id(MX), len(CAD))
     if _chat_D.get("key") != key:  # índice de nomes/apelidos: recalcula só quando os dados mudam
@@ -789,7 +769,8 @@ def api_flow():
     d, _ = snapshots.load("b3_flow", max_mem_age=3 * 3600)
     return JSONResponse({k: v for k, v in (d or {}).items() if k != "mtd"}, headers={"Cache-Control": "public, max-age=1800"})
 
-JS_FILES = ("app", "previsao", "grafico", "grupos", "ui", "comparar", "aluguel", "chatui")
+with open(os.path.join(BASE, "index.html"), encoding="utf-8") as _fh:  # fonte única: as tags <script> do index.html
+    JS_FILES = tuple(re.findall(r'src="/static/(\w+)\.js', _fh.read()))
 TW_CSS = os.path.join(BASE, "static", "tw.css")  # gerado no build do Render (scripts/build_css.sh); sem ele usa o CDN
 IMMUTABLE = {"Cache-Control": "public, max-age=31536000, immutable"}
 _INDEX = {}
@@ -810,10 +791,14 @@ def _index_html():
                    lambda m: f'/static/{m.group(1)}.js?v={_hash(os.path.join(BASE, m.group(1) + ".js"))}"'
                    if m.group(1) in JS_FILES else m.group(0), h)
         if os.path.exists(TW_CSS) and os.path.getsize(TW_CSS) > 1000 and not os.environ.get("TW_CDN"):  # TW_CDN=1 volta ao CDN
-            h = re.sub(r'<script src="https://cdn\.tailwindcss\.com"></script>\s*<script>tailwind\.config[^<]*</script>',
+            h = re.sub(r'<script src="https://cdn\.tailwindcss\.com"></script>\s*<script src="/tailwind\.config\.js"></script>',
                        f'<link rel="stylesheet" href="/static/tw.css?v={_hash(TW_CSS)}">', h, count=1)
         _INDEX.update(key=key, html=h.encode("utf-8"))
     return _INDEX["html"]
+
+@app.get("/tailwind.config.js")
+def tw_config():  # mesma configuração do build (tailwind.config.js), usada só quando o CSS gerado não existe
+    return FileResponse(os.path.join(BASE, "tailwind.config.js"), media_type="application/javascript", headers={"Cache-Control": "no-cache"})
 
 @app.get("/static/tw.css")
 def tw_css(v: str = ""):
