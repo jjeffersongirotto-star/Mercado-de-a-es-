@@ -74,6 +74,15 @@ window.avgLastMonths = function (t, c, n) {
   for (let i = 0; i < t.length; i++) if (t[i] > cut && c[i] != null) { s += c[i]; k++; }
   return k ? s / k : null;
 };
+// JSON com novas tentativas: servidor recém-iniciado pode demorar; tenta até `tries` vezes (cada uma com `ms` de limite). Falhou tudo -> null.
+window.getRetry = async function (u, tries = 3, ms = 15000) {
+  for (let k = 0; k < tries; k++) {
+    const ac = new AbortController(), h = setTimeout(() => ac.abort(), ms);
+    try { const r = await fetch(u, { signal: ac.signal }); if (r.ok) return await r.json(); if (r.status < 500 && r.status !== 202) return null; } catch (e) { } finally { clearTimeout(h); }
+    if (k < tries - 1) await new Promise(res => setTimeout(res, 1500));
+  }
+  return null;
+};
 if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths };
 
 // Volta ao app: < 10 min fora não faz nada. >= 10 min: atualiza os dados em segundo plano mantendo aba, cards e rolagem;

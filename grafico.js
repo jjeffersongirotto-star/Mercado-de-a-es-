@@ -95,8 +95,8 @@
       if (fresh && !force) return;
       ref.classList.add('spin');
       try {
-        const r = await fetch(`/api/chart/${encodeURIComponent(t)}?kind=${kind}${qs}`); const pay = await r.json();
-        if (!r.ok || !pay.stock) throw new Error(pay.error || r.status);
+        const pay = await getRetry(`/api/chart/${encodeURIComponent(t)}?kind=${kind}${qs}`);  // servidor recém-iniciado: tenta de novo
+        if (!pay || !pay.stock) throw new Error('indisponível');
         cput(key, pay);
         if (my === seq) { cur = { kind, pay }; paint(); }
       } catch (e) {
@@ -139,6 +139,7 @@
       if (base == null) base = d.c[i];
       out.push([ms, (d.c[i] / base - 1) * 100]);
     }
+    out.base = base;  // preço no início do período (modo Valor do Comparar)
     return out;
   }
   // Índices mensais (IPCA, poupança): soma os meses do mês inicial em diante que já terminaram até o fim do período.
@@ -163,7 +164,8 @@
     return out;
   }
   window.gcPts = { pricePts, ratePts };
-  function render(plot, leg, series, start, end, kind, base) {
+  // opt (Comparar): mode 'val' = legenda com preço inicial → final e %; cross = toque/arraste mostra valor e % na data
+  function render(plot, leg, series, start, end, kind, base, opt) {
     const W = 600, H = 240, pad = 4;
     if (!series.length || !series[0].pts.length) { plot.innerHTML = '<div class="gc-load">Sem dados no período.</div>'; leg.innerHTML = ''; return; }
     { const xe = Math.max(...series.map(s => s.pts.length ? s.pts[s.pts.length - 1][0] : -Infinity)); series = series.map(s => { const l = s.pts[s.pts.length - 1]; return l && l[0] < xe ? { ...s, pts: s.pts.concat([[xe, l[1]]]) } : s; }); }
@@ -182,7 +184,22 @@
     </svg>
     <div class="gc-yl">${ticks.map(v => `<span style="top:${(Y(v) / H * 100).toFixed(2)}%">${B ? 'R$ ' + F2.format(v) : P2.format(v).replace(',00', '') + '%'}</span>`).join('')}</div>
     <div class="gc-xl"><span>${fmtX(x0)}</span><span>${fmtX((x0 + x1) / 2)}</span><span>${fmtX(x1)}</span></div>`;
-    leg.innerHTML = series.map(s => { const v = s.pts[s.pts.length - 1][1]; return `<div style="--lc:${s.color}"><b>${P2.format(v)}%</b><span>${s.label}</span></div>`; }).join('');
+    const val = (s, p) => s.base > 0 && s.vfmt ? s.vfmt(s.base * (1 + p / 100)) : null, o = opt || {};
+    leg.innerHTML = series.map(s => { const v = s.pts[s.pts.length - 1][1], a = o.mode === 'val' && val(s, 0);
+      return `<div style="--lc:${s.color}"><b>${a ? `${a} → ${val(s, v)} · ` : ''}${P2.format(v)}%</b><span>${s.label}</span></div>`; }).join('');
+    if (!o.cross) return;
+    const at = (s, ms) => { let p = null; for (const q of s.pts) { if (q[0] > ms) break; p = q; } return p; };
+    plot.style.touchAction = 'pan-y';
+    plot.onpointerdown = plot.onpointermove = (e) => {
+      if (e.type === 'pointermove' && e.pointerType !== 'mouse' && !e.buttons) return;
+      const sv = plot.querySelector('svg'), rc = sv.getBoundingClientRect(), fx = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width)), ms = x0 + fx * (x1 - x0), px = sv.offsetLeft + fx * rc.width;
+      const rows = series.map(s => { const p = at(s, ms); return p ? `<div style="--lc:${s.color}"><b>${val(s, p[1]) ? val(s, p[1]) + ' · ' : ''}${P2.format(p[1])}%</b> ${s.label}</div>` : ''; }).join('');
+      let tip = plot.querySelector('.gc-tip'), ln = plot.querySelector('.gc-vl');
+      if (!tip) { plot.insertAdjacentHTML('beforeend', '<div class="gc-vl"></div><div class="gc-tip"></div>'); tip = plot.querySelector('.gc-tip'); ln = plot.querySelector('.gc-vl'); }
+      ln.style.left = px + 'px'; tip.innerHTML = `<div class="gc-tip-d">${new Date(ms).toLocaleDateString('pt-BR')}</div>${rows}`;
+      tip.style.left = fx > .5 ? '' : (px + 8) + 'px'; tip.style.right = fx > .5 ? (plot.clientWidth - px + 8) + 'px' : '';
+    };
+    plot.onpointerleave = (e) => { if (e.pointerType === 'mouse') plot.querySelectorAll('.gc-tip, .gc-vl').forEach(x => x.remove()); };
   }
   function niceStep(r) { const p = Math.pow(10, Math.floor(Math.log10(r || 1))), n = r / p; return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p; }
 
