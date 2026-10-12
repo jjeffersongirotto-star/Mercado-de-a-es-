@@ -51,7 +51,8 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Versão (`?v=`) de JS/CSS | **automática** (hash do conteúdo, `server._index_html`) | não edite `?v=` à mão |
 | Configuração do Tailwind | `tailwind.config.js` | build do CSS e, sem ele, o CDN no navegador |
 | App instalável: nome e cor | `<title>` e `<meta name="theme-color">` do `index.html` | manifesto (`/manifest.webmanifest`, gerado pelo servidor) |
-| App instalável: ícones e modo sem internet | `static/icons/`, `sw.js` (registrado no fim do `ui.js`) | celular (tela inicial) |
+| App instalável: desenho do ícone (marca "JG Investindo", cores) | `scripts/build_icons.py` (gera `static/icons/`; não edite os PNG à mão) | manifesto, tela inicial do celular |
+| App instalável: modo sem internet | `sw.js` (registrado no fim do `ui.js`) | celular |
 | Endereços (branch `data`, site no Render), `br_num`, `when_sp` | `snapshots.py` (`RAW`, `APP_URL`) | servidor, `history.py`, `tiebreak.py`, `scripts/`, workflow `keepalive.yml` |
 | Dados de snapshots | `snapshots.load(nome)` | nunca baixe a mesma URL por conta própria |
 
