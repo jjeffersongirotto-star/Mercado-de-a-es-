@@ -585,7 +585,7 @@ def _start():
 
 @app.get("/api/countries")
 def api_countries():
-    return [{"id": k, "name": v[1], "currency": v[2], "flag": f"/static/flags/{k}.png",
+    return [{"id": k, "name": v[1], "currency": v[2], "flag": f"/static/flags/{k}.png", "index": tradingview.YAHOO[k][2],
              "sources": [{"id": i, "name": n, "logo": f"/static/logos/{l}"} for i, n, l, cs in SOURCES if k in cs]}
             for k, v in tradingview.COUNTRIES.items()]
 
@@ -652,9 +652,10 @@ def api_history(ticker: str, kind: str = "m"):
         return JSONResponse({"error": "histórico indisponível: " + str(e)[:200]}, status_code=502)
 
 @app.get("/api/chart/{ticker}")
-def api_chart(ticker: str, kind: str = "d"):
+def api_chart(ticker: str, kind: str = "d", country: str = "br"):
     try:
-        return JSONResponse(history.chart(ticker, kind), headers={"Cache-Control": "public, max-age=120"})
+        if country not in tradingview.COUNTRIES or kind not in history.KINDS: raise ValueError("parâmetros inválidos")
+        return JSONResponse(history.chart(ticker, kind, country), headers={"Cache-Control": "public, max-age=120"})
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     except Exception as e:

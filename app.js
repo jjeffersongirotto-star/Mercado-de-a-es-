@@ -351,7 +351,7 @@ function tipHtml(r, f) {
   return `${head}<table class="tipt">${rows}</table>${extra}<div class="mt-1 text-slate-400">Exibido e usado nos filtros: <b class="text-slate-200">${F(r.v[k])}</b></div>`;
 }
 
-const chartSlot = (r) => state.country === 'br' ? `<div class="gchart" data-gt="${r.ticker}"></div>` : '';
+const chartSlot = (r) => `<div class="gchart" data-gt="${r.ticker}"${state.country === 'br' ? '' : ` data-gc="${state.country}"`}></div>`;  // fora do Brasil: índice do país
 function blockHtml(r) {
   const price = val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
   const open = state.expanded.has(r.ticker);

@@ -9,6 +9,7 @@ import requests
 log = logging.getLogger("screener.hist")
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"}
 from snapshots import RAW
+import tradingview
 KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("10y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
 _mem = {}
 
@@ -16,7 +17,7 @@ def _ysym(t):
     t = t.upper()
     return "^BVSP" if t in ("IBOV", "^BVSP") else t + ".SA"
 
-def yahoo(t, kind, rng=None):
+def yahoo(t, kind, rng=None, sym=None):
     rng0, itv, _ = KINDS[kind]; rng = rng or rng0
     last = None
     for host in ("query1", "query2"):
@@ -27,7 +28,7 @@ def yahoo(t, kind, rng=None):
                 p.update(period1=0, period2=int(time.time()) + 86400)
             else:
                 p["range"] = rng
-            r = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{_ysym(t)}",
+            r = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{sym or _ysym(t)}",
                              params=p, headers={"User-Agent": "Mozilla/5.0"}, timeout=(4, 10))
             r.raise_for_status()
             res = r.json()["chart"]["result"][0]
@@ -229,8 +230,45 @@ def get(t, kind):
         return base
     raise RuntimeError("; ".join(errs))
 
-def chart(t, kind):
+def yget(sym, kind):
+    """Ação/índice de fora do Brasil direto do Yahoo (símbolo já com sufixo), com cache em memória."""
+    key = ("y", sym, kind); c = _mem.get(key)
+    if c and time.time() - c[0] < KINDS[kind][2]:
+        return c[1]
+    d = yahoo(sym, kind, sym=sym); _mem[key] = (time.time(), d)
+    return d
+
+def ysym(t, country):
+    suf = tradingview.YAHOO[country][0]
+    s = t.upper().rstrip(".").replace(".", "-")  # TradingView "RR." / "BRK.B" -> Yahoo "RR" / "BRK-B"
+    return f"{s}.{suf}" if suf else s
+
+def _cut(b, t0):  # série diária {d, v} a partir de ~40 dias antes do 1º ponto da ação
+    cut = datetime.fromtimestamp(t0 - 40 * 86400).strftime("%Y-%m-%d")
+    i0 = next((i for i, x in enumerate(b["d"]) if x >= cut), len(b["d"]))
+    return {"d": b["d"][i0:], "v": b["v"][i0:]}
+
+def chart_foreign(t, kind, country):
+    """Ação de fora: ação + índice do país (chave ibov) + dólar (BCB); ouro em US$ só nos EUA. Sem índices brasileiros."""
+    yx = tradingview.YAHOO[country]
+    out = {"stock": yget(yx[1] if t.upper() == "@IX" else ysym(t, country), kind)}
+    try: out["ibov"] = yget(yx[1], kind)
+    except Exception as e: out["ibov"] = {"error": str(e)[:120]}
+    if kind != "i":
+        t0 = out["stock"]["t"][0] if out["stock"].get("t") else 0
+        try: out["usd"] = _cut(bcb("usd"), t0)
+        except Exception as e: out["usd"] = {"error": str(e)[:120]}
+        if country == "us":
+            try:
+                g = yget("GC=F", "d")
+                out["gold"] = _cut({"d": [datetime.utcfromtimestamp(x).strftime("%Y-%m-%d") for x in g["t"]], "v": g["c"]}, t0)
+            except Exception as e: out["gold"] = {"error": str(e)[:120]}
+    return out
+
+def chart(t, kind, country="br"):
     """Uma requisição por período: ação + Ibovespa + índices BCB (exceto intradiário)."""
+    if country != "br":
+        return chart_foreign(t, kind, country)
     out = {"stock": get(t, kind)}
     try:
         out["ibov"] = get("IBOV", kind)

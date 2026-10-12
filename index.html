@@ -288,6 +288,9 @@
   .gt-tabs .gper { margin: 0 0 0 auto; } .gt-tabs .gper + .gper { margin-left: 0; } .gt-tabs { row-gap: .3rem; }
   .ggrid.reorg .gt { cursor: grab; } .ggrid.reorg .gt:not(.gt-fav) { outline: 1px dashed rgb(16 185 129 / .6); }
   .gx { width: 34px; height: 34px; border-radius: 9999px; display: grid; place-items: center; background: rgb(30 41 59); border: 1px solid rgb(71 85 105); color: rgb(226 232 240); font-size: 16px; }
+  .cmp-head { display: flex; align-items: center; gap: .5rem; } .cmp-flags { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .3rem; }
+  .cmp-flags button { display: grid; place-items: center; min-width: 32px; height: 28px; padding: 0 .3rem; border-radius: .45rem; border: 1px solid var(--bd); background: var(--bg-sec); font-size: 15px; line-height: 1; }
+  .cmp-flags button.on { border-color: var(--c-pos-bd); box-shadow: var(--ring); }
   .cmp-top { min-height: 30vh; border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .6); border-radius: 1rem; padding: .7rem; display: flex; flex-direction: column; gap: .55rem; }
   .cmp-srch { position: relative; } .cmp-srch input { width: 100%; padding: .55rem .75rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .9rem; outline: none; }
   .cmp-srch input:focus { border-color: rgb(16 185 129); }
@@ -569,7 +572,7 @@
 <h3>Reorganizar</h3>
 <ol class="list-decimal pl-5"><li>Na aba Grupos, toque em ⇅ Reorganizar.</li><li>Escolha ★ Favoritados ou Demais.</li><li>Arraste os grupos pela alça ⠿ para a ordem desejada e toque em Salvar (ou Cancelar).</li></ol><p class="text-slate-400 text-xs mt-1">Nos filtros da aba Ações, também dá para arrastar pela alça ⠿ para reordenar ou mandar para Filtros ocultos.</p>
 <h3>Comparar</h3>
-<ol class="list-decimal pl-5"><li>Abra a aba Comparar.</li><li>Em 'Buscar ação ou índice principal…' escolha a referência.</li><li>Em 'Adicionar ação ou índice…' inclua as outras para comparar.</li><li>O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens.</li></ol><p class="text-slate-400 text-xs mt-1">Aqui no Chat você também pode perguntar, por exemplo: “PETR4 vs VALE3 vs Ibovespa em 2 anos”.</p>
+<ol class="list-decimal pl-5"><li>Abra a aba Comparar.</li><li>Nas bandeiras (canto direito) escolha o país das ações (começa no Brasil); 🌐 compara ações de todos os países. Cada país tem o seu índice (Brasil: Ibovespa; EUA: S&amp;P 500; Reino Unido: FTSE 100; Alemanha: DAX; Portugal: PSI; Japão: Nikkei 225). Comparar tudo funciona só no Brasil.</li><li>Em 'Buscar ação ou índice principal…' escolha a referência.</li><li>Em 'Adicionar ação ou índice…' inclua as outras para comparar.</li><li>O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens.</li></ol><p class="text-slate-400 text-xs mt-1">Aqui no Chat você também pode perguntar, por exemplo: “PETR4 vs VALE3 vs Ibovespa em 2 anos”.</p>
 <h3>Previsão rentabilidade</h3>
 <ol class="list-decimal pl-5"><li>Abra a aba Previsão (sub-aba Previsão rentabilidade).</li><li>Em Referências, preencha Valor inicial, Aporte mensal, Dividendos e Rentabilidade (MÊS ou ANO) e o Imposto s/ dividendo.</li><li>Em Projeções, busque uma empresa para usar os números dela; ou em 'E se eu tivesse investido?' escolha a ação e a Data inicial/final para simular com o histórico real.</li><li>Use + em Aportes extraordinários e Retiradas extraordinárias para lançamentos avulsos.</li><li>A tabela mostra mês a mês (imposto em amarelo, Valorização total em violeta); toque em Mostrar mais meses para continuar.</li></ol>
 <h3>Previsão aluguel</h3>

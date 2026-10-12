@@ -6,18 +6,35 @@
   const COLORS = ['#34d399', '#60a5fa', '#facc15', '#f472b6', '#fb923c', '#a78bfa', '#d4a373', '#22d3ee', '#f87171', '#a3e635', '#e879f9', '#94a3b8'];
   const today = new Date().toISOString().slice(0, 10), yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();
-  S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all })); } catch (e) { } };
-  const rows = () => state.data ? state.data.rows : [];
+  S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.ct = S.ct || 'br'; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct })); } catch (e) { } };
+  // País da comparação (bandeiras): 'br' (padrão), outro país ou 'all' (🌐). Ação de fora = "us:AAPL"; índice do país = "@ix:us".
+  // Linhas de cada país = mesmo /api/data das abas (carregadas uma vez); Brasil reaproveita state.data quando a aba Ações está no Brasil.
+  const RC = {};
+  const ctry = (c) => (state.countries || []).find(x => x.id === c) || { id: c, name: c, index: 'Índice' };
+  const cOf = (id) => id.startsWith('@ix:') ? id.slice(4) : id.includes(':') ? id.split(':')[0] : 'br';
+  const tOf = (id) => id.includes(':') ? id.split(':')[1] : id;
+  const idOf = (c, t) => c === 'br' ? t : c + ':' + t;
+  const ctList = () => S.ct === 'all' ? (state.countries || []).map(c => c.id) : [S.ct];
+  async function loadRows(c) {
+    if (RC[c]) return RC[c];
+    if (c === 'br' && state.country === 'br' && state.data) return state.data.rows;
+    try { const d = await (await fetch(`/api/data?country=${c}`)).json(); RC[c] = (d.rows || []).filter(r => !r.il).map(r => ({ ...r, cid: idOf(c, r.ticker) })); } catch (e) { RC[c] = []; }
+    return RC[c];
+  }
+  const cached = (c) => RC[c] || (c === 'br' && state.country === 'br' && state.data ? state.data.rows : []);
+  const rows = () => ctList().flatMap(c => cached(c).map(r => (r.cid ? r : { ...r, cid: idOf(c, r.ticker) })));
+  const idxList = () => S.ct === 'br' ? IDX : S.ct === 'all' ? IDX.concat((state.countries || []).filter(c => c.id !== 'br').map(c => ['@ix:' + c.id, c.index + ' (' + c.name + ')', 'ibov']))
+    : [['@ix:' + S.ct, ctry(S.ct).index, 'ibov']].concat(IDX.filter(x => x[0] === '@usd' || (x[0] === '@gold' && S.ct === 'us')));
   const isIdx = (id) => id[0] === '@';
-  const label = (id) => isIdx(id) ? IDX.find(x => x[0] === id)[1] : id;
+  const label = (id) => isIdx(id) ? ((idxList().concat(IDX)).find(x => x[0] === id) || [id, id])[1] : cOf(id) === 'br' || S.ct !== 'all' ? tOf(id) : `${tOf(id)} (${ctry(cOf(id)).name})`;  // país no nome só no 🌐
   const root = $c('#compRoot');
   let vals = {}, seq = 0;
 
   function shell() {
     const fields = (state.data?.fields || []).filter(f => f.key !== 'preco');
     root.innerHTML = `<section class="cmp-top">
-      <label class="cmp-lbl">Principal</label>
+      <div class="cmp-head"><label class="cmp-lbl">Principal</label><div id="cmpFlags" class="cmp-flags">${(state.countries || []).map(c => `<button type="button" data-ct="${c.id}" title="Comparar ações de ${esc(c.name)}" aria-label="${esc(c.name)}"><img class="flag" src="${c.flag}" alt=""></button>`).join('')}<button type="button" data-ct="all" title="Comparar todos os países" aria-label="Todos os países">🌐</button></div></div>
       <div id="cmpPrin" class="cmp-prin"></div>
       <div class="cmp-srch" data-w="p"><input id="cmpP" type="search" placeholder="Buscar ação ou índice principal…" autocomplete="off"><div class="pv-combo hidden"></div></div>
       <label class="cmp-lbl">Comparar com</label>
@@ -33,6 +50,8 @@
   }
   function chips() {
     const ind = S.crit !== 'preco', ref = S.items[0];
+    root.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', b.dataset.ct === S.ct));
+    $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br');  // "Comparar tudo" usa o histórico da B3: só no Brasil
     $c('#cmpPrin').innerHTML = ref ? `<span class="cmp-chip ref" style="--cc:${COLORS[0]}">${esc(label(ref))}<b class="cmp-pv ${vals[ref] > 0 ? 'up' : vals[ref] < 0 ? 'dn' : ''}">${vals[ref] != null ? (ind ? F2.format(vals[ref]) : pc(vals[ref])) : ''}</b><button type="button" data-rm="${esc(ref)}" aria-label="Remover principal">✕</button></span>${S.items.length > 1 ? '<button type="button" id="cmpSwap" class="cmp-swap" title="Trocar principal" aria-label="Trocar principal">⇅</button>' : ''}` : '';
     $c('#cmpP').closest('.cmp-srch').classList.toggle('hidden', !!ref);
     $c('#cmpChips').innerHTML = S.items.slice(1).map((id, j) => `<span class="cmp-chip${ind && isIdx(id) ? ' off' : ''}" style="--cc:${COLORS[(j + 1) % COLORS.length]}">${esc(label(id))}<button type="button" data-rm="${esc(id)}" aria-label="Remover ${esc(label(id))}">✕</button></span>`).join('');
@@ -56,8 +75,8 @@
     const box = e.target.closest('.cmp-srch'), q = norm(e.target.value).trim(), d = box.querySelector('.pv-combo');
     if (!q) { d.classList.add('hidden'); return; }
     const ind = S.crit !== 'preco';
-    const idx = IDX.filter(x => norm(x[1]).includes(q) && !S.items.includes(x[0])).map(x => ({ id: x[0], t: x[1], s: 'índice', off: ind }));
-    const st = rows().filter(r => !S.items.includes(r.ticker) && (r._s ? r._s.includes(q) : norm(r.ticker + ' ' + r.nome).includes(q))).map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30).map(r => ({ id: r.ticker, t: r.ticker, s: r.nome || '' }));
+    const idx = idxList().filter(x => norm(x[1]).includes(q) && !S.items.includes(x[0])).map(x => ({ id: x[0], t: x[1], s: 'índice', off: ind }));
+    const st = rows().filter(r => !S.items.includes(r.cid) && (r._s ? r._s.includes(q) : norm(r.ticker + ' ' + r.nome).includes(q))).map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30).map(r => ({ id: r.cid, t: label(r.cid), s: r.nome || '' }));
     const L = idx.concat(st);
     d.innerHTML = L.length ? L.map(o => `<button type="button" data-add="${esc(o.id)}" data-w="${box.dataset.w}"${o.off ? ' disabled' : ''}><b>${esc(o.t)}</b><span>${esc(o.s)}${o.off ? ' · indisponível para indicadores' : ''}</span></button>`).join('') : '<div class="px-3 py-2 text-xs text-slate-500">Nada encontrado.</div>';
     d.classList.remove('hidden');
@@ -67,9 +86,9 @@
     vals = {};
     if (ind) {
       chart.classList.add('hidden');
-      const byT = new Map(rows().map(r => [r.ticker, r]));
+      const byT = new Map(rows().map(r => [r.cid, r]));
       for (const id of S.items) if (!isIdx(id)) { const r = byT.get(id); if (r && r.v[S.crit] != null) vals[id] = r.v[S.crit]; }
-      if (S.all) for (const r of rows()) if (r.v[S.crit] != null) vals[r.ticker] = r.v[S.crit];
+      if (S.all) for (const r of rows()) if (r.v[S.crit] != null) vals[r.cid] = r.v[S.crit];
       cols(); return;
     }
     chart.classList.toggle('hidden', S.min || S.all);
@@ -91,19 +110,21 @@
     const start = Date.parse(S.di), end = Date.parse(S.df) + 864e5 - 1;
     const kind = (Date.now() - start) > 5 * 365 * 864e5 ? 'm' : 'd';
     chart.querySelector('.gc-plot').innerHTML = loaderHTML('');
-    const stocks = S.items.filter(x => !isIdx(x)), need = stocks.length ? stocks : ['IBOV'];
+    // uma carga por ação; índices vêm da carga de uma ação do mesmo país (ou só do índice: "IBOV" no Brasil, "@IX" fora)
+    const stocks = S.items.filter(x => !isIdx(x)), idxC = (id) => id.startsWith('@ix:') ? id.slice(4) : (id === '@usd' || id === '@gold') && S.ct !== 'br' && S.ct !== 'all' ? S.ct : 'br';
+    const need = [...stocks]; for (const id of S.items.filter(isIdx)) { const c = idxC(id); if (!need.some(x => cOf(x) === c)) need.push(c === 'br' ? 'IBOV' : c + ':@IX'); }
     const pays = {}, tget = async (u, ms) => { const ac = new AbortController(), h = setTimeout(() => ac.abort(), ms); try { const r = await fetch(u, { signal: ac.signal }); return r.ok ? await r.json() : null; } catch (e) { return null; } finally { clearTimeout(h); } };
     // "comparar com tudo": retornos de todas as ações numa chamada só, em paralelo com o gráfico; nada fica carregando para sempre
     const pR = S.all ? tget(`/api/returns?di=${S.di}&df=${S.df}`, 20000) : null;
-    await Promise.all(need.map(async t => { const j = await tget(`/api/chart/${encodeURIComponent(t)}?kind=${kind}`, 15000); if (j) pays[t] = j; }));
+    await Promise.all(need.map(async id => { const c = cOf(id), j = await tget(`/api/chart/${encodeURIComponent(tOf(id))}?kind=${kind}${c === 'br' ? '' : '&country=' + c}`, 15000); if (j) pays[id] = j; }));
     if (my !== seq) return;
-    const anyP = Object.values(pays)[0] || {};
+    const payC = (c) => pays[Object.keys(pays).find(x => cOf(x) === c)] || {}, anyP = payC('br');
     const series = [];
     S.items.forEach((id, i) => {
       let pts = [];
       if (!isIdx(id)) { const p = pays[id]; if (p && p.stock && !p.stock.error) pts = gcPricePts(p.stock, start, end); }
       else {
-        const k = IDX.find(x => x[0] === id)[2], d = anyP[k];
+        const k = (idxList().concat(IDX)).find(x => x[0] === id)[2], d = payC(idxC(id))[k];
         if (d && !d.error) pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end);
       }
       if (pts.length) { vals[id] = pts[pts.length - 1][1]; series.push({ id: i === 0 ? 'stock' : id, label: label(id), color: COLORS[i % COLORS.length], pts }); }
@@ -114,7 +135,7 @@
     if (S.all) {
       const R = (await pR) || {}; S._miss = !Object.keys(R).length || !Object.keys(pays).length;
       if (my !== seq) return;
-      for (const r of rows()) { if (S.items.includes(r.ticker)) continue; const v = R[r.ticker]; if (v != null) vals[r.ticker] = v; }
+      for (const r of rows()) { if (S.items.includes(r.cid)) continue; const v = R[r.ticker]; if (v != null) vals[r.cid] = v; }
       for (const [id, , k] of IDX) if (vals[id] == null) { const d = anyP[k]; if (d && !d.error) { const pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end); if (pts.length) vals[id] = pts[pts.length - 1][1]; } }
     }
     if (!S.all) S._miss = false;
@@ -124,7 +145,7 @@
     const ref = S.items[0], rv = vals[ref], ind = S.crit !== 'preco';
     const fmt = (v) => ind ? F2.format(v) : pc(v);
     const L = [], M = [];
-    const cand = S.all ? [...new Set(S.items.slice(1).concat(IDX.map(x => x[0]), rows().map(r => r.ticker)))].filter(id => id !== ref) : S.items.slice(1);
+    const cand = S.all ? [...new Set(S.items.slice(1).concat(IDX.map(x => x[0]), rows().map(r => r.cid)))].filter(id => id !== ref) : S.items.slice(1);
     for (const id of cand) {
       if (vals[id] == null) continue;
       const it = { id, v: vals[id], d: rv == null ? 0 : vals[id] - rv };
@@ -144,9 +165,16 @@
     if (!state.data) { root.innerHTML = loaderHTML('Carregando dados…'); if (!waiting) { waiting = true; setTimeout(() => { waiting = false; build(); }, 1200); } return; }
     shell(); built = true;
     for (const id of ['#cmpP', '#cmpQ']) { $c(id).addEventListener('input', drop); $c(id).addEventListener('focus', drop); }
+    Promise.all(ctList().map(loadRows));
     root.addEventListener('click', async (e) => {
       if (e.target.closest('#cmpMin')) { S.min = !S.min; $c('#cmpChart').classList.toggle('hidden', S.min || S.all || S.crit !== 'preco'); chips(); save(); return; }
       if (e.target.closest('#cmpAll')) { S.all = !S.all; all(); return; }
+      const fl = e.target.closest('[data-ct]');
+      if (fl) {  // país escolhido: só ações dele (e seus índices); 🌐 mantém tudo
+        S.ct = fl.dataset.ct; if (S.ct !== 'br') S.all = false;
+        if (S.ct !== 'all') S.items = S.items.filter(id => (isIdx(id) ? idxList().some(x => x[0] === id) : cOf(id) === S.ct));
+        all(); await Promise.all(ctList().map(loadRows)); return;
+      }
       const a = e.target.closest('[data-add]');
       if (a) { if (a.dataset.w === 'p') S.items = [a.dataset.add].concat(S.items.filter(x => x !== a.dataset.add)); else S.items.push(a.dataset.add);
         $c('#cmpP').value = $c('#cmpQ').value = ''; root.querySelectorAll('.cmp-srch .pv-combo').forEach(x => x.classList.add('hidden')); all(); return; }
