@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Gera os ícones do app instalável em static/icons/ e a marca do topo do site em static/brand/ a partir da arte "JG Investing"
 (fonte única do desenho): scripts/icon-source.jpg (botão quadrado: ícones normais e iPhone), scripts/icon-source-round.jpg
-(botão redondo: Android) e scripts/brand-source.jpg (faixa horizontal: topo do site). Uso: python scripts/build_icons.py   (requer Pillow).
+(botão redondo: Android), scripts/brand-source.jpg (faixa horizontal: topo do site no celular) e
+scripts/brand-source-wide.jpg (faixa comprida: topo do site no computador). Uso: python scripts/build_icons.py   (requer Pillow).
 Para trocar o ícone: substitua scripts/icon-source.jpg (botão quadrado sobre fundo escuro) e ajuste BOTAO se o recorte mudar."""
 import os
 from PIL import Image, ImageDraw, ImageFilter
@@ -14,10 +15,11 @@ OUT = os.path.join(AQUI, "..", "static", "icons")
 BOTAO = (206, 102, 1305, 1201)   # caixa do botão dentro da imagem (x0, y0, x1, y1)
 RAIO = 0.14                       # raio dos cantos do botão (fração do lado)
 MOLDURA = 35                      # espessura da moldura clara do botão (px na arte), removida quando o celular recorta o ícone
-FONTE_MARCA = os.path.join(AQUI, "brand-source.jpg")
-FAIXA = (56, 54, 3404, 510)        # caixa da faixa horizontal dentro da imagem da marca
+BRAND = os.path.join(AQUI, "..", "static", "brand")
 RAIO_FAIXA = 0.19                 # raio dos cantos da faixa (fração da altura)
-MARCA = os.path.join(AQUI, "..", "static", "brand", "jg-investing.webp")
+# faixas da marca: (arte, caixa da faixa dentro da arte, arquivo gerado, altura gerada em px)
+MARCAS = ((os.path.join(AQUI, "brand-source.jpg"), (56, 54, 3404, 510), "jg-investing.webp", 126),
+          (os.path.join(AQUI, "brand-source-wide.jpg"), (7, 390, 2118, 505), "jg-investing-wide.webp", 115))
 FUNDO = (3, 12, 34)               # cor escura do interior do botão (fundo dos ícones que o celular recorta)
 
 
@@ -49,9 +51,9 @@ def redondo(size, k=0.8):
     return im.resize((size, size), Image.LANCZOS)
 
 
-def marca(altura=126):
-    """Faixa "JG Investing" do topo do site, com os cantos arredondados transparentes (altura em px; exibida a até 1/3 no computador)."""
-    b = Image.open(FONTE_MARCA).convert("RGB").crop(FAIXA); W, H = b.size
+def marca(fonte, caixa, altura):
+    """Faixa "JG Investing" do topo do site, com os cantos arredondados transparentes."""
+    b = Image.open(fonte).convert("RGB").crop(caixa); W, H = b.size
     m = Image.new("L", (W, H), 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, W - 1, H - 1], radius=H * RAIO_FAIXA, fill=255)
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); im.paste(b, (0, 0), m)
     return im.resize((round(W * altura / H), altura), Image.LANCZOS)
@@ -73,4 +75,6 @@ if __name__ == "__main__":
                                 ("apple-touch-icon.png", 180, True, 0.92)):
         icone(size, mask, k).save(os.path.join(OUT, nome), optimize=True); print(nome)
     redondo(512, 0.9).save(os.path.join(OUT, "maskable-512.png"), optimize=True); print("maskable-512.png")
-    os.makedirs(os.path.dirname(MARCA), exist_ok=True); marca().save(MARCA, quality=90, method=6); print(os.path.basename(MARCA))
+    os.makedirs(BRAND, exist_ok=True)
+    for fonte, caixa, nome, altura in MARCAS:
+        marca(fonte, caixa, altura).save(os.path.join(BRAND, nome), quality=90, method=6); print(nome)
