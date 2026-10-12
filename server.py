@@ -758,7 +758,18 @@ def api_chat(body: dict):
     if _chat_D.get("key") != key:  # índice de nomes/apelidos: recalcula só quando os dados mudam
         _chat_D.update(key=key, D=chat.build(rows, FIELDS, MX, CAD))
     chat_D = _chat_D["D"]
-    return JSONResponse(chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}), headers={"Cache-Control": "no-store"})
+    def ext_fn(t, c):  # empresa ligada a um assunto (qualquer país do site): mesmos dados das abas
+        try:
+            if c != "br" and c not in tradingview.COUNTRIES: return None
+            rows_c = rows if c == "br" else (cache.get_foreign(c) or {}).get("rows") or []
+            r = next((x for x in rows_c if x["ticker"].upper() == t), None)
+            if not r: return None
+            v = r.get("v") or {}
+            return {"ticker": r["ticker"], "nome": r.get("nome"), "var": r.get("var"), "cur": r.get("cur"), "pais": tradingview.COUNTRIES[c][1],
+                    "preco": v.get("preco"), "valmerc": v.get("valmerc"), "pl": v.get("pl")}
+        except Exception as e:
+            log.warning("chat ext %s/%s: %s", c, t, e); return None
+    return JSONResponse(chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}, ext_fn), headers={"Cache-Control": "no-store"})
 
 _chat_D = {}
 

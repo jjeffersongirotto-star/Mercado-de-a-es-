@@ -971,7 +971,33 @@ def _sys(extra=""):
             + ", ".join(ui_labels()) + ". Nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele "
             "olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, e sugira a opção real mais próxima, se houver. "
             "Você pode filtrar, ranquear e cruzar critérios na tabela de dados e deve explicar os critérios usados. Diga quais ações atendem "
-            "aos critérios, sem recomendação personalizada de investimento. " + extra)
+            "aos critérios, sem recomendação personalizada de investimento. " + POP + extra)
+
+
+# assuntos fora do mercado: a IA só aponta a empresa ligada (marcador); preço e dados vêm do site (link_ext)
+POP = ("Se a pergunta for sobre algo fora do mercado (jogo, filme, série, música, esporte, pessoa, marca, produto, evento, política ou atualidade), "
+       "diga em uma ou duas frases qual empresa de capital aberto está mais ligada a ele (dona, fabricante, distribuidora, patrocinadora) e em que bolsa "
+       "ela é negociada, sem escrever preço, e termine com uma linha só com [[EMPRESA:TICKER:PAIS]] (PAIS = br, us, gb, de, pt ou jp; ex.: [[EMPRESA:TTWO:us]]). "
+       "Se não houver empresa ligada ou você não souber do que se trata, peça para a pessoa escolher o tema e termine com uma linha só com [[ASSUNTO]]. ")
+TOPICS = ["Cinema", "Música", "Esporte", "Jogos", "Política", "Atualidades", "Outros"]
+_MK = re.compile(r"\[\[EMPRESA:([A-Za-z0-9.\-]+):([a-z]{2})\]\]")
+
+
+def link_ext(out, q, ext_fn):
+    """Troca os marcadores da IA: empresa ligada -> dados do site (qualquer país); assunto incerto -> botões de tema."""
+    a = out["a"]; m = _MK.search(a); ask = "[[ASSUNTO]]" in a
+    a = _MK.sub("", a).replace("[[ASSUNTO]]", "").strip()
+    r = ext_fn(m.group(1).upper(), m.group(2)) if m and ext_fn else None
+    if r:
+        cur, big = r.get("cur") or "", lambda x: f"{br(x / 1e9, 1)} bi" if abs(x) >= 1e9 else f"{br(x / 1e6, 1)} mi"
+        var = r.get("var")
+        a += (f"\n\n**{r.get('nome') or r['ticker']} ({r['ticker']})** — {r['pais']}: preço {br(r.get('preco'))} {cur}"
+              + (f" ({'+' if var >= 0 else ''}{br(var)}% hoje)" if var is not None else "")
+              + (f" · valor de mercado {big(r['valmerc'])} {cur}" if r.get("valmerc") else "")
+              + (f" · P/L {br(r['pl'])}" if r.get("pl") else "") + "\n\nDeseja mais alguma informação sobre ela?")
+    out = dict(out, a=a)
+    if ask: out["sug"] = [{"l": t, "q": f"{q} (assunto: {t.lower()})"} for t in TOPICS]
+    return out
 
 
 def _post(model, body, deadline, cap=60):
@@ -1164,7 +1190,7 @@ def ground(q, ctx, hist, deadline):
 _QA = {}  # mesma pergunta no mesmo dia (sem histórico)
 
 
-def answer2(q, hist, D, ret_fn, cx=None):
+def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None):
     t0 = time.time(); deadline = t0 + DEADLINE_S
     cx = cx or {}
     P = parse(q, D, hist)
@@ -1210,13 +1236,12 @@ def answer2(q, hist, D, ret_fn, cx=None):
                 try:
                     a, tok = ground(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini+web", "tok": tok}
                 except Exception as e:
-                    log.info("busca web: %s", str(e)[:60])
-                    note = "\n\n(Busca na web indisponível agora — plano gratuito/cota do Gemini; resposta com os dados do site.)"
+                    log.info("busca web indisponível (cota do Gemini?): %s", str(e)[:60])
                     if out is None:
                         try: a, tok = gemini2(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini", "tok": tok}
                         except Exception: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
-                    out = dict(out, a=out["a"] + note)
             if out is None: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+    if out["mode"].startswith("gemini"): out = link_ext(out, q, ext_fn)
     if out["a"].startswith("Não consegui entender") or out["mode"] == "regras" and out["a"].startswith("Não encontrei"):
         out["sug"] = suggestions(P, D)
     elif out["mode"] in ("regras", "ia+dados") and (P["tickers"] or P["metrics"] or P["sector"]):

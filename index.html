@@ -60,13 +60,13 @@
   #tooltip { pointer-events: none; }
   #hiddenFolder:not(.open) #hiddenList .fitem { display: none; }
   #hiddenFolder.open .folder-hint { display: none; }
-  @media (max-width: 639px) {  /* topo no celular em pé: faixa; bandeira | Fonte (metade de cima) e data (metade de baixo) | botões */
-    #hdr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "brand brand brand" "flag src btns" "flag upd btns"; row-gap: 0; }
-    #hdr > h1 { grid-area: brand; margin-bottom: .4rem; } #hdrSrc { display: contents; } #ddCountry { grid-area: flag; } #hdrBtns { grid-area: btns; gap: .35rem; }
-    #ddSource { grid-area: src; min-width: 0; justify-self: start; max-width: 100%; } #updated { grid-area: upd; align-self: start; line-height: 1.2; margin-top: 2px; }
-    body #hdr #btnSource { height: 22px; padding: 0 .45rem; border-radius: .45rem; max-width: 100%; overflow: hidden; } #sourceLabel { min-width: 0; overflow: hidden; white-space: nowrap; }
-    body #hdr #btnCountry { height: calc(22px + 2px + 1.2 * 11px); } body #hdrBtns .ricon { width: 30px; }
+  @media (max-width: 639px) {  /* topo no celular em pé: faixa; bandeira | Fonte | data (dd/mm/aa, quebra em 2 linhas) | botões — mesma altura */
+    #hdr { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "brand brand brand brand" "flag src upd btns"; column-gap: .4rem; }
+    #hdr > h1 { grid-area: brand; } #hdrSrc { display: contents; } #ddCountry { grid-area: flag; } #hdrBtns { grid-area: btns; gap: .3rem; }
+    #ddSource { grid-area: src; } #updated { grid-area: upd; justify-self: center; text-align: center; white-space: normal; line-height: 1.25; }
+    body #hdrBtns .ricon { width: 26px; } body #hdr #btnCsv { padding: 0 .4rem; } body #hdr #btnCountry { padding: 0 .3rem; } #updated { font-size: 10.5px; }
   }
+
   #hiddenFolder:not(.open) #hiddenList { min-height: 0; padding-bottom: 0; }
   .sortable-fallback { opacity: .9 !important; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   .drag-handle { touch-action: none; }
@@ -193,7 +193,9 @@
   .gc-load { display: grid; place-items: center; height: 100%; font-size: 12px; color: rgb(148 163 184); text-align: center; }
   .gc-empty { display: grid; place-items: center; height: 100%; font-size: 13px; color: rgb(148 163 184); border: 1px dashed rgb(51 65 85); border-radius: .5rem; text-align: center; padding: 1rem; }
   .gc-nodata .gc-chk label, .gc-nodata .gc-dates label { opacity: .4; filter: grayscale(1); }
-  .sd-ic { font-size: 10px; font-weight: 800; padding: 0 3px; border-radius: 4px; background: rgb(51 65 85); margin-right: 2px; }
+  html { background: rgb(2 6 23); }  /* mesma cor do body (bg-slate-950): sem fio claro no fim da página */
+  .sd-ic { display: block; } .sd-ic path { fill: none; stroke: var(--c-mut); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; } .sd-ic path.on { stroke: var(--c-pos); }
+  #sortDir { display: inline-flex; align-items: center; gap: .3rem; }
   .gc-note { display: none; }
   .gc-nodata-msg { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: rgb(148 163 184); pointer-events: none; text-align: center; }
   .umod { position: fixed; inset: 0; z-index: 300; background: rgb(2 6 23 / .7); display: grid; place-items: center; padding: 1rem; }
@@ -342,6 +344,8 @@
   body .umod-list button { justify-content: flex-start; min-height: var(--h); }
   body .hidden { display: none !important; }
   .upd { font-size: 10.5px; font-weight: 400; color: rgb(100 116 139); margin-top: 1px; } .gt-upd { padding: .2rem .6rem .35rem; flex: none; }
+  .gt-foot { display: flex; align-items: center; gap: .3rem; padding-right: .6rem; } .gt-foot .gt-upd { margin-right: auto; }
+  .gt-act { font-size: 10.5px; line-height: 1.2; padding: .12rem .45rem; border-radius: .4rem; background: var(--bg-sec); border: 1px solid var(--bd); color: var(--c-txt); } .gt-act.dan { color: var(--c-neg); border-color: rgb(159 18 57 / .8); }
   body .gbtn.pri, body .pv-ok, body .umod-ok, body #btnCsv { min-height: var(--h); padding: 0 .9rem; border-radius: var(--r); font-size: 13px; font-weight: 700; background: var(--c-pos-bg); border: 1px solid var(--c-pos-bd); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
   body .pv-ok { min-height: var(--h-sm); }
   body .gbtn.dan, body .pv-lnk.dan, body .gt-tabs button.dan { color: var(--c-neg); border-color: rgb(159 18 57 / .8); background: rgb(76 5 25 / .35); }
@@ -557,11 +561,11 @@
 <h3>Ações</h3>
 <ol class="list-decimal pl-5"><li>Cada card mostra preço, variação e os indicadores (consenso das fontes em Todos).</li><li>No topo escolha país e fonte; veja 'Status das fontes' abaixo dos filtros.</li><li>Toque no card para expandir (Expandir todos/Recolher todos, ao lado de resultados, abrem ou fecham todos): histórico, índices B3, peso no Ibovespa e outras classes da ação.</li><li>As cores indicam concordância entre fontes (pergunte 'o que significam as cores').</li><li>Use a busca, a lupa de filtros e Ordenar para refinar; Carregar mais mostra mais resultados.</li></ol>
 <h3>Filtros e ordenação</h3>
-<ol class="list-decimal pl-5"><li>Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.</li><li>Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e Indicadores (toque em + para abrir os campos de mínimo/máximo).</li><li>Nos campos: ≥ maior é melhor, ≤ menor é melhor; campo vazio = sem filtro; os filtros se somam (todos precisam ser atendidos); percentuais como número (8 = 8%); ≤ com + exclui negativos (ex.: P/L negativo = prejuízo).</li><li>Em Volume (média diária) escolha o período (dia, 10 pregões, 1 a 12 meses) e digite em milhões da moeda (10 = 10 mi/dia); em Crescimento escolha Receita ou Lucro e o período (1 a 5 anos).</li><li>Toque na ☆ de um campo para levá-lo ao topo; arraste pela alça ⠿ para reordenar ou para Filtros ocultos (ocultos não são aplicados); Limpar filtros zera os valores.</li><li>Em Ordenar, escolha o indicador (começa em Alta do dia (%)) e toque no botão ao lado (9→1 Maior → menor) para inverter.</li><li>↓ CSV exporta o resultado.</li></ol>
+<ol class="list-decimal pl-5"><li>Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.</li><li>Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e Indicadores (toque em + para abrir os campos de mínimo/máximo).</li><li>Nos campos: ≥ maior é melhor, ≤ menor é melhor; campo vazio = sem filtro; os filtros se somam (todos precisam ser atendidos); percentuais como número (8 = 8%); ≤ com + exclui negativos (ex.: P/L negativo = prejuízo).</li><li>Em Volume (média diária) escolha o período (dia, 10 pregões, 1 a 12 meses) e digite em milhões da moeda (10 = 10 mi/dia); em Crescimento escolha Receita ou Lucro e o período (1 a 5 anos).</li><li>Toque na ☆ de um campo para levá-lo ao topo; arraste pela alça ⠿ para reordenar ou para Filtros ocultos (ocultos não são aplicados); Limpar filtros zera os valores.</li><li>Em Ordenar, escolha o indicador (começa em Alta do dia (%)) e toque no botão de setas ao lado (˄˅; seta verde = ordem atual, ex.: Maior → menor) para inverter.</li><li>↓ CSV exporta o resultado.</li></ol>
 <h3>Favoritos</h3>
 <ol class="list-decimal pl-5"><li>Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.</li><li>Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.</li><li>Ficam salvos no seu navegador.</li></ol>
 <h3>Grupos (criar e editar)</h3>
-<ol class="list-decimal pl-5"><li>Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.</li><li>Toque nos cards das empresas para selecioná-las (uma ação por empresa).</li><li>Digite o Nome do grupo e toque em Salvar.</li><li>Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir para alterar.</li><li>Para guardar seus grupos ou levá-los a outro aparelho, use ↓ (Exportar grupos) para baixar um arquivo e ↑ (Importar grupos) para carregá-lo, no topo da aba Grupos.</li></ol>
+<ol class="list-decimal pl-5"><li>Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.</li><li>Toque nos cards das empresas para selecioná-las (uma ação por empresa).</li><li>Digite o Nome do grupo e toque em Salvar.</li><li>Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir, no canto inferior direito do card, para alterar.</li><li>Para guardar seus grupos ou levá-los a outro aparelho, use Exportar grupos (ícone de arquivo com seta para baixo) para baixar um arquivo e Importar grupos (seta para cima) para carregá-lo, no topo da aba Grupos.</li></ol>
 <h3>Reorganizar</h3>
 <ol class="list-decimal pl-5"><li>Na aba Grupos, toque em ⇅ Reorganizar.</li><li>Escolha ★ Favoritados ou Demais.</li><li>Arraste os grupos pela alça ⠿ para a ordem desejada e toque em Salvar (ou Cancelar).</li></ol><p class="text-slate-400 text-xs mt-1">Nos filtros da aba Ações, também dá para arrastar pela alça ⠿ para reordenar ou mandar para Filtros ocultos.</p>
 <h3>Comparar</h3>

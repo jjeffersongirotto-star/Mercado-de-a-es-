@@ -266,6 +266,25 @@ def test_no_ai_gives_suggestions():
     assert chat.read_log(10, "sem_resposta")[0]["q"] == "qual empresa tem o maior lucro"
 
 
+
+def test_pop_culture_links_company_and_topics():
+    def fake(url, headers=None, json=None, timeout=None):
+        if json["generationConfig"].get("responseMimeType"): return _gem('{"tipo":"analise"}')
+        txt = json["contents"][-1]["parts"][0]["text"]
+        return _gem("O GTA é da Take-Two, negociada na Nasdaq.\n[[EMPRESA:TTWO:us]]" if "gta" in txt.lower() else "Não sei do que se trata.\n[[ASSUNTO]]")
+    ext = lambda t, c: {"ticker": t, "nome": "Take-Two Interactive", "var": 1.0, "cur": "USD", "pais": "Estados Unidos", "preco": 200.0, "valmerc": 3.9e10, "pl": None} if (t, c) == ("TTWO", "us") else None
+    old = _with_ai(fake)
+    try:
+        chat._QA.clear()
+        a1 = chat.answer2("E o gta?", [], D, ret_fn, {}, ext)
+        a2 = chat.answer2("e aquele lance do zorbax?", [], D, ret_fn, {}, ext)
+    finally:
+        _restore(old)
+    assert "[[" not in a1["a"] and "TTWO" in a1["a"] and "200,00 USD" in a1["a"] and "Deseja mais alguma informação" in a1["a"]
+    assert "[[" not in a2["a"] and [x["l"] for x in a2["sug"]][-1] == "Outros"
+    assert "Busca na web indisponível" not in open(chat.__file__, encoding="utf-8").read()
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
