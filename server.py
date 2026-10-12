@@ -715,8 +715,20 @@ def api_chat(body: dict):
         try: out.update(_idx_returns(di, df))
         except Exception: pass
         return out
-    chat_D = chat.build(rows, FIELDS, MX)
+    CAD = ((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}
+    key = ((cache.data or {}).get("updated_at"), id(MX), len(CAD))
+    if _chat_D.get("key") != key:  # índice de nomes/apelidos: recalcula só quando os dados mudam
+        _chat_D.update(key=key, D=chat.build(rows, FIELDS, MX, CAD))
+    chat_D = _chat_D["D"]
     return JSONResponse(chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}), headers={"Cache-Control": "no-store"})
+
+_chat_D = {}
+
+@app.get("/api/chat/log")
+def api_chat_log(n: int = 200, only: str = ""):
+    """Perguntas feitas ao chat (mais recentes primeiro). only=sem_resposta | reclamacao."""
+    import chat
+    return JSONResponse(chat.read_log(max(1, min(n, 2000)), only or None), headers={"Cache-Control": "no-store"})
 
 @app.get("/api/metrics")
 def api_metrics():

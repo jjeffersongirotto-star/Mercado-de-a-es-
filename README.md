@@ -80,3 +80,19 @@ Selecionar uma fonte mostra somente os valores dela (filtros e ordenação usam 
 
 Rotina diária (19:05): `scripts/push_snapshot_from_here.sh` atualiza todos os snapshots em sequência
 (`ONLY="cvm tradingview"` limita as etapas).
+
+## Chat (aba Chat)
+`chat.py` responde sobre os dados do site. Como decide:
+1. **Entende sem IA** (`parse`): tickers (`PETR4`, `petr 4`, `petr`), nomes e apelidos (Petrobras, Itaú, BB, Magalu…, sempre a classe
+   mais negociada, ou ON/PN/unit se pedida), vários indicadores, setor, filtros (`DY acima de 8`, `entre 6 e 10`, `lucro positivo`),
+   período (`em 2024`, `desde janeiro`, `de 2020 a 2023`, `hoje`, `última semana`), abreviações (`oq`, `pq`, `hj`), erros de digitação
+   e a conversa anterior (`e o P/L?`, `e a VALE3?`).
+2. **Responde na hora** só quando entendeu todas as palavras; rankings usam liquidez ≥ R$ 500 mil/dia, 1 ticker por empresa e DY < 40%
+   (critérios mostrados na resposta).
+3. **Com `GEMINI_API_KEY`**: perguntas objetivas que as regras não entenderam são **interpretadas pela IA em JSON** e calculadas em Python
+   com os dados reais (`ia+dados`); perguntas abertas (análise, opinião) vão ao Gemini com o contexto do site; reclamação (“está errado”)
+   ou indicador perguntado sem maioria entre as fontes usa busca na web. Tempo total limitado a 120 s.
+4. Sem resposta: sugestões clicáveis.
+
+Registro de perguntas: `cache/chat_log.jsonl`, visível em `/api/chat/log` (`?only=sem_resposta` ou `?only=reclamacao`, `&n=500`).
+Testes: `python tests/test_chat.py`.
