@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Screener B3 — backend FastAPI.
+"""JG Investing — backend FastAPI.
 Fonte primária: Fundamentus (resultado.php). Complemento: Status Invest (ao vivo; fallback snapshot diário do GitHub Actions).
 Nomes/setores (opcional): brapi.dev /api/quote/list (público, sem token).
 """
@@ -543,11 +543,12 @@ def scheduler():
             cache.refresh()
         time.sleep(60)
 
-app = FastAPI(title="Screener B3")
+app = FastAPI(title="JG Investing")
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.mount("/static/logos", StaticFiles(directory=os.path.join(BASE, "static", "logos")), name="logos")
 app.mount("/static/flags", StaticFiles(directory=os.path.join(BASE, "static", "flags")), name="flags")
 app.mount("/static/icons", StaticFiles(directory=os.path.join(BASE, "static", "icons")), name="icons")
+app.mount("/static/brand", StaticFiles(directory=os.path.join(BASE, "static", "brand")), name="brand")
 
 @app.on_event("startup")
 def _start():

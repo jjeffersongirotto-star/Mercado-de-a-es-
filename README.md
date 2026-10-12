@@ -1,4 +1,4 @@
-# Screener B3
+# JG Investing
 
 Filtro de ações da B3 (e de outros países, via TradingView) com indicadores fundamentalistas, consenso entre várias fontes,
 grupos prontos, comparação, previsão de rentabilidade/aluguel e um chat sobre os dados do site.

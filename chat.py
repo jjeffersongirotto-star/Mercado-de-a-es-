@@ -729,6 +729,14 @@ _GUIDE = None
 _LABELS = None
 
 
+def site_name():
+    """Nome do site = parte antes de " — " no <title> do index.html (mesma fonte do nome do app instalável)."""
+    try:
+        return re.search(r"<title>(.*?)</title>", open(os.path.join(BASE, "index.html"), encoding="utf-8").read()).group(1).split(" — ")[0]
+    except Exception:
+        return ""
+
+
 def guide():
     """Guia do site = painel ⓘ (#infoModal do index.html). Fonte única das explicações, do passo a passo e do glossário."""
     global _GUIDE
@@ -958,7 +966,7 @@ def _models():
 
 
 def _sys(extra=""):
-    return ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, com números no formato brasileiro. "
+    return ("Você é o assistente do site " + site_name() + ". Responda em português do Brasil, de forma concisa, com números no formato brasileiro. "
             "Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: "
             + ", ".join(ui_labels()) + ". Nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele "
             "olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, e sugira a opção real mais próxima, se houver. "

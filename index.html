@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Screener B3 — Indicadores Fundamentalistas</title>
+<title>JG Investing — Indicadores Fundamentalistas</title>
 <meta name="theme-color" content="#020617">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
@@ -344,6 +344,7 @@
   body .lupa, body .gx, body #btnInfo, body [data-close], body .pv-x, body .pv-i, body .pv-plus, body .cmp-swap, body #btnCountry {
     width: var(--h); height: var(--h); min-width: var(--h); padding: 0; flex: none; display: inline-grid; place-items: center; border-radius: var(--r); background: var(--bg-sec); border: 1px solid var(--bd); color: var(--c-txt); font-size: 16px; font-weight: 600; line-height: 1; }
   body #btnCountry { width: auto; padding: 0 .4rem; display: inline-flex; gap: .3rem; }
+  body #btnSource { height: var(--h); border-radius: var(--r); background: var(--bg-sec); border-color: var(--bd); }
   body .pv-plus { color: var(--c-pos); font-size: 20px; }
   body .ricon, body .gc-bar .gc-ref.ricon { width: var(--h); height: var(--h); background: none; border: 0; color: rgb(203 213 225); }
   body .star { width: var(--h-sm); height: var(--h-sm); }
@@ -398,30 +399,28 @@
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 <header class="border-b border-slate-800 bg-slate-900/80">
-  <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
+  <div class="max-w-[1800px] mx-auto px-3 sm:px-4 py-2 space-y-1.5">
     <div class="flex items-center gap-2">
-      <div class="flex flex-col items-start gap-1">
+      <h1 class="m-0"><img src="/static/brand/jg-investing.png" alt="JG Investing" width="107" height="40" class="h-10 w-auto block"></h1>
+      <div class="ml-auto flex items-center gap-2 text-sm">
+        <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button id="btnCsv">↓ CSV</button>
+        <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 min-w-0">
       <div id="ddCountry" class="dd">
-        <button id="btnCountry" type="button" title="País" aria-haspopup="listbox" class="h-9 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5">
+        <button id="btnCountry" type="button" title="País" aria-haspopup="listbox" class="px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5">
           <img id="countryFlag" class="flag" src="/static/flags/br.png" alt="Brasil"><span class="chev text-[10px] text-slate-400">▾</span></button>
         <div id="countryMenu" class="dd-menu hidden left-0" role="listbox"></div>
       </div>
       <div id="ddSource" class="dd">
-        <button id="btnSource" type="button" title="Fonte dos dados" aria-haspopup="listbox" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs flex items-center gap-1.5">
+        <button id="btnSource" type="button" title="Fonte dos dados" aria-haspopup="listbox" class="px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs flex items-center gap-1.5">
           <span class="text-xs text-slate-400">Fonte</span><span id="sourceLabel" class="flex items-center gap-1.5 font-medium">Todos</span><span class="chev text-[10px] text-slate-400">▾</span></button>
         <div id="sourceMenu" class="dd-menu hidden left-0" role="listbox"></div>
       </div>
-      </div>
-      <div>
-        <h1 class="text-lg font-bold leading-tight">Screener <span id="countryTitle">B3</span></h1>
-        <p id="subtitle" class="hidden sm:block text-[11px] text-slate-400 leading-tight">Consenso entre várias fontes</p>
-      </div>
-    </div>
-    <div class="ml-auto flex flex-nowrap items-center gap-2 text-sm min-w-0">
-      <span id="updated" class="text-slate-400 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[46vw] sm:max-w-none">Carregando…</span>
-      <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button id="btnCsv">↓ CSV</button>
-      <button id="btnInfo" type="button" title="Como funciona" aria-label="Informações" class="w-9 h-9 grid place-items-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-lg leading-none">ⓘ</button>
+      <p id="subtitle" class="hidden sm:block text-[11px] text-slate-400 leading-tight">Consenso entre várias fontes</p>
+      <span id="updated" class="ml-auto text-slate-400 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Carregando…</span>
     </div>
   </div>
 </header>
@@ -569,7 +568,7 @@
 <h3>Atualizar dados</h3>
 <ol class="list-decimal pl-5"><li>Toque no botão ⟳ (Atualizar) no topo.</li><li>O horário da última atualização aparece ao lado (horário de Brasília).</li><li>Os dados também se atualizam sozinhos a cada 30 minutos.</li></ol>
 <h3>Instalar o app</h3>
-<ol class="list-decimal pl-5"><li>Android (Chrome): abra o site, toque no menu ⋮ e em Instalar app (ou Adicionar à tela inicial).</li><li>iPhone (Safari): abra o site, toque em Compartilhar e em Adicionar à Tela de Início.</li><li>O ícone Screener B3 aparece na tela inicial e abre em tela cheia, sem a barra do navegador.</li><li>O app se atualiza sozinho com o site; sem internet, mostra os últimos dados que você abriu.</li></ol>
+<ol class="list-decimal pl-5"><li>Android (Chrome): abra o site, toque no menu ⋮ e em Instalar app (ou Adicionar à tela inicial).</li><li>iPhone (Safari): abra o site, toque em Compartilhar e em Adicionar à Tela de Início.</li><li>O ícone JG Investing aparece na tela inicial e abre em tela cheia, sem a barra do navegador.</li><li>O app se atualiza sozinho com o site; sem internet, mostra os últimos dados que você abriu.</li></ol>
 <h3>Fontes e consenso</h3>
 <ol class="list-decimal pl-5"><li>No topo da aba Ações, o seletor Fonte vem em Todos (consenso entre as fontes).</li><li>Escolha uma fonte (ex.: Status Invest) para ver só os valores dela; filtros e ordenação passam a usar esses valores.</li><li>Abra Status das fontes (abaixo dos filtros) para ver de onde e quando veio cada fonte.</li><li>Toque em um indicador do card para ver o valor de cada fonte; o botão ⓘ explica as regras e as cores.</li></ol>
 <h3>País</h3>
