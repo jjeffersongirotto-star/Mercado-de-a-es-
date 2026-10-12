@@ -12,11 +12,12 @@ from datetime import datetime, timezone, timedelta
 import requests
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import universe
+from snaputil import APP_API
 
 ZD, OUT = sys.argv[1], sys.argv[2]
 os.makedirs(os.path.join(OUT, "history4"), exist_ok=True)
 rows = json.load(open(os.environ["DATA_JSON"]))["rows"] if os.environ.get("DATA_JSON") else \
-    requests.get("https://mercado-de-acoes.onrender.com/api/data", timeout=120).json()["rows"]
+    requests.get(APP_API, timeout=120).json()["rows"]
 kept = universe.tradable(rows)  # todas as classes negociadas
 TICK = [r["ticker"] for r in kept]
 if os.environ.get("COTA_ONLY"): TICK = [t for t in TICK if t in os.environ["COTA_ONLY"].split(",")]

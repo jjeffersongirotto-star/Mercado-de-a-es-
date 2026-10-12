@@ -8,7 +8,8 @@ on:
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  contents: read
 
 concurrency:
   group: keepalive
@@ -19,10 +20,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: snapshots.py
+          sparse-checkout-cone-mode: false
       - name: Acessar o site
         run: |
+          # endereço do site: fonte única em snapshots.py (APP_URL)
+          URL=$(grep -oP 'APP_API", "\K[^"]+' snapshots.py)
+          echo "site: $URL"
           for i in 1 2 3; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 https://mercado-de-acoes.onrender.com/api/status || true)
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$URL/api/status" || true)
             echo "tentativa $i: HTTP $code"
             [ "$code" = "200" ] && exit 0
             sleep 20

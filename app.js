@@ -4,10 +4,7 @@ const view = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY) || 
 const saveView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ country: state.country, source: state.source })); } catch (e) { } };
 const state = { country: view.country || 'br', source: view.source || 'all', countries: [], expanded: new Set(), rowMap: {}, data: null, rows: [], filtered: [], shown: 0, sortKey: 'liq2m', sortDir: -1, filters: {}, fieldMap: {} };
 const $ = (s) => document.querySelector(s);
-const nf = (d) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-const F2 = nf(2), F0 = nf(0);
 const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function fmtBig(v) {
   const a = Math.abs(v);
@@ -509,7 +506,6 @@ async function loadProfiles(rows) {
   if (!PROFILES) { try { const j = await (await fetch('/api/profiles')).json(); PROFILES = j.profiles || {}; } catch (e) { PROFILES = {}; } }
   for (const r of rows) { const p = PROFILES[r.ticker]; if (p) { r.desc = p.d; r.psetor = p.s; r.pind = p.i; } }
 }
-const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 // ---------- Setor (macro) e classificação ----------
 const SECTORS = ['Financeiro', 'Utilidade Pública', 'Materiais Básicos & Commodities', 'Petróleo, Gás e Biocombustíveis', 'Consumo Cíclico', 'Consumo Não Cíclico', 'Agronegócio', 'Saúde', 'Tecnologia & Comunicações', 'Outros'];
 const SEC_RULES = [

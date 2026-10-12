@@ -7,7 +7,8 @@ import json, os, sys, time
 from datetime import date, timedelta
 import requests
 OUT = sys.argv[1]
-RAW = os.environ.get("SNAPSHOT_RAW_BASE", "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from snapshots import RAW  # noqa: E402
 UA = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
 
 def table(name, d, take=1000):

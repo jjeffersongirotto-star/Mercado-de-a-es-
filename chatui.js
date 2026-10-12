@@ -4,7 +4,6 @@
   if (!root) return;
   let H = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(H.slice(-60))); } catch (e) { } };
-  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^\s*[*•-]\s+/gm, '• ').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="text-sky-300 underline">link</a>').replace(/\n/g, '<br>');
   root.innerHTML = `<div class="cht"><div class="cht-h"><b>Chat</b><button type="button" class="gbtn" id="chtClr">Limpar</button></div>
     <div class="cht-l" id="chtL"></div>

@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 
 import requests
 
+import snapshots
+
 log = logging.getLogger("screener.tiebreak")
 
 # chave do indicador -> (campo do yfinance .info, multiplicador). Só definições comparáveis.
@@ -31,9 +33,7 @@ YF_MAP = {
 }
 ZERO_IS_NA = {"mbruta", "mebit", "mliq", "pl", "pvp", "psr", "evebitda", "liqcorr"}  # Yahoo usa 0 p/ "sem dado" (ex.: bancos)
 TTL = 24 * 3600
-REPO_RAW = os.environ.get(
-    "YF_FALLBACK_URL",
-    "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data/yfinance.json")
+REPO_RAW = os.environ.get("YF_FALLBACK_URL", f"{snapshots.RAW}/yfinance.json")
 
 
 def extract(info):
@@ -148,15 +148,9 @@ class YFStore:
             if only_missing and e and e.get("src") == "live" and e.get("v"):
                 continue
             self.put(t, v, src="snapshot", when=when); n += 1
-        return f"{origin} de {fmt_sp(when)} ({n} tickers)"
+        return f"{origin} de {snapshots.when_sp(when)} ({n} tickers)"
 
 
-def fmt_sp(iso):
-    try:
-        from zoneinfo import ZoneInfo
-        return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
-    except Exception:
-        return iso or "?"
 
 
 def run_fetch(store, tickers, on_progress=None, delay=0.35, max_consecutive_fail=8):

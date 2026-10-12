@@ -13,13 +13,11 @@
   const PERIODS = [['1d', '1 dia'], ['7d', '7 dias'], ['1m', '1 mês'], ['1y', '1 ano'], ['2y', '2 anos'], ['3y', '3 anos'], ['4y', '4 anos'], ['5y', '5 anos']];
   const DAY = 864e5;
   const P2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' });
-  const RS = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const cache = {};
   const getJSON = (u) => cache[u] || (cache[u] = fetch(u).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); return d; }).catch(e => { delete cache[u]; throw e; }));
   const hist = (t, k) => getJSON(`/api/history/${encodeURIComponent(t)}?kind=${k}`);
   const idx = (n) => getJSON(`/api/indices/${n}`);
   const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
-  const brDate = (s) => s.split('-').reverse().join('/');
 
   function mount(box) {
     if (box.dataset.m) return; box.dataset.m = '1';
@@ -178,7 +176,7 @@
       ${ticks.map(v => `<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" class="${!B && Math.abs(v) < 1e-9 ? 'gc-zero' : 'gc-grid'}"/>`).join('')}${B ? `<line x1="0" x2="${W}" y1="${Y(B)}" y2="${Y(B)}" class="gc-zero"/>` : ''}
       ${series.slice().reverse().map(s => `<polyline fill="none" stroke="${s.color}" stroke-width="${s.id === 'stock' ? 2.4 : 1.6}" vector-effect="non-scaling-stroke" stroke-linejoin="round" points="${s.pts.map(p => X(p[0]).toFixed(1) + ',' + Y(toY(p[1])).toFixed(1)).join(' ')}"/>`).join('')}
     </svg>
-    <div class="gc-yl">${ticks.map(v => `<span style="top:${(Y(v) / H * 100).toFixed(2)}%">${B ? 'R$ ' + RS.format(v) : P2.format(v).replace(',00', '') + '%'}</span>`).join('')}</div>
+    <div class="gc-yl">${ticks.map(v => `<span style="top:${(Y(v) / H * 100).toFixed(2)}%">${B ? 'R$ ' + F2.format(v) : P2.format(v).replace(',00', '') + '%'}</span>`).join('')}</div>
     <div class="gc-xl"><span>${fmtX(x0)}</span><span>${fmtX((x0 + x1) / 2)}</span><span>${fmtX(x1)}</span></div>`;
     leg.innerHTML = series.map(s => { const v = s.pts[s.pts.length - 1][1]; return `<div style="--lc:${s.color}"><b>${P2.format(v)}%</b><span>${s.label}</span></div>`; }).join('');
   }

@@ -32,9 +32,6 @@ if (typeof document !== 'undefined') (function () {
   const PRZ = [1, 2, 3, 6, 12], nearP = (m) => PRZ.reduce((a, b) => Math.abs(b - (m || 1)) < Math.abs(a - (m || 1)) ? b : a, 1);
   st.items.forEach(i => i.prazo = nearP(i.prazo)); if (st.draft) st.draft.prazo = nearP(st.draft.prazo);
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
-  const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }), N0 = new Intl.NumberFormat('pt-BR');
-  const num = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
-  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let BTB = null, loading = false;
   const row = (t) => (typeof state !== 'undefined' && state.data ? state.data.rows : []).find(r => r.ticker === t);
   const b3 = (t) => BTB && BTB.t ? BTB.t[t] : null;
@@ -49,30 +46,30 @@ if (typeof document !== 'undefined') (function () {
   const pct = (v) => v == null ? '—' : String(v).replace('.', ',') + '% a.a.';
   // Ações confirmadas: lista compacta (editar/excluir). Formulário só aparece com "+ Ação" ou "editar".
   function inputsHtml() {
-    const list = st.items.map((it, k) => `<div class="al-row" data-k="${k}"><div class="min-w-0"><b>${esc(it.t)}</b> <span class="al-sub">${N0.format(it.q)} ações${it.add ? ' · +' + N0.format(it.add) + '/mês' : ''} · ${pct(it.rate)} · ${(it.prazo || 1) * 30} dias${it.nl ? ' · ' + String(it.nl).replace('.', ',') + '% não alugado' : ''}</span>${lowDemand(it.t) ? '<span class="al-warn"> ⚠ pouca demanda</span>' : ''}</div>
+    const list = st.items.map((it, k) => `<div class="al-row" data-k="${k}"><div class="min-w-0"><b>${esc(it.t)}</b> <span class="al-sub">${F0.format(it.q)} ações${it.add ? ' · +' + F0.format(it.add) + '/mês' : ''} · ${pct(it.rate)} · ${(it.prazo || 1) * 30} dias${it.nl ? ' · ' + String(it.nl).replace('.', ',') + '% não alugado' : ''}</span>${lowDemand(it.t) ? '<span class="al-warn"> ⚠ pouca demanda</span>' : ''}</div>
       <div class="al-btns"><button type="button" class="gbtn" data-a="edit" aria-label="Editar ${esc(it.t)}">Editar</button><button type="button" class="gx" data-a="del" aria-label="Excluir ${esc(it.t)}">✕</button></div></div>`).join('');
     const d = st.draft;
     const form = d ? `<div class="al-it" id="alForm">
       <label class="pv-f"><span>Ação</span><input class="pv-in al-t" value="${esc(d.t)}" placeholder="Buscar…" autocomplete="off"></label>
-      <label class="pv-f"><span>Quantidade</span><input class="pv-in" data-f="q" inputmode="numeric" value="${d.q ? N0.format(d.q) : ''}"></label>
-      <label class="pv-f"><span>Adições mensais</span><input class="pv-in" data-f="add" inputmode="numeric" value="${d.add ? N0.format(d.add) : ''}"></label>
+      <label class="pv-f"><span>Quantidade</span><input class="pv-in" data-f="q" inputmode="numeric" value="${d.q ? F0.format(d.q) : ''}"></label>
+      <label class="pv-f"><span>Adições mensais</span><input class="pv-in" data-f="add" inputmode="numeric" value="${d.add ? F0.format(d.add) : ''}"></label>
       <label class="pv-f"><span>Taxa (% a.a.)</span><input class="pv-in" data-f="rate" inputmode="decimal" value="${d.rate != null ? String(d.rate).replace('.', ',') : ''}"></label>
       <label class="pv-f"><span>Prazo</span><select class="pv-in" data-f="prazo">${PRZ.map(m => `<option value="${m}"${(d.prazo || 1) === m ? ' selected' : ''}>${m * 30} dias</option>`).join('')}</select></label>
       <label class="pv-f"><span>% não alugado</span><input class="pv-in" data-f="nl" inputmode="decimal" value="${d.nl ? String(d.nl).replace('.', ',') : '0'}"></label>
       <div class="al-btns"><button type="button" class="gbtn pri" data-a="ok" aria-label="Confirmar">✓</button><button type="button" class="gx" data-a="cancel" aria-label="Cancelar">✕</button></div>
-      ${d.t && b3(d.t) ? `<div class="upd">${(window.updTxt && updTxt()) || 'Atualizado em ' + (BTB.date || '').split('-').reverse().join('/')}</div>` : ''}
+      ${d.t && b3(d.t) ? `<div class="upd">${(window.updTxt && updTxt()) || 'Atualizado em ' + dataBR(BTB.date)}</div>` : ''}
       ${d.t && lowDemand(d.t) ? '<p class="al-warn">⚠ Pouca demanda de aluguel para esta ação na B3: o empréstimo pode não acontecer ou demorar.</p>' : ''}</div>` : '';
     return list + form;
   }
   function exHtml() {
     return st.ex.map((e, k) => `<div class="pv-ex-row al-ex" data-x="${k}"><label class="pv-f"><span>Mês</span><input class="pv-in" data-xf="m" inputmode="numeric" value="${e.m || ''}"></label>
       <label class="pv-f"><span>Ação</span><select class="pv-in" data-xf="t">${[...new Set(st.items.map(i => i.t))].map(t => ({ t })).map(i => `<option${i.t === e.t ? ' selected' : ''}>${esc(i.t)}</option>`).join('')}</select></label>
-      <label class="pv-f"><span>Ações (+ adiciona, − retira)</span><input class="pv-in" data-xf="q" inputmode="numeric" value="${e.q ? N0.format(e.q) : ''}"></label><button type="button" class="gx" data-xdel="${k}" aria-label="Remover">✕</button></div>`).join('');
+      <label class="pv-f"><span>Ações (+ adiciona, − retira)</span><input class="pv-in" data-xf="q" inputmode="numeric" value="${e.q ? F0.format(e.q) : ''}"></label><button type="button" class="gx" data-xdel="${k}" aria-label="Remover">✕</button></div>`).join('');
   }
-  const perB = (I, R, m0) => I.length ? R.per.map(p => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${m0}</td><td><b>${esc(x.t)}</b></td><td>${N0.format(Math.round(x.sh))}</td><td>${brl.format(x.val)}</td><td>${N0.format(Math.round(x.lent))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td></tr>`; }).join('') : '';
+  const perB = (I, R, m0) => I.length ? R.per.map(p => { const x = p[m0 - 1]; return `<tr><td class="pv-c-m">${m0}</td><td><b>${esc(x.t)}</b></td><td>${F0.format(Math.round(x.sh))}</td><td>${brl.format(x.val)}</td><td>${F0.format(Math.round(x.lent))}</td><td class="pos">${brl.format(x.rec)}</td><td class="neg">${brl.format(x.dsc)}</td></tr>`; }).join('') : '';
   let shown = 240;
   const moreB = (I, R, m0) => I.length && m0 - 1 + shown < R.rows.length ? '<button type="button" class="gbtn" data-a="more">Mostrar mais meses</button>' : '';
-  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1, m0 - 1 + shown).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${N0.format(Math.round(r.q))}</td><td>${brl.format(r.val)}</td><td>${N0.format(Math.round(r.ql))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
+  const mainB = (I, R, m0) => I.length ? R.rows.slice(m0 - 1, m0 - 1 + shown).map(r => `<tr><td class="pv-c-m">${r.m}</td><td>${F0.format(Math.round(r.q))}</td><td>${brl.format(r.val)}</td><td>${F0.format(Math.round(r.ql))}</td><td>${brl.format(r.rec)}</td><td class="neg">${brl.format(r.dsc)}</td><td class="pos">${brl.format(r.liq)}</td><td><b>${brl.format(r.acc)}</b></td></tr>`).join('') : '';
   // Só as tabelas são refeitas enquanto digita: o campo ativo não é recriado (mantém foco, cursor e seleção)
   function tables() {
     const pb = document.getElementById('alPerB'); if (!pb) return render();
@@ -103,10 +100,10 @@ if (typeof document !== 'undefined') (function () {
   root.addEventListener('input', (e) => {
     const t = e.target, k = t.closest('[data-k]'), x = t.closest('[data-x]');
     if (t.id === 'alMes') { st.mes = t.value.replace(/\D/g, '').slice(0, 3); later(); return; }
-    if (t.id === 'alFee') { st.fee = num(t.value); later(); return; }
-    if (t.dataset.f && st.draft) { st.draft[t.dataset.f] = t.dataset.f === 'rate' ? num(t.value) : t.dataset.f === 'nl' ? Math.max(0, Math.min(100, num(t.value))) : Math.round(num(t.value)); save(); return; }
-    if (x && t.dataset.xf === 'q') { st.ex[+x.dataset.x].q = Math.round(num(t.value.replace(/^−/, '-'))); later(); }
-    if (x && t.dataset.xf === 'm') { st.ex[+x.dataset.x].m = Math.min(960, Math.round(num(t.value))); later(); }
+    if (t.id === 'alFee') { st.fee = parseBR(t.value); later(); return; }
+    if (t.dataset.f && st.draft) { st.draft[t.dataset.f] = t.dataset.f === 'rate' ? parseBR(t.value) : t.dataset.f === 'nl' ? Math.max(0, Math.min(100, parseBR(t.value))) : Math.round(parseBR(t.value)); save(); return; }
+    if (x && t.dataset.xf === 'q') { st.ex[+x.dataset.x].q = Math.round(parseBR(t.value.replace(/^−/, '-'))); later(); }
+    if (x && t.dataset.xf === 'm') { st.ex[+x.dataset.x].m = Math.min(960, Math.round(parseBR(t.value))); later(); }
   });
   root.addEventListener('change', (e) => {
     const t = e.target, x = t.closest('[data-x]');

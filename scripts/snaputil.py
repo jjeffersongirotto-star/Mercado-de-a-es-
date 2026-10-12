@@ -1,21 +1,16 @@
 """Utilidades comuns dos scripts de snapshot (rodam na máquina da rotina diária, não no Render)."""
 import io, json, os, re, html, time
 from datetime import datetime, timezone
+import sys
 import requests
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from snapshots import RAW, APP_URL, br_num  # noqa: E402  (fonte única dos endereços e do parser de número)
 
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36",
       "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"}
 
-def br_num(s):
-    if s is None: return None
-    s = str(s).strip().replace("%", "").replace("R$", "").strip()
-    if s in ("", "-", "—", "nan", "N/A"): return None
-    try: return float(s.replace(".", "").replace(",", "."))
-    except ValueError: return None
-
-APP_API = os.environ.get("APP_API", "https://mercado-de-acoes.onrender.com/api/data")
-SI_SNAPSHOT = os.environ.get("SI_FALLBACK_URL",
-    "https://raw.githubusercontent.com/jjeffersongirotto-star/Mercado-de-a-es-/data/data/statusinvest.csv")
+APP_API = APP_URL + "/api/data"
+SI_SNAPSHOT = os.environ.get("SI_FALLBACK_URL", f"{RAW}/statusinvest.csv")
 
 def app_api_data(wait=600):
     """Payload do app no Render (/api/data, Brasil). O Render lê o Fundamentus normalmente.

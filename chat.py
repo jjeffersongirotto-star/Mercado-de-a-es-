@@ -726,16 +726,18 @@ def execute(P, D, ret_fn):
 
 # ============================================================ guia, glossário, cores, como usar
 _GUIDE = None
+_LABELS = None
 
 
 def guide():
-    """Guia do site extraído do painel ⓘ (index.html)."""
+    """Guia do site = painel ⓘ (#infoModal do index.html). Fonte única das explicações, do passo a passo e do glossário."""
     global _GUIDE
     if _GUIDE is None:
         try:
             s = open(os.path.join(BASE, "index.html"), encoding="utf-8").read()
             i = s.index('<div id="infoModal"'); j = s.index("<script", i); t = s[i:j]
-            t = re.sub(r"<(summary|h\d)[^>]*>", "\n## ", t); t = re.sub(r"<li[^>]*>", "\n- ", t); t = re.sub(r"<[^>]+>", "", t)
+            t = re.sub(r"<ol[^>]*>(.*?)</ol>", lambda m: "".join(f"\n{k}. {x}" for k, x in enumerate(re.findall(r"<li[^>]*>(.*?)</li>", m.group(1), re.S), 1)), t, flags=re.S)
+            t = re.sub(r"<(summary|h\d)[^>]*>", "\n## ", t); t = re.sub(r"<li[^>]*>|<p[^>]*>", "\n- ", t); t = re.sub(r"<[^>]+>", "", t)
             t = _html.unescape(t); t = re.sub(r"[ \t]+", " ", t); _GUIDE = re.sub(r"\n\s*\n+", "\n", t).replace("✕", "").strip()
         except Exception:
             _GUIDE = ""
@@ -750,93 +752,68 @@ def guide_sections():
     return {k: "\n".join(v).strip() for k, v in out.items()}
 
 
-GLOSS = {
-    "p/l": "P/L (preço/lucro): preço da ação ÷ lucro por ação dos últimos 12 meses. Quantos anos de lucro atual pagariam o preço; menor = mais barata (só faz sentido com lucro positivo).",
-    "p/vp": "P/VP (preço/valor patrimonial): preço ÷ patrimônio líquido por ação. Abaixo de 1 = negocia abaixo do patrimônio contábil.",
-    "dy": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
-    "dividend yield": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
-    "roe": "ROE (retorno sobre o patrimônio): lucro líquido ÷ patrimônio líquido, em %. Mede a rentabilidade do capital dos acionistas.",
-    "roic": "ROIC (retorno sobre o capital investido): lucro operacional após impostos ÷ capital investido (dívida + patrimônio), em %.",
-    "roa": "ROA (retorno sobre ativos): lucro líquido ÷ ativo total, em %. Útil para comparar bancos e empresas de muitos ativos.",
-    "lpa": "LPA (lucro por ação): lucro líquido dos últimos 12 meses ÷ número de ações.",
-    "vpa": "VPA (valor patrimonial por ação): patrimônio líquido ÷ número de ações.",
-    "ebitda": "EBITDA: lucro antes de juros, impostos, depreciação e amortização — aproxima a geração de caixa operacional. No site aparece em EV/EBITDA.",
-    "ebit": "EBIT: lucro operacional (antes de juros e impostos). O Fundamentus usa EBIT ajustado (lucro bruto − despesas de vendas − despesas gerais e administrativas).",
-    "ev/ebitda": "EV/EBITDA: valor da firma (valor de mercado + dívida líquida) ÷ EBITDA. Menor = mais barata em relação à geração de caixa operacional.",
-    "ev/ebit": "EV/EBIT: valor da firma (valor de mercado + dívida líquida) ÷ EBIT (lucro operacional).",
-    "p/ebit": "P/EBIT: valor de mercado ÷ EBIT (lucro operacional).",
-    "p/ativo": "P/Ativo: valor de mercado ÷ ativo total.",
-    "psr": "PSR (price sales ratio): valor de mercado ÷ receita líquida dos últimos 12 meses.",
-    "peg": "PEG: P/L ÷ crescimento anual do lucro (em %). Perto de 1 ou abaixo = preço razoável para o crescimento.",
-    "margem liquida": "Margem líquida: lucro líquido ÷ receita líquida, em %.",
-    "margem bruta": "Margem bruta: lucro bruto ÷ receita líquida, em %.",
-    "margem ebit": "Margem EBIT: EBIT (lucro operacional) ÷ receita líquida, em %.",
-    "liquidez corrente": "Liquidez corrente: ativo circulante ÷ passivo circulante. Acima de 1 = mais recursos de curto prazo do que dívidas de curto prazo.",
-    "liquidez": "Liquidez (2 meses): volume financeiro médio negociado por dia na bolsa nos últimos 2 meses, em R$.",
-    "divida liquida": "Dívida líquida: dívida bruta (empréstimos e financiamentos) − caixa e aplicações. Negativa = caixa líquido.",
-    "div.liq/patrim": "Dív.Líq/Patrimônio: dívida líquida ÷ patrimônio líquido. Negativo = caixa líquido (mais caixa que dívida).",
-    "divida liquida/patrimonio": "Dív.Líq/Patrimônio: dívida líquida ÷ patrimônio líquido. Negativo = caixa líquido (mais caixa que dívida).",
-    "divida liquida/ebit": "Dív.Líq/EBIT: quantos anos de lucro operacional pagariam a dívida líquida. Negativo = caixa líquido.",
-    "cagr": "CAGR: taxa de crescimento anual composta. No site: Cresc. Receita 5a e Cresc. Lucro 5a (crescimento médio por ano em 5 anos).",
-    "valor de mercado": "Valor de mercado: preço da ação × número total de ações da empresa.",
-    "patrimonio liquido": "Patrimônio líquido: ativos − passivos; o capital que pertence aos acionistas.",
-    "on": "ON (final 3): ação ordinária, com direito a voto. PN (final 4, 5, 6): preferencial, prioridade nos dividendos. Unit (final 11): pacote de ações.",
-    "pn": "PN (final 4, 5, 6): ação preferencial, prioridade nos dividendos e geralmente sem voto. ON (final 3) tem voto. Unit (final 11) é um pacote de ações.",
-    "unit": "Unit (final 11): pacote de ações ON e PN negociado como um só papel.",
-    "ibovespa": "Ibovespa: principal índice da B3, carteira das ações mais negociadas.",
-    "cdi": "CDI: taxa de juros entre bancos, referência da renda fixa. No site os gráficos usam 'CDB 100% do CDI' (CDI diário acumulado).",
-    "selic": "Selic: taxa básica de juros do Brasil, definida pelo Copom. O CDI fica muito próximo dela.",
-    "ipca": "IPCA: índice oficial de inflação do Brasil (IBGE), mensal.",
-    "poupanca": "Poupança: rende 0,5% ao mês + TR quando a Selic está acima de 8,5% a.a.; senão 70% da Selic + TR.",
-    "jcp": "JCP (juros sobre capital próprio): forma de provento que a empresa deduz do imposto; para o investidor tem 15% de IR na fonte.",
-    "data com": "Data com: último dia em que é preciso ter a ação para receber o provento anunciado. No dia seguinte (data ex) a ação passa a ser negociada sem o direito.",
-    "payout": "Payout: parte do lucro distribuída como proventos (proventos ÷ lucro líquido), em %.",
-    "graham": "Preço justo de Graham = √(22,5 × LPA × VPA). 'Baratas pelo Graham' = maior desconto do preço em relação a esse valor (só LPA>0, VPA>0, P/L≥2).",
-    "magic formula": "Magic Formula (Greenblatt): soma do ranking de earnings yield (EBIT/EV) e do ranking de ROIC; menor soma = melhor posição.",
-    "consenso": "Consenso entre fontes (modo Todos): para cada indicador o site compara as fontes (CVM, Status Invest, Dados de Mercado, Fundamentus, Investidor10, TradingView, Yahoo). Valores iguais = diferença ≤ 10% (com piso para margens/ROE). Com maioria, mostra o Fundamentus se estiver no grupo, senão a mediana do grupo; sem maioria, média (simples ou ponderada pelos grupos). As cores mostram o nível de concordância.",
-    "bonificacao": "Bonificação: a empresa entrega ações novas aos acionistas (registrada pela B3 como BONIFICAÇÃO). Desdobramento/grupamento só mudam quantidade e preço.",
-    "desdobramento": "Desdobramento (split): cada ação vira várias, o preço cai na mesma proporção; o valor investido não muda.",
-    "grupamento": "Grupamento (inplit): várias ações viram uma, o preço sobe na mesma proporção; o valor investido não muda.",
-    "small caps": "Small caps: empresas de menor valor de mercado. No site, o grupo 'Pequenas e médias'.",
-    "perenes": "Perenes (etiqueta): energia, saneamento, gás, bancos ou seguros com DY > 5%, ROE > 10%, LPA > 0 e lucro 5a não negativo.",
-    "growth": "Growth (etiqueta): crescimento do lucro em 5 anos > 20% a.a. e da receita > 10% a.a., com LPA > 0.",
-    "turnaround": "Turnaround (etiqueta): lucro 5a negativo ou zero, mas LPA e ROE atuais positivos (voltou a lucrar).",
-}
-GLOSS_KEYS = {norm(k): k for k in GLOSS}
-GLOSS_CONS = GLOSS["consenso"]
+def glossary():
+    """Termos da seção Glossário do painel ⓘ -> {termo normalizado: "Termo (sigla): definição"}."""
+    out = {}
+    for l in guide_sections().get("Glossário", "").split("\n"):
+        l = l.strip("- ").strip()
+        head, _, _ = l.partition(": ")
+        if not head: continue
+        m = re.match(r"^([^(]+?)\s*(?:\((.+)\))?$", head)
+        names = re.split(r",\s*|\s+e\s+", m.group(1)) + ([m.group(2)] if m.group(2) else [])
+        for n in names:
+            if n.strip(): out[norm(n.strip())] = l
+    return out
+
+
+def ui_labels():
+    """Nomes reais de botões, abas, campos e opções, lidos da interface (index.html e *.js) — nunca uma lista à parte."""
+    global _LABELS
+    if _LABELS is None:
+        found = set()
+        for fn in ["index.html"] + sorted(f for f in os.listdir(BASE) if f.endswith(".js") and f != "tailwind.config.js"):
+            try: s = open(os.path.join(BASE, fn), encoding="utf-8").read()
+            except OSError: continue
+            if fn == "index.html": s = s[:s.find('<div id="infoModal"')] + s[s.find("</div>\n</div>", s.find('<div id="infoModal"')):]
+            raw = re.findall(r"<(?:button|summary|option|label|h[1-4])\b[^>]*>(.*?)</(?:button|summary|option|label|h[1-4])>", s, re.S)
+            raw += re.findall(r'(?:placeholder|aria-label)="([^"]{2,40})"', s)
+            for x in raw:
+                x = _html.unescape(re.sub(r"<[^>]+>", " ", x))
+                if "$" in x or "{" in x or "=" in x: continue
+                x = re.sub(r"[＋+⇅★☆↓↑⟳✕✓✏⠿▾▴…→←·]|^\W+|\W+$", " ", x).strip()
+                x = re.sub(r"\s+", " ", x)
+                if 2 <= len(x) <= 40 and re.search(r"[A-Za-zÀ-ú]", x): found.add(x)
+        _LABELS = sorted(found, key=norm)
+    return _LABELS
+
+
+# palavra do usuário -> termo do Glossário do painel ⓘ (só o vocabulário; as definições ficam no painel)
 GLOSS_SYN = {"pl": "p/l", "preco/lucro": "p/l", "preco lucro": "p/l", "pvp": "p/vp", "dividendo": "dy", "dividendos": "dy", "yield": "dy",
              "ev ebitda": "ev/ebitda", "evebitda": "ev/ebitda", "ev ebit": "ev/ebit", "margem": "margem liquida", "divida": "divida liquida",
-             "dl/pl": "div.liq/patrim", "divida/pl": "div.liq/patrim", "dl/ebit": "divida liquida/ebit", "divida/ebit": "divida liquida/ebit",
-             "ordinaria": "on", "preferencial": "pn", "units": "unit", "ibov": "ibovespa", "juros sobre capital proprio": "jcp",
-             "juros sobre capital": "jcp", "data ex": "data com", "split": "desdobramento", "inplit": "grupamento",
-             "lucro por acao": "lpa", "valor patrimonial": "vpa", "valor patrimonial por acao": "vpa", "magic": "magic formula",
-             "preco justo": "graham", "crescimento": "cagr", "cagr receita": "cagr", "cagr lucro": "cagr", "proventos": "dy",
-             "ebit ajustado": "ebit", "aj": "ebit", "consenso entre fontes": "consenso", "small cap": "small caps"}
-
-COLORS = ("Outras cores no site: verde = positivo/ganho/confirmar; violeta = Valorização total na Previsão; amarelo = imposto (Previsão).")
-HOWTO = [
-    (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), "Previsão aluguel:\n1. Abra a aba Previsão e toque em Previsão aluguel.\n2. Toque em ＋ Ação, busque a ação e informe Quantidade, Adições mensais, Prazo e % não alugado.\n3. A Taxa (% a.a.) vem preenchida com a taxa de aluguel da B3 (se indisponível, digite-a); confirme com ✓.\n4. Ajuste a Taxa da corretora e marque 'Descontar automaticamente taxa da corretora + IR 15%' se quiser.\n5. A tabela mostra o valor recebido mês a mês; use ✏ Editar/Excluir em cada ação."),
-    (("previsao rentab", "rentabilidade", "previsao", "simula", "simulacao", "projecao", "projecoes", "aporte"), "Previsão rentabilidade:\n1. Abra a aba Previsão (sub-aba Previsão rentabilidade).\n2. Em Referências, preencha Valor inicial, Aporte mensal, Dividendos e Rentabilidade (MÊS ou ANO) e o Imposto s/ dividendo.\n3. Em Projeções, busque uma empresa para usar os números dela; ou em 'E se eu tivesse investido?' escolha a ação e a Data inicial/final para simular com o histórico real.\n4. Use + em Aportes extraordinários e Retiradas extraordinárias para lançamentos avulsos.\n5. A tabela mostra mês a mês (imposto em amarelo, Valorização total em violeta); toque em Mostrar mais meses para continuar."),
-    (("compar",), "Aba Comparar:\n1. Abra a aba Comparar.\n2. Em 'Buscar ação ou índice principal…' escolha a referência.\n3. Em 'Adicionar ação ou índice…' inclua as outras para comparar.\n4. O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens.\nAqui no Chat você também pode perguntar, por exemplo: “PETR4 vs VALE3 vs Ibovespa em 2 anos”."),
-    (("favorit", "estrela"), "Favoritos:\n1. Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.\n2. Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.\n3. Ficam salvos no seu navegador."),
-    (("reorganiz", "arrastar", "reordenar", "mudar a ordem", "trocar a ordem"), "Reorganizar:\n1. Na aba Grupos, toque em ⇅ Reorganizar.\n2. Escolha ★ Favoritados ou Demais.\n3. Arraste os grupos pela alça ⠿ para a ordem desejada e toque em Salvar (ou Cancelar).\nNos filtros da aba Ações, também dá para arrastar pela alça ⠿ para reordenar ou mandar para Filtros ocultos."),
-    (("export", "csv", "baixar", "planilha", "excel", "download"), "Exportar (CSV):\n1. Na aba Ações, aplique a busca, os filtros e a ordenação que quiser.\n2. Toque em ↓ CSV (no topo da lista).\n3. O arquivo baixa com as ações filtradas e os indicadores (abre no Excel/Google Planilhas)."),
-    (("atualiz", "recarreg", "dados novos", "dados atualizados"), "Atualizar dados:\n1. Toque no botão ⟳ (Atualizar) no topo.\n2. O horário da última atualização aparece ao lado (horário de Brasília).\n3. Os dados também se atualizam sozinhos a cada 30 minutos."),
-    (("fonte", "fontes", "consenso", "todos"), GLOSS_CONS + "\n\nNa tela:\n1. No topo da aba Ações, o seletor Fonte vem em Todos (consenso entre as fontes).\n2. Escolha uma fonte (ex.: Status Invest) para ver só os valores dela; filtros e ordenação passam a usar esses valores.\n3. Abra Status das fontes (abaixo dos filtros) para ver de onde e quando veio cada fonte.\n4. Toque em um indicador do card para ver o valor de cada fonte; o botão ⓘ explica as regras e as cores."),
-    (("pais", "paises", "eua", "estados unidos", "exterior"), "País:\n1. Toque na bandeira no topo.\n2. Escolha o país (Brasil, Estados Unidos, Reino Unido, Alemanha, Portugal, Japão).\n3. Fora do Brasil a fonte é só o TradingView."),
-    (("grupo",), "Grupos:\n1. Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.\n2. Toque nos cards das empresas para selecioná-las (uma ação por empresa).\n3. Digite o Nome do grupo e toque em Salvar.\n4. Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir para alterar."),
-    (("filtr", "ordenar", "ordena", "busca", "pesquis", "procurar"), "Filtros e ordenação (aba Ações):\n1. Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.\n2. Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e os campos de mínimo/máximo (≥ maior é melhor, ≤ menor é melhor; percentuais como número, 8 = 8%).\n3. Arraste filtros pela alça ⠿ para reordenar ou para Filtros ocultos; Limpar zera tudo.\n4. Em Ordenar, escolha o indicador e toque em Maior → menor para inverter.\n5. ↓ CSV exporta o resultado."),
-    (("chat",), "Aba Chat:\n1. Digite em 'Pergunte sobre as ações do site…' e envie. Exemplos: 'P/L da PETR4', 'DY de Itaú e Bradesco', 'maiores DY dos bancos', 'ações com ROE acima de 20 e P/L abaixo de 8', 'PETR4 vs Ibovespa em 2024', 'e o P/L?' (continua a conversa).\n2. Perguntas diretas são respondidas na hora com os dados do site; as abertas usam IA com os dados do site (a origem aparece abaixo da resposta).\n3. Se achar que algo está errado, diga e ele revisa com busca na web."),
-    (("acoes", "acao", "aba acoes", "cards", "card"), "Aba Ações:\n1. Cada card mostra preço, variação e os indicadores (consenso das fontes em Todos).\n2. No topo escolha país e fonte; veja 'Status das fontes' abaixo dos filtros.\n3. Toque no card para expandir (Expandir todos/Recolher todos abrem ou fecham todos): histórico, índices B3, peso no Ibovespa e outras classes da ação.\n4. As cores indicam concordância entre fontes (pergunte 'o que significam as cores').\n5. Use a busca, a lupa de filtros e Ordenar para refinar; Carregar mais mostra mais resultados."),
+             "dl/pl": "div.liq/pl", "divida/pl": "div.liq/pl", "divida liquida/patrimonio": "div.liq/pl", "dl/ebit": "div.liq/ebit",
+             "divida/ebit": "div.liq/ebit", "divida liquida/ebit": "div.liq/ebit", "ordinaria": "on", "preferencial": "pn", "units": "unit",
+             "ibov": "ibovespa", "juros sobre capital proprio": "jcp", "juros sobre capital": "jcp", "data ex": "data com", "split": "desdobramento",
+             "inplit": "grupamento", "lucro por acao": "lpa", "valor patrimonial": "vpa", "valor patrimonial por acao": "vpa", "crescimento": "cagr",
+             "cagr receita": "cagr", "cagr lucro": "cagr", "proventos": "dy", "ebit ajustado": "ebit", "small cap": "small caps",
+             "liquidez": "liquidez 2 meses", "magic": "magic formula", "preco justo": "graham"}
+# assunto da pergunta -> seções do painel ⓘ (títulos <h3>/<summary>); o texto fica só no painel
+HOWTO_KEYS = [
+    (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), ["Previsão aluguel"]),
+    (("previsao rentab", "rentabilidade", "previsao", "simula", "simulacao", "projecao", "projecoes", "aporte"), ["Previsão rentabilidade"]),
+    (("compar",), ["Comparar"]),
+    (("favorit", "estrela"), ["Favoritos"]),
+    (("reorganiz", "arrastar", "reordenar", "mudar a ordem", "trocar a ordem"), ["Reorganizar"]),
+    (("importar", "exportar grupo", "exportar os grupos", "backup", "outro aparelho", "outro celular"), ["Grupos (criar e editar)"]),
+    (("export", "csv", "baixar", "planilha", "excel", "download"), ["Exportar (CSV)"]),
+    (("atualiz", "recarreg", "dados novos", "dados atualizados"), ["Atualizar dados"]),
+    (("consenso",), ["Regras de mescla (modo “Todos”)", "Fontes e consenso"]),
+    (("fonte", "fontes", "todos"), ["Fontes e consenso"]),
+    (("pais", "paises", "eua", "estados unidos", "exterior"), ["País"]),
+    (("grupo",), ["Grupos (criar e editar)"]),
+    (("filtr", "ordenar", "ordena", "busca", "pesquis", "procurar"), ["Filtros e ordenação"]),
+    (("chat",), ["Chat"]),
+    (("acoes", "acao", "aba acoes", "cards", "card"), ["Ações"]),
 ]
-LABELS = ["Ações", "Grupos", "Comparar", "Previsão", "Chat", "CSV", "Limpar", "Expandir todos", "Recolher todos", "Maior → menor", "Carregar mais",
-          "Previsão rentabilidade", "Previsão aluguel", "Mostrar mais meses", "Criar grupo", "Criar", "Reorganizar", "Salvar", "Cancelar", "Editar", "Excluir",
-          "Favoritos", "Favoritados", "Favoritar", "Filtros ocultos", "Mais filtros", "Lupa", "Só líquidas", "Índice B3", "Setor", "Minimizar filtros", "Ordenar",
-          "Status das fontes", "Buscar", "Valor inicial", "Aporte mensal", "Dividendos", "Rentabilidade", "Imposto", "Projeções", "E se eu tivesse investido",
-          "Data inicial", "Data final", "Aportes extraordinários", "Retiradas extraordinárias", "Ação", "Quantidade", "Adições mensais", "Taxa", "Prazo",
-          "% não alugado", "Taxa da corretora", "Descontar automaticamente", "Remover", "Adicionar", "Renderam menos", "Renderam mais", "Filtrar", "Todos",
-          "País", "Fonte", "Estrela", "Alça", "Enviar", "Mês", "Inverter ordem", "Restaurar", "Concordância", "Exportar", "Atualizar", "Informações",
-          "Como funciona", "Referências", "Fluxo da bolsa", "Etiquetas"]
 _LN = None
 
 
@@ -849,50 +826,60 @@ def fake_label(q, P):
     if not m and re.search(r"\b(site|tela|app|aplicativo|clic|toc|aperto|apertar)\w*", nq):
         m = re.search(r"\b(?:opcao|opcoes|campo|funcao|recurso)\s+(?:de |do |da |chamad[oa] )?[\"'“]?([^\"'”?.,!]{2,40})", nq)
     if not m: return None
-    if _LN is None: _LN = [norm(x).replace("+", "").strip() for x in LABELS]
+    labels = ui_labels()
+    if _LN is None: _LN = [norm(x).strip() for x in labels]
     name = re.sub(r"\b(no|na|do|da|de|que|para|pra|onde|como|fica|esta|nao|existe|aparece|site|tela|app|aqui|ai|la)\b.*$", "", m.group(1)).strip()
     if len(name) < 2: return None
     sing = re.sub(r"(oes|aes)$", "ao", name); sing = re.sub(r"(?<=[rzl])es$", "", sing); sing = re.sub(r"(?<=[a-z])s$", "", sing)
-    W = set(" ".join(_LN).split()) | {"grupo", "grupos", "acoes", "acao", "filtro", "filtros", "favorito", "favoritos", "previsao", "aluguel",
-                                      "rentabilidade", "comparar", "chat", "busca", "estrela", "o", "a", "os", "as", "e", "de"}
+    W = set(" ".join(_LN).split()) | {"o", "a", "os", "as", "e", "de"}
     g = norm(guide())
     if any(name in l or sing in l for l in _LN) or all(w in W for w in name.split()) or (len(sing) >= 4 and sing in g): return None
-    for keys, _ in HOWTO:
+    for keys, _ in HOWTO_KEYS:
         if any(k in name for k in keys): return None
     near = difflib.get_close_matches(sing, _LN, 1, 0.55)
-    sug = f" A opção real mais próxima parece ser \"{LABELS[_LN.index(near[0])]}\"." if near else ""
+    sug = f" A opção real mais próxima parece ser \"{labels[_LN.index(near[0])]}\"." if near else ""
     return (f"Não encontrei a opção \"{m.group(1).strip()}\" no site. Pode olhar de novo e me descrever exatamente o que aparece na tela "
             f"(nome do botão/texto), ou contar passo a passo como chegou nesse lugar? Assim consigo verificar se há alguma divergência.{sug}")
 
 
 def define(P):
+    """Definição de um termo: Glossário do painel ⓘ; senão uma seção do painel com esse nome; senão as linhas que o citam."""
     nq = P["nq"]
     m = re.search(r"\b(?:o que (?:e|sao|significa|quer dizer)|que e|significado d[eoa]s?|significa|defin[ae]|definicao d[eoa]s?|conceito d[eoa]s?)\b\s*(?:o |a |os |as |um |uma )?(.+)$", nq)
     term = (m.group(1) if m else nq).strip(" ?")
     term = re.sub(r"\b(no site|aqui|na tela|no app)\b", "", term).strip()
     if not term: return None
+    G = glossary()
     t = GLOSS_SYN.get(term, term)
-    if t in GLOSS_KEYS: return GLOSS[GLOSS_KEYS[t]]
-    for g, k in sorted(GLOSS_KEYS.items(), key=lambda x: -len(x[0])):
-        if re.search(r"(?<![a-z])" + re.escape(g) + r"(?![a-z])", term): return GLOSS[k]
-    for s, k in sorted(GLOSS_SYN.items(), key=lambda x: -len(x[0])):
-        if re.search(r"(?<![a-z])" + re.escape(s) + r"(?![a-z])", term): return GLOSS[GLOSS_KEYS[k]]
-    # procura no guia do site (painel ⓘ)
+    if t in G: return G[t]
+    for g in sorted(G, key=len, reverse=True):
+        if re.search(r"(?<![a-z])" + re.escape(g) + r"(?![a-z])", term): return G[g]
+    for w in sorted(GLOSS_SYN, key=len, reverse=True):
+        if re.search(r"(?<![a-z])" + re.escape(w) + r"(?![a-z])", term) and GLOSS_SYN[w] in G: return G[GLOSS_SYN[w]]
+    for keys, titles in HOWTO_KEYS:  # assunto com seção própria no painel (ex.: consenso)
+        if any(norm(term) == k or norm(term) == k + "s" for k in keys) and not keys[0] in ("acoes", "chat"):
+            h = howto(dict(P, nq=term))
+            if h: return h
     if len(term) >= 4:
-        hits = [l.strip("- ").strip() for l in guide().split("\n") if term in norm(l) and not l.startswith("## ")]
-        if hits: return "Do guia do site (ⓘ):\n" + "\n".join("• " + h for h in hits[:3])
+        secs = guide_sections()
+        for title, body in secs.items():
+            if body and term in norm(title): return f"{title}:\n{body}"
+        lines = [l.strip("- ").strip() for l in guide().split("\n") if term in norm(l) and not l.startswith("## ")]
+        if lines: return "Do guia do site (ⓘ):\n" + "\n".join("• " + h for h in lines[:3])
     return None
 
 
 def colors_text():
     c = guide_sections().get("Cores", "")
-    return ("Cores dos indicadores (aba Ações, modo Todos):\n" + c + "\n" + COLORS) if c else COLORS
+    return ("Cores (painel ⓘ):\n" + c) if c else None
 
 
 def howto(P):
-    nq = P["nq"]
-    for keys, txt in HOWTO:
-        if any(w in nq for w in keys): return txt
+    nq = P["nq"]; secs = guide_sections()
+    for keys, titles in HOWTO_KEYS:
+        if any(w in nq for w in keys):
+            parts = [f"{t}:\n{secs[t]}" for t in titles if secs.get(t)]
+            if parts: return "\n\n".join(parts)
     return None
 
 
@@ -926,7 +913,7 @@ def local(q, D, ret_fn, cx, P=None):
         h = howto(P)
         if h: return h
         return None
-    if P["define"] and not P["tickers"] and not P["complex"]:
+    if P["define"] and not P["tickers"] and not re.search(r"\b(por que|porque|explique|explica|analis\w*|devo|vale a pena|compensa|opiniao|recomend\w*|investir|comprar|vender)\b", nq):
         d = define(P)
         if d: return d
         return None
@@ -972,7 +959,7 @@ def _models():
 def _sys(extra=""):
     return ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, com números no formato brasileiro. "
             "Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: "
-            + ", ".join(LABELS) + ". Nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele "
+            + ", ".join(ui_labels()) + ". Nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele "
             "olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, e sugira a opção real mais próxima, se houver. "
             "Você pode filtrar, ranquear e cruzar critérios na tabela de dados e deve explicar os critérios usados. Diga quais ações atendem "
             "aos critérios, sem recomendação personalizada de investimento. " + extra)

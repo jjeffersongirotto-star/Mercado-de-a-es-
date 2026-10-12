@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import requests
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import universe
+from snaputil import APP_API
 
 out = sys.argv[1]
 HIST = os.environ.get("HIST_DIR") or os.path.join(out, "history4")
@@ -18,7 +19,7 @@ if os.environ.get("DATA_JSON"):
 else:
     rows = []
     for _ in range(10):
-        d = requests.get(os.environ.get("APP_URL", "https://mercado-de-acoes.onrender.com") + "/api/data", timeout=120).json()
+        d = requests.get(APP_API, timeout=120).json()
         rows = d.get("rows") or []
         if rows:
             break

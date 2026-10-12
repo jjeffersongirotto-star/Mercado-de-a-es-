@@ -151,14 +151,18 @@ def test_definitions_colors_howto():
     assert ask("ebitda?")[1].startswith("EBITDA")
     assert ask("o que é jcp")[1].startswith("JCP")
     assert "Cores" in ask("pq o card ta vermelho")[1]
-    assert ask("como usar a aba comparar")[1].startswith("Aba Comparar")
-    assert ask("onde fica o botão de exportar")[1].startswith("Exportar")
-    assert ask("como funciona o consenso")[1].startswith("Consenso")
+    assert ask("como usar a aba comparar")[1].startswith("Comparar:\n1.")
+    assert ask("onde fica o botão de exportar")[1].startswith("Exportar (CSV)")
+    assert ask("como funciona o consenso")[1].startswith("Regras de mescla")
+    assert ask("o que é consenso")[1].startswith("Regras de mescla")
+    assert "Graham" in ask("o que é graham")[1]
+    assert ask("o que é on e pn")[1].startswith("ON, PN e Unit")
     assert ask("bom dia")[1].startswith("Olá")
 
 
 def test_fake_labels_only_for_site_buttons():
-    assert ask("onde fica o botão de importar")[1].startswith("Não encontrei a opção")
+    assert ask("onde fica o botão de imprimir")[1].startswith("Não encontrei a opção")
+    assert "Importar grupos" in ask("onde fica o botão de importar")[1]  # existe (↑ na aba Grupos)
     assert ask("tem o botão modo escuro?")[1].startswith("Não encontrei a opção")
     assert not (ask("qual opção mais barata entre PETR4 e VALE3")[1] or "").startswith("Não encontrei a opção")
     assert not (ask("menu de setores")[1] or "").startswith("Não encontrei a opção")
@@ -168,6 +172,15 @@ def test_open_questions_go_to_ai():
     for q in ("ações mais baratas", "vale ou itau, qual melhor", "o roe do banco do brasil ta errado", "qual empresa tem o maior lucro",
               "explique o que é roic e por que importa"):
         assert ask(q)[1] is None, q
+
+
+def test_single_source_guide():
+    """Passo a passo, glossário, cores e nomes de botões vêm do painel ⓘ / da interface — o chat não tem cópia própria."""
+    secs = chat.guide_sections()
+    assert all(t in secs and secs[t] for _, ts in chat.HOWTO_KEYS for t in ts)  # toda seção citada pelo chat existe no painel
+    G = chat.glossary(); assert all(t in G for t in set(chat.GLOSS_SYN.values()) if t not in ("graham", "magic formula"))
+    assert "Importar grupos" in chat.ui_labels() and "Reorganizar" in chat.ui_labels()
+    for name in ("GLOSS", "HOWTO", "LABELS", "COLORS"): assert not hasattr(chat, name)
 
 
 def test_unknown_ticker_suggests():

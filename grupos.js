@@ -2,7 +2,6 @@
 (function () {
   const KEY = 'screenerB3.grupos.v1';
   const $g = (s) => document.querySelector(s);
-  const escH = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let groups = (() => { try { const g = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(g) ? g : []; } catch (e) { return []; } })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(groups)); } catch (e) { uiAlert('Não foi possível salvar no navegador.'); } };
   state.selSet = new Set(); state.selMode = false; state.group = null;
@@ -13,10 +12,10 @@
   const ORD = [['', 'Padrão (barra de filtros)'], ['valmerc:-1', 'Valor de mercado: maior → menor'], ['valmerc:1', 'Valor de mercado: menor → maior'],
     ['preco:-1', 'Preço da ação: maior → menor'], ['preco:1', 'Preço da ação: menor → maior'], ['var:-1', 'Alta do dia: maior → menor'], ['var:1', 'Alta do dia: menor → maior']];
   const toolsOld = () => `<div class="gtools"><label>Ordenar<select id="gOrd">${ORD.map(([v, l]) => `<option value="${v}"${v === state.ord2 ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-    <label>Setor<select id="gSec">${['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${escH(x)}</option>`).join('')}</select></label></div>`;
+    <label>Setor<select id="gSec">${['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label></div>`;
   const tools = () => '';
   state.ord2 = '';
-  $g('#gSec').innerHTML = ['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${escH(x)}</option>`).join('');
+  $g('#gSec').innerHTML = ['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${esc(x)}</option>`).join('');
   document.addEventListener('change', (e) => {
     if (e.target.id !== 'gOrd' && e.target.id !== 'gSec') return;
     if (e.target.id === 'gOrd') state.ord2 = e.target.value; else state.sector = e.target.value;
@@ -31,12 +30,12 @@
     const b = $g('#gBar');
     if (state.selMode) {
       b.innerHTML = `<div class="gbar mb-2"><b class="text-emerald-300 text-sm">${state.selSet.size} selecionada(s)</b>
-        <input id="gName" maxlength="40" placeholder="Nome do grupo" value="${escH(editing ? editing.name : '')}" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
+        <input id="gName" maxlength="40" placeholder="Nome do grupo" value="${esc(editing ? editing.name : '')}" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
         <button type="button" class="gbtn pri" data-g="save">Salvar</button><button type="button" class="gbtn" data-g="cancel">Cancelar</button>
-        <input id="gQ" type="search" placeholder="Buscar empresa, setor ou atividade (ex.: gasol)…" value="${escH($g('#q').value)}" class="basis-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm"></div>${tools()}`;
+        <input id="gQ" type="search" placeholder="Buscar empresa, setor ou atividade (ex.: gasol)…" value="${esc($g('#q').value)}" class="basis-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm"></div>${tools()}`;
     } else if (viewing) {
-      b.innerHTML = `<div class="gbar mb-2"><b class="text-emerald-300">${escH(viewing.name)}</b><span class="text-xs text-slate-400">${viewing.tickers.length} empresa(s)${viewing.rank ? ' · ordem do ranking' : ''}</span>
-        ${viewing.pre ? '' : `<button type="button" class="gbtn ml-auto" data-g="edit" data-n="${escH(viewing.name)}">Editar</button>`}
+      b.innerHTML = `<div class="gbar mb-2"><b class="text-emerald-300">${esc(viewing.name)}</b><span class="text-xs text-slate-400">${viewing.tickers.length} empresa(s)${viewing.rank ? ' · ordem do ranking' : ''}</span>
+        ${viewing.pre ? '' : `<button type="button" class="gbtn ml-auto" data-g="edit" data-n="${esc(viewing.name)}">Editar</button>`}
         <button type="button" class="gx ${viewing.pre ? 'ml-auto' : ''}" data-g="back" aria-label="Fechar grupo">✕</button></div>`;
     } else b.innerHTML = '';
   }
@@ -81,17 +80,15 @@
   // ---------- Grupos pré-definidos (TOP 10, recalculados com os dados atuais) ----------
   let METRICS = null;
   const loadMetrics = async () => { if (METRICS) return METRICS; try { METRICS = (await (await fetch('/api/metrics')).json()).metrics || {}; } catch (e) { METRICS = {}; } return METRICS; };
-  const F2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const pc = (x) => (x > 0 ? '+' : '') + F2.format(x) + '%';
   const rowsAll = () => state.data ? state.data.rows : [];
   // grupos pré-definidos: só empresas com negociação média ≥ R$ 500 mil/dia (evita distorções de papéis sem liquidez)
   const rows1 = () => state.data ? (state.data.rowsK || state.data.rows) : []; // grupos prontos: 1 ticker por empresa
   const rowsK = () => state.country === 'br' ? rows1().filter(r => ((r.v.vol30 ?? r.v.liq2m) || 0) >= 5e5) : rowsAll();
   const MX = (t) => (METRICS || {})[t] || {};
   const pctRank = (arr, key, asc) => { const s = arr.slice().sort((a, b) => asc ? key(a) - key(b) : key(b) - key(a)); const m = new Map(); s.forEach((r, i) => m.set(r, 1 - i / Math.max(1, s.length - 1))); return m; };
-  const listDate = (r) => r.ipo || MX(r.ticker).ftd || null;
+  // data de listagem: uma fonte por país, igual para todas as empresas — Brasil: 1º pregão na B3 (COTAHIST); exterior: IPO (TradingView)
+  const listDate = (r) => (state.country === 'br' ? MX(r.ticker).ftd : r.ipo) || null;
   window.isNova = (r) => { const d = listDate(r); return !!d && (Date.now() - Date.parse(d)) < 92 * 864e5; };
-  const fmtD = (d) => d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '—';
   window.gTop10 = () => PRE.filter(p => preOk(p) && !p.fav).map(p => { let L = []; try { L = (p.calc(p.per ? 1 : undefined) || []).slice(0, 10); } catch (e) { } return `${p.name}${p.h ? ' [' + p.h + ']' : ''}: ` + L.map(x => Array.isArray(x) ? x[0].ticker + ' ' + (x[1] ?? '') : x.ticker).join('; '); }).join('\n');
   const PRE = [
     { id: 'valor', m: 1, name: 'Maior valorização', h: 'Valorização', per: true, calc: (n) => rowsK().filter(r => MX(r.ticker)['ret' + n] != null).map(r => [r, MX(r.ticker)['ret' + n]]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, pc(v), v]) },
@@ -111,7 +108,7 @@
     { id: 'divida', name: 'Menos endividadas', t: 'últimos 12 meses', h: 'Dív.Líq/PL', calc: () => rowsK().filter(r => r.v.lpa > 0 && r.v.dlpl != null).map(r => [r, r.v.dlpl]).sort((a, b) => a[1] - b[1]).map(([r, v]) => [r, F2.format(v)]) },
     { id: 'quedas', m: 1, name: 'Maiores quedas', h: 'Variação', per: true, calc: (n) => rowsK().filter(r => MX(r.ticker)['ret' + n] != null).map(r => [r, MX(r.ticker)['ret' + n]]).filter(x => x[1] < 0).sort((a, b) => a[1] - b[1]).map(([r, v]) => [r, pc(v), v]) },
     { id: 'negoc', name: 'Mais negociadas', t: '30 dias', h: 'Giro/dia', calc: () => rowsK().filter(r => r.v.valmerc > 0 && (r.v.vol30 ?? r.v.liq2m) > 0).map(r => [r, (r.v.vol30 ?? r.v.liq2m) / r.v.valmerc * 100]).sort((a, b) => b[1] - a[1]).map(([r, v]) => [r, F2.format(v) + '%']) },
-    { id: 'novas', name: 'Novidades', t: 'listagens recentes', h: 'Listagem', calc: () => rows1().filter(r => listDate(r)).sort((a, b) => listDate(b).localeCompare(listDate(a))).map(r => [r, fmtD(listDate(r))]) },
+    { id: 'novas', name: 'Novidades', t: 'listagens recentes', h: 'Listagem', calc: () => rows1().filter(r => listDate(r)).sort((a, b) => listDate(b).localeCompare(listDate(a))).map(r => [r, dataBR(listDate(r))]) },
   ];
   const preOk = (p) => state.country === 'br' || !p.m;
   const UKEY = 'screenerB3.gruposUI.v1';
@@ -146,24 +143,24 @@
     return ['fav'].concat(rest.filter(x => ui.gstar.includes(x)), rest.filter(x => !ui.gstar.includes(x)));
   }
   const priceCell = (r) => { const v = r.var; return `<td class="gc3">${r.v.preco != null ? F2.format(r.v.preco) : '—'}${v != null ? ` <span class="${v > 0 ? 'up' : v < 0 ? 'dn' : ''}">${v > 0 ? '+' : ''}${F2.format(v)}%</span>` : ''}</td>`; };
-  const tbl = (rows, h, full) => `<table class="gtab"><thead><tr><th>Ativo</th><th>${escH(h)}</th><th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${escH(r.ticker)}"${full ? ' class="tap"' : ''}><td><b>${escH(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${escH(v)}</td>${priceCell(r)}</tr>`).join('')}</tbody></table>`;
+  const tbl = (rows, h, full) => `<table class="gtab"><thead><tr><th>Ativo</th><th>${esc(h)}</th><th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}"${full ? ' class="tap"' : ''}><td><b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${priceCell(r)}</tr>`).join('')}</tbody></table>`;
   const preTitle = (p) => p.name + ' (' + (p.per ? ((ui.per[p.id] || 1) + ' ano' + ((ui.per[p.id] || 1) > 1 ? 's' : '')) : p.t) + ')';
   const perSel = (p) => p.per ? `<select class="gper" data-per="${p.id}" aria-label="Período">${[1, 2, 3, 4, 5].map(k => `<option value="${k}"${k === (ui.per[p.id] || 1) ? ' selected' : ''}>${k} ano${k > 1 ? 's' : ''}</option>`).join('')}</select>` : '';
   function favControls() {
     const f = ui.fav, tabs = [['all', 'Todos']].concat(f.tabs.map(t => [t.id, t.name]), [['prov', 'Proventos no ano']]), ut = f.tabs.find(t => t.id === f.tab);
-    const two = (l) => { const w = String(l).split(' '); return w.length < 2 ? escH(l) : escH(w[0]) + '<br>' + escH(w.slice(1).join(' ')); };
+    const two = (l) => { const w = String(l).split(' '); return w.length < 2 ? esc(l) : esc(w[0]) + '<br>' + esc(w.slice(1).join(' ')); };
     const avgL = (n) => `Média ${n} ${n > 1 ? 'meses' : 'mês'}`, sortL = (v) => v === 'preco' ? 'Preço da ação' : `Maiores valorizações ${v.slice(1)} ano${+v.slice(1) > 1 ? 's' : ''}`;
-    const twoS = (l) => { const m = l.match(/^(.*?) (\d.*)$/); return m ? escH(m[1]) + '<br>' + escH(m[2]) : two(l); };
+    const twoS = (l) => { const m = l.match(/^(.*?) (\d.*)$/); return m ? esc(m[1]) + '<br>' + esc(m[2]) : two(l); };
     return `<div class="gt-tabs gfav-row">${tabs.map(([k, l]) => `<button type="button" class="${f.tab === k ? 'on' : ''}" data-ftab="${k}">${two(l)}</button>`).join('')}<button type="button" data-ftab="+" aria-label="Nova aba">＋</button>
       ${f.tab !== 'prov' ? `<label class="g2sel"><span>${twoS(avgL(f.avg || 1))}</span><select data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>${avgL(n)}</option>`).join('')}</select></label><label class="g2sel"><span>${twoS(sortL(f.sort || 'preco'))}</span><select data-fsort aria-label="Ordenar favoritos">${['preco', 'v1', 'v2', 'v3', 'v4', 'v5'].map(v => `<option value="${v}"${(f.sort || 'preco') === v ? ' selected' : ''}>${sortL(v)}</option>`).join('')}</select></label>` : ''}</div>`;
   }
   function provCols(list0, empty) {
       const parse = (s) => { const [d, m, y] = s.split('/'); return (y || '') + m + d; };
-      const L = list0.map(r => { const p = r.v.preco || MX(r.ticker).p || 0; return [r, (MX(r.ticker).ytd || []).filter(e => e[2] !== 'grupamento' && e[2] !== 'desdobramento').sort((a, b) => parse(b[0]).localeCompare(parse(a[0]))), p]; }).filter(x => x[1].length);
+      const L = list0.map(r => { const p = r.v.preco || 0; return [r, (MX(r.ticker).ytd || []).filter(e => e[2] !== 'grupamento' && e[2] !== 'desdobramento').sort((a, b) => parse(b[0]).localeCompare(parse(a[0]))), p]; }).filter(x => x[1].length);
       if (!L.length) return `<p class="gt-empty">${empty}</p>`;
-      return '<div class="pcols">' + L.map(([r, ev, p]) => `<div class="pcol"><div class="pcol-h">${escH(r.ticker)}</div>${ev.map(e => e[2] === 'bonificação' || e[2] === 'desdobramento' || e[2] === 'grupamento'
+      return '<div class="pcols">' + L.map(([r, ev, p]) => `<div class="pcol"><div class="pcol-h">${esc(r.ticker)}</div>${ev.map(e => e[2] === 'bonificação' || e[2] === 'desdobramento' || e[2] === 'grupamento'
         ? `<div class="pcard bon"><span>${e[0].slice(0, 5)}</span><b>${e[2] === 'bonificação' ? 'Bonif. ' + F2.format((e[1] - 1) * 100) + '%' : e[2] + ' ' + F2.format(e[1]) + ':1'}</b></div>`
-        : `<div class="pcard"><span>${e[0].slice(0, 5)}${e[3] ? ' · ' + escH(e[3]) : ''}</span><b>R$ ${e[1] < 0.1 ? e[1].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : F2.format(e[1])}</b><em>${F2.format(p ? e[1] / p * 100 : 0)}%</em></div>`).join('')}</div>`).join('') + '</div>';
+        : `<div class="pcard"><span>${e[0].slice(0, 5)}${e[3] ? ' · ' + esc(e[3]) : ''}</span><b>R$ ${e[1] < 0.1 ? e[1].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : F2.format(e[1])}</b><em>${F2.format(p ? e[1] / p * 100 : 0)}%</em></div>`).join('')}</div>`).join('') + '</div>';
   }
   // Sub-abas Todos / Proventos no ano dos grupos de proventos
   const PTAB = ['dy', 'prov'], ptabOf = (p) => p && PTAB.includes(p.id) ? ((ui.ptab || {})[p.id] || 'all') : null;
@@ -179,7 +176,7 @@
     const R = favRows();
     if (!R.length) return '<p class="gt-empty">Toque na ☆ de uma empresa para favoritar.</p>';
     let html = tbl(R, 'Média ' + f.avg + (f.avg > 1 ? ' meses' : ' mês'), full);
-    if (f.tabs.length && full) html += `<div class="gmvbox">${R.map(([r]) => `<label>${escH(r.ticker)} → <select class="gmv" data-mv="${r.ticker}"><option value="">—</option>${f.tabs.map(x => `<option value="${x.id}"${f.assign[r.ticker] === x.id ? ' selected' : ''}>${escH(x.name)}</option>`).join('')}</select></label>`).join('')}</div>`;
+    if (f.tabs.length && full) html += `<div class="gmvbox">${R.map(([r]) => `<label>${esc(r.ticker)} → <select class="gmv" data-mv="${r.ticker}"><option value="">—</option>${f.tabs.map(x => `<option value="${x.id}"${f.assign[r.ticker] === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`).join('')}</div>`;
     return html;
   }
   function groupData(id) {
@@ -189,12 +186,12 @@
     const byT = new Map(rowsAll().map(r => [r.ticker, r]));
     return { title: gg.name, g: gg, rows: gg.tickers.map(t => byT.get(t)).filter(Boolean).map(r => [r, r.v.valmerc ? 'R$ ' + (r.v.valmerc / 1e9).toFixed(1).replace('.', ',') + ' bi' : '—']), h: 'Valor de mercado' };
   }
-  const starB = (id) => id === 'fav' ? '' : `<button type="button" class="gstar${ui.gstar.includes(id) ? ' on' : ''}" data-gstar="${escH(id)}" aria-label="Destacar grupo">${ui.gstar.includes(id) ? '★' : '☆'}</button>`;
+  const starB = (id) => id === 'fav' ? '' : `<button type="button" class="gstar${ui.gstar.includes(id) ? ' on' : ''}" data-gstar="${esc(id)}" aria-label="Destacar grupo">${ui.gstar.includes(id) ? '★' : '☆'}</button>`;
   function tileHtml(id) {
     const d = groupData(id); if (!d) return '';
     if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
-    return `<div class="gt" data-id="${escH(id)}"><div class="gt-head" data-open="${escH(id)}">${starB(id)}<span class="gt-name">${escH(d.title)}</span></div>
-      ${d.p ? ctlRow(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${escH(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${escH(d.g.name)}">Excluir</button></div>`}
+    return `<div class="gt" data-id="${esc(id)}"><div class="gt-head" data-open="${esc(id)}">${starB(id)}<span class="gt-name">${esc(d.title)}</span></div>
+      ${d.p ? ctlRow(d.p) : `<div class="gt-tabs"><button type="button" data-g="edit" data-n="${esc(d.g.name)}">Editar</button><button type="button" class="dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button></div>`}
       <div class="gt-list">${grpBody(d, false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}</div>`;
   }
   // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
@@ -226,7 +223,7 @@
   function fullHtml(id) {
     const d = groupData(id); if (!d) { fullId = null; return ''; }
     const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? ctlRow(d.p) : '') + grpBody(d, true);
-    return `<section class="gfull"><div class="gfull-head"><b>${escH(d.title)}</b><button type="button" class="gx" data-gclose aria-label="Fechar grupo">✕</button></div>${body}</section>`;
+    return `<section class="gfull"><div class="gfull-head"><b>${esc(d.title)}</b><button type="button" class="gx" data-gclose aria-label="Fechar grupo">✕</button></div>${body}</section>`;
   }
   async function list() {
     const r = $g('#gruposRoot');
@@ -254,7 +251,7 @@
     ov.innerHTML = `<div class="rg-top"><button type="button" class="gbtn" data-rg="cancel">Cancelar</button><b>${which === 'star' ? 'Favoritados' : 'Demais grupos'}</b><button type="button" class="gbtn pri" data-rg="save">Salvar</button></div><div class="rg-grid"></div>`;
     document.body.appendChild(ov);
     const grid = ov.querySelector('.rg-grid');
-    grid.innerHTML = ids.map(id => `<div class="rg-card" data-id="${escH(id)}"><span class="rg-n"></span><span class="rg-t">${escH(groupData(id)?.title || id)}</span><span class="rg-h">⠿</span></div>`).join('');
+    grid.innerHTML = ids.map(id => `<div class="rg-card" data-id="${esc(id)}"><span class="rg-n"></span><span class="rg-t">${esc(groupData(id)?.title || id)}</span><span class="rg-h">⠿</span></div>`).join('');
     const num = () => [...grid.children].forEach((c, i) => { c.querySelector('.rg-n').textContent = i + 1; });
     const fit = () => {
       const n = ids.length, H = window.innerHeight - ov.querySelector('.rg-top').offsetHeight - 24, W = Math.min(window.innerWidth - 24, 900);

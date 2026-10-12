@@ -8,13 +8,9 @@
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();
   S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all })); } catch (e) { } };
-  const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const F2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const pc = (x) => (x > 0 ? '+' : '') + F2.format(x) + '%';
   const rows = () => state.data ? state.data.rows : [];
   const isIdx = (id) => id[0] === '@';
   const label = (id) => isIdx(id) ? IDX.find(x => x[0] === id)[1] : id;
-  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const root = $c('#compRoot');
   let vals = {}, seq = 0;
 
