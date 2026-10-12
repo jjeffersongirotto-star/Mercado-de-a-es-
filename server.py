@@ -60,26 +60,26 @@ FIELDS = [
     ("liqcorr",  "Liq. Corrente",      "x",  "high",False, "Liq. Corr.",       "LIQ. CORRENTE",          True,  0.2,  True),
     ("dlpl",     "Dív.Líq/Patrim.",    "x",  "low", False, "Dív.Líq/ Patrim.", "DIV. LIQ. / PATRI.",     True,  0.2,  True),
     ("dlebit",   "Dív.Líq/EBIT",       "x",  "low", False, None,               "DIVIDA LIQUIDA / EBIT",  False, 0.5,  True),
-    # volume financeiro médio por dia (moeda do país). Brasil: B3 (COTAHIST, snapshot metrics); exterior: TradingView
+    # volume financeiro médio por dia (moeda do país). Brasil em "Todos": B3 (COTAHIST, snapshot metrics); fonte escolhida: o valor dela
     ("voldia",   "Volume dia",         "$",  "high",False, None,               None,                     False, 0,    False),
     ("vol10",    "Volume 10 pregões",  "$",  "high",False, None,               None,                     False, 0,    False),
     ("vol30",    "Volume 1 mês",       "$",  "high",False, None,               None,                     False, 0,    False),
-    ("liq2m",    "Volume 2 meses",     "$",  "high",False, None,               None,                     False, 0,    False),
+    ("liq2m",    "Volume 2 meses",     "$",  "high",False, "Liq.2meses",       " LIQUIDEZ MEDIA DIARIA", False, 0,    False),
     ("vol90",    "Volume 3 meses",     "$",  "high",False, None,               None,                     False, 0,    False),
     ("vol6m",    "Volume 6 meses",     "$",  "high",False, None,               None,                     False, 0,    False),
     ("vol9m",    "Volume 9 meses",     "$",  "high",False, None,               None,                     False, 0,    False),
     ("vol12m",   "Volume 12 meses",    "$",  "high",False, None,               None,                     False, 0,    False),
-    # crescimento médio por ano (CAGR). Brasil: CVM (DFP); exterior: TradingView (só 5 anos)
+    # crescimento médio por ano (CAGR): 5 anos por consenso das fontes; 1 a 4 anos só a CVM tem
     ("cresc1a",  "Cresc. Receita 1a",  "%",  "high",False, None,               None,                     False, 3.0,  False),
     ("cresc2a",  "Cresc. Receita 2a",  "%",  "high",False, None,               None,                     False, 3.0,  False),
     ("cresc3a",  "Cresc. Receita 3a",  "%",  "high",False, None,               None,                     False, 3.0,  False),
     ("cresc4a",  "Cresc. Receita 4a",  "%",  "high",False, None,               None,                     False, 3.0,  False),
-    ("cresc5a",  "Cresc. Receita 5a",  "%",  "high",False, None,               None,                     False, 3.0,  False),
+    ("cresc5a",  "Cresc. Receita 5a",  "%",  "high",False, "Cresc. Rec.5a",    "CAGR RECEITAS 5 ANOS",   False, 3.0,  True),
     ("lucro1a",  "Cresc. Lucro 1a",    "%",  "high",False, None,               None,                     False, 3.0,  False),
     ("lucro2a",  "Cresc. Lucro 2a",    "%",  "high",False, None,               None,                     False, 3.0,  False),
     ("lucro3a",  "Cresc. Lucro 3a",    "%",  "high",False, None,               None,                     False, 3.0,  False),
     ("lucro4a",  "Cresc. Lucro 4a",    "%",  "high",False, None,               None,                     False, 3.0,  False),
-    ("lucro5a",  "Cresc. Lucro 5a",    "%",  "high",False, None,               None,                     False, 3.0,  False),
+    ("lucro5a",  "Cresc. Lucro 5a",    "%",  "high",False, None,               "CAGR LUCROS 5 ANOS",     False, 3.0,  True),
     ("vpa",      "VPA",                "R$", "high",False, "__VPA",            " VPA",                   False, 0.10, True),
     ("lpa",      "LPA",                "R$", "high",False, "__LPA",            " LPA",                   False, 0.10, True),
     ("peg",      "PEG",                "x",  "low", True,  None,               " PEG Ratio",             False, 0.3,  True),
@@ -88,15 +88,14 @@ FIELDS = [
 ]
 FIELD_KEYS = [f[0] for f in FIELDS]
 # Campos agrupados nos filtros (um campo com Período): grp = grupo, per = período, sub = subtipo; scale = digitado em milhões.
-# fixed = fonte única no Brasil para o grupo inteiro (não entra no consenso nem muda com o seletor de fonte).
 VOL_PER = {"voldia": "dia", "vol10": "10 pregões", "vol30": "1 mês", "liq2m": "2 meses", "vol90": "3 meses",
            "vol6m": "6 meses", "vol9m": "9 meses", "vol12m": "12 meses"}
 GROWTH_KEYS = [f"{k}{n}a" for k in ("cresc", "lucro") for n in range(1, 6)]
 # Ordenar: posição de cada indicador (os demais ficam só em Mais filtros)
 SORT_POS = {k: i for i, k in enumerate(("dy", "pl", "pvp", "roe", "valmerc", "dlebit", "mliq", "evebit", "roic", "peg"), 1)}
-FIELD_EXTRA = {**{k: {"grp": "vol", "per": p, "scale": 1e6, "fixed": "b3"} for k, p in VOL_PER.items()},
+FIELD_EXTRA = {**{k: {"grp": "vol", "per": p, "scale": 1e6} for k, p in VOL_PER.items()},
                **{k: {"grp": "cres", "sub": "Receita" if k.startswith("cresc") else "Lucro",
-                      "per": f"{k[5]} ano" + ("s" if k[5] != "1" else ""), "fixed": "cvm"} for k in GROWTH_KEYS},
+                      "per": f"{k[5]} ano" + ("s" if k[5] != "1" else "")} for k in GROWTH_KEYS},
                **{k: {"sort": i} for k, i in SORT_POS.items()}}
 REL_THR = 0.30  # 30%
 
@@ -360,11 +359,6 @@ def finalize(base, yf_store=None):
             if y: S["yf"] = {k: x for k, x in y.items() if x is not None}
         nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur")}
         if not isbr and r.get("ipo"): nr["ipo"] = r["ipo"]  # data de listagem no exterior (TradingView); no Brasil vem da B3 (metrics.ftd)
-        fixv = {}
-        if isbr:  # grupos de fonte única (volume = B3, crescimento = CVM): fora do consenso e do seletor de fonte
-            mv, cv = (MXB.get(r["ticker"]) or {}).get("vol") or {}, S.get("cvm") or {}
-            fixv = {k: (mv if ex["fixed"] == "b3" else cv).get(k) for k, ex in FIELD_EXTRA.items() if ex.get("fixed")}
-            S = {s_: {k: x for k, x in d_.items() if k not in fixv} for s_, d_ in S.items()}
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
         if r["ticker"] in FIN: nr["fin"] = True
@@ -372,9 +366,10 @@ def finalize(base, yf_store=None):
         if ixs:  # índices da empresa (qualquer classe; mostra a classe quando diferente da exibida)
             nr["ix"] = {k: ([p, c] if c != r["ticker"] else [p]) for k, (c, p) in ixs.items()}
         consensus.apply_row(nr, CMP_FIELDS, divergente)
-        if fixv:
-            nr["v"].update(fixv)
-            nr.setdefault("src", {}).update({k: "cvm" for k, x in fixv.items() if x is not None and FIELD_EXTRA[k]["fixed"] == "cvm"})
+        if isbr:  # volume em "Todos": B3 (prioridade, todos os períodos); com uma fonte escolhida o site mostra o valor dela (S)
+            mv = (MXB.get(r["ticker"]) or {}).get("vol") or {}
+            nr["v"].update({k: mv.get(k) for k in VOL_PER})
+            for k in VOL_PER: (nr.get("src") or {}).pop(k, None)
         if isbr:  # cadastro oficial da B3 completa nome/setor; sem nome ou sem nenhum fundamento, o papel sai
             cd = CAD.get(r["ticker"][:4])
             if cd and not nr.get("nome"): nr["nome"] = cd[0]
