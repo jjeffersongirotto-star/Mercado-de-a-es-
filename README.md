@@ -60,6 +60,8 @@ EV/EBITDA=enterpriseToEbitda, Liq. corrente=currentRatio, VPA=bookValue, LPA=tra
 Sem 3ª fonte: ROIC, EV/EBIT, P/EBIT, P/Ativo, Dív.Líq/Patrim., crescimentos 5a.
 Se o Yahoo bloquear o servidor, usa o snapshot `data/yfinance.json` da branch `data`
 (gerado por `scripts/fetch_yfinance.py`, chamado por `scripts/push_snapshot_from_here.sh`).
+No Render a consulta ao vivo fica desligada (o Yahoo sempre bloqueia IPs de nuvem) e o servidor usa direto o snapshot;
+a variável `YF_LIVE=1` liga de novo (`YF_LIVE=0` desliga em qualquer lugar).
 
 ## Multi-fonte, consenso, seletor de fonte e de país
 | Fonte | Como chega ao Render | Países |

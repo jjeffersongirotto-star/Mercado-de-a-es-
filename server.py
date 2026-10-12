@@ -416,6 +416,9 @@ def build_foreign(country):
 
 # ---------------------------------------------------------------------------
 YF_FILE = os.path.join(BASE, "cache", "yfinance.json")
+# Yahoo ao vivo: o Yahoo bloqueia IPs de nuvem (401 "Invalid Crumb" em cada ticker, enchendo o log).
+# No Render (variável RENDER, definida pelo próprio Render) usa só o snapshot diário; YF_LIVE=1/0 força ligar/desligar.
+YF_LIVE = os.environ.get("YF_LIVE", "0" if os.environ.get("RENDER") else "1") not in ("0", "false", "no", "")
 ABS_THR = {f[0]: f[8] for f in FIELDS if f[9]}
 
 class Cache:
@@ -518,6 +521,12 @@ class Cache:
             need = tiebreak.tickers_needing(self.base["rows"])
             pend = len(self.yf.stale(need))
             snap = getattr(self.yf, "snapshot_msg", None)
+            if not YF_LIVE:
+                snap = self.yf.load_snapshot() or snap
+                self.yf.status = (f"{snap} (ao vivo desligado neste servidor: o Yahoo bloqueia IPs de nuvem)" if snap
+                                  else "sem snapshot (ao vivo desligado neste servidor)")
+                self.yf.save()
+                return
             if time.time() >= self.yf.blocked_until and pend:
                 self.yf.status = (f"{snap} — " if snap else "") + f"tentando ao vivo em segundo plano ({pend} tickers)…"
                 self.reapply()
