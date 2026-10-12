@@ -611,7 +611,7 @@ async function load() {
     if (country === 'br') { d.rowsK = universe(d.rows); d.rows = tradable(d.rows); await loadProfiles(d.rows); } // todas as classes negociadas; grupos prontos usam rowsK (1 por empresa)
     d.rows.forEach(prepRow); d.hasLiq = d.rows.some(x => x.v.liq2m != null);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
-    $('#updated').innerHTML = `Atualizado: <b class="text-slate-200">${d.updated_at_sp}</b> (Brasília)` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
+    $('#updated').innerHTML = `<span class="max-sm:hidden">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp}</b> <span class="max-sm:hidden">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
     $('#srcStatus').innerHTML = Object.entries(L).filter(([k]) => st[k]).map(([k, n]) => `<div><b class="text-slate-300">${n}</b>: ${friendlyStatus(st[k], d.updated_at_sp)}</div>`).join('');
