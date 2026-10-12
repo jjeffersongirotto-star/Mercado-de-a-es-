@@ -22,15 +22,24 @@
       alug: ls('screenerB3.aluguel.v1', 3000), alugRes: txt('#alugRoot table', 2500),
       comp: ls('screenerB3.comparar.v1', 1500), compRes: txt('#compRoot .cmp-cols', 5000) };
   }
+  const EX = ['DY do Itaú', 'Maiores DY dos bancos', 'PETR4 vs Ibovespa em 2024', 'Ações com ROE acima de 20 e P/L abaixo de 8', 'O que significam as cores?'];
+  const MODE = { 'gemini+web': 'respondido por IA (Gemini) com dados do site + busca na web', gemini: 'respondido por IA (Gemini) com os dados do site',
+    'ia+dados': 'pergunta interpretada por IA; números calculados com os dados do site', regras: 'resposta automática com os dados do site' };
+  const chips = (list) => list && list.length ? `<div class="cht-s">${list.map(x => `<button type="button" class="cht-c" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
   const draw = () => {
-    L.innerHTML = H.length ? H.map(m => `<div class="cht-m ${m.r === 'u' ? 'u' : 'a'}">${m.r === 'u' ? esc(m.t) : md(m.t)}${m.mode ? `<div class="cht-n">${m.mode === 'gemini+web' ? 'respondido por IA (Gemini) com dados do site + busca na web' : m.mode === 'gemini' ? 'respondido por IA (Gemini) com os dados do site' : 'resposta automática (regras) com os dados do site'}</div>` : ''}</div>`).join('')
-      : '<div class="cht-e">Exemplos: “DY do BBAS3”, “maiores dividend yield”, “PETR4 vs Ibovespa 2 anos”, “menores P/L”.</div>';
+    const last = H.length - 1;
+    L.innerHTML = H.length ? H.map((m, i) => `<div class="cht-m ${m.r === 'u' ? 'u' : 'a'}">${m.r === 'u' ? esc(m.t) : md(m.t)}${m.mode ? `<div class="cht-n">${MODE[m.mode] || MODE.regras}</div>` : ''}${i === last && m.r === 'a' ? chips(m.sug) : ''}</div>`).join('')
+      : `<div class="cht-e">Pergunte do seu jeito — por nome, apelido ou ticker. Exemplos:${chips(EX)}</div>`;
     L.scrollTop = L.scrollHeight;
   };
   draw();
   root.querySelector('#chtClr').onclick = async () => { if (!H.length || (window.uiConfirm ? await uiConfirm('Apagar o histórico do chat?') : true)) { H = []; save(); draw(); } };
+  L.addEventListener('click', (e) => {  // sugestões clicáveis
+    const c = e.target.closest('.cht-c'); if (!c) return;
+    root.querySelector('#chtQ').value = c.dataset.q; root.querySelector('#chtF').requestSubmit();
+  });
   root.querySelector('#chtF').onsubmit = async (e) => {
-    e.preventDefault(); const inp = root.querySelector('#chtQ'), q = inp.value.trim(); if (!q) return;
+    e.preventDefault(); const inp = root.querySelector('#chtQ'), q = inp.value.trim(); if (!q || root.querySelector('#chtS').disabled) return;
     const hist = H.slice(-6).map(m => ({ r: m.r, t: m.t }));
     H.push({ r: 'u', t: q }); inp.value = ''; draw();
     L.insertAdjacentHTML('beforeend', `<div class="cht-m a cht-w">${window.loaderHTML ? loaderHTML('Pensando…') : '…'}</div>`); L.scrollTop = L.scrollHeight;
@@ -38,7 +47,7 @@
     try {
       const ac = new AbortController(), to = setTimeout(() => ac.abort(), 150000);
       const r = await fetch('api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q, hist, ctx: ctxNow() }), signal: ac.signal });
-      clearTimeout(to); const d = await r.json(); H.push({ r: 'a', t: d.a || 'Sem resposta.', mode: d.mode });
+      clearTimeout(to); const d = await r.json(); H.push({ r: 'a', t: d.a || 'Sem resposta.', mode: d.mode, sug: d.sug || null });
     } catch (err) { H.push({ r: 'a', t: 'Não foi possível responder agora. Tente de novo.', mode: '' }); }
     btn.disabled = false; save(); draw();
   };

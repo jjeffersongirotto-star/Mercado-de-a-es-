@@ -1,81 +1,1101 @@
-"""Chat sobre os dados do site: Gemini (se GEMINI_API_KEY no ambiente) com contexto montado aqui; senão, respostas por regras."""
-import os, re, json, unicodedata, logging
-from datetime import date, timedelta
+"""Chat sobre os dados do site.
+
+Fluxo (answer2):
+1. parse(): entende a pergunta sem IA (tickers, nomes/apelidos de empresas, indicadores, setor, filtros, período,
+   memória da conversa, abreviações e erros de digitação).
+2. Se a interpretação é confiável (nenhuma palavra sobrando), responde na hora com os dados do site (execute()).
+3. Senão, com GEMINI_API_KEY: a IA só INTERPRETA a pergunta em JSON (interpret()) e o Python calcula com os dados
+   reais; se a pergunta é aberta (análise, opinião, explicação), o Gemini responde com o contexto do site.
+4. Reclamação ("está errado"), dado faltando ou indicador citado sem maioria entre as fontes: Gemini com busca na web.
+5. Sem IA disponível: melhor esforço das regras e sugestões ("Você quis dizer…").
+Toda pergunta é registrada em cache/chat_log.jsonl (veja /api/chat/log)."""
+import os, re, json, time, difflib, hashlib, unicodedata, logging, html as _html
+from datetime import date, timedelta, datetime, timezone
 import requests
+
 log = logging.getLogger("chat")
-IDX = {"@ibov": ["ibovespa", "ibov"], "@usd": ["dolar", "usd"], "@cdi": ["cdb", "cdi"], "@ipca": ["ipca", "inflacao"],
-       "@poup": ["poupanca"], "@gold": ["ouro"]}
+BASE = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE = os.path.join(BASE, "cache", "chat_log.jsonl")
+DEADLINE_S = 120  # tempo total da resposta no servidor (o navegador desiste em 150 s)
+
+# ============================================================ vocabulário
+IDX = {"@ibov": ["ibovespa", "ibov", "indice bovespa"], "@usd": ["dolar", "usd", "cambio"], "@cdi": ["cdi", "cdb", "renda fixa"],
+       "@ipca": ["ipca", "inflacao"], "@poup": ["poupanca"], "@gold": ["ouro"]}
 IDXN = {"@ibov": "Ibovespa", "@usd": "Dólar", "@cdi": "CDB 100% do CDI", "@ipca": "IPCA", "@poup": "Poupança", "@gold": "Ouro"}
-MX = {"ret1": "valorização 1 ano (%)", "ret2": "valorização 2 anos (%)", "ret3": "valorização 3 anos (%)", "ret5": "valorização 5 anos (%)",
-      "dy1": "DY médio 1 ano (%)", "prov12": "proventos 12m ÷ preço (%)", "avg1": "preço médio 1 mês", "v30": "volume médio 30 pregões (R$)"}
-SYN = {"dividendo": "dy", "dy": "dy", "yield": "dy", "p/l": "pl", "pl": "pl", "preco/lucro": "pl", "p/vp": "pvp", "pvp": "pvp", "roe": "roe",
-       "valor de mercado": "valmerc", "liquidez": "liq2m", "cotacao": "preco", "preco": "preco", "margem": "mliq", "divida": "divliq_pl",
-       "valorizacao": "ret1", "subiu": "ret1", "rentabilidade": "ret1", "proventos": "prov12", "volume": "v30", "lpa": "lpa", "vpa": "vpa", "roic": "roic"}
-def norm(s): return unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
+# métricas calculadas do histórico (snapshot metrics): rótulo, unidade
+MX = {"ret1": ("Valorização 1 ano", "%"), "ret2": ("Valorização 2 anos", "%"), "ret3": ("Valorização 3 anos", "%"),
+      "ret4": ("Valorização 4 anos", "%"), "ret5": ("Valorização 5 anos", "%"), "dy1": ("DY médio 1 ano", "%"),
+      "prov12": ("Proventos 12m ÷ preço", "%"), "avg1": ("Preço médio 1 mês", "R$"), "v30": ("Volume médio 30 pregões", "$")}
+BIG = {"valmerc", "patrliq", "liq2m", "v30", "voldia", "vol10", "vol30", "vol90"}
+RET = "ret"  # pseudo-indicador: variação de preço no período (calculada pelo histórico)
+
+# indicador -> sinônimos (texto normalizado: sem acento, minúsculo). Casam por palavra inteira, o mais longo primeiro.
+SYN = {
+    "dy": ["dividend yield", "dividendyield", "yield", "dy", "dividendo", "dividendos", "dividend", "rendimento em dividendos"],
+    "prov12": ["proventos", "provento"],
+    "pl": ["p/l", "p / l", "p l", "pl", "preco/lucro", "preco lucro", "preco sobre lucro", "preco sobre o lucro"],
+    "pvp": ["p/vp", "p / vp", "p vp", "pvp", "preco/valor patrimonial", "preco sobre valor patrimonial", "preco sobre o valor patrimonial"],
+    "psr": ["psr", "p/receita", "preco/receita", "preco sobre receita"],
+    "evebitda": ["ev/ebitda", "ev ebitda", "evebitda", "ebitda"],
+    "evebit": ["ev/ebit", "ev ebit", "evebit"],
+    "pebit": ["p/ebit", "pebit"],
+    "pativo": ["p/ativo", "p/ativos", "preco/ativo", "preco sobre ativo", "preco sobre ativos"],
+    "roe": ["roe", "retorno sobre patrimonio", "retorno sobre o patrimonio", "retorno sobre patrimonio liquido"],
+    "roic": ["roic", "retorno sobre capital investido", "retorno sobre o capital investido"],
+    "roa": ["roa", "retorno sobre ativos", "retorno sobre os ativos", "retorno sobre o ativo"],
+    "mbruta": ["margem bruta", "marg bruta"],
+    "mebit": ["margem ebit", "margem operacional", "marg ebit"],
+    "mliq": ["margem liquida", "marg liquida", "margem", "margens"],
+    "liqcorr": ["liquidez corrente", "liq corrente"],
+    "dlebit": ["divida liquida/ebit", "divida liquida / ebit", "divida liquida sobre ebit", "div liq/ebit", "dl/ebit", "divida/ebit", "divida sobre ebit"],
+    "dlpl": ["divida liquida/patrimonio", "divida liquida / patrimonio", "divida liquida sobre patrimonio", "div liq/pl", "div liq/patrim",
+             "dl/pl", "divida/pl", "divida/patrimonio", "divida sobre patrimonio", "divida liquida", "divida", "dividas", "endividamento",
+             "endividada", "endividadas", "endividado", "alavancagem", "alavancada", "alavancadas"],
+    "liq2m": ["liquidez diaria", "liquidez 2 meses", "liquidez media", "liquidez", "liquidas", "liquida", "negociacao"],
+    "v30": ["volume financeiro", "volume medio", "volume"],
+    "cresc5a": ["crescimento de receita", "crescimento da receita", "crescimento das receitas", "cresc receita", "cagr receita", "cagr receitas",
+                "cagr de receita", "receita cresceu", "crescimento de receitas"],
+    "lucro5a": ["crescimento de lucro", "crescimento do lucro", "crescimento dos lucros", "cresc lucro", "cagr lucro", "cagr lucros",
+                "cagr de lucro", "lucro cresceu", "crescimento de lucros"],
+    "lpa": ["lpa", "lucro por acao"],
+    "vpa": ["vpa", "valor patrimonial por acao", "valor patrimonial"],
+    "peg": ["peg ratio", "peg"],
+    "valmerc": ["valor de mercado", "market cap", "valor da empresa", "capitalizacao"],
+    "patrliq": ["patrimonio liquido", "patrimonio"],
+    "preco": ["cotacao", "cotacoes", "preco atual", "preco", "precos", "valor da acao", "quanto custa", "quanto esta", "quanto ta",
+              "quanto vale", "valendo", "custando"],
+    RET: ["valorizacao", "valorizacoes", "rentabilidade", "retorno", "rendeu", "rende", "rendimento", "subiu", "subiram", "valorizou",
+          "valorizaram", "caiu", "cairam", "desvalorizou", "desvalorizacao", "variacao", "variou", "performance", "desempenho",
+          "performou", "ganhou", "perdeu", "oscilou", "alta", "queda", "rendem",
+          "renderam", "subindo", "caindo", "altas", "quedas", "valorizacao de preco"],
+}
+SYN_LIST = sorted(((w, k) for k, ws in SYN.items() for w in ws), key=lambda x: -len(x[0]))
+METRIC_WORDS = {p for w, _ in SYN_LIST for p in re.split(r"[\s/]+", w) if p}
+
+# setor (palavras do usuário) -> regex aplicado em setor/subsetor/segmento B3 (inglês do TradingView/brapi + português da B3)
+SECTORS = {
+    "Bancos": (("banco", "bancos", "bancarias", "bancario", "bancarios", "financeiro", "financeiras", "financeiros", "financas"),
+               r"bank|banco|\bbco\b|bancos"),
+    "Seguradoras": (("seguradora", "seguradoras", "seguros", "seguro", "seguridade"), r"insur|segur|resseg"),
+    "Energia elétrica": (("energia", "eletrica", "eletricas", "eletrico", "eletricas", "eletricidade", "utilities", "utilidade publica",
+                          "transmissoras", "transmissao", "geradoras", "distribuidoras"), r"electric|eletric|energia|utilit|power"),
+    "Saneamento": (("saneamento", "agua"), r"water|sanea|agua"),
+    "Petróleo e gás": (("petroleo", "petroleiras", "petroleira", "oleo e gas", "gas", "combustiveis", "combustivel"),
+                       r"oil|gas|petrol|refin|combust"),
+    "Mineração e siderurgia": (("mineracao", "mineradoras", "mineradora", "siderurgia", "siderurgicas", "siderurgica", "aco", "metais", "metalurgia"),
+                               r"miner|metal|steel|mining|siderur|alumin"),
+    "Varejo": (("varejo", "varejistas", "varejista", "lojas", "comercio"), r"retail|varej|comerc|store|department|apparel|tecido|vestu|calcad|eletrodom"),
+    "Construção e imóveis": (("construcao", "construtoras", "construtora", "imobiliario", "imobiliarias", "incorporadoras", "imoveis", "shoppings", "shopping"),
+                             r"constru|homebuild|real estate|imobil|edific|incorpor|shopping|explor.*imov"),
+    "Saúde": (("saude", "hospitais", "hospital", "farmaceuticas", "farmacias", "farmacia", "planos de saude"), r"health|saude|hospital|medic|pharma|farma|drug"),
+    "Tecnologia": (("tecnologia", "tech", "software", "ti"), r"tech|software|inform|semicon|computa|programa|data process"),
+    "Telecomunicações": (("telecom", "telecomunicacoes", "telefonia", "telefonicas"), r"telecom|communicat|telefon"),
+    "Alimentos e bebidas": (("alimentos", "alimenticias", "frigorificos", "frigorifico", "bebidas", "carnes"), r"food|aliment|beverage|bebida|carne|meat|cervej"),
+    "Agronegócio": (("agro", "agronegocio", "agricolas", "agricultura"), r"agri|agro|farm|acucar|alcool|grao"),
+    "Papel e celulose": (("papel", "celulose"), r"paper|pulp|papel|celulose|madeira"),
+    "Transporte e logística": (("transporte", "transportes", "logistica", "ferrovias", "rodovias", "aereas", "aviacao", "companhias aereas", "locadoras", "aluguel de carros"),
+                               r"transport|logist|rail|airline|truck|rodov|ferrov|aere|locac|aluguel de carro|rental"),
+    "Educação": (("educacao", "ensino", "faculdades"), r"educa|school|ensino"),
+}
+SECT_WORDS = sorted(((w, s) for s, (ws, _) in SECTORS.items() for w in ws), key=lambda x: -len(x[0]))
+
+# apelidos -> raiz de 4 letras (só valem se a raiz existir nos dados)
+ALIAS = {
+    "petrobras": "PETR", "petrobas": "PETR", "petro": "PETR", "petrobrás": "PETR", "vale": "VALE", "itau": "ITUB", "itau unibanco": "ITUB",
+    "itausa": "ITSA", "bradesco": "BBDC", "banco do brasil": "BBAS", "bb": "BBAS", "bco brasil": "BBAS", "santander": "SANB",
+    "bb seguridade": "BBSE", "caixa seguridade": "CXSE", "btg": "BPAC", "btg pactual": "BPAC", "banrisul": "BRSR", "abc brasil": "ABCB",
+    "weg": "WEGE", "ambev": "ABEV", "b3": "B3SA", "bolsa b3": "B3SA", "magalu": "MGLU", "magazine luiza": "MGLU", "magazine": "MGLU",
+    "taesa": "TAEE", "eletrobras": "AXIA", "eletrobrás": "AXIA", "axia": "AXIA", "suzano": "SUZB", "gerdau": "GGBR",
+    "metalurgica gerdau": "GOAU", "embraer": "EMBJ", "localiza": "RENT", "rumo": "RAIL", "cemig": "CMIG", "copel": "CPLE",
+    "sabesp": "SBSP", "klabin": "KLBN", "jbs": "JBSS", "brf": "MBRF", "marfrig": "MBRF", "mbrf": "MBRF", "raia": "RADL",
+    "raia drogasil": "RADL", "drogasil": "RADL", "rd saude": "RADL", "natura": "NATU", "renner": "LREN", "lojas renner": "LREN",
+    "hapvida": "HAPV", "rede dor": "RDOR", "rede d'or": "RDOR", "americanas": "AMER", "casas bahia": "BHIA", "azul": "AZUL",
+    "gol": "GOLL", "cosan": "CSAN", "ultrapar": "UGPA", "ipiranga": "UGPA", "vibra": "VBBR", "br distribuidora": "VBBR",
+    "prio": "PRIO", "petrorio": "PRIO", "petro rio": "PRIO", "engie": "EGIE", "equatorial": "EQTL", "cpfl": "CPFE",
+    "energisa": "ENGI", "isa energia": "ISAE", "cteep": "ISAE", "isa cteep": "ISAE", "sanepar": "SAPR", "copasa": "CSMG",
+    "usiminas": "USIM", "csn": "CSNA", "csn mineracao": "CMIN", "cba": "CBAV", "tim": "TIMS", "vivo": "VIVT", "telefonica": "VIVT",
+    "totvs": "TOTS", "assai": "ASAI", "carrefour": "CRFB", "mateus": "GMAT", "grupo mateus": "GMAT", "pao de acucar": "PCAR",
+    "gpa": "PCAR", "multiplan": "MULT", "iguatemi": "IGTI", "cyrela": "CYRE", "mrv": "MRVE", "direcional": "DIRR", "eztec": "EZTC",
+    "cury": "CURY", "randon": "RAPT", "randoncorp": "RAPT", "marcopolo": "POMO", "tupy": "TUPY", "fleury": "FLRY",
+    "odontoprev": "ODPV", "porto seguro": "PSSA", "porto": "PSSA", "irb": "IRBR", "unipar": "UNIP", "braskem": "BRKM",
+    "bradespar": "BRAP", "alpargatas": "ALPA", "azzas": "AZZA", "arezzo": "AZZA", "vivara": "VIVA", "smart fit": "SMFT",
+    "smartfit": "SMFT", "cogna": "COGN", "yduqs": "YDUQ", "minerva": "BEEF", "sao martinho": "SMTO", "slc": "SLCE",
+    "slc agricola": "SLCE", "3tentos": "TTEN", "kepler": "KEPL", "kepler weber": "KEPL", "wiz": "WIZC", "neoenergia": "NEOE",
+    "alupar": "ALUP", "auren": "AURE", "aes brasil": "AESB", "eneva": "ENEV", "romi": "ROMI", "pagseguro": "PAGS",
+    "mercado livre": "MELI", "dexco": "DXCO", "vamos": "VAMO", "movida": "MOVI", "simpar": "SIMH", "ecorodovias": "ECOR",
+    "motiva": "MOTV", "ccr": "MOTV", "hypera": "HYPE", "camil": "CAML", "m dias branco": "MDIA", "grendene": "GRND",
+    "intelbras": "INTB", "lwsa": "LWSA", "locaweb": "LWSA", "ser educacional": "SEER", "cielo": "CIEL",
+    "raizen": "RAIZ", "allos": "ALOS", "jhsf": "JHSF", "even": "EVEN", "tenda": "TEND", "lavvi": "LAVV", "plano e plano": "PLPL",
+    "petz": "PETZ", "c&a": "CEAB", "cea": "CEAB", "guararapes": "GUAR", "riachuelo": "GUAR", "sanepar": "SAPR", "copel": "CPLE",
+}
+# apelidos que também são palavras comuns: só valem com contexto de ação (ou escritos em maiúsculas)
+GUARDED = {"vale", "azul", "gol", "tim", "rumo", "porto", "vivo", "even", "positivo", "vamos", "prio", "wiz", "raia", "natura",
+           "movida", "camil", "tenda", "motiva", "cury", "bb", "b3"}
+SIGN_WORDS = {"positivo", "positiva", "positivos", "positivas", "negativo", "negativa", "negativos", "negativas"}
+VALE_IDIOM = re.compile(r"\b(vale a pena|vale mais|vale menos|vale o|vale a|quanto vale|nao vale|vale muito|vale apena|valeria|vale investir|vale comprar|vale ficar)\b")
+
+# palavras que não carregam informação (não tornam a pergunta "difícil")
+STOP = set("""a o os as um uma uns umas de do da dos das no na nos nas em e ou que qual quais quem quanto quanta quantos quantas
+como pra para por pelo pela pelos pelas com sem se ao aos a, me mim eu voce voces tem ter tinha teve ha hoje agora atual atualmente
+atuais esta estao esse essa esses essas isso este isto aquele aquela dele dela deles delas dessa desse sua seu suas seus minha meu
+mais menos muito muita pouco ja ainda tambem so somente apenas mostre mostra mostrar me diga diz dizer fale fala falar quero queria
+gostaria saber sabe ver veja lista liste listar listagem informe informar traga trazer quais sao sao e eh foi ser sendo fica ficou
+acao acoes empresa empresas papel papeis ativo ticker tickers companhia companhias bolsa br brasil brasileira brasileiras
+maior maiores menor menores top primeiras primeiros ultimas ultimos mais alto alta altos baixo baixa baixos alto melhor melhores pior
+piores dela daquela nele nela qual e obrigado obrigada ola oi bom dia boa tarde noite por favor favor valeu vs versus contra x entre
+comparar compare comparacao compara compar comparando atual valor valores numero numeros dado dados indicador indicadores
+classe classes on pn unit units ordinaria ordinarias preferencial preferenciais todas todos tudo cada geral site aqui la ai
+ano anos mes meses dia dias semana semanas periodo desde ate de a hoje ontem anual mensal ultimo ultima passado passada este
+neste nesse deste desse janeiro fevereiro marco abril maio junho julho agosto setembro outubro novembro dezembro ytd acumulado
+acima abaixo superior inferior pelo menos minimo maximo maior que menor que igual positivo positiva positivos positivas negativo
+negativa negativos negativas zero ordem crescente decrescente ordenado ordenadas ordenados ranking rank classificacao
+paga pagam pagou pagar pagando pagaram possui possuem possuir apresenta apresentam teve tiveram tenha tenham negocia negociam
+estava estavam custa custam ficaram mostrando hj sobre ficam fica acoes? ha existe existem seria seriam pode podem consegue
+quero ver vejo saber calcula calcule qual resumo informacoes info detalhes dados significa significam significado quer dizer
+funciona usar uso faco faz criar onde setor setores segmento segmentos ramo area
+""".split())
+COMPLEX = ("por que", "porque", "explique", "explica", "analise", "analisa", "analisar", "devo", "vale a pena", "compensa", "opiniao",
+           "sugest", "recomend", "indica", "indique", "e se", "minha", "meu ", "minhas", "meus ", "previs", "simula", "futuro", "vai subir",
+           "vai cair", "perspectiva", "risco", "arriscad", "seguro investir", "investir", "comprar", "vender", "carteira", "estrategia",
+           "boa", "bom ", "ruim", "barata", "baratas", "barato", "baratos", "cara ", "caras", "caro", "descontad", "oportunidade",
+           "subvaloriz", "potencial", "justo", "graham", "magic formula", "perene", "perenes", "growth", "turnaround", "etiqueta")
+HOWW = ("como usar", "como funciona", "como faco", "como faz", "como uso", "para que serve", "pra que serve", "onde fica", "onde esta",
+        "onde encontro", "onde acho", "explica a aba", "o que faz a aba", "como mexer", "passo a passo", "como adicion", "como cri",
+        "como favorit", "como filtr", "como orden", "como compar", "como reorganiz", "como export", "como baix", "como atualiz",
+        "como mud", "como troc", "como vejo", "como ver", "tutorial", "nao acho", "nao encontro", "cade")
+WRONG = ("esta errado", "ta errado", "errado", "errada", "nao e isso", "incorreto", "incorreta", "confere", "confira", "conferir", "verifica",
+         "verifique", "nao bate", "desatualizado", "desatualizada", "mentira", "nao esta certo", "esta certo", "ta certo")
+MISSING = ("nao tem esse dado", "nao possui", "nao ha informac", "nao contem", "nao dispoe", "nao tem informac", "nao consta",
+           "nao encontrei", "nao tem dados", "nao tenho")
+ABBR = {"oq": "o que", "oque": "o que", "q": "que", "pq": "por que", "porq": "por que", "vc": "voce", "vcs": "voces", "ta": "esta",
+        "tao": "estao", "hj": "hoje", "qto": "quanto", "qt": "quanto", "qnt": "quanto", "qnto": "quanto", "qtos": "quantos",
+        "tb": "tambem", "tbm": "tambem", "mt": "muito", "mto": "muito", "mtas": "muitas", "c/": "com", "s/": "sem", "p/": "para",
+        "msm": "mesmo", "eh": "e", "n": "nao", "naum": "nao", "blz": "beleza", "obg": "obrigado", "vlw": "valeu", "dps": "depois",
+        "td": "tudo", "tds": "todos", "qdo": "quando", "qnd": "quando", "ngm": "ninguem", "agr": "agora", "aki": "aqui",
+        "acoes?": "acoes", "x": "x"}
+MONTHS = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+
+
+def norm(s):
+    return unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
+
+
 def br(x, d=2):
     if x is None: return "—"
     return f"{x:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-def build(rows, fields, metrics):
-    F = {f[0]: (f[1], f[2]) for f in fields}
-    by = {r["ticker"]: r for r in rows}
-    return {"rows": rows, "F": F, "by": by, "M": metrics or {}}
 
-def _tickers(q, D):
-    up = re.findall(r"\b[A-Za-z]{4}\d{1,2}[A-Za-z]?\b", q)
-    out = [t.upper() for t in up if t.upper() in D["by"]]
-    nq = norm(q)
-    if not out:  # nome da empresa
-        for r in D["rows"]:
-            n = norm(r.get("nome") or "").split(" ")[0]
-            if len(n) >= 4 and re.search(r"\b" + re.escape(n) + r"\b", nq): out.append(r["ticker"])
-    return list(dict.fromkeys(out))[:6]
-def _idx(q):
-    nq = norm(q); return [k for k, ws in IDX.items() if any(re.search(r"\b" + w + r"\b", nq) for w in ws)]
-def _metric(q, D):
-    nq = norm(q)
-    for w, k in sorted(SYN.items(), key=lambda x: -len(x[0])):
-        if w in nq:
-            if k == "ret1":
-                m = re.search(r"(\d)\s*anos?", nq); k = f"ret{m.group(1)}" if m and m.group(1) in "1235" else k
-            return k
-    return None
-def _period(q):
-    nq = norm(q); t = date.today()
-    m = re.search(r"(\d+)\s*(ano|anos|mes|meses|dia|dias)", nq)
-    if m:
-        n = int(m.group(1)); u = m.group(2)
-        d0 = t - timedelta(days=n * (365 if u.startswith("ano") else 30 if u.startswith("mes") else 1))
-    else: d0 = t - timedelta(days=365)
-    return d0.isoformat(), t.isoformat()
+def dbr(iso):
+    return f"{iso[8:10]}/{iso[5:7]}/{iso[:4]}"
+
+
+def money_big(x):
+    a = abs(x)
+    if a >= 1e9: return f"R$ {br(x / 1e9, 1)} bi"
+    if a >= 1e6: return f"R$ {br(x / 1e6, 1)} mi"
+    if a >= 1e3: return f"R$ {br(x / 1e3, 1)} mil"
+    return f"R$ {br(x)}"
+
+
+# ============================================================ dados
+def build(rows, fields, metrics, cad=None):
+    """rows = linhas do site (consenso), fields = FIELDS do servidor, metrics = snapshot metrics, cad = cadastro B3 {RAIZ: [nome, segmento]}."""
+    F = {f[0]: {"label": f[1], "unit": f[2], "dir": f[3], "neg": f[4]} for f in fields}
+    by = {r["ticker"]: r for r in rows}
+    M = metrics or {}
+    cad = cad or {}
+
+    def liq(r):
+        v = r.get("v") or {}
+        return (M.get(r["ticker"]) or {}).get("v30") or v.get("vol30") or v.get("liq2m") or 0
+    roots = {}
+    for r in rows: roots.setdefault(r["ticker"][:4], []).append(r["ticker"])
+    for k in roots: roots[k].sort(key=lambda t: -liq(by[t]))
+    # tokens dos nomes -> raízes (só tokens que identificam no máximo 1 empresa)
+    tok = {}
+    for k, ts in roots.items():
+        names = {by[t].get("nome") or "" for t in ts} | {(cad.get(k) or [""])[0] or ""}
+        for nm in names:
+            for w in re.findall(r"[a-z0-9&']+", norm(nm)):
+                if len(w) >= 4 and w not in STOP and w not in GENERIC and w not in METRIC_WORDS:
+                    tok.setdefault(w, set()).add(k)
+    tok = {w: next(iter(ks)) for w, ks in tok.items() if len(ks) == 1}
+    alias = {norm(a): k for a, k in ALIAS.items() if k in roots}
+    seg = {k: (cad.get(k) or [None, None])[1] for k in roots}
+    vocab = set(tok) | set(alias) | METRIC_WORDS | {w for w, _ in SECT_WORDS} | {w for ws in IDX.values() for w in ws}
+    return {"rows": rows, "F": F, "by": by, "M": M, "roots": roots, "tok": tok, "alias": alias, "seg": seg, "liq": liq,
+            "vocab": vocab, "tickers": list(by)}
+
+
+GENERIC = set("""holding holdings participacoes participacao part industria industrias comercio servicos investimentos invest
+brasileiro brasileira brasileiros brasil grupo group companhia company corp corporation unit units pfd sa s/a ltda
+energia eletrica eletricas transmissora transmissao geracao distribuicao saneamento seguros seguridade financeira
+financeiro banco bco bank banc nacional internacional nordeste sudeste norte sul central paulista paulistas mineira
+gerais minas sao rio janeiro tecnologia sistemas logistica transportes alimentos imobiliaria empreendimentos realty
+incorporadora construtora engenharia mineracao siderurgica metalurgica petroleo papel celulose quimica textil
+shopping shoppings centers center educacional educacao saude hospitalar medicina farmaceutica telecomunicacoes
+comunicacoes cia companhias ordinaria preferencial units cons class classe each para cada""".split())
+
+
+def fmt(D, k, x):
+    if x is None: return "—"
+    if k in BIG: return money_big(x)
+    unit = (D["F"].get(k) or {}).get("unit") or (MX.get(k) or ("", ""))[1]
+    if unit == "%": return br(x) + "%"
+    if unit in ("R$", "$"): return "R$ " + br(x)
+    return br(x)
+
+
+def label(D, k):
+    if k in D["F"]: return D["F"][k]["label"]
+    if k in MX: return MX[k][0]
+    return {RET: "Variação de preço"}.get(k, k)
+
+
 def val(D, r, k):
-    if k in (r.get("v") or {}): return r["v"].get(k)
+    v = (r.get("v") or {}).get(k)
+    if v is not None: return v
     return (D["M"].get(r["ticker"]) or {}).get(k)
-def label(D, k): return D["F"].get(k, (MX.get(k, k), ""))[0]
+
+
+# ============================================================ entendimento
+def _clean(q):
+    """Normaliza: sem acento, minúsculo, abreviações expandidas, pontuação vira espaço (preserva p/l, p/vp, ev/ebitda...)."""
+    nq = norm(q)
+    nq = re.sub(r"(?<=\d)\.(?=\d{3}\b)", "", nq)  # 1.000 -> 1000
+    nq = re.sub(r"[?!;:\"“”()\[\]{}]", " ", nq)
+    nq = re.sub(r"(?<!\d),|,(?!\d)", " ", nq)
+    nq = re.sub(r"\s+\.|\.\s+|\.$", " ", nq)
+    out = []
+    for w in nq.split():
+        out.append(ABBR.get(w, w))
+    return " ".join(out).strip()
+
+
+def _fix_typos(nq, D):
+    """Corrige palavras desconhecidas parecidas com o vocabulário (dividndo -> dividendo). Devolve (texto, correções)."""
+    vocab = [w for w in D["vocab"] if " " not in w and len(w) >= 4]
+    fixes, out = [], []
+    for w in nq.split():
+        if len(w) >= 5 and w.isalpha() and w not in D["vocab"] and w not in STOP and w not in COMMON_WORDS:
+            m = difflib.get_close_matches(w, vocab, 1, 0.84)
+            if m:
+                fixes.append((w, m[0])); w = m[0]
+        out.append(w)
+    return " ".join(out), fixes
+
+
+COMMON_WORDS = set("""casa cash game home life best next onda ouro soja oleo mill rede area land vale mais como para qual quem onde
+esta isso essa esse nada tudo hoje anos dias taxa dado dados renda fixa bolsa acao boas bons cada cara caro mesa nova novo
+pena pela pelo sobre tipo meta foco vida time base bens hora uma umas todo toda show love play jogo real reais""".split())
+
+
+def _period(nq):
+    """-> (inicio, fim, rótulo, tipo) ; tipo: 'dia' | 'periodo' ; None se nada explícito."""
+    t = date.today()
+    y = t.year
+    m = re.search(r"\b(?:de|entre)\s+((?:19|20)\d\d)\s+(?:a|e|ate)\s+((?:19|20)\d\d)\b", nq)
+    if m:
+        a, b = sorted((int(m.group(1)), int(m.group(2))))
+        return f"{a}-01-01", min(date(b, 12, 31), t).isoformat(), f"de {a} a {b}", "periodo"
+    m = re.search(r"\bdesde\s+((?:19|20)\d\d)\b", nq)
+    if m: return f"{m.group(1)}-01-01", t.isoformat(), f"desde {m.group(1)}", "periodo"
+    m = re.search(r"\b(?:desde|a partir de)\s+(" + "|".join(MONTHS) + r")(?:\s+de\s+((?:19|20)\d\d))?\b", nq)
+    if m:
+        mo = MONTHS.index(m.group(1)) + 1; yy = int(m.group(2) or (y if mo <= t.month else y - 1))
+        return f"{yy}-{mo:02d}-01", t.isoformat(), f"desde {m.group(1)}/{yy}", "periodo"
+    m = re.search(r"\b(?:em|no ano de|durante|ano de)\s+((?:19|20)\d\d)\b", nq)
+    if not m:
+        for mm in re.finditer(r"\b((?:19|20)\d\d)\b", nq):
+            if not re.search(r"(acima|abaixo|maior|menor|mais|menos|superior|inferior|minimo|maximo|ate|[<>])\s*(de|que|a)?\s*$", nq[:mm.start()]):
+                m = mm; break
+    if m:
+        yy = int(m.group(1))
+        if 1994 <= yy <= y:
+            return f"{yy}-01-01", min(date(yy, 12, 31), t).isoformat(), f"em {yy}", "periodo"
+    if re.search(r"\b(no ano|neste ano|nesse ano|este ano|esse ano|do ano|ytd|acumulado do ano|ano ate agora|desde o inicio do ano|em " + str(y) + r")\b", nq):
+        return f"{y}-01-01", t.isoformat(), f"em {y} (até hoje)", "periodo"
+    m = re.search(r"\b(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|doze)\s*(anos?|mes|meses|dias?|semanas?|pregoes?)\b", nq)
+    if m:
+        n = {"um": 1, "uma": 1, "dois": 2, "duas": 2, "tres": 3, "quatro": 4, "cinco": 5, "seis": 6, "doze": 12}.get(m.group(1)) or int(m.group(1))
+        u = m.group(2)
+        days = n * (365 if u.startswith("ano") else 30 if u.startswith("mes") else 7 if u.startswith("semana") else 1.45 if u.startswith("preg") else 1)
+        lab = f"{n} {u}"
+        return (t - timedelta(days=round(days))).isoformat(), t.isoformat(), f"em {lab}", "periodo"
+    if re.search(r"\b(na semana|nesta semana|essa semana|esta semana|ultima semana|semana passada)\b", nq):
+        return (t - timedelta(days=7)).isoformat(), t.isoformat(), "nos últimos 7 dias", "periodo"
+    if re.search(r"\b(no mes|neste mes|este mes|esse mes|ultimo mes|mes passado)\b", nq):
+        return (t - timedelta(days=30)).isoformat(), t.isoformat(), "nos últimos 30 dias", "periodo"
+    if re.search(r"\b(hoje|no dia|do dia|agora|nesse momento|neste momento|ultimo pregao|ontem)\b", nq):
+        return (t - timedelta(days=1)).isoformat(), t.isoformat(), "no dia", "dia"
+    return None
+
+
+def _num(s):
+    s = s.replace("%", "").strip()
+    if re.fullmatch(r"-?\d+,\d+", s): s = s.replace(",", ".")
+    try: return float(s)
+    except ValueError: return None
+
+
+CMP_RE = re.compile(r"(acima de|maior que|maior ou igual a|mais de|mais que|superior a|pelo menos|no minimo|minimo de|>=|>|"
+                    r"abaixo de|menor que|menor ou igual a|menos de|menos que|inferior a|no maximo|maximo de|ate|<=|<)\s*(-?\d+(?:[.,]\d+)?)\s*(%|mi|milhoes|milhao|bi|bilhoes|bilhao|mil)?")
+BETW_RE = re.compile(r"entre\s+(-?\d+(?:[.,]\d+)?)\s*%?\s+e\s+(-?\d+(?:[.,]\d+)?)\s*%?")
+SIGN_RE = re.compile(r"\b(positivo|positiva|positivos|positivas|negativo|negativa|negativos|negativas|maior que zero|menor que zero)\b")
+
+
+def parse(q, D, hist=None):
+    """Interpretação sem IA. -> dict com tickers, idx, metrics, sector, filters, period, order, n, flags e 'left' (palavras não entendidas)."""
+    nq0 = _clean(q)
+    nq, fixes = _fix_typos(nq0, D)
+    work = " " + nq + " "
+    P = {"q": q, "nq": nq, "fixes": fixes, "tickers": [], "idx": [], "metrics": [], "sector": None, "filters": [], "period": None,
+         "order": None, "n": None, "notes": [], "from_hist": False, "all_classes": bool(re.search(r"\btodas as classes\b", nq)),
+         "illiquid": bool(re.search(r"\b(iliquidas|incluindo iliquidas|todas as acoes|sem filtro de liquidez)\b", nq))}
+    used = []  # trechos consumidos
+
+    def take(span_text):
+        nonlocal work
+        work = work.replace(" " + span_text + " ", " ", 1) if (" " + span_text + " ") in work else work.replace(span_text, " ", 1)
+        used.append(span_text)
+
+    # --- tickers explícitos (PETR4, petr 4, PETR-4, TAEE11)
+    for m in re.finditer(r"\b([a-z][a-z0-9]{3})\s?-?(\d{1,2})([a-z]?)\b", nq):
+        t = (m.group(1) + m.group(2) + m.group(3)).upper()
+        if t not in D["by"]: t = (m.group(1) + m.group(2)).upper()
+        if t in D["by"]:
+            P["tickers"].append(t); take(m.group(0))
+        elif m.group(1).upper() in D["roots"]:  # classe inexistente: usa a mais negociada e avisa
+            t2 = D["roots"][m.group(1).upper()][0]
+            P["tickers"].append(t2); P["notes"].append(f"Não encontrei {t}; usei {t2}."); take(m.group(0))
+        elif re.fullmatch(r"[a-z]{4}\d{1,2}", m.group(0)):
+            near = difflib.get_close_matches(m.group(0).replace(" ", "").replace("-", "").upper(), D["tickers"], 3, 0.6)
+            P["notes"].append(f"Não encontrei {t} no site." + (f" Você quis dizer {', '.join(near)}?" if near else ""))
+            P.setdefault("unknown_tickers", []).append(t); take(m.group(0))
+    # --- índices (antes dos apelidos: "ouro", "dolar")
+    for k, ws in IDX.items():
+        for w in sorted(ws, key=len, reverse=True):
+            if re.search(r"\b" + re.escape(w) + r"\b", work):
+                P["idx"].append(k); take(w); break
+    # --- apelidos (mais longos primeiro) e tokens de nome
+    has_ctx = bool(re.search(r"\b(acao|acoes|papel|ticker|empresa|cotacao|preco|dy|dividend|p/l|p/vp|roe|lucro|rendeu|subiu|caiu|valoriz|"
+                             r"divida|margem|vs|versus|contra|compar)\b", nq)) or len(nq.split()) <= 4
+    for a in sorted(D["alias"], key=lambda x: (x in GUARDED, -len(x))):
+        if not re.search(r"\b" + re.escape(a) + r"\b", work): continue
+        has_ctx = has_ctx or bool(P["tickers"]) or bool(re.search(r"\b" + re.escape(a) + r"\s+(ou|e|vs|x)\b|\b(ou|e|vs|x)\s+" + re.escape(a) + r"\b", nq))
+        if a == "vale" and VALE_IDIOM.search(nq) and not re.search(r"\bvale3\b|\bvale s\.?a", nq): continue
+        if a in GUARDED and not has_ctx and not re.search(r"\b" + re.escape(a.upper()) + r"\b", q): continue
+        if a == "azul" and re.search(r"\b(cor|cores|card|numero|aparece|fica|badge|etiqueta|aj)\b", nq): continue
+        if a == "bb" and "bb seguridade" in work: continue
+        P["tickers"].append(_class(D, D["alias"][a], nq)); take(a)
+    P["tickers"] = list(dict.fromkeys(P["tickers"]))
+    # --- setor
+    for w, s in SECT_WORDS:
+        if re.search(r"\b" + re.escape(w) + r"s?\b", work):
+            P["sector"] = s; take(w); break
+    # --- indicadores (mais longo primeiro, por posição)
+    found = []
+    for w, k in SYN_LIST:
+        for m in re.finditer(r"(?<![a-z0-9/])" + re.escape(w) + r"(?![a-z0-9/])", work):
+            found.append((m.start(), m.end(), k, w))
+            work = work[:m.start()] + " " * (m.end() - m.start()) + work[m.end():]
+    found.sort()
+    for s, e, k, w in found:
+        if k not in P["metrics"]: P["metrics"].append(k)
+        used.append(w)
+    P["_mpos"] = [(s, e, k) for s, e, k, _ in found]
+    for w in list(work.split()):
+        k = D["tok"].get(w)
+        if k and w not in COMMON_WORDS and w not in SIGN_WORDS:
+            P["tickers"].append(_class(D, k, nq)); take(w)
+    # --- raiz sozinha (petr, VALE) se não for palavra comum
+    for m in re.finditer(r"\b([a-z]{4})\b", work):
+        w = m.group(1)
+        if w.upper() in D["roots"] and w not in COMMON_WORDS and w not in STOP and w not in METRIC_WORDS and w not in D["vocab"]:
+            P["tickers"].append(_class(D, w.upper(), nq)); take(w)
+    P["tickers"] = list(dict.fromkeys(P["tickers"]))
+    # --- período
+    P["period"] = _period(nq)
+    # --- filtros
+    mpos = _metric_positions(nq, P["metrics"])
+    for m in CMP_RE.finditer(nq):
+        op = ">=" if m.group(1) in ("acima de", "maior que", "maior ou igual a", "mais de", "mais que", "superior a", "pelo menos", "no minimo", "minimo de", ">=", ">") else "<="
+        x = _num(m.group(2))
+        if x is None: continue
+        mul = {"mi": 1e6, "milhoes": 1e6, "milhao": 1e6, "bi": 1e9, "bilhoes": 1e9, "bilhao": 1e9, "mil": 1e3}.get(m.group(3) or "", 1)
+        k = _metric_before(mpos, m.start()) or (P["metrics"][0] if len(P["metrics"]) == 1 else None)
+        if k and k != RET: P["filters"].append((k, op, x * mul))
+    for m in BETW_RE.finditer(nq):
+        k = _metric_before(mpos, m.start()) or (P["metrics"][0] if len(P["metrics"]) == 1 else None)
+        a, b = _num(m.group(1)), _num(m.group(2))
+        if k and k != RET and a is not None and b is not None:
+            P["filters"] += [(k, ">=", min(a, b)), (k, "<=", max(a, b))]
+    for m in SIGN_RE.finditer(nq):
+        k = _metric_before(mpos, m.start())
+        if not k and re.search(r"\blucro\b", nq[max(0, m.start() - 25):m.start()]): k = "lpa"; used.append("lucro")
+        if k and k != RET:
+            P["filters"].append((k, ">" if m.group(1).startswith(("positiv", "maior")) else "<", 0))
+    # --- ordem e quantidade
+    if re.search(r"\b(maiores|maior|top|mais altos?|mais altas?|mais elevad[oa]s?|lideres|primeiros|mais)\b", nq): P["order"] = "desc"
+    if re.search(r"\b(menores|menor|mais baix[oa]s?|menos)\b", nq): P["order"] = "asc" if P["order"] is None or re.search(r"\bmenor(es)?\b", nq) else P["order"]
+    if re.search(r"\b(melhores|melhor)\b", nq): P["order"] = "best"
+    if re.search(r"\b(piores|pior)\b", nq): P["order"] = "worst"
+    if RET in P["metrics"] and re.search(r"\b(quedas?|cairam|caiu|desvaloriz\w*|perderam|perdeu)\b", nq) and P["order"] != "asc":
+        P["order"] = "worst"
+    if not P["metrics"] and not P["tickers"] and re.search(r"\b(maiores|grandes|mais valiosas|gigantes)\s+(empresas|acoes|companhias)\b", nq):
+        P["metrics"] = ["valmerc"]; P["order"] = "desc"
+    m = re.search(r"\btop\s*(\d{1,3})\b", nq) or re.search(r"\b(\d{1,3})\s+(?:acoes|empresas|papeis|maiores|menores|melhores|piores|primeir\w*|mais|menos)\b", nq) \
+        or re.search(r"\b(?:maiores|menores|melhores|piores|primeiras|primeiros)\s+(\d{1,3})\b", nq)
+    if m: P["n"] = max(1, min(int(m.group(1)), 50))
+    # --- flags de intenção
+    P["complaint"] = any(re.search(r"\b" + w + r"\b", nq) for w in WRONG)
+    P["howto"] = any(w in nq for w in HOWW)
+    P["complex"] = any(w in (" " + nq + " ") for w in COMPLEX) and not P["howto"]
+    if P["order"] in ("best", "worst") and not P["metrics"]: P["complex"] = True
+    P["define"] = bool(re.search(r"\b(o que (e|sao|significa|quer dizer)|que e|significado|significa|defin[ae]|definicao|conceito)\b", nq))
+    P["colors"] = bool(re.search(r"\b(cor|cores|colorid\w*)\b", nq)) or bool(re.search(
+        r"\b(vermelh\w+|laranja|amarel\w+|azul|verde|cinza|violeta|roxo)\b.*\b(card|numero|valor|aparece|fica|esta|significa|quer dizer|por que|porque)\b|"
+        r"\b(card|numero|valor|aparece|fica|esta|significa|por que|porque)\b.*\b(vermelh\w+|laranja|amarel\w+|azul|verde|cinza|violeta|roxo)\b", nq))
+    # --- memória da conversa ("e o P/L?", "e a VALE3?")
+    # ordem/período sem indicador: variação de preço ("piores em 5 anos", "maiores altas")
+    if not P["metrics"] and P["period"] and (P["order"] or re.search(r"\b(altas?|quedas?)\b", nq)) and not P["tickers"]:
+        P["metrics"] = [RET]
+        P["complex"] = any(w in (" " + nq + " ") for w in COMPLEX) and not P["howto"]
+    if hist and not P.get("unknown_tickers"):
+        marker = bool(re.match(r"^(e|e o|e a|e os|e as|e quanto|e qual|e de|e do|e da|agora|tambem|e em|e no|e na|mesmo|dela|dele|dessa|desse|da mesma)\b", nq)
+                      or re.search(r"\b(dela|dele|dessa|desse|delas|deles|a mesma|o mesmo|essa acao|essa empresa|ela|elas|tambem)\b", nq))
+        dataq = bool(P["metrics"] or P["period"])
+        follow = marker or (len(nq.split()) <= 4 and dataq and not P["tickers"] and not P["idx"])
+        if follow and not (P["order"] or P["sector"] or P["filters"] or P["n"] or P["define"] or P["howto"] or P["colors"]):
+            pq = [h for h in hist if h.get("r") == "u"]
+            for h in reversed(pq[-3:]):
+                PP = parse(h.get("t", ""), D, None)
+                if not P["tickers"] and not P["idx"] and (PP["tickers"] or PP["idx"]) and not P["sector"]:
+                    P["tickers"], P["idx"], P["from_hist"] = PP["tickers"], PP["idx"], True
+                if marker and not P["metrics"] and not P["period"] and PP["metrics"] and (P["tickers"] or P["idx"]) and not P["define"]:
+                    P["metrics"], P["from_hist"] = PP["metrics"], True
+                if marker and not P["period"] and PP["period"] and (P["metrics"] == [RET] or not P["metrics"]): P["period"] = PP["period"]
+                if P["tickers"] or P["idx"]: break
+    # --- palavras não entendidas
+    rest = re.sub(r"-?\d+(?:[.,]\d+)?%?", " ", work)
+    P["left"] = [w for w in re.findall(r"[a-z][a-z']*", rest) if w not in STOP and w not in COMMON_WORDS and len(w) > 1
+                 and not any(w in x.split() for x in used) and w not in ("mi", "bi", "mil", "milhoes", "bilhoes", "reais", "rs")]
+    return P
+
+
+def _class(D, root, nq):
+    """Raiz -> ticker: classe pedida (ON/PN/unit) ou a mais negociada."""
+    ts = D["roots"][root]
+    want = None
+    if re.search(r"\b(on|ordinaria|ordinarias)\b", nq): want = "3"
+    elif re.search(r"\b(pn|preferencial|preferenciais|pna)\b", nq): want = "4"
+    elif re.search(r"\b(unit|units)\b", nq): want = "11"
+    if want:
+        for t in ts:
+            if t[4:] == want: return t
+        if want == "4":
+            for t in ts:
+                if t[4:] in ("5", "6"): return t
+    return ts[0]
+
+
+def _metric_positions(nq, metrics):
+    out = []
+    for w, k in SYN_LIST:
+        if k not in metrics: continue
+        for m in re.finditer(r"(?<![a-z0-9/])" + re.escape(w) + r"(?![a-z0-9/])", nq): out.append((m.start(), m.end(), k))
+    return sorted(out)
+
+
+def _metric_before(mpos, pos):
+    best = None
+    for s, e, k in mpos:
+        if e <= pos and pos - e <= 30: best = k
+    return best
+
+
+def confident(P):
+    """A regra local só responde quando entendeu tudo (nenhuma palavra sobrando e nada que peça análise)."""
+    return not P["left"] and not P["complex"] and not P["complaint"]
+
+
+# ============================================================ execução (dados reais do site)
+def _rank_dir(D, k, order):
+    """True = crescente."""
+    d = (D["F"].get(k) or {}).get("dir")
+    if order == "asc": return True
+    if order == "desc": return False
+    good_low = d == "low"
+    if order == "worst": return not good_low
+    return good_low  # best ou None: direção "boa" do indicador
+
+
+def _sector_rows(D, s):
+    rx = re.compile(SECTORS[s][1], re.I)
+    out = []
+    for r in D["rows"]:
+        txt = " ".join(x for x in (r.get("setor"), r.get("subsetor"), D["seg"].get(r["ticker"][:4]), r.get("nome")) if x)
+        if rx.search(norm(txt)) and not (s == "Bancos" and re.search(r"segur|insur", norm(txt))):
+            out.append(r)
+    return out
+
+
+def _passes(D, r, filters):
+    for k, op, x in filters:
+        v = val(D, r, k)
+        if v is None: return False
+        if op == ">=" and not v >= x: return False
+        if op == "<=" and not v <= x: return False
+        if op == ">" and not v > x: return False
+        if op == "<" and not v < x: return False
+    return True
+
+
+def _ops(op): return {">=": "≥", "<=": "≤", ">": ">", "<": "<"}[op]
+
+
+def _rank_metric(k, P):
+    """RET em ranking: usa as métricas pré-calculadas (1–5 anos ou ano-calendário)."""
+    if k != RET: return k, None
+    p = P.get("period")
+    if not p: return "ret1", None
+    di, df, lab, kind = p
+    if kind == "dia": return "var", None
+    yrs = (date.fromisoformat(df) - date.fromisoformat(di)).days / 365
+    if di.endswith("-01-01") and (df.endswith("-12-31") or df == date.today().isoformat()) and di[:4] == df[:4]: return "anual", di[:4]
+    r = round(yrs)
+    if r in (1, 2, 3, 4, 5) and abs(yrs - r) < 0.1: return f"ret{r}", None
+    return None, None
+
+
+def ranking(P, D):
+    k0 = P["metrics"][0]
+    k, year = _rank_metric(k0, P)
+    if k is None:
+        return "Para ranking de valorização tenho 1, 2, 3, 4 ou 5 anos, o dia de hoje e anos fechados (ex.: “maiores altas em 2024”)."
+    rows = _sector_rows(D, P["sector"]) if P["sector"] else list(D["rows"])
+    crit = []
+    if P["sector"]: crit.append(f"setor {P['sector']}")
+    if not P["illiquid"]:
+        rows = [r for r in rows if (val(D, r, "liq2m") or 0) >= 5e5 or (D["M"].get(r["ticker"]) or {}).get("v30", 0) >= 5e5]
+        crit.append("liquidez ≥ R$ 500 mil/dia")
+    if k == "dy" and not P["illiquid"]:
+        rows = [r for r in rows if (val(D, r, "dy") or 0) < 40]; crit.append("DY < 40% (evita distorções, como nos grupos)")
+    if P["filters"]:
+        rows = [r for r in rows if _passes(D, r, P["filters"])]
+        crit += [f"{label(D, fk)} {_ops(op)} {fmt(D, fk, x)}" for fk, op, x in P["filters"]]
+
+    def get(r):
+        if k == "var": return r.get("var")
+        if k == "anual": return ((D["M"].get(r["ticker"]) or {}).get("anual") or {}).get(year)
+        return val(D, r, k)
+    L = [(r, get(r)) for r in rows]
+    L = [(r, x) for r, x in L if isinstance(x, (int, float))]
+    if k == "anual" and not L:
+        return f"Ainda não tenho a variação anual de {year} para montar o ranking. Tenho 1, 2, 3, 4 e 5 anos, o dia de hoje e anos fechados."
+    asc = _rank_dir(D, k if k in D["F"] else k0, P["order"])
+    if k in D["F"] and D["F"][k].get("neg") and asc: L = [(r, x) for r, x in L if x > 0]; crit.append(f"{label(D, k)} > 0")
+    if not P["all_classes"]:  # 1 ticker por empresa (o mais negociado)
+        seen, L2 = set(), []
+        for r, x in sorted(L, key=lambda z: -D["liq"](z[0])):
+            if r["ticker"][:4] in seen: continue
+            seen.add(r["ticker"][:4]); L2.append((r, x))
+        L = L2; crit.append("1 ticker por empresa")
+    L.sort(key=lambda z: z[1], reverse=not asc)
+    n = P["n"] or 10
+    lab = label(D, k) if k not in ("var", "anual") else ("Variação no dia" if k == "var" else f"Variação em {year}")
+    unit_k = k if k not in ("var", "anual") else "ret1"
+    if not L:
+        return f"Nenhuma ação atende: {lab}" + (" · " + " · ".join(crit) if crit else "") + "."
+    if k0 == RET:
+        per = {"var": "no dia", "anual": f"em {year}"}.get(k) or "em " + MX[k][0].split(" ", 1)[1]
+        head = f"{'Maiores quedas' if asc else 'Maiores altas'} {per}" + (f" — {P['sector']}" if P["sector"] else "") + ":"
+    else:
+        head = f"{'Menores' if asc else 'Maiores'} {lab}" + (f" — {P['sector']}" if P["sector"] else "") + ":"
+    lines = [f"{i + 1}. {r['ticker']} ({(r.get('nome') or '')[:30]}): {fmt(D, unit_k, x)}" for i, (r, x) in enumerate(L[:n])]
+    tail = f"\nCritérios: {' · '.join(crit)}." if crit else ""
+    if len(L) > n: tail += f" Mostrando {n} de {len(L)}."
+    return head + "\n" + "\n".join(lines) + tail
+
+
+def returns(P, D, ret_fn):
+    ents = P["tickers"] + P["idx"]
+    p = P["period"] or ((date.today() - timedelta(days=365)).isoformat(), date.today().isoformat(), "em 12 meses", "periodo")
+    di, df, lab, kind = p
+    if kind == "dia":
+        out = []
+        for t in P["tickers"]:
+            v = D["by"][t].get("var")
+            out.append((t, v))
+        idx = [x for x in P["idx"]]
+        R = ret_fn(di, df, []) if idx else {}
+        out += [(IDXN[x], R.get(x)) for x in idx]
+        lines = [f"• {a}: {_sgn(b)}" if b is not None else f"• {a}: sem dados" for a, b in sorted(out, key=lambda z: -(z[1] if z[1] is not None else -1e9))]
+        return "Variação no dia:\n" + "\n".join(lines)
+    R = ret_fn(di, df, P["tickers"])
+    items = [(x if x in D["by"] else IDXN.get(x, x), R.get(x)) for x in ents]
+    items.sort(key=lambda z: -(z[1] if z[1] is not None else -1e9))
+    s = f"Variação de preço {lab} ({dbr(di)} a {dbr(df)}):\n" + "\n".join(f"• {a}: {_sgn(b)}" if b is not None else f"• {a}: sem dados" for a, b in items)
+    if len(items) >= 2 and items[0][1] is not None and items[-1][1] is not None:
+        s += f"\nMaior alta: {items[0][0]}."
+    if any(x in D["by"] for x in ents): s += "\n(Variação do preço; proventos não incluídos.)"
+    return s
+
+
+def _sgn(x): return ("+" if x >= 0 else "") + br(x) + "%"
+
+
+DEFAULT_KEYS = ["preco", "dy", "pl", "pvp", "roe", "dlpl"]
+
+
+def values(P, D, ks=None):
+    ks = ks or [k for k in P["metrics"] if k != RET] or ["preco"]
+    lines, red = [], False
+    for t in P["tickers"]:
+        r = D["by"][t]
+        st = r.get("st") or {}
+        parts = []
+        for k in ks:
+            x = val(D, r, k)
+            if k == "preco" and x is not None:
+                parts.append(f"Cotação: R$ {br(x)}" + (f" ({_sgn(r['var'])} no dia)" if isinstance(r.get("var"), (int, float)) else ""))
+                continue
+            if x is None:
+                parts.append(f"{label(D, k)}: o site não tem esse dado")
+                continue
+            note = {"red": " (fontes sem maioria)", "amb": " (maioria das fontes)"}.get(st.get(k), "")
+            red = red or st.get(k) == "red"
+            parts.append(f"{label(D, k)}: {fmt(D, k, x)}{note}")
+        lines.append(f"{t} — " + " · ".join(parts) if len(parts) <= 2 else f"{t} ({(r.get('nome') or '')[:30]}):\n" + "\n".join("• " + p for p in parts))
+    s = "\n".join(lines)
+    if len(P["tickers"]) >= 2 and len(ks) == 1 and ks[0] != "preco":
+        vs = [(t, val(D, D["by"][t], ks[0])) for t in P["tickers"] if val(D, D["by"][t], ks[0]) is not None]
+        if len(vs) >= 2:
+            want_low = bool(re.search(r"\bmenor\b", P["nq"]))
+            best = (min if want_low else max)(vs, key=lambda z: z[1])
+            s += f"\n{'Menor' if want_low else 'Maior'} {label(D, ks[0])}: {best[0]}."
+    if red:
+        s += "\n“Fontes sem maioria” = os sites de dados divergem; o valor exibido segue a regra de consenso (veja ⓘ no topo)."
+    return s
+
 
 def card(D, t):
     r = D["by"][t]; v = r.get("v") or {}; m = D["M"].get(t) or {}
-    keys = [k for k in ("preco", "dy", "pl", "pvp", "roe", "roic", "mliq", "divliq_pl", "lpa", "vpa", "valmerc", "liq2m") if v.get(k) is not None]
-    s = f"{t} — {r.get('nome','')} · {r.get('setor') or ''}\n" + "; ".join(f"{label(D,k)}: {br(v[k])}" for k in keys)
+    keys = [k for k in ("preco", "dy", "pl", "pvp", "roe", "roic", "mliq", "dlpl", "dlebit", "lpa", "vpa", "valmerc", "liq2m") if v.get(k) is not None]
+    s = f"{t} — {r.get('nome', '')} · {r.get('setor') or ''}\n" + "; ".join(f"{label(D, k)}: {fmt(D, k, v[k])}" for k in keys)
     st = r.get("st") or {}
-    if st: s += "\nDivergência entre fontes: " + ", ".join(f"{label(D,k)} ({'sem maioria' if x == 'red' else 'maioria'})" for k, x in st.items())
+    if st: s += "\nDivergência entre fontes: " + ", ".join(f"{label(D, k)} ({'sem maioria' if x == 'red' else 'maioria'})" for k, x in st.items())
     if r.get("ix"): s += "\nÍndices B3: " + ", ".join(r["ix"].keys())
     if r.get("tags"): s += "\nEtiquetas: " + ", ".join(r["tags"])
-    mm = [f"{MX[k]}: {br(m[k])}" for k in MX if m.get(k) is not None]
+    mm = [f"{MX[k][0]}: {fmt(D, k, m[k])}" for k in MX if m.get(k) is not None]
     if mm: s += "\n" + "; ".join(mm)
-    if m.get("ytd"): s += "\nProventos no ano: " + "; ".join(f"{e[0]} R$ {br(e[1],4)} ({e[2]})" for e in m["ytd"][:8])
+    if m.get("anual"): s += "\nVariação anual: " + "; ".join(f"{y}: {_sgn(x)}" for y, x in sorted(m["anual"].items())[-5:] if isinstance(x, (int, float)))
+    if m.get("ytd"): s += "\nProventos no ano: " + "; ".join(f"{e[0]} R$ {br(e[1], 4)} ({e[2]})" for e in m["ytd"][:8])
     return s
 
-def top(D, k, n=10, asc=None):
-    lo = D["F"].get(k, ("", ""))
-    asc = (k in ("pl", "pvp", "divliq_pl")) if asc is None else asc
-    L = [(r, val(D, r, k)) for r in D["rows"]]
-    L = [(r, x) for r, x in L if isinstance(x, (int, float)) and (k not in ("pl", "pvp") or x > 0)]
-    L.sort(key=lambda z: z[1], reverse=not asc)
-    return L[:n]
+
+def execute(P, D, ret_fn):
+    """Responde com os dados do site a partir da interpretação. None = não sabe responder."""
+    T, I, K = P["tickers"], P["idx"], P["metrics"]
+    K2 = [k for k in K if k != RET]
+    if P.get("unknown_tickers") and not T and not I:
+        return " ".join(P["notes"])
+    pre = ""
+    if P["fixes"]: pre += "(Entendi: " + ", ".join(f"“{b}”" for a, b in P["fixes"]) + ")\n"
+    if P["notes"]: pre += " ".join(P["notes"]) + "\n"
+    if I and not T:
+        if "preco" in K: pre += "O site não mostra a cotação de índices/dólar, só a variação no período.\n"
+        return pre + returns(P, D, ret_fn)
+    if T:
+        if K2:
+            s = values(P, D)
+            if RET in K or I: s += "\n\n" + returns(P, D, ret_fn)
+            return pre + s
+        if RET in K or I or P["period"]:
+            return pre + returns(P, D, ret_fn)
+        if len(T) == 1: return pre + card(D, T[0])
+        return pre + values(P, D, DEFAULT_KEYS) + "\n\n" + returns(P, D, ret_fn)
+    if K:
+        listy = P["sector"] or P["filters"] or P["order"] or P["n"] or re.search(r"\b(quais|qual|liste|lista|listar|ranking|top|acoes|empresas)\b", P["nq"])
+        if listy: return pre + ranking(P, D)
+        return None
+    if P["sector"]:
+        return pre + ranking(dict(P, metrics=["valmerc"], order="desc"), D)
+    return None
+
+
+# ============================================================ guia, glossário, cores, como usar
+_GUIDE = None
+
+
+def guide():
+    """Guia do site extraído do painel ⓘ (index.html)."""
+    global _GUIDE
+    if _GUIDE is None:
+        try:
+            s = open(os.path.join(BASE, "index.html"), encoding="utf-8").read()
+            i = s.index('<div id="infoModal"'); j = s.index("<script", i); t = s[i:j]
+            t = re.sub(r"<(summary|h\d)[^>]*>", "\n## ", t); t = re.sub(r"<li[^>]*>", "\n- ", t); t = re.sub(r"<[^>]+>", "", t)
+            t = _html.unescape(t); t = re.sub(r"[ \t]+", " ", t); _GUIDE = re.sub(r"\n\s*\n+", "\n", t).replace("✕", "").strip()
+        except Exception:
+            _GUIDE = ""
+    return _GUIDE
+
+
+def guide_sections():
+    out, cur = {}, None
+    for l in guide().split("\n"):
+        if l.startswith("## "): cur = l[3:].strip(); out[cur] = []
+        elif cur: out[cur].append(l)
+    return {k: "\n".join(v).strip() for k, v in out.items()}
+
+
+GLOSS = {
+    "p/l": "P/L (preço/lucro): preço da ação ÷ lucro por ação dos últimos 12 meses. Quantos anos de lucro atual pagariam o preço; menor = mais barata (só faz sentido com lucro positivo).",
+    "p/vp": "P/VP (preço/valor patrimonial): preço ÷ patrimônio líquido por ação. Abaixo de 1 = negocia abaixo do patrimônio contábil.",
+    "dy": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
+    "dividend yield": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
+    "roe": "ROE (retorno sobre o patrimônio): lucro líquido ÷ patrimônio líquido, em %. Mede a rentabilidade do capital dos acionistas.",
+    "roic": "ROIC (retorno sobre o capital investido): lucro operacional após impostos ÷ capital investido (dívida + patrimônio), em %.",
+    "roa": "ROA (retorno sobre ativos): lucro líquido ÷ ativo total, em %. Útil para comparar bancos e empresas de muitos ativos.",
+    "lpa": "LPA (lucro por ação): lucro líquido dos últimos 12 meses ÷ número de ações.",
+    "vpa": "VPA (valor patrimonial por ação): patrimônio líquido ÷ número de ações.",
+    "ebitda": "EBITDA: lucro antes de juros, impostos, depreciação e amortização — aproxima a geração de caixa operacional. No site aparece em EV/EBITDA.",
+    "ebit": "EBIT: lucro operacional (antes de juros e impostos). O Fundamentus usa EBIT ajustado (lucro bruto − despesas de vendas − despesas gerais e administrativas).",
+    "ev/ebitda": "EV/EBITDA: valor da firma (valor de mercado + dívida líquida) ÷ EBITDA. Menor = mais barata em relação à geração de caixa operacional.",
+    "ev/ebit": "EV/EBIT: valor da firma (valor de mercado + dívida líquida) ÷ EBIT (lucro operacional).",
+    "p/ebit": "P/EBIT: valor de mercado ÷ EBIT (lucro operacional).",
+    "p/ativo": "P/Ativo: valor de mercado ÷ ativo total.",
+    "psr": "PSR (price sales ratio): valor de mercado ÷ receita líquida dos últimos 12 meses.",
+    "peg": "PEG: P/L ÷ crescimento anual do lucro (em %). Perto de 1 ou abaixo = preço razoável para o crescimento.",
+    "margem liquida": "Margem líquida: lucro líquido ÷ receita líquida, em %.",
+    "margem bruta": "Margem bruta: lucro bruto ÷ receita líquida, em %.",
+    "margem ebit": "Margem EBIT: EBIT (lucro operacional) ÷ receita líquida, em %.",
+    "liquidez corrente": "Liquidez corrente: ativo circulante ÷ passivo circulante. Acima de 1 = mais recursos de curto prazo do que dívidas de curto prazo.",
+    "liquidez": "Liquidez (2 meses): volume financeiro médio negociado por dia na bolsa nos últimos 2 meses, em R$.",
+    "divida liquida": "Dívida líquida: dívida bruta (empréstimos e financiamentos) − caixa e aplicações. Negativa = caixa líquido.",
+    "div.liq/patrim": "Dív.Líq/Patrimônio: dívida líquida ÷ patrimônio líquido. Negativo = caixa líquido (mais caixa que dívida).",
+    "divida liquida/patrimonio": "Dív.Líq/Patrimônio: dívida líquida ÷ patrimônio líquido. Negativo = caixa líquido (mais caixa que dívida).",
+    "divida liquida/ebit": "Dív.Líq/EBIT: quantos anos de lucro operacional pagariam a dívida líquida. Negativo = caixa líquido.",
+    "cagr": "CAGR: taxa de crescimento anual composta. No site: Cresc. Receita 5a e Cresc. Lucro 5a (crescimento médio por ano em 5 anos).",
+    "valor de mercado": "Valor de mercado: preço da ação × número total de ações da empresa.",
+    "patrimonio liquido": "Patrimônio líquido: ativos − passivos; o capital que pertence aos acionistas.",
+    "on": "ON (final 3): ação ordinária, com direito a voto. PN (final 4, 5, 6): preferencial, prioridade nos dividendos. Unit (final 11): pacote de ações.",
+    "pn": "PN (final 4, 5, 6): ação preferencial, prioridade nos dividendos e geralmente sem voto. ON (final 3) tem voto. Unit (final 11) é um pacote de ações.",
+    "unit": "Unit (final 11): pacote de ações ON e PN negociado como um só papel.",
+    "ibovespa": "Ibovespa: principal índice da B3, carteira das ações mais negociadas.",
+    "cdi": "CDI: taxa de juros entre bancos, referência da renda fixa. No site os gráficos usam 'CDB 100% do CDI' (CDI diário acumulado).",
+    "selic": "Selic: taxa básica de juros do Brasil, definida pelo Copom. O CDI fica muito próximo dela.",
+    "ipca": "IPCA: índice oficial de inflação do Brasil (IBGE), mensal.",
+    "poupanca": "Poupança: rende 0,5% ao mês + TR quando a Selic está acima de 8,5% a.a.; senão 70% da Selic + TR.",
+    "jcp": "JCP (juros sobre capital próprio): forma de provento que a empresa deduz do imposto; para o investidor tem 15% de IR na fonte.",
+    "data com": "Data com: último dia em que é preciso ter a ação para receber o provento anunciado. No dia seguinte (data ex) a ação passa a ser negociada sem o direito.",
+    "payout": "Payout: parte do lucro distribuída como proventos (proventos ÷ lucro líquido), em %.",
+    "graham": "Preço justo de Graham = √(22,5 × LPA × VPA). 'Baratas pelo Graham' = maior desconto do preço em relação a esse valor (só LPA>0, VPA>0, P/L≥2).",
+    "magic formula": "Magic Formula (Greenblatt): soma do ranking de earnings yield (EBIT/EV) e do ranking de ROIC; menor soma = melhor posição.",
+    "consenso": "Consenso entre fontes (modo Todos): para cada indicador o site compara as fontes (CVM, Status Invest, Dados de Mercado, Fundamentus, Investidor10, TradingView, Yahoo). Valores iguais = diferença ≤ 10% (com piso para margens/ROE). Com maioria, mostra o Fundamentus se estiver no grupo, senão a mediana do grupo; sem maioria, média (simples ou ponderada pelos grupos). As cores mostram o nível de concordância.",
+    "bonificacao": "Bonificação: a empresa entrega ações novas aos acionistas (registrada pela B3 como BONIFICAÇÃO). Desdobramento/grupamento só mudam quantidade e preço.",
+    "desdobramento": "Desdobramento (split): cada ação vira várias, o preço cai na mesma proporção; o valor investido não muda.",
+    "grupamento": "Grupamento (inplit): várias ações viram uma, o preço sobe na mesma proporção; o valor investido não muda.",
+    "small caps": "Small caps: empresas de menor valor de mercado. No site, o grupo 'Pequenas e médias'.",
+    "perenes": "Perenes (etiqueta): energia, saneamento, gás, bancos ou seguros com DY > 5%, ROE > 10%, LPA > 0 e lucro 5a não negativo.",
+    "growth": "Growth (etiqueta): crescimento do lucro em 5 anos > 20% a.a. e da receita > 10% a.a., com LPA > 0.",
+    "turnaround": "Turnaround (etiqueta): lucro 5a negativo ou zero, mas LPA e ROE atuais positivos (voltou a lucrar).",
+}
+GLOSS_KEYS = {norm(k): k for k in GLOSS}
+GLOSS_CONS = GLOSS["consenso"]
+GLOSS_SYN = {"pl": "p/l", "preco/lucro": "p/l", "preco lucro": "p/l", "pvp": "p/vp", "dividendo": "dy", "dividendos": "dy", "yield": "dy",
+             "ev ebitda": "ev/ebitda", "evebitda": "ev/ebitda", "ev ebit": "ev/ebit", "margem": "margem liquida", "divida": "divida liquida",
+             "dl/pl": "div.liq/patrim", "divida/pl": "div.liq/patrim", "dl/ebit": "divida liquida/ebit", "divida/ebit": "divida liquida/ebit",
+             "ordinaria": "on", "preferencial": "pn", "units": "unit", "ibov": "ibovespa", "juros sobre capital proprio": "jcp",
+             "juros sobre capital": "jcp", "data ex": "data com", "split": "desdobramento", "inplit": "grupamento",
+             "lucro por acao": "lpa", "valor patrimonial": "vpa", "valor patrimonial por acao": "vpa", "magic": "magic formula",
+             "preco justo": "graham", "crescimento": "cagr", "cagr receita": "cagr", "cagr lucro": "cagr", "proventos": "dy",
+             "ebit ajustado": "ebit", "aj": "ebit", "consenso entre fontes": "consenso", "small cap": "small caps"}
+
+COLORS = ("Outras cores no site: verde = positivo/ganho/confirmar; violeta = Valorização total na Previsão; amarelo = imposto (Previsão).")
+HOWTO = [
+    (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), "Previsão aluguel:\n1. Abra a aba Previsão e toque em Previsão aluguel.\n2. Toque em ＋ Ação, busque a ação e informe Quantidade, Adições mensais, Prazo e % não alugado.\n3. A Taxa (% a.a.) vem preenchida com a taxa de aluguel da B3 (se indisponível, digite-a); confirme com ✓.\n4. Ajuste a Taxa da corretora e marque 'Descontar automaticamente taxa da corretora + IR 15%' se quiser.\n5. A tabela mostra o valor recebido mês a mês; use ✏ Editar/Excluir em cada ação."),
+    (("previsao rentab", "rentabilidade", "previsao", "simula", "simulacao", "projecao", "projecoes", "aporte"), "Previsão rentabilidade:\n1. Abra a aba Previsão (sub-aba Previsão rentabilidade).\n2. Em Referências, preencha Valor inicial, Aporte mensal, Dividendos e Rentabilidade (MÊS ou ANO) e o Imposto s/ dividendo.\n3. Em Projeções, busque uma empresa para usar os números dela; ou em 'E se eu tivesse investido?' escolha a ação e a Data inicial/final para simular com o histórico real.\n4. Use + em Aportes extraordinários e Retiradas extraordinárias para lançamentos avulsos.\n5. A tabela mostra mês a mês (imposto em amarelo, Valorização total em violeta); toque em Mostrar mais meses para continuar."),
+    (("compar",), "Aba Comparar:\n1. Abra a aba Comparar.\n2. Em 'Buscar ação ou índice principal…' escolha a referência.\n3. Em 'Adicionar ação ou índice…' inclua as outras para comparar.\n4. O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens.\nAqui no Chat você também pode perguntar, por exemplo: “PETR4 vs VALE3 vs Ibovespa em 2 anos”."),
+    (("favorit", "estrela"), "Favoritos:\n1. Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.\n2. Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.\n3. Ficam salvos no seu navegador."),
+    (("reorganiz", "arrastar", "reordenar", "mudar a ordem", "trocar a ordem"), "Reorganizar:\n1. Na aba Grupos, toque em ⇅ Reorganizar.\n2. Escolha ★ Favoritados ou Demais.\n3. Arraste os grupos pela alça ⠿ para a ordem desejada e toque em Salvar (ou Cancelar).\nNos filtros da aba Ações, também dá para arrastar pela alça ⠿ para reordenar ou mandar para Filtros ocultos."),
+    (("export", "csv", "baixar", "planilha", "excel", "download"), "Exportar (CSV):\n1. Na aba Ações, aplique a busca, os filtros e a ordenação que quiser.\n2. Toque em ↓ CSV (no topo da lista).\n3. O arquivo baixa com as ações filtradas e os indicadores (abre no Excel/Google Planilhas)."),
+    (("atualiz", "recarreg", "dados novos", "dados atualizados"), "Atualizar dados:\n1. Toque no botão ⟳ (Atualizar) no topo.\n2. O horário da última atualização aparece ao lado (horário de Brasília).\n3. Os dados também se atualizam sozinhos a cada 30 minutos."),
+    (("fonte", "fontes", "consenso", "todos"), GLOSS_CONS + "\n\nNa tela:\n1. No topo da aba Ações, o seletor Fonte vem em Todos (consenso entre as fontes).\n2. Escolha uma fonte (ex.: Status Invest) para ver só os valores dela; filtros e ordenação passam a usar esses valores.\n3. Abra Status das fontes (abaixo dos filtros) para ver de onde e quando veio cada fonte.\n4. Toque em um indicador do card para ver o valor de cada fonte; o botão ⓘ explica as regras e as cores."),
+    (("pais", "paises", "eua", "estados unidos", "exterior"), "País:\n1. Toque na bandeira no topo.\n2. Escolha o país (Brasil, Estados Unidos, Reino Unido, Alemanha, Portugal, Japão).\n3. Fora do Brasil a fonte é só o TradingView."),
+    (("grupo",), "Grupos:\n1. Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.\n2. Toque nos cards das empresas para selecioná-las (uma ação por empresa).\n3. Digite o Nome do grupo e toque em Salvar.\n4. Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir para alterar."),
+    (("filtr", "ordenar", "ordena", "busca", "pesquis", "procurar"), "Filtros e ordenação (aba Ações):\n1. Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.\n2. Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e os campos de mínimo/máximo (≥ maior é melhor, ≤ menor é melhor; percentuais como número, 8 = 8%).\n3. Arraste filtros pela alça ⠿ para reordenar ou para Filtros ocultos; Limpar zera tudo.\n4. Em Ordenar, escolha o indicador e toque em Maior → menor para inverter.\n5. ↓ CSV exporta o resultado."),
+    (("chat",), "Aba Chat:\n1. Digite em 'Pergunte sobre as ações do site…' e envie. Exemplos: 'P/L da PETR4', 'DY de Itaú e Bradesco', 'maiores DY dos bancos', 'ações com ROE acima de 20 e P/L abaixo de 8', 'PETR4 vs Ibovespa em 2024', 'e o P/L?' (continua a conversa).\n2. Perguntas diretas são respondidas na hora com os dados do site; as abertas usam IA com os dados do site (a origem aparece abaixo da resposta).\n3. Se achar que algo está errado, diga e ele revisa com busca na web."),
+    (("acoes", "acao", "aba acoes", "cards", "card"), "Aba Ações:\n1. Cada card mostra preço, variação e os indicadores (consenso das fontes em Todos).\n2. No topo escolha país e fonte; veja 'Status das fontes' abaixo dos filtros.\n3. Toque no card para expandir (Expandir todos/Recolher todos abrem ou fecham todos): histórico, índices B3, peso no Ibovespa e outras classes da ação.\n4. As cores indicam concordância entre fontes (pergunte 'o que significam as cores').\n5. Use a busca, a lupa de filtros e Ordenar para refinar; Carregar mais mostra mais resultados."),
+]
+LABELS = ["Ações", "Grupos", "Comparar", "Previsão", "Chat", "CSV", "Limpar", "Expandir todos", "Recolher todos", "Maior → menor", "Carregar mais",
+          "Previsão rentabilidade", "Previsão aluguel", "Mostrar mais meses", "Criar grupo", "Criar", "Reorganizar", "Salvar", "Cancelar", "Editar", "Excluir",
+          "Favoritos", "Favoritados", "Favoritar", "Filtros ocultos", "Mais filtros", "Lupa", "Só líquidas", "Índice B3", "Setor", "Minimizar filtros", "Ordenar",
+          "Status das fontes", "Buscar", "Valor inicial", "Aporte mensal", "Dividendos", "Rentabilidade", "Imposto", "Projeções", "E se eu tivesse investido",
+          "Data inicial", "Data final", "Aportes extraordinários", "Retiradas extraordinárias", "Ação", "Quantidade", "Adições mensais", "Taxa", "Prazo",
+          "% não alugado", "Taxa da corretora", "Descontar automaticamente", "Remover", "Adicionar", "Renderam menos", "Renderam mais", "Filtrar", "Todos",
+          "País", "Fonte", "Estrela", "Alça", "Enviar", "Mês", "Inverter ordem", "Restaurar", "Concordância", "Exportar", "Atualizar", "Informações",
+          "Como funciona", "Referências", "Fluxo da bolsa", "Etiquetas"]
+_LN = None
+
+
+def fake_label(q, P):
+    """Se a pergunta cita um botão/opção/aba que não existe no site, devolve a resposta; senão None."""
+    global _LN
+    if P["tickers"] or P["metrics"] or P["sector"] or P["idx"]: return None
+    nq = P["nq"]
+    m = re.search(r"\b(?:botao|botoes|aba|abas|menu|icone|toggle|link)\s+(?:de |do |da |chamad[oa] |com o nome |com nome )?[\"'“]?([^\"'”?.,!]{2,40})", nq)
+    if not m and re.search(r"\b(site|tela|app|aplicativo|clic|toc|aperto|apertar)\w*", nq):
+        m = re.search(r"\b(?:opcao|opcoes|campo|funcao|recurso)\s+(?:de |do |da |chamad[oa] )?[\"'“]?([^\"'”?.,!]{2,40})", nq)
+    if not m: return None
+    if _LN is None: _LN = [norm(x).replace("+", "").strip() for x in LABELS]
+    name = re.sub(r"\b(no|na|do|da|de|que|para|pra|onde|como|fica|esta|nao|existe|aparece|site|tela|app|aqui|ai|la)\b.*$", "", m.group(1)).strip()
+    if len(name) < 2: return None
+    sing = re.sub(r"(oes|aes)$", "ao", name); sing = re.sub(r"(?<=[rzl])es$", "", sing); sing = re.sub(r"(?<=[a-z])s$", "", sing)
+    W = set(" ".join(_LN).split()) | {"grupo", "grupos", "acoes", "acao", "filtro", "filtros", "favorito", "favoritos", "previsao", "aluguel",
+                                      "rentabilidade", "comparar", "chat", "busca", "estrela", "o", "a", "os", "as", "e", "de"}
+    g = norm(guide())
+    if any(name in l or sing in l for l in _LN) or all(w in W for w in name.split()) or (len(sing) >= 4 and sing in g): return None
+    for keys, _ in HOWTO:
+        if any(k in name for k in keys): return None
+    near = difflib.get_close_matches(sing, _LN, 1, 0.55)
+    sug = f" A opção real mais próxima parece ser \"{LABELS[_LN.index(near[0])]}\"." if near else ""
+    return (f"Não encontrei a opção \"{m.group(1).strip()}\" no site. Pode olhar de novo e me descrever exatamente o que aparece na tela "
+            f"(nome do botão/texto), ou contar passo a passo como chegou nesse lugar? Assim consigo verificar se há alguma divergência.{sug}")
+
+
+def define(P):
+    nq = P["nq"]
+    m = re.search(r"\b(?:o que (?:e|sao|significa|quer dizer)|que e|significado d[eoa]s?|significa|defin[ae]|definicao d[eoa]s?|conceito d[eoa]s?)\b\s*(?:o |a |os |as |um |uma )?(.+)$", nq)
+    term = (m.group(1) if m else nq).strip(" ?")
+    term = re.sub(r"\b(no site|aqui|na tela|no app)\b", "", term).strip()
+    if not term: return None
+    t = GLOSS_SYN.get(term, term)
+    if t in GLOSS_KEYS: return GLOSS[GLOSS_KEYS[t]]
+    for g, k in sorted(GLOSS_KEYS.items(), key=lambda x: -len(x[0])):
+        if re.search(r"(?<![a-z])" + re.escape(g) + r"(?![a-z])", term): return GLOSS[k]
+    for s, k in sorted(GLOSS_SYN.items(), key=lambda x: -len(x[0])):
+        if re.search(r"(?<![a-z])" + re.escape(s) + r"(?![a-z])", term): return GLOSS[GLOSS_KEYS[k]]
+    # procura no guia do site (painel ⓘ)
+    if len(term) >= 4:
+        hits = [l.strip("- ").strip() for l in guide().split("\n") if term in norm(l) and not l.startswith("## ")]
+        if hits: return "Do guia do site (ⓘ):\n" + "\n".join("• " + h for h in hits[:3])
+    return None
+
+
+def colors_text():
+    c = guide_sections().get("Cores", "")
+    return ("Cores dos indicadores (aba Ações, modo Todos):\n" + c + "\n" + COLORS) if c else COLORS
+
+
+def howto(P):
+    nq = P["nq"]
+    for keys, txt in HOWTO:
+        if any(w in nq for w in keys): return txt
+    return None
+
+
+def suggestions(P, D):
+    T, K = P["tickers"], [k for k in P["metrics"] if k != RET]
+    if T:
+        t = T[0]
+        return [f"DY e P/L da {t}", f"{t} rendeu quanto em 1 ano?", f"{t} vs Ibovespa em 2 anos", f"Resumo da {t}"]
+    if K:
+        lab = label(D, K[0])
+        return [f"Maiores {lab}", f"{lab} dos bancos", f"Ações com {lab} acima de 10", f"O que é {lab}?"]
+    if P["sector"]:
+        return [f"Maiores DY — {P['sector']}", f"Menores P/L — {P['sector']}", f"Maior ROE — {P['sector']}"]
+    return ["DY do BBAS3", "Maiores DY dos bancos", "PETR4 vs Ibovespa em 2024", "Ações com ROE acima de 20 e P/L abaixo de 8"]
+
+
+def local(q, D, ret_fn, cx, P=None):
+    """Resposta sem IA quando a interpretação é confiável. -> texto ou None."""
+    P = P or parse(q, D)
+    nq = P["nq"]
+    if P["complaint"]: return None
+    if P.get("unknown_tickers") and not P["tickers"]: return " ".join(P["notes"])
+    if re.fullmatch(r"(oi|ola|bom dia|boa tarde|boa noite|e ai|opa|hello|hi)( tudo bem| tudo bom)?", nq):
+        return "Olá! Pergunte sobre as ações do site, por exemplo: “DY do Itaú”, “maiores DY dos bancos”, “PETR4 vs Ibovespa em 2024”."
+    if re.fullmatch(r"(obrigad[oa]|valeu|beleza|ok|show|perfeito|otimo|blz|top)( mesmo)?", nq):
+        return "De nada! Se quiser, pergunte outra coisa sobre as ações do site."
+    fk = fake_label(q, P)
+    if fk: return fk
+    if P["colors"] and not P["tickers"]: return colors_text()
+    if (P["howto"] or re.search(r"\baba\b", nq)) and not P["tickers"] and not P["idx"]:
+        h = howto(P)
+        if h: return h
+        return None
+    if P["define"] and not P["tickers"] and not P["complex"]:
+        d = define(P)
+        if d: return d
+        return None
+    if not P["tickers"] and not P["idx"] and not P["sector"] and not P["order"] and not P["filters"] and not P["n"] and len(nq.split()) <= 3:
+        d = define(dict(P, nq="o que e " + nq))  # termo solto: “ebitda?”
+        if d: return d
+    if cx.get("groups") and ("grupo" in nq or "quem esta" in nq or "quais estao" in nq):
+        for line in str(cx["groups"]).split("\n"):
+            name = norm(line.split(":")[0].split("[")[0]).strip()
+            if name and name in nq: return line
+    if not confident(P): return None
+    return execute(P, D, ret_fn)
+
+
+def rules(q, D, ret_fn, P=None):
+    """Melhor esforço sem IA (quando a IA não está disponível)."""
+    P = P or parse(q, D)
+    try:
+        a = execute(P, D, ret_fn)
+    except Exception as e:
+        log.info("rules: %s", e); a = None
+    if a: return a
+    if P["define"] or (P["metrics"] and not P["tickers"]):
+        d = define(P)
+        if d: return d
+    h = howto(P) if (P["howto"] or "aba" in P["nq"]) else None
+    if h: return h
+    near = []
+    for w in P["left"]:
+        if len(w) >= 5: near += difflib.get_close_matches(w, list(D["alias"]) + list(D["tok"]), 1, 0.85)
+    extra = f" Você quis dizer “{near[0]}”?" if near else ""
+    return "Não consegui entender essa pergunta só com as regras do site." + extra + " Tente uma das sugestões abaixo."
+
+
+# ============================================================ IA (Gemini)
+API = "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent"
+
+
+def _models():
+    return [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]
+
+
+def _sys(extra=""):
+    return ("Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, com números no formato brasileiro. "
+            "Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: "
+            + ", ".join(LABELS) + ". Nunca invente. Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele "
+            "olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, e sugira a opção real mais próxima, se houver. "
+            "Você pode filtrar, ranquear e cruzar critérios na tabela de dados e deve explicar os critérios usados. Diga quais ações atendem "
+            "aos critérios, sem recomendação personalizada de investimento. " + extra)
+
+
+def _post(model, body, deadline, cap=60):
+    left = deadline - time.time()
+    if left < 4: raise TimeoutError("sem tempo")
+    return requests.post(API.format(model), headers={"x-goog-api-key": os.environ.get("GEMINI_API_KEY", ""), "Content-Type": "application/json"},
+                         json=body, timeout=min(cap, left))
+
+
+def _contents(q, hist, n=4):
+    c = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-n:]]
+    c.append({"role": "user", "parts": [{"text": q[:1000]}]})
+    return c
+
+
+def _text(j):
+    c = j["candidates"][0]
+    return "".join(p.get("text", "") for p in (c.get("content") or {}).get("parts", []) if not p.get("thought")).strip(), c
+
+
+INTERP = """Converta a pergunta do usuário (sobre ações da bolsa brasileira) em JSON, sem comentários. Hoje é {hoje}.
+Campos:
+"tipo": "valor" (indicador de ações citadas), "ranking" (listar/filtrar/ordenar ações), "retorno" (variação de preço/rentabilidade de ações ou índices no período),
+        "definicao" (o que significa um termo), "como_usar" (como usar o site), "analise" (opinião, explicação, por que, cenário, recomendação) ou "outro";
+"acoes": tickers ou nomes de empresas citados (ex.: ["PETR4","Itaú"]); se a pergunta continua a conversa, use a empresa da conversa;
+"indices": entre {idx};
+"indicadores": chaves entre {keys};
+"setor": entre {sect} ou null;
+"filtros": lista de {{"ind": chave, "op": ">=", "<=", ">" ou "<", "valor": número}} (percentuais como número: 8% = 8; R$ em reais);
+"ordem": "desc", "asc" ou null; "n": quantidade pedida ou null;
+"inicio" e "fim": datas AAAA-MM-DD do período pedido, ou null.
+Use "ret" como indicador para variação de preço/rentabilidade. Responda só o JSON."""
+
+
+def interpret(q, hist, D, deadline):
+    """IA só para entender a pergunta (JSON). -> dict parse-compatível ou None."""
+    if not os.environ.get("GEMINI_API_KEY"): return None
+    keys = ", ".join(f"{k} ({label(D, k)})" for k in list(D["F"]) + ["ret1", "ret5", "prov12", "v30", RET] if k in D["F"] or k in MX or k == RET)
+    sys_t = INTERP.format(hoje=date.today().isoformat(), idx=", ".join(f"{k} ({v})" for k, v in IDXN.items()), keys=keys,
+                          sect=", ".join(SECTORS))
+    body = {"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": _contents(q, hist, 4),
+            "generationConfig": {"temperature": 0, "maxOutputTokens": 500, "responseMimeType": "application/json", "thinkingConfig": {"thinkingBudget": 0}}}
+    for model in list(reversed(_models()[-2:])) + ([os.environ["GEMINI_MODEL"]] if os.environ.get("GEMINI_MODEL") else []):  # o leve primeiro
+        try:
+            r = _post(model, body, deadline, cap=25)
+            if r.status_code != 200: continue
+            t, _ = _text(r.json())
+            t = re.sub(r"^```(?:json)?|```$", "", t.strip()).strip()
+            return json.loads(t)
+        except Exception as e:
+            log.info("interpret %s: %s", model, str(e)[:80])
+    return None
+
+
+def from_interp(J, q, D, base):
+    """JSON da IA -> estrutura P (mesma do parse), resolvendo nomes de empresas com o próprio dicionário do site."""
+    P = dict(base)
+    T = []
+    for a in J.get("acoes") or []:
+        a = str(a)
+        if a.upper() in D["by"]: T.append(a.upper()); continue
+        sub = parse(a, D)
+        T += sub["tickers"]
+    P["tickers"] = list(dict.fromkeys(T))
+    P["idx"] = [x for x in (J.get("indices") or []) if x in IDXN]
+    ks = []
+    for k in J.get("indicadores") or []:
+        k = str(k)
+        if k in ("ret", "ret1", "ret2", "ret3", "ret5") and J.get("tipo") == "retorno": k = RET
+        if k in D["F"] or k in MX or k == RET: ks.append(k)
+    P["metrics"] = list(dict.fromkeys(ks))
+    P["sector"] = J.get("setor") if J.get("setor") in SECTORS else None
+    P["filters"] = [(f["ind"], f["op"], float(f["valor"])) for f in (J.get("filtros") or [])
+                    if isinstance(f, dict) and (f.get("ind") in D["F"] or f.get("ind") in MX)
+                    and f.get("op") in (">=", "<=", ">", "<") and isinstance(f.get("valor"), (int, float))]
+    P["order"] = J.get("ordem") if J.get("ordem") in ("asc", "desc") else P.get("order")
+    P["n"] = J.get("n") if isinstance(J.get("n"), int) and 0 < J["n"] <= 50 else P.get("n")
+    di, df = J.get("inicio"), J.get("fim")
+    try:
+        if di:
+            date.fromisoformat(di); df = df or date.today().isoformat(); date.fromisoformat(df)
+            kind = "dia" if (date.fromisoformat(df) - date.fromisoformat(di)).days <= 1 else "periodo"
+            P["period"] = (di, df, f"de {dbr(di)} a {dbr(df)}" if kind == "periodo" else "no dia", kind)
+    except ValueError:
+        pass
+    if J.get("tipo") == "ranking" and not P["metrics"] and P["sector"]: P["metrics"] = ["valmerc"]
+    P["tipo"] = J.get("tipo")
+    return P
+
+
+def rel_context(q, D, ret_fn, cx, P):
+    """Só o contexto necessário à pergunta."""
+    nq = P["nq"]; T = P["tickers"]; I = P["idx"]; parts = []
+    screen = not (T or I) or P["sector"] or P["filters"]
+    if screen:
+        parts.append("TABELA DE TODAS AS AÇÕES (CSV; vazio = sem dado):\n" + table(D, cx))
+    else:
+        tb = table(D, cx).split("\n"); parts.append("AÇÕES CITADAS (CSV):\n" + "\n".join([tb[0]] + [l for l in tb[1:] if l.split(",")[0] in T]))
+        for t in T[:4]: parts.append("DETALHE " + card(D, t))
+    if cx.get("groups") and (screen or "grupo" in nq): parts.append("GRUPOS PRONTOS DO SITE (top 10):\n" + str(cx["groups"])[:8000])
+    if T or I or "indice" in nq or "ibov" in nq:
+        p = P["period"] or ((date.today() - timedelta(days=365)).isoformat(), date.today().isoformat(), "em 12 meses", "periodo")
+        R = ret_fn(p[0], p[1], T)
+        parts.append(f"Variação de preço no período pedido ({p[0]} a {p[1]}): " + "; ".join(f"{IDXN.get(x, x)} {br(R.get(x))}%" for x in T + list(IDXN) if x in R))
+    for kk, lab, ws in (("prev", "PREVISÃO RENTABILIDADE (entradas, JSON)", ("previs", "simula", "aporte", "minha", "meu")),
+                        ("prevRes", "PREVISÃO RENTABILIDADE (resultado na tela)", ("previs", "simula", "aporte", "minha", "meu")),
+                        ("alug", "PREVISÃO ALUGUEL (entradas, JSON)", ("aluguel", "alugar", "btc")),
+                        ("alugRes", "PREVISÃO ALUGUEL (resultado na tela)", ("aluguel", "alugar", "btc")),
+                        ("comp", "COMPARAR (seleção, JSON)", ("compar", "rendeu mais", "rendeu menos")),
+                        ("compRes", "COMPARAR (resultado na tela)", ("compar", "rendeu mais", "rendeu menos"))):
+        if cx.get(kk) and any(w in nq for w in ws): parts.append(lab + ":\n" + str(cx[kk])[:5000])
+    if any(w in nq for w in ("como", "aba", "funciona", "significa", "regra", "cor", "calcul", "fonte", "previs", "aluguel", "compar", "grupo", "etiqueta", "consenso")):
+        parts.append("GUIA DO SITE (painel ⓘ):\n" + guide())
+    return "\n\n".join(parts)
+
 
 COLS = [("preco", 2), ("pl", 1), ("pvp", 2), ("dy", 1), ("roe", 1), ("roic", 1), ("mbruta", 0), ("mliq", 1), ("dlebit", 1), ("dlpl", 2),
         ("cresc5a", 0), ("lucro5a", 0), ("lpa", 2), ("valmerc", -6), ("liq2m", -3)]
+
+
 def table(D, cx):
     tg = {}
     for it in str(cx.get("tags") or "").split(";"):
@@ -84,6 +1104,7 @@ def table(D, cx):
     out = [head]
     for r in D["rows"]:
         v = r.get("v") or {}; m = D["M"].get(r["ticker"]) or {}
+
         def f(k, d):
             x = v.get(k)
             if not isinstance(x, (int, float)): return ""
@@ -95,336 +1116,148 @@ def table(D, cx):
         out.append(",".join(cells))
     return "\n".join(out)
 
-def context(q, D, ret_fn, cx=None):
-    cx = cx or {}
-    parts = ["TABELA DE TODAS AS AÇÕES (CSV; vazio = sem dado):\n" + table(D, cx)]
-    if cx.get("groups"): parts.append("GRUPOS PRONTOS DO SITE (top 10):\n" + str(cx["groups"])[:8000])
-    try:
-        from datetime import date as _d, timedelta as _t
-        R = ret_fn((_d.today() - _t(days=365)).isoformat(), _d.today().isoformat(), [])
-        parts.append("ÍNDICES, variação em 1 ano: " + "; ".join(f"{IDXN[k]} {br(R[k],1)}%" for k in IDXN if k in R))
-    except Exception: pass
-    for k, lab in (("prev", "PREVISÃO RENTABILIDADE (entradas do usuário, JSON)"), ("prevRes", "PREVISÃO RENTABILIDADE (resultado na tela)"),
-                   ("alug", "PREVISÃO ALUGUEL (entradas, JSON)"), ("alugRes", "PREVISÃO ALUGUEL (resultado na tela)"),
-                   ("comp", "COMPARAR (seleção, JSON)"), ("compRes", "COMPARAR (resultado na tela)")):
-        if cx.get(k): parts.append(lab + ":\n" + str(cx[k])[:5000])
-    T = _tickers(q, D); I = _idx(q)
-    for t in T[:3]: parts.append("DETALHE " + card(D, t))
-    if T or I:
-        di, df = _period(q); R = ret_fn(di, df, T)
-        parts.append(f"Variação no período {di} a {df}: " + "; ".join(f"{IDXN.get(x, x)} {br(R.get(x))}%" for x in T + I if x in R))
-    return "\n\n".join(parts)[:300000], T, I, None
 
-def context_old(q, D, ret_fn):
-    T = _tickers(q, D); I = _idx(q); k = _metric(q, D); parts = []
-    for t in T: parts.append(card(D, t))
-    if T or I:
-        di, df = _period(q); R = ret_fn(di, df, T)
-        parts.append(f"Variação no período {di} a {df}: " + "; ".join(f"{IDXN.get(x, x)} {br(R.get(x))}%" for x in T + I if x in R))
-    if k and not T:
-        for asc in ((False, True) if k in ("pl", "pvp") else (False,)):
-            parts.append(f"Top 10 por {label(D,k)} ({'menor' if (k in ('pl','pvp','divliq_pl')) else 'maior'} primeiro): " + "; ".join(f"{r['ticker']} {br(x)}" for r, x in top(D, k, 10)))
-            break
-    if not parts:
-        parts.append("Top 10 DY: " + "; ".join(f"{r['ticker']} {br(x)}" for r, x in top(D, "dy")))
-        parts.append("Top 10 valorização 1 ano: " + "; ".join(f"{r['ticker']} {br(x)}" for r, x in top(D, "ret1")))
-        parts.append(f"Total de ações no site: {len(D['rows'])}")
-    return "\n\n".join(parts), T, I, k
-
-def rules(q, D, ret_fn):
-    T = _tickers(q, D); I = _idx(q); k = _metric(q, D); nq = norm(q)
-    if len(T) + len(I) >= 2 or (I and not k):
-        di, df = _period(q); R = ret_fn(di, df, T)
-        items = [(IDXN.get(x, x), R.get(x)) for x in T + I]
-        items.sort(key=lambda z: -(z[1] if z[1] is not None else -1e9))
-        return f"Variação de {di[8:]}/{di[5:7]}/{di[:4]} a {df[8:]}/{df[5:7]}/{df[:4]}:\n" + "\n".join(f"• {a}: {br(b)}%" if b is not None else f"• {a}: sem dados" for a, b in items)
-    if T:
-        t = T[0]
-        if k:
-            x = val(D, D["by"][t], k)
-            return f"{t} — {label(D,k)}: {br(x)}" if x is not None else f"Não tenho {label(D,k)} de {t}."
-        return card(D, t)
-    if k:
-        n = int((re.search(r"\b(\d{1,2})\b", nq) or [0, 10])[1]); asc = any(w in nq for w in ("menor", "menores", "baratas", "pior", "piores"))
-        if k in ("pl", "pvp"): asc = not any(w in nq for w in ("maior", "maiores"))
-        L = top(D, k, max(1, min(n, 30)), asc)
-        return f"{'Menores' if asc else 'Maiores'} {label(D,k)}:\n" + "\n".join(f"{i+1}. {r['ticker']} ({(r.get('nome') or '')[:28]}): {br(x)}" for i, (r, x) in enumerate(L))
-    return ("Não entendi. Exemplos: “DY do BBAS3”, “maiores dividend yield”, “PETR4 vs Ibovespa 2 anos”, “menores P/L”, "
-            "“o que é VALE3?”.")
-
-def gemini(q, ctx, hist):
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key: raise RuntimeError("sem chave")
-    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]
-    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: " + ", ".join(LABELS) + ". Nunca invente. " "Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo "
-             "(dados do site: tabela de todas as ações, grupos, índices e o que o usuário preencheu em Previsão e Comparar). "
-             "Você pode filtrar, ranquear e cruzar critérios na tabela (ex.: P/L baixo + LPA positivo + crescimento) e deve explicar os critérios usados. "
-             "Diga quais ações atendem aos critérios, sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. "
-             "Números no formato brasileiro.\n\nDADOS DO SITE:\n" + ctx)
-    contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-6:]]
-    contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
+def gemini2(q, ctx, hist, deadline):
+    if not os.environ.get("GEMINI_API_KEY"): raise RuntimeError("sem chave")
+    sys_t = _sys("Use SOMENTE os dados abaixo. Se um dado não estiver aqui, diga que o site não tem.\n\nDADOS DO SITE:\n" + ctx)
     err = None
-    tries = [(m, True) for m in models] + [("gemini-flash-latest", False)]  # sem raciocínio (rápido); por último, com raciocínio padrão
-    for model, think0 in tries:  # modelo indisponível/sobrecarregado: tenta o próximo
+    for model, th in [(m, True) for m in _models()] + [("gemini-flash-latest", False)]:
+        body = {"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": _contents(q, hist),
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, **({"thinkingConfig": {"thinkingBudget": 0}} if th else {})}}
         try:
-            r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                              headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-                              json={"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": contents,
-                                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, **({"thinkingConfig": {"thinkingBudget": 0}} if think0 else {})}}, timeout=90)
+            r = _post(model, body, deadline)
+        except TimeoutError:
+            break
         except requests.RequestException as e:
             err = type(e).__name__; continue
         if r.status_code != 200: err = f"http {r.status_code}"; continue
-        c = r.json()["candidates"][0]["content"]["parts"]
-        t = "".join(p.get("text", "") for p in c if not p.get("thought")).strip()
-        if t: return t
+        j = r.json(); t, _ = _text(j)
+        if t: return t, (j.get("usageMetadata") or {}).get("promptTokenCount")
         err = "vazio"
     raise RuntimeError(f"gemini {err}")
 
-def answer(q, hist, D, ret_fn, cx=None):
-    try:
-        ctx = context(q, D, ret_fn, cx)[0]
-        return {"a": gemini(q, ctx, hist), "mode": "gemini"}
-    except Exception as e:
-        log.info("chat fallback: %s", str(e)[:80])
-        return {"a": rules(q, D, ret_fn), "mode": "regras"}
 
-
-# ================= Economia de tokens: respostas locais, contexto relevante, cache diário =================
-import hashlib, html as _html, time as _time
-_GUIDE = None
-def guide():
-    """Guia do site extraído do painel ⓘ (index.html)."""
-    global _GUIDE
-    if _GUIDE is None:
-        try:
-            s = open(os.path.join(os.path.dirname(__file__), "index.html"), encoding="utf-8").read()
-            i = s.index('<div id="infoModal"'); j = s.index("<script", i); t = s[i:j]
-            t = re.sub(r"<(summary|h\d)[^>]*>", "\n## ", t); t = re.sub(r"<li[^>]*>", "\n- ", t); t = re.sub(r"<[^>]+>", "", t)
-            t = _html.unescape(t); t = re.sub(r"[ \t]+", " ", t); _GUIDE = re.sub(r"\n\s*\n+", "\n", t).replace("✕", "").strip()
-        except Exception: _GUIDE = ""
-    return _GUIDE
-def guide_sections():
-    out, cur = {}, None
-    for l in guide().split("\n"):
-        if l.startswith("## "): cur = l[3:].strip(); out[cur] = []
-        elif cur: out[cur].append(l)
-    return {k: "\n".join(v).strip() for k, v in out.items()}
-
-GLOSS = {
-    "p/l": "P/L (preço/lucro): preço da ação ÷ lucro por ação. Quantos anos de lucro atual pagariam o preço; menor = mais barata (só faz sentido com lucro positivo).",
-    "p/vp": "P/VP (preço/valor patrimonial): preço ÷ patrimônio líquido por ação. Abaixo de 1 = negocia abaixo do patrimônio contábil.",
-    "dy": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
-    "dividend yield": "DY (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.",
-    "roe": "ROE (retorno sobre o patrimônio): lucro líquido ÷ patrimônio líquido, em %. Mede a rentabilidade do capital dos acionistas.",
-    "roic": "ROIC (retorno sobre o capital investido): lucro operacional após impostos ÷ capital investido (dívida + patrimônio), em %.",
-    "lpa": "LPA (lucro por ação): lucro líquido dos últimos 12 meses ÷ número de ações.",
-    "vpa": "VPA (valor patrimonial por ação): patrimônio líquido ÷ número de ações.",
-    "ev/ebitda": "EV/EBITDA: valor da firma (valor de mercado + dívida líquida) ÷ EBITDA. Menor = mais barata em relação à geração de caixa operacional.",
-    "ev/ebit": "EV/EBIT: valor da firma ÷ EBIT (lucro operacional).",
-    "psr": "PSR: valor de mercado ÷ receita líquida dos últimos 12 meses.",
-    "margem liquida": "Margem líquida: lucro líquido ÷ receita líquida, em %.",
-    "margem bruta": "Margem bruta: lucro bruto ÷ receita líquida, em %.",
-    "liquidez": "Liquidez (2 meses): volume financeiro médio negociado por dia na bolsa nos últimos 2 meses, em R$.",
-    "cdi": "CDI: taxa de juros entre bancos, referência da renda fixa. No site os gráficos usam 'CDB 100% do CDI' (CDI diário acumulado).",
-    "ipca": "IPCA: índice oficial de inflação do Brasil (IBGE), mensal.",
-    "graham": "Preço justo de Graham = √(22,5 × LPA × VPA). 'Baratas pelo Graham' = maior desconto do preço em relação a esse valor (só LPA>0, VPA>0, P/L≥2).",
-    "magic formula": "Magic Formula (Greenblatt): soma do ranking de earnings yield (EBIT/EV) e do ranking de ROIC; menor soma = melhor posição.",
-    "consenso": "Consenso entre fontes: para cada indicador o site compara as fontes (Fundamentus, Status Invest etc.) e exibe o valor da maioria; cores indicam divergência.",
-    "bonificacao": "Bonificação: a empresa entrega ações novas aos acionistas (registrada pela B3 como BONIFICAÇÃO). Desdobramento/grupamento só mudam quantidade e preço.",
-}
-COLORS = ("Cores no site: verde = positivo/ganho/confirmar; vermelho = negativo/perda/sem maioria entre as fontes; âmbar/laranja = maioria com divergência; "
-          "azul = informação/EBIT ajustado; azul-escuro = bancos/seguradoras (indicador não comparável); violeta = Valorização total na Previsão; "
-          "amarelo = imposto (Previsão).")
-HOWTO = [
- (("previsao aluguel","previsao de aluguel","aluguel"), "Previsão aluguel:\n1. Abra a aba Previsão e toque em Previsão aluguel.\n2. Toque em ＋ Ação, busque a ação e informe Quantidade, Adições mensais, Prazo e % não alugado.\n3. A Taxa (% a.a.) vem preenchida com a taxa de aluguel da B3 (se indisponível, digite-a); confirme com ✓.\n4. Ajuste a Taxa da corretora e marque 'Descontar automaticamente taxa da corretora + IR 15%' se quiser.\n5. A tabela mostra o valor recebido mês a mês; use ✏ Editar/Excluir em cada ação."),
- (("previsao rentab","rentabilidade","previsao","simula"), "Previsão rentabilidade:\n1. Abra a aba Previsão (sub-aba Previsão rentabilidade).\n2. Em Referências, preencha Valor inicial, Aporte mensal, Dividendos e Rentabilidade (MÊS ou ANO) e o Imposto s/ dividendo.\n3. Em Projeções, busque uma empresa para usar os números dela; ou em 'E se eu tivesse investido?' escolha a ação e a Data inicial/final para simular com o histórico real.\n4. Use + em Aportes extraordinários e Retiradas extraordinárias para lançamentos avulsos.\n5. A tabela mostra mês a mês (imposto em amarelo, Valorização total em violeta); toque em Mostrar mais meses para continuar."),
- (("compar",), "Aba Comparar:\n1. Abra a aba Comparar.\n2. Em 'Buscar ação ou índice principal…' escolha a referência.\n3. Em 'Adicionar ação ou índice…' inclua as outras para comparar.\n4. O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens."),
- (("favorit",), "Favoritos:\n1. Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.\n2. Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.\n3. Ficam salvos no seu navegador."),
- (("reorganiz","arrastar","reordenar"), "Reorganizar:\n1. Na aba Grupos, toque em ⇅ Reorganizar.\n2. Escolha ★ Favoritados ou Demais.\n3. Arraste os grupos pela alça ⠿ para a ordem desejada e toque em Salvar (ou Cancelar).\nNos filtros da aba Ações, também dá para arrastar pela alça ⠿ para reordenar ou mandar para Filtros ocultos."),
- (("grupo",), "Grupos:\n1. Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.\n2. Toque nos cards das empresas para selecioná-las (uma ação por empresa).\n3. Digite o Nome do grupo e toque em Salvar.\n4. Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir para alterar."),
- (("filtr","ordenar","ordena","busca","pesquis"), "Filtros e ordenação (aba Ações):\n1. Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.\n2. Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e os campos de mínimo/máximo (≥ maior é melhor, ≤ menor é melhor; percentuais como número, 8 = 8%).\n3. Arraste filtros pela alça ⠿ para reordenar ou para Filtros ocultos; Limpar zera tudo.\n4. Em Ordenar, escolha o indicador e toque em Maior → menor para inverter.\n5. ↓ CSV exporta o resultado."),
- (("chat",), "Aba Chat:\n1. Digite em 'Pergunte sobre as ações do site…' (ex.: 'P/L da PETR4', 'compare VALE3 e ITUB4', 'maiores DY') e envie.\n2. Perguntas simples são respondidas na hora pelo próprio site; as abertas usam IA com os dados do site (a origem aparece abaixo da resposta).\n3. Se achar que algo está errado, diga e ele revisa."),
- (("acoes","acao","aba acoes","cards"), "Aba Ações:\n1. Cada card mostra preço, variação e os indicadores (consenso das fontes em Todos).\n2. No topo escolha país e fonte; veja 'Status das fontes' abaixo dos filtros.\n3. Toque no card para expandir (Expandir todos/Recolher todos abrem ou fecham todos): histórico, índices B3, peso no Ibovespa e outras classes da ação.\n4. As cores indicam concordância entre fontes (pergunte 'o que significam as cores').\n5. Use a busca, a lupa de filtros e Ordenar para refinar; Carregar mais mostra mais resultados."),
-]
-HOWW = ("como usar", "como funciona", "como faco", "como faço", "como uso", "para que serve", "onde fica", "explica a aba", "o que faz a aba", "como mexer", "passo a passo", "como adicion", "como cri", "como favorit", "como filtr", "como orden", "como compar", "como reorganiz", "tutorial")
-SCREEN = ("qual acao", "quais acoes", "que acao", "que acoes", "melhores", "melhor acao", "descontad", "barat", "desvaloriz", "potencial", "crescimento",
-          "recomend", "ranking", "liste", "listar", "filtr", "quais empresas", "qual empresa", "sugest", "oportunidade", "subvaloriz")
-COMPLEX = ("por que", "porque", "explique", "analise", "analisa", "devo", "vale a pena", "compensa", "opiniao", "sugest", "e se", "minha", "meu ", "previs", "aluguel", "simula")
-TABS = {"aluguel": "Aluguel", "previsao": "Previsão", "comparar": "Comparar", "grupos": "Grupos", "acoes": "Ações", "chat": "Chat", "filtro": "Ações", "favorit": "Grupos"}
-
-LABELS = ["Ações","Grupos","Comparar","Previsão","Chat","CSV","Limpar","Expandir todos","Recolher todos","Maior → menor","Carregar mais",
- "Previsão rentabilidade","Previsão aluguel","Mostrar mais meses","Criar grupo","Criar","Reorganizar","Salvar","Cancelar","Editar","Excluir",
- "Favoritos","Favoritados","Favoritar","Filtros ocultos","Mais filtros","Lupa","Só líquidas","Índice B3","Setor","Minimizar filtros","Ordenar",
- "Status das fontes","Buscar","Valor inicial","Aporte mensal","Dividendos","Rentabilidade","Imposto","Projeções","E se eu tivesse investido",
- "Data inicial","Data final","Aportes extraordinários","Retiradas extraordinárias","Ação","Quantidade","Adições mensais","Taxa","Prazo",
- "% não alugado","Taxa da corretora","Descontar automaticamente","Remover","Adicionar","Renderam menos","Renderam mais","Filtrar","Todos",
- "País","Fonte","Estrela","Alça","Enviar","Mês","Inverter ordem","Restaurar","Concordância","Exportar"]
-_LN = None
-def fake_label(q):
-    """Se a pergunta cita um botão/opção que não existe, devolve a resposta; senão None."""
-    global _LN
-    if _LN is None: _LN = [norm(x).replace("+","").strip() for x in LABELS]
-    nq = norm(q)
-    m = re.search(r"(?:bot[aã]o|opc[aã]o|op[cç][oõ]es|aba|menu|campo|icone|chave|toggle|link)\s+(?:de |do |da |chamad[oa] )?[\"'“]?([^\"'”?.,!]{2,40})", nq)
-    if not m: return None
-    name = re.sub(r"\b(no|na|do|da|de|que|para|pra|onde|como|fica|esta|nao|existe|aparece|site)\b.*$", "", m.group(1)).strip()
-    W = set(" ".join(_LN).split()) | {"grupo","grupos","acoes","acao","filtro","filtros","favorito","favoritos","previsao","aluguel","rentabilidade","comparar","chat","busca","estrela","o","a","os","as","e"}
-    if len(name) < 2 or any(name in l for l in _LN) or all(w in W for w in name.split()): return None
-    import difflib
-    near = difflib.get_close_matches(name, _LN, 1, 0.55)
-    sug = f" A opção real mais próxima parece ser \"{LABELS[_LN.index(near[0])]}\"." if near else ""
-    return (f"Não encontrei a opção \"{m.group(1).strip()}\" no site. Pode olhar de novo e me descrever exatamente o que aparece na tela "
-            f"(nome do botão/texto), ou contar passo a passo como chegou nesse lugar? Assim consigo verificar se há alguma divergência.{sug}")
-
-def local(q, D, ret_fn, cx):
-    """Respostas prontas sem IA. Retorna texto ou None."""
-    nq = norm(q); T = _tickers(q, D); I = _idx(q); k = _metric(q, D)
-    if any(w in nq for w in WRONG): return None
-    fk = fake_label(q)
-    if fk: return fk
-    if any(w in nq for w in COMPLEX) and not any(w in nq for w in HOWW): return None
-    if any(w in nq for w in SCREEN) and not any(w in nq for w in HOWW): return None
-    if "cor" in nq.split() or "cores" in nq or "colorid" in nq: return COLORS
-    if any(w in nq for w in HOWW) or re.search(r"\baba\b", nq):
-        for keys, txt in HOWTO:
-            if any(w in nq for w in keys): return txt
-        return None
-    m = re.search(r"\b(o que (e|significa|quer dizer)|significado d[eo]|defin[ae])\b\s*(o |a |um |uma )?(.+?)\??$", nq)
-    if m and not T:
-        term = m.group(4).strip()
-        for g, txt in sorted(GLOSS.items(), key=lambda x: -len(x[0])):
-            if norm(g) in term or term in norm(g): return txt
-        return None
-    if cx.get("groups") and ("grupo" in nq or "quem esta" in nq or "quais estao" in nq):
-        for line in str(cx["groups"]).split("\n"):
-            name = norm(line.split(":")[0].split("[")[0]).strip()
-            if name and name in nq: return line
-    if T and not k and re.search(r"\b(preco|cotacao|quanto (esta|ta|custa)|valor da acao|variacao do dia|subiu hoje|caiu hoje|hoje)\b", nq):
-        r = D["by"][T[0]]; v = r.get("v") or {}
-        return f"{T[0]}: R$ {br(v.get('preco'))} ({'+' if (r.get('var') or 0) >= 0 else ''}{br(r.get('var'))}% no dia)."
-    if (len(T) + len(I) >= 2) or (T and re.search(r"\b(rendeu|rentabilidade|valorizou|variacao|retorno|subiu|caiu)\b", nq)) or (I and not T and not k):
-        return rules(q, D, ret_fn)
-    if T and k: return rules(q, D, ret_fn)
-    if k and re.search(r"\b(maiores|menores|top|maior|menor)\b", nq): return rules(q, D, ret_fn)
-    return None
-
-def rel_context(q, D, ret_fn, cx):
-    """Só o contexto necessário à pergunta."""
-    nq = norm(q); T = _tickers(q, D); I = _idx(q); parts = []
-    screen = any(w in nq for w in SCREEN) or not (T or I)
-    if screen: parts.append("TABELA DE TODAS AS AÇÕES (CSV; vazio = sem dado):\n" + table(D, cx))
-    else:
-        tb = table(D, cx).split("\n"); parts.append("AÇÕES CITADAS (CSV):\n" + "\n".join([tb[0]] + [l for l in tb[1:] if l.split(",")[0] in T]))
-        for t in T[:4]: parts.append("DETALHE " + card(D, t))
-    if cx.get("groups") and (screen or "grupo" in nq): parts.append("GRUPOS PRONTOS DO SITE (top 10):\n" + str(cx["groups"])[:8000])
-    if T or I or "indice" in nq or "ibov" in nq:
-        di, df = _period(q); R = ret_fn(di, df, T)
-        parts.append(f"Variação no período {di} a {df}: " + "; ".join(f"{IDXN.get(x, x)} {br(R.get(x))}%" for x in T + list(IDXN) if x in R))
-    for kk, lab, ws in (("prev", "PREVISÃO RENTABILIDADE (entradas, JSON)", ("previs", "simula", "aporte", "minha", "meu")),
-                        ("prevRes", "PREVISÃO RENTABILIDADE (resultado na tela)", ("previs", "simula", "aporte", "minha", "meu")),
-                        ("alug", "PREVISÃO ALUGUEL (entradas, JSON)", ("aluguel", "alugar", "btc")),
-                        ("alugRes", "PREVISÃO ALUGUEL (resultado na tela)", ("aluguel", "alugar", "btc")),
-                        ("comp", "COMPARAR (seleção, JSON)", ("compar", "rendeu mais", "rendeu menos")),
-                        ("compRes", "COMPARAR (resultado na tela)", ("compar", "rendeu mais", "rendeu menos"))):
-        if cx.get(kk) and any(w in nq for w in ws): parts.append(lab + ":\n" + str(cx[kk])[:5000])
-    if any(w in nq for w in ("como", "aba", "funciona", "significa", "regra", "cor", "calcul", "fonte", "previs", "aluguel", "compar", "grupo")):
-        parts.append("GUIA DO SITE (painel ⓘ):\n" + guide())
-    return "\n\n".join(parts)
-
-_QA = {}  # mesma pergunta no mesmo dia
-_CACHE = {"day": None, "ok": False}
-def answer2(q, hist, D, ret_fn, cx=None):
-    cx = cx or {}; nq = norm(q).strip(" ?!.")
-    rel = "|".join(str(cx.get(k, ""))[:3000] for k in ("prev", "alug", "comp") if any(w in nq for w in ("previs", "aluguel", "compar", "minha", "meu")))
-    key = date.today().isoformat() + "|" + hashlib.sha1((nq + "|" + rel).encode()).hexdigest()
-    if key in _QA and not hist: return dict(_QA[key], cached=True)
-    loc = None
-    try: loc = local(q, D, ret_fn, cx)
-    except Exception as e: log.info("local: %s", e)
-    if loc:
-        out = {"a": loc, "mode": "regras", "tok": 0}
-    else:
-        ctx = rel_context(q, D, ret_fn, cx)
-        T = _tickers(q, D)
-        want = any(w in nq for w in WRONG) or any("red" in ((D["by"].get(t) or {}).get("st") or {}).values() for t in T)
-        out = None
-        if not want:
-            try:
-                a, tok = gemini2(q, ctx, hist)
-                out = {"a": a, "mode": "gemini", "tok": tok}
-                if any(w in norm(a) for w in MISSING): want = True
-            except Exception as e:
-                log.info("chat fallback: %s", str(e)[:80])
-        if want:  # (a) falta dado, (b) divergência entre fontes, (c) usuário diz que está errado
-            try:
-                a, tok = ground(q, ctx, hist); out = {"a": a, "mode": "gemini+web", "tok": tok}
-            except Exception as e:
-                log.info("busca web: %s", str(e)[:60])
-                note = "\n\n(Busca na web indisponível agora — plano gratuito/cota do Gemini; resposta com os dados do site.)"
-                if out is None:
-                    try: a, tok = gemini2(q, ctx, hist); out = {"a": a, "mode": "gemini", "tok": tok}
-                    except Exception: out = {"a": rules(q, D, ret_fn), "mode": "regras", "tok": 0}
-                out = dict(out, a=out["a"] + note)
-        if out is None: out = {"a": rules(q, D, ret_fn), "mode": "regras", "tok": 0}
-    if out["mode"] == "gemini" or loc: _QA[key] = out
-    if len(_QA) > 2000: _QA.clear()
-    return out
-
-WRONG = ("esta errado", "ta errado", "errado", "nao e isso", "incorreto", "confere", "confira", "verifica", "verifique", "nao bate", "desatualizado")
-MISSING = ("nao tem esse dado", "nao possui", "nao ha informac", "nao contem", "nao dispoe", "nao tem informac", "nao consta", "nao encontrei")
 TRUST = ("Ao pesquisar na web, prefira fontes confiáveis: B3 (b3.com.br), CVM (gov.br/cvm, rad.cvm.gov.br), sites de RI das empresas, "
          "Status Invest, Fundamentus. Diga claramente o que veio da web e o que veio do site.")
-def ground(q, ctx, hist):
-    """Gemini com busca Google. Retorna (texto com fontes, tokens) ou levanta erro."""
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key: raise RuntimeError("sem chave")
-    contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
-    contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
-    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: " + ", ".join(LABELS) + ". Nunca invente. " "Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, conciso. Use os DADOS DO SITE e, quando faltarem ou parecerem errados, "
-             "a busca na web. " + TRUST + " Sem recomendação personalizada.\n\nDADOS DO SITE:\n" + ctx[:60000])
+
+
+def ground(q, ctx, hist, deadline):
+    """Gemini com busca Google. -> (texto com fontes, tokens) ou erro. Uma tentativa por modelo, dentro do prazo."""
+    if not os.environ.get("GEMINI_API_KEY"): raise RuntimeError("sem chave")
+    sys_t = _sys("Use os DADOS DO SITE e, quando faltarem ou parecerem errados, a busca na web. " + TRUST + "\n\nDADOS DO SITE:\n" + ctx[:60000])
     err = None
-    for model in [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]:
-        r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent", headers={"x-goog-api-key": key},
-                          json={"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": contents, "tools": [{"google_search": {}}],
-                                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, "thinkingConfig": {"thinkingBudget": 0}}}, timeout=90)
+    for model in _models():
+        body = {"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": _contents(q, hist), "tools": [{"google_search": {}}],
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, "thinkingConfig": {"thinkingBudget": 0}}}
+        try:
+            r = _post(model, body, deadline)
+        except TimeoutError:
+            break
+        except requests.RequestException as e:
+            err = type(e).__name__; continue
         if r.status_code != 200: err = r.status_code; continue
-        j = r.json(); c = j["candidates"][0]
-        t = "".join(p.get("text", "") for p in c["content"]["parts"] if not p.get("thought")).strip()
+        j = r.json(); t, c = _text(j)
         src = [(x.get("web") or {}) for x in (c.get("groundingMetadata") or {}).get("groundingChunks", [])]
         src = [w for w in src if w.get("uri")][:6]
         if src: t += "\n\nFontes da web:\n" + "\n".join(f"• {w.get('title') or 'fonte'}: {w['uri']}" for w in src)
         if t: return t, (j.get("usageMetadata") or {}).get("promptTokenCount")
     raise RuntimeError(f"busca {err}")
 
-def gemini2(q, ctx, hist):
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key: raise RuntimeError("sem chave")
-    # cache de contexto do Gemini (cachedContents): no plano gratuito o limite é 0 -> tenta 1x por dia e usa contexto inline
-    if _CACHE["day"] != date.today().isoformat():
-        _CACHE["day"] = date.today().isoformat()
-        try:
-            r = requests.post("https://generativelanguage.googleapis.com/v1beta/cachedContents", headers={"x-goog-api-key": key},
-                              json={"model": "models/gemini-3.5-flash", "systemInstruction": {"parts": [{"text": "GUIA DO SITE:\n" + guide()}]}, "ttl": "86400s"}, timeout=20)
-            _CACHE["ok"] = r.status_code == 200 and r.json().get("name"); log.info("cachedContents: %s", r.status_code)
-        except Exception: _CACHE["ok"] = False
-    sys_t = ("Sobre botões/abas/opções do site, cite SOMENTE nomes que existem no GUIA DO SITE ou nesta lista de botões/opções reais: " + ", ".join(LABELS) + ". Nunca invente. " "Se o usuário citar um botão/opção que não existe, diga que essa opção não existe, peça que ele olhe de novo e descreva exatamente o que vê ou conte passo a passo como chegou ali, para verificar se há divergência, e sugira a opção real mais próxima, se houver. " "Você é o assistente do site Screener B3. Responda em português do Brasil, de forma concisa, usando SOMENTE os dados abaixo. "
-             "Pode filtrar, ranquear e cruzar critérios na tabela e deve explicar os critérios usados. Diga quais ações atendem aos critérios, "
-             "sem recomendação personalizada de investimento. Se um dado não estiver aqui, diga que o site não tem. Números no formato brasileiro.\n\nDADOS DO SITE:\n" + ctx)
-    contents = [{"role": "user" if h.get("r") == "u" else "model", "parts": [{"text": str(h.get("t", ""))[:1500]}]} for h in (hist or [])[-4:]]
-    contents.append({"role": "user", "parts": [{"text": q[:1000]}]})
-    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.1-flash-lite"] if m]
-    err = None
-    for model, th in [(m, True) for m in models] + [("gemini-flash-latest", False)]:
-        body = {"contents": contents, "generationConfig": {"temperature": 0.2, "maxOutputTokens": 3000, **({"thinkingConfig": {"thinkingBudget": 0}} if th else {})}}
-        if _CACHE["ok"] and model == "gemini-3.5-flash": body["cachedContent"] = _CACHE["ok"]; body["systemInstruction"] = {"parts": [{"text": sys_t}]}
-        else: body["systemInstruction"] = {"parts": [{"text": sys_t}]}
-        try:
-            r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                              headers={"x-goog-api-key": key, "Content-Type": "application/json"}, json=body, timeout=90)
-        except requests.RequestException as e: err = type(e).__name__; continue
-        if r.status_code != 200: err = f"http {r.status_code}"; continue
-        j = r.json(); c = j["candidates"][0]["content"]["parts"]
-        t = "".join(p.get("text", "") for p in c if not p.get("thought")).strip()
-        if t: return t, (j.get("usageMetadata") or {}).get("promptTokenCount")
-        err = "vazio"
-    raise RuntimeError(f"gemini {err}")
+
+# ============================================================ orquestração
+_QA = {}  # mesma pergunta no mesmo dia (sem histórico)
+
+
+def answer2(q, hist, D, ret_fn, cx=None):
+    t0 = time.time(); deadline = t0 + DEADLINE_S
+    cx = cx or {}
+    P = parse(q, D, hist)
+    nq = P["nq"]
+    rel = "|".join(str(cx.get(k, ""))[:3000] for k in ("prev", "alug", "comp") if any(w in nq for w in ("previs", "aluguel", "compar", "minha", "meu")))
+    key = date.today().isoformat() + "|" + hashlib.sha1((nq + "|" + rel).encode()).hexdigest()
+    if key in _QA and not hist:
+        out = dict(_QA[key], cached=True); _log(q, out, P, t0); return out
+    has_ai = bool(os.environ.get("GEMINI_API_KEY"))
+    loc = None
+    try: loc = local(q, D, ret_fn, cx, P)
+    except Exception as e: log.info("local: %s", e)
+    out = None
+    if loc:
+        out = {"a": loc, "mode": "regras", "tok": 0}
+    elif not has_ai:
+        out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+    else:
+        # (1) IA interpreta, o Python calcula — só para perguntas objetivas
+        if not P["complex"] and not P["complaint"]:
+            J = interpret(q, hist, D, deadline)
+            if J and J.get("tipo") in ("valor", "ranking", "retorno"):
+                P2 = from_interp(J, q, D, P)
+                try: a = execute(P2, D, ret_fn)
+                except Exception as e: log.info("execute interp: %s", e); a = None
+                if a: out = {"a": a, "mode": "ia+dados", "tok": 0}
+                P = P2 if (P2["tickers"] or P2["idx"]) else P
+            elif J and J.get("tipo") in ("definicao", "como_usar"):
+                a = define(P) or howto(P)
+                if a: out = {"a": a, "mode": "regras", "tok": 0}
+        if out is None:
+            ctx = rel_context(q, D, ret_fn, cx, P)
+            red_asked = any(((D["by"].get(t) or {}).get("st") or {}).get(k) == "red" for t in P["tickers"] for k in P["metrics"])
+            want = P["complaint"] or red_asked
+            if not want:
+                try:
+                    a, tok = gemini2(q, ctx, hist, deadline)
+                    out = {"a": a, "mode": "gemini", "tok": tok}
+                    if any(w in norm(a) for w in MISSING) and deadline - time.time() > 20: want = True
+                except Exception as e:
+                    log.info("chat fallback: %s", str(e)[:80])
+            if want:  # (a) usuário diz que está errado, (b) indicador perguntado sem maioria, (c) IA diz que falta o dado
+                try:
+                    a, tok = ground(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini+web", "tok": tok}
+                except Exception as e:
+                    log.info("busca web: %s", str(e)[:60])
+                    note = "\n\n(Busca na web indisponível agora — plano gratuito/cota do Gemini; resposta com os dados do site.)"
+                    if out is None:
+                        try: a, tok = gemini2(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini", "tok": tok}
+                        except Exception: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+                    out = dict(out, a=out["a"] + note)
+            if out is None: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+    if out["a"].startswith("Não consegui entender") or out["mode"] == "regras" and out["a"].startswith("Não encontrei"):
+        out["sug"] = suggestions(P, D)
+    elif out["mode"] in ("regras", "ia+dados") and (P["tickers"] or P["metrics"] or P["sector"]):
+        out["sug"] = suggestions(P, D)[:3]
+    if (out["mode"] in ("gemini", "ia+dados") or loc) and not hist: _QA[key] = out
+    if len(_QA) > 2000: _QA.clear()
+    _log(q, out, P, t0)
+    return out
+
+
+def _log(q, out, P, t0):
+    """Registro de perguntas (para ver o que os usuários perguntam e o que ficou sem resposta)."""
+    try:
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        if os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) > 3_000_000:
+            os.replace(LOG_FILE, LOG_FILE + ".1")
+        a = out.get("a") or ""
+        rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "q": q[:500], "mode": out.get("mode"),
+               "cached": bool(out.get("cached")), "ms": int((time.time() - t0) * 1000),
+               "sem_resposta": a.startswith(("Não consegui entender", "Não encontrei a opção")) or any(w in norm(a) for w in MISSING),
+               "reclamacao": bool(P.get("complaint")), "entendeu": {"tickers": P.get("tickers"), "idx": P.get("idx"), "ind": P.get("metrics"),
+               "setor": P.get("sector"), "filtros": P.get("filters"), "periodo": (P.get("period") or [None, None, None])[:3], "sobrou": P.get("left")},
+               "a": a[:400]}
+        with open(LOG_FILE, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception as e:
+        log.info("chat log: %s", e)
+
+
+def read_log(n=200, only=None):
+    out = []
+    for fn in (LOG_FILE + ".1", LOG_FILE):
+        if os.path.exists(fn):
+            with open(fn, encoding="utf-8") as fh:
+                for l in fh:
+                    try: out.append(json.loads(l))
+                    except ValueError: pass
+    if only == "sem_resposta": out = [r for r in out if r.get("sem_resposta")]
+    elif only == "reclamacao": out = [r for r in out if r.get("reclamacao")]
+    return out[-n:][::-1]
