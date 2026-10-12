@@ -27,6 +27,10 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 - se uma fonte não existe para um contexto inteiro (ex.: não há B3 fora do Brasil), o contexto **todo** usa a outra fonte
   (Brasil = B3; exterior = TradingView) — escolha por país/contexto, nunca por empresa;
 - quando uma informação precisa de outra fonte para todos os itens, mude a fonte do grupo inteiro (e documente na tabela 1.3).
+- o seletor de fonte do topo vale para todos os cards: escolhida uma fonte, todo valor exibido é o dela ("—" se ela não tiver);
+  "Todos" mostra o consenso (ou a fonte com prioridade, como a B3, onde a tabela 1.3 indicar).
+- "não duplicar" é sobre o site, não sobre as fontes: os dados são carregados uma vez e toda aba reaproveita a mesma cópia e as mesmas
+  funções (ex.: o card de uma ação é montado por `blockHtml`/`cardsHtml` em Ações e em Grupos).
 
 ### 1.3 Onde cada informação mora
 
@@ -38,9 +42,9 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Países e moedas | `tradingview.py` → `COUNTRIES` | `/api/countries`, seletor de país |
 | Regras de consenso entre fontes | `consensus.py` | cores/selos dos cards (`st`, `cm`, `ag` de cada linha) |
 | Histórico, proventos e métricas por período (valorização 1–5 anos, DY médio, proventos do ano, 1º pregão) | snapshot `metrics` (`/api/metrics`, gerado por `scripts/build_metrics.py` a partir da B3) | Grupos, rankings do chat |
-| Volume financeiro por período (dia, 10 pregões, 1–12 meses) | Brasil: snapshot `metrics` → `vol` (B3, `scripts/build_metrics.py`) · exterior: TradingView | filtro Volume (grupo `vol`), cards, Só líquidas (`liq2m`), Grupos, chat |
-| Crescimento de receita e lucro (1–5 anos) | Brasil: CVM (`scripts/build_cvm.py` → `cresc{n}a`, `lucro{n}a`) · exterior: TradingView (só 5 anos) | filtro Crescimento (grupo `cres`), cards, Grupos, chat |
-| Campos com Período, fonte fixa e posição em Ordenar | `server.py` → `FIELD_EXTRA` (`grp`, `per`, `sub`, `fixed`, `sort`) | filtros, cards e Ordenar (`app.js`); `val()` ignora o seletor de fonte nos campos `fixed` |
+| Volume financeiro por período (dia, 10 pregões, 1–12 meses) | Brasil em "Todos": snapshot `metrics` → `vol` (B3, `scripts/build_metrics.py`; prioridade B3) · fonte escolhida: o valor dela (`S`) · exterior: TradingView | filtro Volume (grupo `vol`), cards, Só líquidas (`liq2m`), Grupos, chat |
+| Crescimento de receita e lucro (1–5 anos) | 5 anos: consenso das fontes · 1–4 anos: só CVM (`scripts/build_cvm.py` → `cresc{n}a`, `lucro{n}a`) · exterior: TradingView (só 5 anos) | filtro Crescimento (grupo `cres`), cards, Grupos, chat |
+| Campos com Período e posição em Ordenar | `server.py` → `FIELD_EXTRA` (`grp`, `per`, `sub`, `sort`) | filtros, cards e Ordenar (`app.js`) |
 | Universo exibido (ilíquidas, 1 ticker por empresa) | `scripts/universe.py` (`mark` grava `il` e `k1` em cada linha de `/api/data`) | site (`tradable`, `universe` em `app.js`), Grupos, `/api/returns`, scripts de snapshot |
 | Variação de preço entre duas datas escolhidas | `server.period_returns` | aba Comparar (`/api/returns`), perguntas do chat com período |
 | Data de listagem | Brasil: `metrics.ftd` (1º pregão na B3) · exterior: `ipo` (TradingView) | Novidades e etiqueta NOVA (`grupos.js` → `listDate`) |

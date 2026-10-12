@@ -636,7 +636,7 @@
     <h3>Regras de mescla (modo “Todos”)</h3>
     <ul>
       <li><b>Iguais</b>: diferença ≤ 10% do maior valor (EV/EBITDA: 20%).</li>
-      <li><b>Piso</b>: também iguais se a diferença ≤ 0,3 pp (ROA, ROE, margens bruta/EBIT/líquida, ROIC).</li>
+      <li><b>Piso</b>: também iguais se a diferença ≤ 0,3 pp (ROA, ROE, margens bruta/EBIT/líquida, ROIC) ou ≤ 1 pp (Cresc. Receita/Lucro 5a).</li>
       <li>Sinais opostos nunca são iguais. Um grupo exige que todos os pares sejam iguais.</li>
       <li><b>Maioria</b> (mais da metade): valor do Fundamentus se estiver no grupo, senão a mediana do grupo.</li>
       <li><b>Metade</b> com 2+ fontes (grupo único) = tratado como maioria.</li>
@@ -657,11 +657,11 @@
     <h3>Particularidades</h3>
     <ul>
       <li>Fundamentus usa <b>EBIT ajustado</b>; CVM e Dados de Mercado votam com o EBIT padrão ou o ajustado (o que formar o maior grupo).</li>
-      <li><b>Fora da votação</b> (aparecem no detalhe, em cinza): TradingView em ROIC; Yahoo em ROA e Marg. EBIT.</li>
+      <li><b>Fora da votação</b> (aparecem no detalhe, em cinza): TradingView em ROIC; Yahoo em ROA e Marg. EBIT; Fundamentus em Cresc. Receita 5a; Status Invest em Cresc. Lucro 5a.</li>
       <li><b>Dív.Líq/EBIT</b>: fontes com sinal oposto ao da Dív.Líq/PL de consenso ficam fora (±).</li>
-      <li><b>Bancos/seguradoras</b>: ROIC, EV/EBITDA, EV/EBIT, P/EBIT e Marg. EBIT divergentes aparecem em azul escuro.</li>
-      <li><b>Volume</b> (todos os períodos): só B3 (COTAHIST oficial), mesmo com outra fonte escolhida.</li>
-      <li><b>Crescimento</b> (receita e lucro, 1 a 5 anos): só CVM (balanços oficiais), mesmo com outra fonte escolhida; receita de bancos e seguradoras não é calculada.</li>
+      <li><b>Bancos/seguradoras</b>: ROIC, EV/EBITDA, EV/EBIT, P/EBIT, Marg. EBIT e Cresc. Receita 5a divergentes aparecem em azul escuro.</li>
+      <li><b>Volume</b>: em Todos, B3 (COTAHIST oficial) em todos os períodos; escolhendo uma fonte, o valor dela (Fundamentus e Status Invest: liquidez média de 2 meses; TradingView: dia, 10 pregões, 1, 2 e 3 meses).</li>
+      <li><b>Crescimento</b>: 5 anos pelo consenso das fontes; 1 a 4 anos só a CVM calcula (receita de bancos e seguradoras não é calculada). Escolhendo uma fonte, o valor dela.</li>
       <li><b>Atualização</b>: Fundamentus, Status Invest e TradingView ao vivo (a cada 30 min); Yahoo, Investidor10, Dados de Mercado e CVM por cópia diária nos dias úteis às 19h05 (também cópia de reserva do Status Invest).</li>
       <li>Filtros, ordenação e CSV usam o <b>valor exibido</b>.</li>
       <li>Países estrangeiros: só TradingView.</li></ul>

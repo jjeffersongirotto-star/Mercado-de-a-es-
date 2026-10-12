@@ -39,7 +39,7 @@ const srcInfo = (id) => (state.data?.sources || []).find(s => s.id === id) || { 
 const logoImg = (id, cls = 'srclogo') => { const s = srcInfo(id); return s.logo ? `<img class="${cls}" src="${s.logo}" alt="" loading="lazy">` : ''; };
 // valor exibido/filtrado: consenso ('Todos') ou só a fonte escolhida
 function val(r, k) {
-  if (state.source === 'all' || (state.fieldMap[k] || {}).fixed) return r.v[k];  // grupos de fonte única (volume B3, crescimento CVM)
+  if (state.source === 'all') return r.v[k];
   const S = r.S ? r.S[state.source] : (state.data.single_source === state.source ? r.v : null);
   const x = S ? S[k] : null;
   return x === undefined ? null : x;
