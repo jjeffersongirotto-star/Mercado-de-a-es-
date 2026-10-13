@@ -107,10 +107,12 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
 - **Cores com significado fixo**: o significado oficial de cada cor está na seção **Cores** do painel ⓘ. Use a mesma cor para o mesmo
   sentido; significado novo → acrescente-o lá.
 - **CSS próprio** usa as variáveis do design system (`var(--c-pos)`, `var(--bd)`, `var(--h)`, `var(--r)`…). Não escreva `rgb(...)` novo se já existe variável equivalente.
-- **Tabelas** (todas): títulos de todas as colunas **centralizados** (inclusive "Ativo"); conteúdo da coluna Ativo **à esquerda**;
+- **Tabelas** (todas): títulos de todas as colunas **centralizados** na horizontal e na vertical (inclusive "Ativo"); conteúdo da coluna Ativo **à esquerda**;
   conteúdo das demais colunas **centralizado**. Tabela nova segue o mesmo CSS (`.gtab`, `.kt-t`, `.pv-t`).
 - **Formulários com nome ao lado do campo, um embaixo do outro**: classe `.frm` — nomes numa coluna alinhada à direita, campos
   começando no mesmo ponto e com a mesma largura (ex.: Critério/Início/Fim do Comparar).
+- **Centralizado na vertical**: células de tabela, elementos lado a lado (nome + campo, ícone + texto, botões, selos, títulos de card) e
+  conteúdo de cards ficam no meio da altura (`align-items: center`; `td, th` no design system). Exceção: texto corrido longo (chat, painel ⓘ) começa no topo.
 - **Alinhamento em dúvida** (não se encaixa nas regras acima): pergunte ao dono do site antes de escolher.
 - **Botões**: `.gbtn` (secundário), `.gbtn.pri` (ação principal), `.gbtn.dan` (perigo). Campos: `.pv-in`. Abas: `.tabs`. Selos: `.hb-*`.
 - **Nunca** use `alert`, `confirm` ou `prompt` do navegador: use `uiAlert`, `uiConfirm`, `uiPrompt`, `uiChoose`, `uiToast`.
