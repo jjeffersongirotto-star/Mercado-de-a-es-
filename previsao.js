@@ -226,8 +226,10 @@ if (typeof document !== 'undefined') {
     } catch (e) { hist = null; el('pvStatus').textContent = 'Histórico indisponível para ' + t + ': ' + e.message; }
     compute(); save();
   }
-  combo(el('pvTicker'), (t) => { st.ticker = t; st.proj = ''; projS = null; el('pvProj').value = ''; st.di = st.df = ''; loadHist(); loadProj(); save(); });
-  combo(el('pvProj'), (t) => { st.proj = t; st.ticker = ''; el('pvTicker').value = ''; loadHist(); loadProj(); save(); });
+  // trocou ação ou datas: o campo Mês volta a vazio para a tabela começar no mês 1
+  const resetMes = () => { st.mes = ''; const m = el('pvMes'); if (m) m.value = ''; };
+  combo(el('pvTicker'), (t) => { resetMes(); st.ticker = t; st.proj = ''; projS = null; el('pvProj').value = ''; st.di = st.df = ''; loadHist(); loadProj(); save(); });
+  combo(el('pvProj'), (t) => { resetMes(); st.proj = t; st.ticker = ''; el('pvTicker').value = ''; loadHist(); loadProj(); save(); });
   el('pvClearP').addEventListener('click', () => { st.proj = ''; el('pvProj').value = ''; projS = null; loadProj(); save(); });
   // Projeções: médias dos últimos 10 anos (ou do que houver) do histórico mensal
   let projS = null;
@@ -266,11 +268,11 @@ if (typeof document !== 'undefined') {
     el('pvRetBox').querySelectorAll('input,button,select').forEach(x => x.disabled = false);
     el('pvDates').classList.toggle('hidden', !T);
   }
-  el('pvClearT').addEventListener('click', () => { st.ticker = ''; el('pvTicker').value = ''; loadHist(); save(); });
+  el('pvClearT').addEventListener('click', () => { resetMes(); st.ticker = ''; el('pvTicker').value = ''; loadHist(); save(); });
   for (const id of ['pvDi', 'pvDf']) el(id).addEventListener('change', () => {
     let v = el(id).value; const lo = el(id).min, hi = el(id).max;
     if (v && lo && v < lo) v = lo; if (v && hi && v > hi) v = hi;
-    if (id === 'pvDi') st.di = v; else st.df = v;
+    resetMes(); if (id === 'pvDi') st.di = v; else st.df = v;
     if (st.df && st.di && st.df < st.di) st.df = st.di;
     el('pvDi').value = st.di; el('pvDf').value = st.df; compute(); save();
   });
