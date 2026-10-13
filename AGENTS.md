@@ -51,7 +51,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Registro de erros | `server.py` → `ERRS` (`/api/errors`) e log do Render | quem mantém o site |
 | Variação de preço entre duas datas escolhidas | `server.period_returns` | aba Comparar (`/api/returns`), perguntas do chat com período |
 | Data de listagem | Brasil: `metrics.ftd` (1º pregão na B3) · exterior: `ipo` (TradingView) | Novidades e etiqueta NOVA (`grupos.js` → `listDate`) |
-| Explicações ao usuário: regras, cores, **passo a passo** de cada aba, **glossário** | painel ⓘ — `#infoModal` em `index.html` | usuário; chat e Gemini (`chat.guide`, `guide_sections`, `glossary`) |
+| Explicações ao usuário: regras, cores, **passo a passo** de cada aba, **glossário** | painel ⓘ — `#infoModal` em `index.html` | usuário; chat e Gemini (`chat.guide`, `guide_sections`, `glossary`); botão ⓘ dos indicadores (`glossOf`, termo em `FIELD_EXTRA` → `gl`) |
 | Nomes de botões, abas, campos e opções | a própria interface (`index.html` e `*.js`) | chat e Gemini (`chat.ui_labels()` lê da interface) |
 | Significado de cada cor | seção **Cores** do painel ⓘ | usuário; chat |
 | Paleta, alturas, raios, sombras | `index.html` → bloco `/* Design system */` (`:root { --c-pos … }`) | todo CSS (`var(--…)`) |

@@ -97,6 +97,11 @@ FIELD_EXTRA = {**{k: {"grp": "vol", "per": p, "scale": 1e6} for k, p in VOL_PER.
                **{k: {"grp": "cres", "sub": "Receita" if k.startswith("cresc") else "Lucro",
                       "per": f"{k[5]} ano" + ("s" if k[5] != "1" else "")} for k in GROWTH_KEYS},
                **{k: {"sort": i} for k, i in SORT_POS.items()}}
+# Termo do Glossário (painel ⓘ) de cada indicador cujo rótulo é diferente do título no Glossário (botão ⓘ dos cards e filtros)
+GLOSS_TERM = {"dy": "DY", "mbruta": "Margem bruta", "mebit": "Margem EBIT", "mliq": "Margem líquida", "liqcorr": "Liquidez corrente",
+              "dlpl": "Dív.Líq/PL", "patrliq": "Patrimônio líquido", "valmerc": "Valor de mercado",
+              **{k: "Volume (média diária)" for k in VOL_PER}, **{k: "CAGR" for k in GROWTH_KEYS}}
+for _k, _g in GLOSS_TERM.items(): FIELD_EXTRA.setdefault(_k, {})["gl"] = _g
 REL_THR = 0.30  # 30%
 
 def divergente(a, b, abs_thr):
