@@ -352,8 +352,10 @@ function tipHtml(r, f) {
 }
 
 const chartSlot = (r) => `<div class="gchart" data-gt="${r.ticker}"${state.country === 'br' ? '' : ` data-gc="${state.country}"`}></div>`;  // fora do Brasil: índice do país
+// preço exibido (respeita a fonte escolhida no topo): cards da aba Ações e Carteira
+const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
 function blockHtml(r) {
-  const price = val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
+  const price = priceOf(r);
   const open = state.expanded.has(r.ticker);
   const varTxt = r.var == null ? '' : `<span class="text-sm font-semibold ${r.var >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${r.var >= 0 ? '▲' : '▼'} ${F2.format(r.var)}%</span>`;
   const stv = state.source === 'all' ? Object.values(r.st || {}) : [];
