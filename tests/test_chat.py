@@ -156,7 +156,7 @@ def test_definitions_colors_howto():
     assert ask("como funciona o consenso")[1].startswith("Regras de mescla")
     assert ask("como uso a carteira")[1].startswith("Carteira:\n1.")
     assert ask("como adicionar uma posição na carteira")[1].startswith("Carteira:\n1.")
-    assert "Abaixo de" in ask("como criar alerta de preço")[1]
+    assert "Abaixo🔔" in ask("como criar alerta de preço")[1]
     assert ask("o que é consenso")[1].startswith("Regras de mescla")
     assert "Graham" in ask("o que é graham")[1]
     assert ask("o que é on e pn")[1].startswith("ON, PN e Unit")

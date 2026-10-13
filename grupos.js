@@ -187,7 +187,7 @@
   const priceCell = (r) => { const v = r.var; return `<td class="gc3">${r.v.preco != null ? F2.format(r.v.preco) : '—'}${v != null ? ` <span class="${v > 0 ? 'up' : v < 0 ? 'dn' : ''}">${v > 0 ? '+' : ''}${F2.format(v)}%</span>` : ''}</td>`; };
   // alr = colunas 🔔 Abaixo de / 🔔 Acima de (só nos Favoritos)
   const alrIn = (t, k) => { const v = (ALR[t] || {})[k]; return `<td class="galr"><input class="pv-in" inputmode="decimal" data-alr="${esc(t)}:${k}" value="${v != null ? F2.format(v) : ''}" aria-label="Avisar ${k === 'lo' ? 'abaixo' : 'acima'} de"></td>`; };
-  const tbl = (rows, h, full, alr) => `<table class="gtab"><thead><tr><th>Ativo</th>${alr ? `<th class="galr">${esc(h).replace(' ', '<br>')}</th>` : `<th>${esc(h)}</th>`}${alr ? '<th class="galr">🔔 Abaixo<br>de</th><th class="galr">🔔 Acima<br>de</th>' : ''}<th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}" class="${full ? 'tap' : ''}${alr && alrPast(r) ? ' galr-on' : ''}"><td><b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${alr ? alrIn(r.ticker, 'lo') + alrIn(r.ticker, 'hi') : ''}${priceCell(r)}</tr>`).join('')}</tbody></table>`;
+  const tbl = (rows, h, full, alr) => `<table class="gtab"><thead><tr><th>Ativo</th>${alr ? `<th class="galr">${esc(h).replace(' ', '<br>')}</th>` : `<th>${esc(h)}</th>`}${alr ? '<th class="galr galr-h">Abaixo🔔</th><th class="galr galr-h">Acima🔔</th>' : ''}<th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}" class="${full ? 'tap' : ''}${alr && alrPast(r) ? ' galr-on' : ''}"><td><b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${alr ? alrIn(r.ticker, 'lo') + alrIn(r.ticker, 'hi') : ''}${priceCell(r)}</tr>`).join('')}</tbody></table>`;
   const preTitle = (p) => p.name + ' (' + (p.per ? ((ui.per[p.id] || 1) + ' ano' + ((ui.per[p.id] || 1) > 1 ? 's' : '')) : p.t) + ')';
   const perSel = (p) => p.per ? `<select class="gper" data-per="${p.id}" aria-label="Período">${[1, 2, 3, 4, 5].map(k => `<option value="${k}"${k === (ui.per[p.id] || 1) ? ' selected' : ''}>${k} ano${k > 1 ? 's' : ''}</option>`).join('')}</select>` : '';
   function favControls() {
@@ -278,8 +278,8 @@
       <div class="flex flex-wrap items-center gap-2">
         ${state.country === 'br' ? '<button type="button" class="gbtn pri" data-g="new">＋ Criar</button>' : ''}
         <button type="button" class="gbtn" data-g="reorg">⇅ Reorganizar</button>
-        ${state.country === 'br' ? `<button type="button" class="gbtn" data-g="export" title="Exportar grupos" aria-label="Exportar grupos">${fileIc(1)}<span class="max-sm:hidden">Exportar</span></button>
-        <button type="button" class="gbtn" data-g="import" title="Importar grupos" aria-label="Importar grupos">${fileIc(0)}<span class="max-sm:hidden">Importar</span></button>` : ''}
+        ${state.country === 'br' ? `<button type="button" class="gbtn fbtn" data-g="export" title="Exportar grupos" aria-label="Exportar grupos">${fileIc(1)}<span class="max-sm:hidden">Exportar</span></button>
+        <button type="button" class="gbtn fbtn" data-g="import" title="Importar grupos" aria-label="Importar grupos">${fileIc(0)}<span class="max-sm:hidden">Importar</span></button>` : ''}
         <input id="gFile" type="file" accept=".json,application/json,text/plain,*/*" class="hidden"></div>
       <div id="gGrid" class="ggrid${reorg ? ' reorg' : ''}">${tileIds().map(id => tileHtml(id) + (id === 'fav' && !reorg ? flowHtml() : '')).join('')}</div></section>`;
     $g('#gFile').addEventListener('change', importG);

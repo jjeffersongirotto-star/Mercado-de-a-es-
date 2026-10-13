@@ -55,6 +55,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Nomes de botões, abas, campos e opções | a própria interface (`index.html` e `*.js`) | chat e Gemini (`chat.ui_labels()` lê da interface) |
 | Significado de cada cor | seção **Cores** do painel ⓘ | usuário; chat |
 | Paleta, alturas, raios, sombras | `index.html` → bloco `/* Design system */` (`:root { --c-pos … }`) | todo CSS (`var(--…)`) |
+| Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
 | Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
 | Diálogos, toast, carregamento | `ui.js` → `uiConfirm`, `uiAlert`, `uiPrompt`, `uiChoose`, `uiToast`, `loaderHTML` | todas as abas |
 | Formatação de indicadores (`fmt`, `fmtPrice`, `fmtBig`, `fmtMoneyBig`) e preço exibido (`priceOf`) | `app.js` | aba Ações, Comparar, Carteira |
@@ -106,6 +107,11 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
 - **Cores com significado fixo**: o significado oficial de cada cor está na seção **Cores** do painel ⓘ. Use a mesma cor para o mesmo
   sentido; significado novo → acrescente-o lá.
 - **CSS próprio** usa as variáveis do design system (`var(--c-pos)`, `var(--bd)`, `var(--h)`, `var(--r)`…). Não escreva `rgb(...)` novo se já existe variável equivalente.
+- **Tabelas** (todas): títulos de todas as colunas **centralizados** (inclusive "Ativo"); conteúdo da coluna Ativo **à esquerda**;
+  conteúdo das demais colunas **centralizado**. Tabela nova segue o mesmo CSS (`.gtab`, `.kt-t`, `.pv-t`).
+- **Formulários com nome ao lado do campo, um embaixo do outro**: classe `.frm` — nomes numa coluna alinhada à direita, campos
+  começando no mesmo ponto e com a mesma largura (ex.: Critério/Início/Fim do Comparar).
+- **Alinhamento em dúvida** (não se encaixa nas regras acima): pergunte ao dono do site antes de escolher.
 - **Botões**: `.gbtn` (secundário), `.gbtn.pri` (ação principal), `.gbtn.dan` (perigo). Campos: `.pv-in`. Abas: `.tabs`. Selos: `.hb-*`.
 - **Nunca** use `alert`, `confirm` ou `prompt` do navegador: use `uiAlert`, `uiConfirm`, `uiPrompt`, `uiChoose`, `uiToast`.
   Carregando: `loaderHTML('texto')`.
