@@ -20,6 +20,7 @@
   .card { position: relative; border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .7); border-radius: .6rem;
           padding: .45rem .6rem .5rem; min-width: 0; transition: border-color .15s, background .15s; }
   .card:hover { border-color: rgb(71 85 105); }
+  .gl-i { flex: none; margin-left: .2rem; padding: 0 .15rem; font-size: 12px; line-height: 1; color: var(--c-mut); text-transform: none; } .gl-i:hover { color: var(--c-txt); }
   .card .lbl { font-size: 10.5px; line-height: 1.1; color: rgb(148 163 184); text-transform: uppercase; letter-spacing: .02em;
                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; gap: 4px; }
   .card .val { font-size: 1.05rem; line-height: 1.35; color: rgb(226 232 240); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -620,30 +621,30 @@
 </div></details>
 <details class="icard"><summary>Glossário</summary><div class="ib"><ul>
 <li><b>P/L</b> (preço/lucro): preço da ação ÷ lucro por ação dos últimos 12 meses. Quantos anos de lucro atual pagariam o preço; menor = mais barata (só faz sentido com lucro positivo).</li>
-<li><b>P/VP</b> (preço/valor patrimonial): preço ÷ patrimônio líquido por ação. Abaixo de 1 = negocia abaixo do patrimônio contábil.</li>
-<li><b>DY</b> (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %.</li>
+<li><b>P/VP</b> (preço/valor patrimonial): preço ÷ patrimônio líquido por ação. Mostra quanto se paga pelo patrimônio da empresa: 1 ou abaixo = negocia pelo valor do patrimônio contábil ou abaixo dele.</li>
+<li><b>DY</b> (dividend yield): proventos pagos nos últimos 12 meses ÷ preço da ação, em %. Mostra quanto a ação devolveu em dinheiro ao acionista; maior = pagou mais em relação ao preço.</li>
 <li><b>ROE</b> (retorno sobre o patrimônio): lucro líquido ÷ patrimônio líquido, em %. Mede a rentabilidade do capital dos acionistas.</li>
-<li><b>ROIC</b> (retorno sobre o capital investido): lucro operacional após impostos ÷ capital investido (dívida + patrimônio), em %.</li>
+<li><b>ROIC</b> (retorno sobre o capital investido): lucro operacional após impostos ÷ capital investido (dívida + patrimônio), em %. Mede se o negócio rende bem sobre todo o dinheiro aplicado nele; maior = melhor.</li>
 <li><b>ROA</b> (retorno sobre ativos): lucro líquido ÷ ativo total, em %. Útil para comparar bancos e empresas de muitos ativos.</li>
-<li><b>LPA</b> (lucro por ação): lucro líquido dos últimos 12 meses ÷ número de ações.</li>
-<li><b>VPA</b> (valor patrimonial por ação): patrimônio líquido ÷ número de ações.</li>
+<li><b>LPA</b> (lucro por ação): lucro líquido dos últimos 12 meses ÷ número de ações. Base do P/L e do preço justo de Graham; crescendo = empresa lucrando mais por ação.</li>
+<li><b>VPA</b> (valor patrimonial por ação): patrimônio líquido ÷ número de ações. Base do P/VP: quanto do patrimônio cabe a cada ação.</li>
 <li><b>EBITDA</b>: lucro antes de juros, impostos, depreciação e amortização — aproxima a geração de caixa operacional. No site aparece em EV/EBITDA.</li>
 <li><b>EBIT</b>: lucro operacional (antes de juros e impostos). O Fundamentus usa EBIT ajustado (lucro bruto − despesas de vendas − despesas gerais e administrativas).</li>
 <li><b>EV/EBITDA</b>: valor da firma (valor de mercado + dívida líquida) ÷ EBITDA. Menor = mais barata em relação à geração de caixa operacional.</li>
-<li><b>EV/EBIT</b>: valor da firma (valor de mercado + dívida líquida) ÷ EBIT (lucro operacional).</li>
-<li><b>P/EBIT</b>: valor de mercado ÷ EBIT (lucro operacional).</li>
-<li><b>P/Ativo</b>: valor de mercado ÷ ativo total.</li>
+<li><b>EV/EBIT</b>: valor da firma (valor de mercado + dívida líquida) ÷ EBIT (lucro operacional). Menor = mais barata em relação ao lucro da operação, já contando a dívida.</li>
+<li><b>P/EBIT</b>: valor de mercado ÷ EBIT (lucro operacional). Menor = mais barata em relação ao lucro da operação.</li>
+<li><b>P/Ativo</b>: valor de mercado ÷ ativo total. Quanto se paga por cada real de bens e direitos da empresa; menor = mais barata.</li>
 <li><b>PSR</b> (price sales ratio): valor de mercado ÷ receita líquida dos últimos 12 meses.</li>
 <li><b>PEG</b>: P/L ÷ crescimento anual do lucro (em %). Perto de 1 ou abaixo = preço razoável para o crescimento.</li>
-<li><b>Margem líquida</b>: lucro líquido ÷ receita líquida, em %.</li>
-<li><b>Margem bruta</b>: lucro bruto ÷ receita líquida, em %.</li>
-<li><b>Margem EBIT</b>: EBIT (lucro operacional) ÷ receita líquida, em %.</li>
+<li><b>Margem líquida</b>: lucro líquido ÷ receita líquida, em %. Quanto sobra de lucro de cada R$ 100 vendidos; maior = mais eficiente.</li>
+<li><b>Margem bruta</b>: lucro bruto ÷ receita líquida, em %. Quanto sobra das vendas depois do custo do produto; maior = mais folga.</li>
+<li><b>Margem EBIT</b>: EBIT (lucro operacional) ÷ receita líquida, em %. Lucro da operação a cada R$ 100 vendidos, antes de juros e impostos.</li>
 <li><b>Liquidez corrente</b>: ativo circulante ÷ passivo circulante. Acima de 1 = mais recursos de curto prazo do que dívidas de curto prazo.</li>
 <li><b>Dívida líquida</b>: dívida bruta (empréstimos e financiamentos) − caixa e aplicações. Negativa = caixa líquido.</li>
-<li><b>Dív.Líq/PL</b>: dívida líquida ÷ patrimônio líquido. Negativo = caixa líquido (mais caixa que dívida).</li>
+<li><b>Dív.Líq/PL</b>: dívida líquida ÷ patrimônio líquido. Mede o endividamento em relação ao capital dos acionistas; menor = menos endividada. Negativo = caixa líquido (mais caixa que dívida).</li>
 <li><b>Dív.Líq/EBIT</b>: quantos anos de lucro operacional pagariam a dívida líquida. Negativo = caixa líquido.</li>
 <li><b>CAGR</b>: taxa de crescimento anual composta. No site: Crescimento (Receita ou Lucro) de 1 a 5 anos = crescimento médio por ano no período.</li>
-<li><b>Valor de mercado</b>: preço da ação × número total de ações da empresa.</li>
+<li><b>Valor de mercado</b>: preço da ação × número total de ações da empresa. Mostra o tamanho da empresa na bolsa.</li>
 <li><b>Patrimônio líquido</b>: ativos − passivos; o capital que pertence aos acionistas.</li>
 <li><b>ON, PN e Unit</b>: ON (final 3): ação ordinária, com direito a voto. PN (final 4, 5, 6): preferencial, prioridade nos dividendos e geralmente sem voto. Unit (final 11): pacote de ações ON e PN negociado como um só papel.</li>
 <li><b>Ibovespa</b>: principal índice da B3, carteira das ações mais negociadas.</li>

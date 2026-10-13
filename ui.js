@@ -83,6 +83,13 @@ window.getRetry = async function (u, tries = 3, ms = 15000) {
   }
   return null;
 };
+// Explicação de um termo lida do Glossário do painel ⓘ (fonte única; o chat lê o mesmo texto). null se não houver.
+window.glossOf = function (term) {
+  const li = [...document.querySelectorAll('#infoModal details')].find(d => (d.querySelector('summary') || {}).textContent === 'Glossário');
+  const it = li && [...li.querySelectorAll('li')].find(x => (x.querySelector('b') || {}).textContent === term);
+  return it ? it.textContent.trim() : null;
+};
+window.glossBtn = (term) => glossOf(term) ? `<button type="button" class="gl-i" data-gl="${esc(term)}" aria-label="O que é ${esc(term)}">ⓘ</button>` : '';
 // Ícone de arquivo (down = exportar, senão importar) e download de .json — Exportar/Importar de Grupos e Carteira.
 window.fileIc = (down) => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>${down ? '<path d="M12 11v6m-3-3 3 3 3-3"/>' : '<path d="M12 17v-6m-3 3 3-3 3 3"/>'}</svg>`;
 window.saveJSON = function (obj, prefix) {

@@ -122,7 +122,7 @@ function itemHtml(id, inFolder) {
   return `<div class="fitem flex flex-col gap-1 bg-slate-950/60 border ${active ? 'border-emerald-600' : 'border-slate-800'} rounded-lg px-2 py-1.5${GROUPS[id] ? ' col-span-2 sm:col-span-3 md:col-span-2 xl:col-span-3 fgrp' : ''}" data-key="${k}" title="${esc(h.txt + (f.unit === '%' ? ' — digite 8 para 8%' : ''))}">
     <div class="flex items-center gap-1 text-[11px] text-slate-400">
       <span class="drag-handle cursor-grab select-none text-slate-500 text-sm leading-none px-0.5" title="Arraste para reordenar ou para 'Filtros ocultos'">⠿</span>
-      <span class="truncate flex-1">${esc(label)}${f.unit === '%' ? ' (%)' : f.scale ? ` (${curSym()} mi)` : ''}</span>
+      <span class="truncate flex-1">${esc(label)}${f.unit === '%' ? ' (%)' : f.scale ? ` (${curSym()} mi)` : ''}</span>${glossBtn(f.gl || f.label)}
       ${sym}
       <button type="button" class="fav text-base leading-none ${prefs.fav[k] ? 'text-amber-400' : 'text-slate-600 hover:text-slate-300'}" data-key="${k}" title="${prefs.fav[k] ? 'Remover dos favoritos' : 'Favoritar (vai para o topo)'}">${prefs.fav[k] ? '★' : '☆'}</button>
     </div>${sel}
@@ -312,7 +312,7 @@ function cardsHtml(r) {
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
     if (all && nSrc >= 1 && v != null || st) cls.push('tip');
     cards += `<div class="${cls.join(' ')}" data-key="${f.key}">
-      <div class="lbl"><span class="truncate" title="${esc(f.label)}">${esc(f.short || f.label)}</span>${cmo.aj ? '<span class="badge bg-sky-600 text-white font-bold ml-auto mr-0.5" title="concordância via EBIT ajustado">aj</span>' : ''}${badge}</div>
+      <div class="lbl"><span class="truncate" title="${esc(f.label)}">${esc(f.short || f.label)}</span>${glossBtn(f.gl || f.label)}${cmo.aj ? '<span class="badge bg-sky-600 text-white font-bold ml-auto mr-0.5" title="concordância via EBIT ajustado">aj</span>' : ''}${badge}</div>
       <div class="val">${v == null ? '—' : fmt(v, f.unit, f.key, r.cur)}</div><div class="detail"></div></div>`;
   }
   return `<div class="cards p-2.5 sm:p-3">${cards}</div>`;
@@ -445,6 +445,7 @@ function cardTip(card) {
 }
 document.addEventListener('mousemove', (e) => {
   if (!hoverCapable) return;
+  if (e.target.closest('[data-gl]')) return;  // ⓘ: mostra só ao tocar/clicar
   const card = e.target.closest('.card.tip');
   if (card && !card.classList.contains('open')) { showTip(e, cardTip(card)); return; }
   const el = e.target.closest('[data-tip-id]');
@@ -452,6 +453,8 @@ document.addEventListener('mousemove', (e) => {
   showTip(e, nl2br(ruleText()));
 });
 document.addEventListener('click', (e) => {
+  const gl = e.target.closest('[data-gl]');  // ⓘ do indicador: explicação do Glossário
+  if (gl) { e.preventDefault(); showTip(e, esc(glossOf(gl.dataset.gl) || '')); clearTimeout(tt._h); tt._h = setTimeout(() => tt.classList.add('hidden'), 10000); return; }
   const card = e.target.closest('.card.tip');
   if (card) {
     const open = card.classList.toggle('open');
