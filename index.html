@@ -172,8 +172,7 @@
   .gc-bar button { padding: .3rem .55rem; border-radius: .5rem; font-size: 12px; background: rgb(30 41 59); border: 1px solid rgb(51 65 85); color: rgb(203 213 225); }
   .gc-bar button.on { background: rgb(6 78 59 / .6); border-color: rgb(16 185 129); color: rgb(110 231 183); }
   .gc-bar .gc-ref { margin-left: auto; width: 32px; height: 32px; border-radius: 9999px; padding: 0; font-size: 17px; }
-  .gc-dates { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0 .3rem; }
-  .gc-dates label { display: inline-flex; align-items: center; gap: .3rem; font-size: 11px; color: rgb(148 163 184); }
+  .gc-dates { margin: .5rem 0 .3rem; }
   .gc-dates input { padding: .25rem .4rem; border-radius: .45rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); color: rgb(226 232 240); font-size: 12px; color-scheme: dark; }
   .gc-chk { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin: .3rem 0 .5rem; }
   .gc-chk label { display: inline-flex; align-items: center; gap: .3rem; font-size: 12px; color: var(--lc); font-weight: 600; }
@@ -244,12 +243,12 @@
   @media (min-width: 1100px) { .ggrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .gtab { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
   .gtab th { position: sticky; top: 0; z-index: 2; background: rgb(15 23 42); box-shadow: 0 1px 0 rgb(30 41 59); font-size: 10px; font-weight: 600; color: rgb(148 163 184); text-transform: uppercase; letter-spacing: .03em; padding: .25rem .3rem; text-align: right; white-space: nowrap; }
-  .gtab th:first-child, .gtab td:first-child { text-align: left; }
-  .gtab td { padding: .28rem .3rem; border-bottom: 1px solid rgb(30 41 59 / .7); text-align: right; white-space: nowrap; }
+  .gtab th { text-align: center; } .gtab td:first-child { text-align: left; }  /* padrão de tabelas: títulos e colunas centralizados, Ativo à esquerda */
+  .gtab td { padding: .28rem .3rem; border-bottom: 1px solid rgb(30 41 59 / .7); text-align: center; white-space: nowrap; }
   .gtab td b { color: rgb(110 231 183); } .gtab .gc2 { color: rgb(226 232 240); } .gtab .gc3 { color: rgb(203 213 225); }
   .gtab .up { color: rgb(52 211 153); } .gtab .dn { color: rgb(251 113 133); }
   .gtab tr.tap { cursor: pointer; } .gtab tr.sel td { background: rgb(6 78 59 / .35); }
-  .gtab .galr { padding: .15rem .15rem; white-space: normal; line-height: 1.15; } body .gtab .galr .pv-in { width: 3.6rem; min-height: 0; height: 1.65rem; padding: 0 .3rem; font-size: 12px; text-align: right; }
+  .gtab .galr { padding: .15rem .15rem; white-space: normal; line-height: 1.15; } .gtab th.galr-h { white-space: nowrap; } body .gtab .galr .pv-in { width: 3.6rem; min-height: 0; height: 1.65rem; padding: 0 .3rem; font-size: 12px; text-align: center; }
   .gtab tr.galr-on td { background: var(--c-amber-bg); } .gtab tr.galr-on td b { color: var(--c-amber); }
   .gtab tr.gdet > td { padding: .4rem 0; white-space: normal; text-align: left; }
   .nova { margin-left: .35rem; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: rgb(14 165 233 / .2); color: rgb(125 211 252); border: 1px solid rgb(14 165 233 / .5); vertical-align: middle; }
@@ -275,18 +274,19 @@
   .gper, .gmv { margin: .3rem .45rem 0; padding: .2rem .3rem; font-size: 11px; border-radius: .4rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); color: rgb(226 232 240); }
   .gmv { margin: 0 0 0 .3rem; max-width: 80px; }
   .gt-tabs { display: flex; flex-wrap: wrap; gap: .25rem; padding: .35rem .45rem 0; align-items: center; }
-  .gflow th:last-child, .gflow td:last-child { text-align: right; } .gflow td.pos { color: var(--c-pos, rgb(52 211 153)); } .gflow td.neg { color: var(--c-neg, rgb(248 113 113)); }
+  .gflow td.pos { color: var(--c-pos, rgb(52 211 153)); } .gflow td.neg { color: var(--c-neg, rgb(248 113 113)); }
   /* Carteira */
   .kt-box { border: 1px solid var(--bd-card); border-radius: var(--r-card); background: var(--bg-card); padding: .75rem; }
-  .kt-f { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; } @media (min-width: 640px) { .kt-f { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; } }
+  .kt-f { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; } @media (min-width: 640px) { .kt-f { grid-template-columns: repeat(5, minmax(0, 1fr)) auto; align-items: end; } }
   .kt-f label { display: flex; flex-direction: column; gap: .2rem; font-size: 12px; color: var(--c-mut); } .kt-fb { display: flex; gap: .4rem; align-items: end; grid-column: 1 / -1; } @media (min-width: 640px) { .kt-fb { grid-column: auto; } }
   .kt-sum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-bottom: .5rem; } @media (min-width: 640px) { .kt-sum { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .kt-sum > div { border: 1px solid var(--bd-card); border-radius: var(--r); background: var(--bg-card); padding: .5rem .6rem; display: flex; flex-direction: column; gap: .15rem; }
   .kt-sum span { font-size: 11px; color: var(--c-mut); } .kt-sum b { font-size: 14px; }
   .kt-wrap { overflow-x: auto; } .kt-t { width: 100%; font-size: 13px; border-collapse: collapse; }
-  .kt-t th { font-size: 11px; color: var(--c-mut); font-weight: 600; text-align: right; padding: .3rem .35rem; border-bottom: 1px solid var(--bd); } .kt-t th:first-child, .kt-t td:first-child { text-align: left; }
-  .kt-t td { text-align: right; padding: .4rem .35rem; border-bottom: 1px solid var(--bd); vertical-align: top; white-space: nowrap; } .kt-t small { display: block; font-size: 11px; color: var(--c-mut); }
-  .kt-t tbody tr { cursor: pointer; } .kt-t tbody tr:hover td, .kt-t tr.on td { background: var(--bg-sec); } @media (max-width: 400px) { .kt-t { font-size: 12px; } .kt-t th, .kt-t td { padding-left: .2rem; padding-right: .2rem; } }
+  .kt-t th { font-size: 11px; color: var(--c-mut); font-weight: 600; text-align: center; padding: .3rem .35rem; border-bottom: 1px solid var(--bd); } .kt-t td:first-child { text-align: left; }
+  .kt-t td { text-align: center; padding: .4rem .35rem; border-bottom: 1px solid var(--bd); vertical-align: top; white-space: nowrap; } .kt-t small { display: block; font-size: 11px; color: var(--c-mut); }
+  .kt-t tbody tr[data-k] { cursor: pointer; } .kt-t tbody tr[data-k]:hover > td, .kt-t tr.on > td { background: var(--bg-sec); }
+  .kt-t tr.kt-det > td { padding: .5rem 0 .75rem; white-space: normal; text-align: left; cursor: default; } .kt-tot > td { border-top: 1px solid var(--bd); } .kt-h > b { display: block; font-size: 12px; color: var(--c-mut); margin: .25rem 0; } @media (max-width: 400px) { .kt-t { font-size: 12px; } .kt-t th, .kt-t td { padding-left: .2rem; padding-right: .2rem; } }
   .kt-sum .up, .kt-t .up { color: var(--c-pos); } .kt-sum .dn, .kt-t .dn { color: var(--c-neg); }
   .pv-sub { padding: 0 0 .25rem; } .al-it { border: 1px solid rgb(51 65 85); border-radius: .75rem; padding: .5rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
   .al-it.ok { border-color: rgb(16 185 129 / .55); } .al-it > label:first-child { grid-column: 1 / -1; } .al-btns { display: flex; gap: .4rem; align-items: end; justify-content: flex-end; }
@@ -315,8 +315,10 @@
   .cmp-srch { position: relative; } .cmp-srch input { width: 100%; padding: .55rem .75rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); font-size: .9rem; outline: none; }
   .cmp-srch input:focus { border-color: rgb(16 185 129); }
   .cmp-srch .pv-combo button[disabled] { opacity: .45; }
-  .cmp-row { display: flex; flex-wrap: wrap; gap: .45rem; } .cmp-row label { display: inline-flex; align-items: center; gap: .3rem; font-size: 12px; color: rgb(148 163 184); }
-  .cmp-row .sel { padding: .35rem .45rem; font-size: 13px; max-width: 46vw; } .cmp-row input:disabled { opacity: .4; }
+  /* Formulário nome + campo em linhas (regra do AGENTS.md): nomes numa coluna alinhada à direita, campos começando no mesmo ponto e com a mesma largura */
+  .frm { display: grid; grid-template-columns: max-content minmax(0, 15rem); gap: .45rem .5rem; align-items: center; } .frm > label { display: contents; }
+  .frm > label > span { justify-self: end; font-size: 12px; color: var(--c-mut); } .frm > label > :is(input, select) { width: 100%; max-width: none; box-sizing: border-box; }
+  .cmp-row .sel { padding: .35rem .45rem; font-size: 13px; } .cmp-row input:disabled { opacity: .4; }
   .cmp-chips { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
   .cmp-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .25rem .2rem .55rem; border-radius: 9999px; border: 1px solid var(--cc); color: rgb(226 232 240); font-size: 12px; }
   .cmp-chip.ref { background: rgb(6 78 59 / .4); } .cmp-chip small { font-size: 9px; color: rgb(110 231 183); font-weight: 700; } .cmp-chip.off { opacity: .4; }
@@ -383,7 +385,8 @@
   body .pv-plus { color: var(--c-pos); font-size: 20px; }
   body .ricon, body .gc-bar .gc-ref.ricon { width: var(--h); height: var(--h); background: none; border: 0; color: rgb(203 213 225); }
   body .star { width: var(--h-sm); height: var(--h-sm); }
-  body [data-g="export"], body [data-g="import"] { width: var(--h); padding: 0; font-variant-emoji: text; font-family: system-ui, sans-serif; }
+  /* Exportar/Importar (Grupos e Carteira): só o ícone no celular; ícone + texto em telas maiores */
+  body .fbtn { display: inline-flex; align-items: center; gap: .35rem; padding: 0 .7rem; width: auto; } @media (max-width: 639px) { body .fbtn { width: var(--h); padding: 0; justify-content: center; } }
   body .gt-tabs .gper { margin: 0 0 0 auto; width: auto; max-width: 48%; }
   body .gfav-sel { display: flex; gap: .3rem; flex-basis: 100%; } body .gfav-sel .gper { margin: 0; max-width: none; flex: none; font-size: 12px; padding-left: .4rem; padding-right: 1.25rem; background-position: right .3rem center; } body .gfav-sel .gper[data-fsort] { flex: 1 1 auto; min-width: 0; } body .gt-tabs .gper + .gper { margin-left: 0; }
   body .gt > .gper, body .gfull > .gper { align-self: flex-start; width: auto; margin: .4rem .5rem 0; }
@@ -410,7 +413,7 @@
   /* Tipografia */
   body .gt-name, body .gfull-head b, body .cmp-col h3, body .icard > summary, body .umod-box h3, body [data-tabpane] h2 { font-size: 14px; font-weight: 700; letter-spacing: 0; }
   body .gfull-head b { font-size: 15px; }
-  body .gtab th, body .gc-dates label, body .cmp-row label, body .gtools-l, body label[for="sortKey"], body .pv-mini { font-size: 12px; font-weight: 500; color: var(--c-mut); }
+  body .gtab th, body .frm > label > span, body .gtools-l, body label[for="sortKey"], body .pv-mini { font-size: 12px; font-weight: 500; color: var(--c-mut); }
   body .gtab th { text-transform: none; letter-spacing: 0; font-size: 11px; }
   body .cmp-ref, body .cmp-it small, body .gt-empty, body .gt-n, body .ldr span, body #activeCount, body .pv-saved + .text-xs { font-size: 11.5px; font-weight: 400; color: var(--c-dim); }
   /* Cores com significado fixo */
@@ -587,11 +590,11 @@
 <h3>Ações</h3>
 <ol class="list-decimal pl-5"><li>Cada card mostra preço, variação e os indicadores (consenso das fontes em Todos).</li><li>No topo escolha país e fonte; veja 'Status das fontes' abaixo dos filtros.</li><li>Toque no card para expandir (Expandir todos/Recolher todos, ao lado de resultados, abrem ou fecham todos): histórico, índices B3, peso no Ibovespa e outras classes da ação.</li><li>As cores indicam concordância entre fontes (pergunte 'o que significam as cores').</li><li>Use a busca, a lupa de filtros e Ordenar para refinar; Carregar mais mostra mais resultados.</li></ol>
 <h3>Carteira</h3>
-<ol class="list-decimal pl-5"><li>Abra a aba Carteira (só ações da B3).</li><li>Preencha Ticker, Quantidade, Preço médio e Data da compra e toque em ＋ Adicionar.</li><li>O resumo mostra Investido, Valor atual (preço da aba Ações, na fonte escolhida no topo), Ganho em R$ e %, Proventos recebidos desde a data e o Total.</li><li>Se fosse no Ibovespa / no CDB: quanto o mesmo valor teria rendido desde a data de cada posição.</li><li>Toque numa posição da tabela para editar (Salvar) ou Excluir. Fica salva no seu aparelho; use Exportar para guardar um arquivo e Importar para trazê-lo em outro aparelho.</li></ol>
+<ol class="list-decimal pl-5"><li>Abra a aba Carteira (só ações da B3).</li><li>Para cada compra ou venda, preencha Ticker, Operação (Compra ou Venda), Quantidade, Preço e Data e toque em ＋ Adicionar. Não é possível vender mais ações do que você tinha na data.</li><li>A tabela mostra uma linha por ação, calculada do histórico: Qtd / PM (quantidade e preço médio das compras; a venda reduz a quantidade sem mudar o preço médio), Atual (preço da aba Ações, na fonte escolhida no topo), Ganho e Proventos (pela quantidade que você tinha em cada data).</li><li>Toque na linha de uma ação para abrir abaixo dela: Investido, Valor atual, Ganho, Lucro nas vendas, Proventos recebidos, Total e Se fosse no Ibovespa / no CDB (o mesmo dinheiro aplicado e retirado nas mesmas datas), e o Histórico de movimentações. Toque de novo para fechar.</li><li>Total da carteira (última linha) mostra os mesmos valores somando todas as ações.</li><li>No Histórico de movimentações, toque numa compra ou venda para editar (Salvar) ou Excluir.</li><li>Fica salva no seu aparelho; use Exportar para guardar um arquivo e Importar para trazê-lo em outro aparelho.</li></ol>
 <h3>Filtros e ordenação</h3>
 <ol class="list-decimal pl-5"><li>Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.</li><li>Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e Indicadores (toque em + para abrir os campos de mínimo/máximo).</li><li>Nos campos: ≥ maior é melhor, ≤ menor é melhor; campo vazio = sem filtro; os filtros se somam (todos precisam ser atendidos); percentuais como número (8 = 8%); ≤ com + exclui negativos (ex.: P/L negativo = prejuízo).</li><li>Em Volume (média diária) escolha o período (dia, 10 pregões, 1 a 12 meses) e digite em milhões da moeda (10 = 10 mi/dia); em Crescimento escolha Receita ou Lucro e o período (1 a 5 anos).</li><li>Toque na ☆ de um campo para levá-lo ao topo; arraste pela alça ⠿ para reordenar ou para Filtros ocultos (ocultos não são aplicados); Limpar filtros zera os valores.</li><li>Em Ordenar, escolha o indicador (começa em Alta do dia (%)) e toque no botão de setas ao lado (˄˅; seta verde = ordem atual, ex.: Maior → menor) para inverter.</li><li>↓ CSV exporta o resultado.</li></ol>
 <h3>Favoritos</h3>
-<ol class="list-decimal pl-5"><li>Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.</li><li>Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.</li><li>No card ★ Favoritos (aba Grupos), preencha 🔔 Abaixo de e/ou 🔔 Acima de: com o app aberto ou em segundo plano, você recebe um aviso uma vez quando o preço passa do limite (de novo só depois de voltar ao intervalo). Ao abrir o app, o que ainda estiver fora do intervalo é avisado de novo e a linha fica em laranja. Deixe o campo vazio para desligar.</li><li>Ficam salvos no seu navegador.</li></ol>
+<ol class="list-decimal pl-5"><li>Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.</li><li>Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.</li><li>No card ★ Favoritos (aba Grupos), preencha Abaixo🔔 e/ou Acima🔔: com o app aberto ou em segundo plano, você recebe um aviso uma vez quando o preço passa do limite (de novo só depois de voltar ao intervalo). Ao abrir o app, o que ainda estiver fora do intervalo é avisado de novo e a linha fica em laranja. Deixe o campo vazio para desligar.</li><li>Ficam salvos no seu navegador.</li></ol>
 <h3>Grupos (criar e editar)</h3>
 <ol class="list-decimal pl-5"><li>Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.</li><li>Toque nos cards das empresas para selecioná-las (uma ação por empresa).</li><li>Digite o Nome do grupo e toque em Salvar.</li><li>Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir, no canto inferior direito do card, para alterar.</li><li>Para guardar seus grupos ou levá-los a outro aparelho, use Exportar grupos (ícone de arquivo com seta para baixo) para baixar um arquivo e Importar grupos (seta para cima) para carregá-lo, no topo da aba Grupos.</li></ol>
 <h3>Reorganizar</h3>
