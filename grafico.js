@@ -77,7 +77,7 @@
       else {
         // Eixo Y em R$ da ação: as outras linhas são rebaseadas no preço inicial da ação (mesma escala)
         let base = null; if (S.on.stock && sd.t && sd.t.length) { for (let i = 0; i < sd.t.length; i++) { if (sd.t[i] * 1000 <= start || base == null) base = sd.c[i]; if (sd.t[i] * 1000 > start) break; } }
-        render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind, base, { cur: C === 'br' ? 'BRL' : (((typeof state !== 'undefined' && state.countries) || []).find(x => x.id === C) || {}).currency });
+        render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind, base, { cur: C === 'br' ? 'BRL' : (((typeof state !== 'undefined' && state.countries) || []).find(x => x.id === C) || {}).currency, cross: true });
       }
       const notes = [];
       if (skipped.length) notes.push((kind === 'i' ? 'Sem dados intradiários: ' : 'Ocultos: ') + skipped.join(', ') + '.');
@@ -192,16 +192,28 @@
     if (!o.cross) return;
     const at = (s, ms) => { let p = null; for (const q of s.pts) { if (q[0] > ms) break; p = q; } return p; };
     plot.style.touchAction = 'pan-y';
+    const clear = () => plot.querySelectorAll('.gc-x').forEach(x => x.remove());
+    // Mira: linhas vertical e horizontal no ponto, valor no eixo lateral, data embaixo, ponto em cada linha e tabela do dia (maior → menor)
     plot.onpointerdown = plot.onpointermove = (e) => {
       if (e.type === 'pointermove' && e.pointerType !== 'mouse' && !e.buttons) return;
-      const sv = plot.querySelector('svg'), rc = sv.getBoundingClientRect(), fx = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width)), ms = x0 + fx * (x1 - x0), px = sv.offsetLeft + fx * rc.width;
-      const rows = series.map(s => { const p = at(s, ms); return p ? `<div style="--lc:${s.color}"><b>${val(s, p[1]) ? val(s, p[1]) + ' · ' : ''}${P2.format(p[1])}%</b> ${s.label}</div>` : ''; }).join('');
-      let tip = plot.querySelector('.gc-tip'), ln = plot.querySelector('.gc-vl');
-      if (!tip) { plot.insertAdjacentHTML('beforeend', '<div class="gc-vl"></div><div class="gc-tip"></div>'); tip = plot.querySelector('.gc-tip'); ln = plot.querySelector('.gc-vl'); }
-      ln.style.left = px + 'px'; tip.innerHTML = `<div class="gc-tip-d">${new Date(ms).toLocaleDateString('pt-BR')}</div>${rows}`;
-      tip.style.left = fx > .5 ? '' : (px + 8) + 'px'; tip.style.right = fx > .5 ? (plot.clientWidth - px + 8) + 'px' : '';
+      const sv = plot.querySelector('svg'), rc = sv.getBoundingClientRect(), fx = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width)), fy = Math.min(1, Math.max(0, (e.clientY - rc.top) / rc.height));
+      const pr = plot.getBoundingClientRect(), ox = rc.left - pr.left, oy = rc.top - pr.top;  // <svg> não tem offsetLeft: posição relativa ao gráfico
+      const ms = x0 + fx * (x1 - x0), px = ox + fx * rc.width, py = oy + fy * rc.height;
+      const yv = y0 + (H - pad - fy * H) / (H - 2 * pad) * (y1 - y0);
+      const hit = series.map(s => [s, at(s, ms)]).filter(x => x[1]).sort((a, b) => b[1][1] - a[1][1]);
+      const rows = hit.map(([s, p]) => `<div style="--lc:${s.color}"><b>${val(s, p[1]) ? val(s, p[1]) + ' · ' : ''}${P2.format(p[1])}%</b> ${s.label}</div>`).join('');
+      const dots = hit.map(([s, p]) => `<i class="gc-x gc-dot" style="--lc:${s.color};left:${ox + X(p[0]) / W * rc.width}px;top:${oy + Y(toY(p[1])) / H * rc.height}px"></i>`).join('');
+      clear();
+      plot.insertAdjacentHTML('beforeend', `<div class="gc-x gc-vl" style="left:${px}px"></div><div class="gc-x gc-hl" style="top:${py}px;left:${ox}px"></div>${dots}
+        <div class="gc-x gc-yv" style="top:${py}px">${B ? money(yv) : P2.format(yv) + '%'}</div>
+        <div class="gc-x gc-xv" style="left:${px}px">${kind === 'i' ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : new Date(ms).toLocaleDateString('pt-BR')}</div>
+        <div class="gc-x gc-tip"><div class="gc-tip-d">${new Date(ms).toLocaleDateString('pt-BR')}</div>${rows}</div>`);
+      const tip = plot.querySelector('.gc-tip');  // a tabela fica do lado oposto ao ponto, para não cobrir o que se está olhando
+      tip.style.left = fx > .5 ? '' : (px + 10) + 'px'; tip.style.right = fx > .5 ? (plot.clientWidth - px + 10) + 'px' : '';
+      tip.style.top = fy < .5 ? 'auto' : '4px'; tip.style.bottom = fy < .5 ? '22px' : 'auto';
     };
-    plot.onpointerleave = (e) => { if (e.pointerType === 'mouse') plot.querySelectorAll('.gc-tip, .gc-vl').forEach(x => x.remove()); };
+    plot.onpointerleave = (e) => { if (e.pointerType === 'mouse') clear(); };
+    plot.onpointerup = plot.onpointercancel = (e) => { if (e.pointerType !== 'mouse') clear(); };  // celular: some ao soltar o dedo
   }
   function niceStep(r) { const p = Math.pow(10, Math.floor(Math.log10(r || 1))), n = r / p; return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p; }
 

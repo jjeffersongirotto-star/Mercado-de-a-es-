@@ -114,16 +114,16 @@
     const X = await Promise.all(Object.keys(by).sort().map(t => calc(t, by[t])));
     const el = $k('#ktBody'); if (!el) return;
     const T = total(X);
-    const det = (k, x) => open.has(k) ? `<tr class="kt-det"><td colspan="5">${cards(x)}${hist(x.L, k === '*')}</td></tr>` : '';
+    const det = (k, x) => open.has(k) ? `<tr class="kt-det"><td colspan="6">${cards(x)}${hist(x.L, k === '*')}</td></tr>` : '';
     const num = (v) => v == null ? '—' : F2.format(v);  // na tabela sem "R$" (cabe no celular); nos cards com "R$"
     const gcell = (x) => x.unreal != null ? `<span class="${cls(x.unreal)}">${num(x.unreal)}</span><small>${pct(x.cost ? x.unreal / x.cost * 100 : null)}</small>` : '—';
     const row = (x) => `<tr class="kt-row${open.has(x.t) ? ' on' : ''}" data-k="open" data-t="${esc(x.t)}"><td><b>${esc(x.t)}</b></td>
-        <td>${F0.format(x.q)}<small>${x.pm != null ? F2.format(x.pm) : '—'}</small></td>
-        <td>${x.price != null ? F2.format(x.price) : '—'}<small>${num(x.cur)}</small></td>
+        <td>${F0.format(x.q)}</td><td>${x.pm != null ? F2.format(x.pm) : '—'}</td>
+        <td>${x.price != null ? F2.format(x.price) : '—'}</td>
         <td>${gcell(x)}</td><td>${num(x.div)}</td></tr>${det(x.t, x)}`;
-    el.innerHTML = `<div class="kt-wrap"><table class="kt-t"><thead><tr><th>Ativo</th><th>Qtd / PM</th><th>Atual</th><th>Ganho R$</th><th>Proventos R$</th></tr></thead><tbody>
+    el.innerHTML = `<div class="kt-wrap"><table class="kt-t"><thead><tr><th>Ativo</th><th>Nº de ações</th><th>Preço médio</th><th>Cotação do dia</th><th>Ganho R$</th><th>Proventos R$</th></tr></thead><tbody>
       ${X.map(row).join('')}
-      <tr class="kt-row kt-tot${open.has('*') ? ' on' : ''}" data-k="open" data-t="*"><td><b>Total da carteira</b></td><td></td><td><small>${num(T.cur)}</small></td>
+      <tr class="kt-row kt-tot${open.has('*') ? ' on' : ''}" data-k="open" data-t="*"><td colspan="4"><b>Total da carteira</b></td>
         <td>${gcell(T)}</td><td>${num(T.div)}</td></tr>${det('*', T)}
       </tbody></table></div>`;
   }
