@@ -1,13 +1,14 @@
 // ---------- Gráfico por ação (SVG próprio, sem biblioteca externa) ----------
 (function () {
+  const IXN = window.INDICES || {};  // nomes dos índices: history.INDICES (servidor)
   const LINES = [
     { id: 'stock', label: 'Ação', color: '#34d399' },
-    { id: 'ibov', label: 'Ibovespa', color: '#60a5fa' },
-    { id: 'usd', label: 'Dólar', color: '#facc15' },
-    { id: 'cdi', label: 'CDB', color: '#f472b6' },
-    { id: 'ipca', label: 'Inflação (IPCA)', color: '#fb923c' },
-    { id: 'poup', label: 'Poupança', color: '#a78bfa' },
-    { id: 'gold', label: 'Ouro', color: '#d4a373' },
+    { id: 'ibov', label: IXN.ibov, color: '#60a5fa' },
+    { id: 'usd', label: IXN.usd, color: '#facc15' },
+    { id: 'cdi', label: IXN.cdi, color: '#f472b6' },
+    { id: 'ipca', label: IXN.ipca, color: '#fb923c' },
+    { id: 'poup', label: IXN.poup, color: '#a78bfa' },
+    { id: 'gold', label: IXN.gold, color: '#d4a373' },
   ];
   window.GC_LINES = LINES;
   // Ação de fora do Brasil: índice do país (nome em /api/countries) na linha "ibov", dólar e ouro só nos EUA; sem índices brasileiros

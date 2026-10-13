@@ -46,6 +46,9 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Crescimento de receita e lucro (1–5 anos) | 5 anos: consenso das fontes · 1–4 anos: só CVM (`scripts/build_cvm.py` → `cresc{n}a`, `lucro{n}a`) · exterior: TradingView (só 5 anos) | filtro Crescimento (grupo `cres`), cards, Grupos, chat |
 | Campos com Período e posição em Ordenar | `server.py` → `FIELD_EXTRA` (`grp`, `per`, `sub`, `sort`) | filtros, cards e Ordenar (`app.js`) |
 | Universo exibido (ilíquidas, 1 ticker por empresa) | `scripts/universe.py` (`mark` grava `il` e `k1` em cada linha de `/api/data`) | site (`tradable`, `universe` em `app.js`), Grupos, `/api/returns`, scripts de snapshot |
+| Nomes dos índices (Ibovespa, Dólar, CDB, IPCA, Poupança, Ouro) | `history.py` → `INDICES` (o site recebe em `window.INDICES`) | gráficos (`grafico.js`), Comparar, chat (`IDXN`) |
+| Índice de cada país e símbolo no Yahoo | `tradingview.py` → `YAHOO` | `/api/countries` (`index`), gráficos e Comparar de ações estrangeiras |
+| Registro de erros | `server.py` → `ERRS` (`/api/errors`) e log do Render | quem mantém o site |
 | Variação de preço entre duas datas escolhidas | `server.period_returns` | aba Comparar (`/api/returns`), perguntas do chat com período |
 | Data de listagem | Brasil: `metrics.ftd` (1º pregão na B3) · exterior: `ipo` (TradingView) | Novidades e etiqueta NOVA (`grupos.js` → `listDate`) |
 | Explicações ao usuário: regras, cores, **passo a passo** de cada aba, **glossário** | painel ⓘ — `#infoModal` em `index.html` | usuário; chat e Gemini (`chat.guide`, `guide_sections`, `glossary`) |
