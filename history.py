@@ -344,6 +344,8 @@ def gold():
     return res
 
 # ---------- Banco Central (SGS) ----------
+# Índices dos gráficos/Comparar/chat (fonte única dos nomes; o site recebe em window.INDICES)
+INDICES = {"ibov": "Ibovespa", "usd": "Dólar", "cdi": "CDB", "ipca": "Inflação (IPCA)", "poup": "Poupança", "gold": "Ouro"}
 SGS = {"cdi": 12, "ipca": 433, "poup": 25, "usd": 1}
 _bcb = {}
 

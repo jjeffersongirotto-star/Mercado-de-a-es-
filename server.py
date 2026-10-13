@@ -571,6 +571,27 @@ def scheduler():
         time.sleep(60)
 
 app = FastAPI(title="JG Investing")
+
+# Registro de erros: todo erro (500 e log ERROR) fica guardado com a causa; consulta em /api/errors (some ao reiniciar; o log do Render guarda mais)
+import collections, traceback
+ERRS = collections.deque(maxlen=300)
+
+class _ErrLog(logging.Handler):
+    def emit(self, rec):
+        if rec.name.startswith(("yfinance", "urllib3")): return  # avisos esperados de fontes externas
+        ERRS.append({"ts": datetime.now(TZ).strftime("%d/%m/%Y %H:%M:%S"), "onde": rec.name, "msg": rec.getMessage()[:500],
+                     "causa": "".join(traceback.format_exception(*rec.exc_info))[-1500:] if rec.exc_info else ""})
+
+logging.getLogger().addHandler(_ErrLog(level=logging.ERROR))
+
+@app.exception_handler(Exception)
+async def _erro(request: Request, exc: Exception):
+    log.error("erro em %s %s", request.method, request.url.path, exc_info=(type(exc), exc, exc.__traceback__))
+    return JSONResponse({"error": "erro interno; tente de novo em instantes"}, status_code=500)
+
+@app.get("/api/errors")
+def api_errors(n: int = 50):
+    return JSONResponse(list(ERRS)[-max(1, min(n, 300)):][::-1], headers={"Cache-Control": "no-store"})
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.mount("/static/logos", StaticFiles(directory=os.path.join(BASE, "static", "logos")), name="logos")
 app.mount("/static/flags", StaticFiles(directory=os.path.join(BASE, "static", "flags")), name="flags")
@@ -843,6 +864,7 @@ def _index_html():
         if os.path.exists(TW_CSS) and os.path.getsize(TW_CSS) > 1000 and not os.environ.get("TW_CDN"):  # TW_CDN=1 volta ao CDN
             h = re.sub(r'<script src="https://cdn\.tailwindcss\.com"></script>\s*<script src="/tailwind\.config\.js"></script>',
                        f'<link rel="stylesheet" href="/static/tw.css?v={_hash(TW_CSS)}">', h, count=1)
+        h = h.replace('<script src="/static/', f'<script>window.INDICES={json.dumps(history.INDICES, ensure_ascii=False)}</script><script src="/static/', 1)
         _INDEX.update(key=key, html=h.encode("utf-8"))
     return _INDEX["html"]
 
