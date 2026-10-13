@@ -43,12 +43,13 @@
     const tp = topic; topic = null;
     H.push({ r: 'u', t: tp ? 'Sobre: ' + tp : q }); inp.value = ''; draw();
     L.insertAdjacentHTML('beforeend', `<div class="cht-m a cht-w">${window.loaderHTML ? loaderHTML('Pensando…') : '…'}</div>`); L.scrollTop = L.scrollHeight;
+    const slow = setTimeout(() => { const w = L.querySelector('.cht-w span'); if (w) w.textContent = 'A IA está demorando, aguarde…'; }, 10000);
     const btn = root.querySelector('#chtS'); btn.disabled = true;
     try {
       const ac = new AbortController(), to = setTimeout(() => ac.abort(), 150000);
       const r = await fetch('api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q, hist, ctx: ctxNow(), topic: tp }), signal: ac.signal });
       clearTimeout(to); const d = await r.json(); H.push({ r: 'a', t: d.a || 'Sem resposta.', mode: d.mode, sug: d.sug || null, sugl: d.sugl || null });
     } catch (err) { H.push({ r: 'a', t: 'Não foi possível responder agora. Tente de novo.', mode: '' }); }
-    btn.disabled = false; save(); draw();
+    clearTimeout(slow); btn.disabled = false; save(); draw();
   };
 })();

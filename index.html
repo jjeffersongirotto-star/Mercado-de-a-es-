@@ -261,7 +261,6 @@
   .gfull { border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .7); border-radius: 1rem; padding: .6rem; }
   .gfull-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; } .gfull-head b { flex: 1; color: rgb(110 231 183); }
   .gfull .gper { margin: 0 0 .4rem; }
-  .gmvbox { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin-top: .6rem; font-size: 11.5px; color: rgb(148 163 184); align-items: center; }
   .gt { display: flex; flex-direction: column; min-width: 0; height: 230px; border: 1px solid rgb(30 41 59); background: rgb(15 23 42 / .7); border-radius: .9rem; overflow: hidden; }
   .gt.gt-flow { height: auto; } .gt-flow .gt-list { overflow: visible; overscroll-behavior: auto; flex: none; } .flow-lb { display: flex; justify-content: space-between; font-size: 10px; color: rgb(100 116 139); padding: 0 .1rem; align-items: center; }
   .gt-fav { grid-column: 1 / -1; height: 30vh; max-height: 320px; border-color: rgb(250 204 21 / .45); }
@@ -276,8 +275,7 @@
   .gt-list b { color: rgb(110 231 183); font-size: 12px; } .gi { color: rgb(100 116 139); font-size: 10px; width: 1.1rem; }
   .gv { margin-left: auto; color: rgb(203 213 225); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .gt-empty { color: rgb(100 116 139); font-size: 11.5px; justify-content: center; border: 0 !important; }
-  .gper, .gmv { margin: .3rem .45rem 0; padding: .2rem .3rem; font-size: 11px; border-radius: .4rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); color: rgb(226 232 240); }
-  .gmv { margin: 0 0 0 .3rem; max-width: 80px; }
+  .gper { margin: .3rem .45rem 0; padding: .2rem .3rem; font-size: 11px; border-radius: .4rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); color: rgb(226 232 240); }
   .gt-tabs { display: flex; flex-wrap: wrap; gap: .25rem; padding: .35rem .45rem 0; align-items: center; }
   .gflow td.pos { color: var(--c-pos, rgb(52 211 153)); } .gflow td.neg { color: var(--c-neg, rgb(248 113 113)); }
   /* Carteira */
@@ -304,10 +302,11 @@
   .flow-ch { padding: .4rem .55rem 0; } .gt-help { font-size: 11px; color: rgb(100 116 139); padding: .2rem .55rem; margin: 0; font-weight: 400; } .gt-flow .ldr svg { width: 110px; height: 75px; }
   .gt-tabs button { font-size: 11px; padding: .15rem .5rem; border-radius: 9999px; border: 1px solid rgb(51 65 85); color: rgb(203 213 225); background: rgb(2 6 23); }
   .gt-tabs button.on { border-color: rgb(250 204 21); color: rgb(250 204 21); } .gt-tabs button.dan { color: rgb(253 164 175); }
-  body .gt-tabs.gfav-row { flex-wrap: nowrap; gap: .2rem; padding-left: .45rem; padding-right: .45rem; box-sizing: border-box; width: 100%; }
+  body .gt-tabs.gfav-row { flex-wrap: nowrap; gap: .5rem; padding-left: .5rem; padding-right: .5rem; box-sizing: border-box; width: 100%; }
   body .gt-tabs.gfav-row > button, body .gt-tabs.gfav-row > .g2sel { min-height: 40px; height: 40px; padding: .15rem .3rem; font-size: 10.5px; letter-spacing: -.01em; line-height: 1.15; text-align: center; white-space: nowrap; flex: none; }
+  body .gt-tabs.gfav-row > button, body .gt-tabs.gfav-row > .g2sel { flex: 1 1 0; min-width: 0; justify-content: center; }  /* botões do mesmo tamanho, mesmo espaço entre eles e das bordas */
   body .g2sel { position: relative; display: inline-flex; align-items: center; gap: .3rem; border: 1px solid var(--bd, rgb(51 65 85)); border-radius: var(--r); background: rgb(2 6 23); color: rgb(226 232 240); font-weight: 600; padding-right: clamp(.7rem, 2.4vw, .85rem) !important; }
-  body .g2sel:first-of-type { margin-left: auto; } body .g2sel::after { content: '▾'; position: absolute; right: .25rem; color: rgb(148 163 184); font-size: 9px; }
+  body .g2sel::after { content: '▾'; position: absolute; right: .25rem; color: rgb(148 163 184); font-size: 9px; }
   body .g2sel select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; font-size: 16px; }
   body .g2sel:focus-within { outline: 2px solid var(--c-pos-bd, rgb(16 185 129)); outline-offset: 1px; }
   .gt-tabs .gper { margin: 0 0 0 auto; } .gt-tabs .gper + .gper { margin-left: 0; } .gt-tabs { row-gap: .3rem; }
@@ -406,10 +405,10 @@
   body .gc-bar button[data-per].on, body .gt-tabs button.on, body .tabs button.on { background: rgb(6 78 59 / .55); border-color: var(--c-pos-bd); color: rgb(110 231 183); box-shadow: none; }
   body .tabs button.on { box-shadow: inset 0 0 0 1px rgb(16 185 129 / .5); }
   /* Campos */
-  body .pv-in, body .sel, body .gper, body .gmv, body .cmp-f, body .umod-in, body #q, body .cmp-srch input, body .gc-dates input, body .pv-ym input, body #gName, body #gQ, body #filters input, body #filters select, body .pv-ex-row select {
+  body .pv-in, body .sel, body .gper, body .cmp-f, body .umod-in, body #q, body .cmp-srch input, body .gc-dates input, body .pv-ym input, body #gName, body #gQ, body #filters input, body #filters select, body .pv-ex-row select {
     min-height: var(--h); padding: 0 .6rem; border-radius: var(--r); background: var(--bg-in); border: 1px solid var(--bd); color: var(--c-txt); font-size: 14px; outline: none; }
-  body .gper, body .gmv, body .cmp-f { min-height: var(--h-sm); font-size: 13px; }
-  body .pv-in:focus, body .sel:focus, body .gper:focus, body .gmv:focus, body .cmp-f:focus, body .umod-in:focus, body #q:focus, body .cmp-srch input:focus, body .gc-dates input:focus, body #filters input:focus, body #gName:focus, body #gQ:focus {
+  body .gper, body .cmp-f { min-height: var(--h-sm); font-size: 13px; }
+  body .pv-in:focus, body .sel:focus, body .gper:focus, body .cmp-f:focus, body .umod-in:focus, body #q:focus, body .cmp-srch input:focus, body .gc-dates input:focus, body #filters input:focus, body #gName:focus, body #gQ:focus {
     border-color: var(--c-pos-bd); box-shadow: var(--ring); }
   body input:disabled, body select:disabled { opacity: .45; }
   /* Cartões, blocos e painéis */
@@ -767,7 +766,7 @@
     <details class="icard"><summary>Grupos</summary><div class="ib">
     <ul>
       <li>Usam só um ticker por empresa (e, exceto Favoritos e Pequenas e médias, só papéis com negociação média ≥ R$ 500 mil/dia; P/L ≥ 2 em Rentabilidade e Graham; DY &lt; 40% e EV/EBIT ≥ 1 para evitar distorções) e mostram o TOP 10, sempre ordenado por um percentual ou índice (nunca por R$), recalculado com os dados atuais. Toque no título para destacar e de novo para abrir em tela cheia (com filtros, fonte, ordenação e gráficos da tela principal; ✕ fecha).</li>
-      <li><b>Favoritos</b>: todas as empresas com ★ (sem limite), com abas criadas por você e a aba <b>Proventos no ano</b> (proventos pagos no ano por ação e em % do preço, e bonificações). Ordem padrão: preço da ação.</li>
+      <li><b>Favoritos</b>: todas as empresas com ★ (sem limite), com a aba <b>Proventos no ano</b> (proventos pagos no ano por ação e em % do preço, e bonificações). Ordem padrão: preço da ação.</li>
       <li><b>Maior valorização</b> / <b>Maiores quedas</b>: variação % do preço em 1 a 5 anos.</li>
       <li><b>Maior rentabilidade</b>: lucro ÷ valor de mercado = 1 ÷ (P/L) (LPA/preço; sem série anual de lucro, não há opção de período).</li>
       <li><b>Maiores pagadoras de dividendos</b>: proventos médios por ano no período ÷ preço atual.</li>
