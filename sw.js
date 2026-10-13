@@ -13,3 +13,8 @@ self.addEventListener('fetch', (e) => {
     return res;
   }).catch(() => caches.match(r).then(m => m || (r.mode === 'navigate' ? caches.match('/') : Response.error()))));
 });
+// Toque no aviso de alerta de preço: volta para o app aberto (ou abre)
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window' }).then(cs => cs.length ? cs[0].focus() : self.clients.openWindow('/')));
+});

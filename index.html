@@ -249,6 +249,8 @@
   .gtab td b { color: rgb(110 231 183); } .gtab .gc2 { color: rgb(226 232 240); } .gtab .gc3 { color: rgb(203 213 225); }
   .gtab .up { color: rgb(52 211 153); } .gtab .dn { color: rgb(251 113 133); }
   .gtab tr.tap { cursor: pointer; } .gtab tr.sel td { background: rgb(6 78 59 / .35); }
+  .gtab .galr { padding: .15rem .15rem; white-space: normal; line-height: 1.15; } body .gtab .galr .pv-in { width: 3.6rem; min-height: 0; height: 1.65rem; padding: 0 .3rem; font-size: 12px; text-align: right; }
+  .gtab tr.galr-on td { background: var(--c-amber-bg); } .gtab tr.galr-on td b { color: var(--c-amber); }
   .gtab tr.gdet > td { padding: .4rem 0; white-space: normal; text-align: left; }
   .nova { margin-left: .35rem; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: rgb(14 165 233 / .2); color: rgb(125 211 252); border: 1px solid rgb(14 165 233 / .5); vertical-align: middle; }
   .gstar { font-size: 16px; line-height: 1; color: rgb(100 116 139); padding: 0 .15rem; } .gstar.on { color: rgb(250 204 21); }
@@ -355,7 +357,7 @@
   .rg-t { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rg-h { color: rgb(100 116 139); }
   /* ================= Design system (único para todas as abas) ================= */
   :root { --c-pos: rgb(52 211 153); --c-pos-bg: rgb(5 150 105); --c-pos-bd: rgb(16 185 129); --c-neg: rgb(251 113 133); --c-neg-bg: rgb(190 18 60); --c-neg-bd: rgb(244 63 94);
-          --c-amber: rgb(251 191 36); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
+          --c-amber: rgb(251 191 36); --c-amber-bg: rgb(120 53 15 / .45); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
           --bg-card: rgb(15 23 42 / .6); --bg-in: rgb(2 6 23); --bg-sec: rgb(30 41 59); --bd: rgb(51 65 85); --bd-card: rgb(30 41 59);
           --h: 38px; --h-sm: 32px; --r: .6rem; --r-card: 1rem; --sh: 0 1px 2px rgb(0 0 0 / .3); --sp: .6rem; --ring: 0 0 0 2px rgb(16 185 129 / .35); }
   /* Botões por função */
@@ -589,7 +591,7 @@
 <h3>Filtros e ordenação</h3>
 <ol class="list-decimal pl-5"><li>Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.</li><li>Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e Indicadores (toque em + para abrir os campos de mínimo/máximo).</li><li>Nos campos: ≥ maior é melhor, ≤ menor é melhor; campo vazio = sem filtro; os filtros se somam (todos precisam ser atendidos); percentuais como número (8 = 8%); ≤ com + exclui negativos (ex.: P/L negativo = prejuízo).</li><li>Em Volume (média diária) escolha o período (dia, 10 pregões, 1 a 12 meses) e digite em milhões da moeda (10 = 10 mi/dia); em Crescimento escolha Receita ou Lucro e o período (1 a 5 anos).</li><li>Toque na ☆ de um campo para levá-lo ao topo; arraste pela alça ⠿ para reordenar ou para Filtros ocultos (ocultos não são aplicados); Limpar filtros zera os valores.</li><li>Em Ordenar, escolha o indicador (começa em Alta do dia (%)) e toque no botão de setas ao lado (˄˅; seta verde = ordem atual, ex.: Maior → menor) para inverter.</li><li>↓ CSV exporta o resultado.</li></ol>
 <h3>Favoritos</h3>
-<ol class="list-decimal pl-5"><li>Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.</li><li>Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.</li><li>Ficam salvos no seu navegador.</li></ol>
+<ol class="list-decimal pl-5"><li>Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.</li><li>Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.</li><li>No card ★ Favoritos (aba Grupos), preencha 🔔 Abaixo de e/ou 🔔 Acima de: com o app aberto ou em segundo plano, você recebe um aviso uma vez quando o preço passa do limite (de novo só depois de voltar ao intervalo). Ao abrir o app, o que ainda estiver fora do intervalo é avisado de novo e a linha fica em laranja. Deixe o campo vazio para desligar.</li><li>Ficam salvos no seu navegador.</li></ol>
 <h3>Grupos (criar e editar)</h3>
 <ol class="list-decimal pl-5"><li>Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.</li><li>Toque nos cards das empresas para selecioná-las (uma ação por empresa).</li><li>Digite o Nome do grupo e toque em Salvar.</li><li>Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir, no canto inferior direito do card, para alterar.</li><li>Para guardar seus grupos ou levá-los a outro aparelho, use Exportar grupos (ícone de arquivo com seta para baixo) para baixar um arquivo e Importar grupos (seta para cima) para carregá-lo, no topo da aba Grupos.</li></ol>
 <h3>Reorganizar</h3>
@@ -689,7 +691,7 @@
       <li><span class="badge bg-sky-600 text-white font-bold">aj</span><span class="t">Azul: concorda via EBIT ajustado</span></li>
       <li><span class="sw sw-bank"></span><span class="t">Azul escuro: banco/seguradora (indicador não comparável)</span></li>
       <li><span class="badge bg-amber-500 text-slate-900 font-bold">±</span><span class="t">Fonte excluída pela checagem de sinal</span></li>
-      <li><span class="t">Nas outras telas: <b class="text-emerald-400">verde</b> = positivo/ganho/confirmar; <b class="text-rose-400">vermelho</b> = negativo/perda/excluir; <b class="text-violet-400">violeta</b> = Valorização total (Previsão); <b class="text-yellow-300">amarelo</b> = imposto (Previsão).</span></li></ul>
+      <li><span class="t">Nas outras telas: <b class="text-emerald-400">verde</b> = positivo/ganho/confirmar; <b class="text-rose-400">vermelho</b> = negativo/perda/excluir; <b class="text-violet-400">violeta</b> = Valorização total (Previsão); <b class="text-yellow-300">amarelo</b> = imposto (Previsão); <b class="text-amber-400">laranja</b> = alerta de preço atingido (Favoritos).</span></li></ul>
     <h3>Particularidades</h3>
     <ul>
       <li>Fundamentus usa <b>EBIT ajustado</b>; CVM e Dados de Mercado votam com o EBIT padrão ou o ajustado (o que formar o maior grupo).</li>

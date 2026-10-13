@@ -124,6 +124,7 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
   Trabalho pesado é feito **uma vez** (na atualização dos dados ou nas rotinas de snapshot), nunca a cada visita.
   Respostas grandes reaproveitam o JSON pronto (`_json_fast`).
 - A branch `data` guarda os snapshots e **não** dispara deploy. Código vai na `main`; dados, na `data`.
+- Alertas de preço dos Favoritos: `grupos.js` (`screenerB3.alertas.v1`), conferidos a cada carga de dados (`dataload`).
 - Chaves no `localStorage` seguem `screenerB3.<nome>.v<N>`. Mudou o formato salvo? Suba o `v<N>` (e migre se necessário) em vez de ler formato antigo como novo.
 - Segredos (chave do Gemini, do Render etc.) ficam só nas variáveis de ambiente do Render/GitHub. Nunca no código, em commits ou no chat.
 

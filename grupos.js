@@ -113,7 +113,7 @@
   const preOk = (p) => state.country === 'br' || !p.m;
   const UKEY = 'screenerB3.gruposUI.v1';
   const ui = (() => { try { return JSON.parse(localStorage.getItem(UKEY) || '{}') || {}; } catch (e) { return {}; } })();
-  ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tabs: [], assign: {}, tab: 'all', sort: 'preco' }; ui.fav.avg = ui.fav.avg || 1;
+  ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tabs: [], assign: {}, tab: 'all', sort: 'preco' }; ui.fav.avg = ui.fav.avg || 9;
   const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } };
   window.gMigrate = (mp) => { // classe trocada (1 ticker por empresa) -> migra grupos e abas dos favoritos
     let ch = false; const m = (t) => mp[t] || t;
@@ -130,11 +130,53 @@
     if (!pend.has(t)) { pend.add(t); fetch(`/api/history/${encodeURIComponent(t)}?kind=d`).then(x => x.ok ? x.json() : null).then(d => { if (d && d.t) DAILY[t] = d; clearTimeout(rt); rt = setTimeout(() => window.gruposRefresh && gruposRefresh(), 300); }).catch(() => { }); }
     return MX(t)['avg' + n] ?? null;
   };
+  // ---------- Alertas de preço (Favoritos) ----------
+  // Avisa uma vez quando o preço passa do limite (com o app aberto ou em segundo plano: os dados recarregam a cada 10 min);
+  // volta a armar quando o preço retorna ao intervalo. Ao abrir o app, avisa de novo o que ainda está fora do intervalo.
+  const AKEY = 'screenerB3.alertas.v1';
+  const ALR = (() => { try { return JSON.parse(localStorage.getItem(AKEY) || '{}') || {}; } catch (e) { return {}; } })();
+  const saveAlr = () => { try { localStorage.setItem(AKEY, JSON.stringify(ALR)); } catch (e) { } };
+  const alrSide = (r) => { const a = ALR[r.ticker], p = r.v.preco; if (!a || p == null) return null; return a.lo != null && p <= a.lo ? 'lo' : a.hi != null && p >= a.hi ? 'hi' : null; };
+  const alrPast = (r) => !!alrSide(r);
+  let alrFirst = true;
+  function notify(msg) {
+    uiToast(msg);
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const o = { body: msg, icon: '/static/icons/icon-192.png', tag: 'alerta-' + msg.split(' ')[0] };
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification('Alerta de preço', o)).catch(() => { });
+    else try { new Notification('Alerta de preço', o); } catch (e) { }
+  }
+  function alrCheck() {
+    if (!state.data) return;
+    let ch = false;
+    for (const t in ALR) {
+      const r = state.rowMap[t], a = ALR[t]; if (!r) continue;
+      const sd = alrSide(r);
+      if (sd && (alrFirst || a.fired !== sd)) notify(`${t} ${sd === 'lo' ? 'abaixo' : 'acima'} de R$ ${F2.format(a[sd])}: R$ ${F2.format(r.v.preco)}`);
+      if ((a.fired || null) !== sd) { if (sd) a.fired = sd; else delete a.fired; ch = true; }
+    }
+    alrFirst = false; if (ch) saveAlr();
+  }
+  function alrSet(key, txt) {
+    const [t, k] = key.split(':'), v = String(txt).trim() ? parseBR(txt) : null;
+    ALR[t] = ALR[t] || {};
+    if (v > 0) ALR[t][k] = v; else delete ALR[t][k];
+    delete ALR[t].fired;
+    if (ALR[t].lo == null && ALR[t].hi == null) delete ALR[t];
+    saveAlr();
+    if (v > 0 && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => { });
+    const r = state.rowMap[t]; if (r) { const s = alrSide(r); if (s && ALR[t]) { ALR[t].fired = s; saveAlr(); notify(`${t} já está ${s === 'lo' ? 'abaixo' : 'acima'} de R$ ${F2.format(ALR[t][s])}: R$ ${F2.format(r.v.preco)}`); } }
+    // só a linha muda (redesenhar o card durante o change perderia o foco do campo)
+    $g('#gruposRoot').querySelectorAll(`tr[data-row="${CSS.escape(t)}"]`).forEach(tr => tr.classList.toggle('galr-on', !!(r && alrPast(r))));
+    $g('#gruposRoot').querySelectorAll(`[data-alr="${CSS.escape(key)}"]`).forEach(i => { i.value = v > 0 ? F2.format(v) : ''; });
+  }
+  document.addEventListener('dataload', alrCheck);
+  if (state.data) alrCheck();
   function favRows() {
     const f = ui.fav, s = f.sort || 'preco';
     let L = favList(); if (f.tab !== 'all' && f.tab !== 'prov') L = L.filter(r => f.assign[r.ticker] === f.tab);
     const key = (r) => s === 'preco' ? (r.v.preco ?? -1e9) : (MX(r.ticker)['ret' + s.slice(1)] ?? -1e9);
-    return L.sort((a, b) => key(b) - key(a)).map(r => { const a = avgP(r, f.avg); return [r, a != null ? 'R$ ' + F2.format(a) : '—']; });
+    return L.sort((a, b) => key(b) - key(a)).map(r => { const a = avgP(r, f.avg); return [r, a != null ? F2.format(a) : '—']; });
   }
   function tileIds() {
     const ids = ['fav'].concat(PRE.filter(preOk).map(p => 'pre:' + p.id), state.country === 'br' ? groups.map(g => 'user:' + g.name) : []);
@@ -143,7 +185,9 @@
     return ['fav'].concat(rest.filter(x => ui.gstar.includes(x)), rest.filter(x => !ui.gstar.includes(x)));
   }
   const priceCell = (r) => { const v = r.var; return `<td class="gc3">${r.v.preco != null ? F2.format(r.v.preco) : '—'}${v != null ? ` <span class="${v > 0 ? 'up' : v < 0 ? 'dn' : ''}">${v > 0 ? '+' : ''}${F2.format(v)}%</span>` : ''}</td>`; };
-  const tbl = (rows, h, full) => `<table class="gtab"><thead><tr><th>Ativo</th><th>${esc(h)}</th><th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}"${full ? ' class="tap"' : ''}><td><b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${priceCell(r)}</tr>`).join('')}</tbody></table>`;
+  // alr = colunas 🔔 Abaixo de / 🔔 Acima de (só nos Favoritos)
+  const alrIn = (t, k) => { const v = (ALR[t] || {})[k]; return `<td class="galr"><input class="pv-in" inputmode="decimal" data-alr="${esc(t)}:${k}" value="${v != null ? F2.format(v) : ''}" aria-label="Avisar ${k === 'lo' ? 'abaixo' : 'acima'} de"></td>`; };
+  const tbl = (rows, h, full, alr) => `<table class="gtab"><thead><tr><th>Ativo</th>${alr ? `<th class="galr">${esc(h).replace(' ', '<br>')}</th>` : `<th>${esc(h)}</th>`}${alr ? '<th class="galr">🔔 Abaixo<br>de</th><th class="galr">🔔 Acima<br>de</th>' : ''}<th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}" class="${full ? 'tap' : ''}${alr && alrPast(r) ? ' galr-on' : ''}"><td><b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${alr ? alrIn(r.ticker, 'lo') + alrIn(r.ticker, 'hi') : ''}${priceCell(r)}</tr>`).join('')}</tbody></table>`;
   const preTitle = (p) => p.name + ' (' + (p.per ? ((ui.per[p.id] || 1) + ' ano' + ((ui.per[p.id] || 1) > 1 ? 's' : '')) : p.t) + ')';
   const perSel = (p) => p.per ? `<select class="gper" data-per="${p.id}" aria-label="Período">${[1, 2, 3, 4, 5].map(k => `<option value="${k}"${k === (ui.per[p.id] || 1) ? ' selected' : ''}>${k} ano${k > 1 ? 's' : ''}</option>`).join('')}</select>` : '';
   function favControls() {
@@ -175,7 +219,7 @@
     }
     const R = favRows();
     if (!R.length) return '<p class="gt-empty">Toque na ☆ de uma empresa para favoritar.</p>';
-    let html = tbl(R, 'Média ' + f.avg + (f.avg > 1 ? ' meses' : ' mês'), full);
+    let html = tbl(R, 'Média ' + f.avg + (f.avg > 1 ? ' meses' : ' mês'), full, true);
     if (f.tabs.length && full) html += `<div class="gmvbox">${R.map(([r]) => `<label>${esc(r.ticker)} → <select class="gmv" data-mv="${r.ticker}"><option value="">—</option>${f.tabs.map(x => `<option value="${x.id}"${f.assign[r.ticker] === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`).join('')}</div>`;
     return html;
   }
@@ -283,13 +327,14 @@
     const st = e.target.closest('[data-gstar]');
     if (st) { e.stopPropagation(); const id = st.dataset.gstar; ui.gstar = ui.gstar.includes(id) ? ui.gstar.filter(x => x !== id) : ui.gstar.concat(id); saveUI(); list(); return; }
     if (e.target.closest('[data-gclose]')) { const id = fullId, y = lastY; fullId = null; list(); requestAnimationFrame(() => { window.scrollTo(0, y); const t = document.querySelector(`.gt[data-id="${CSS.escape(id || '')}"]`); if (t) t.classList.add('hl'); }); return; }
+    if (e.target.closest('[data-alr]')) return;
     const tr = e.target.closest('tr.tap[data-row]');
     if (tr) {
       const nx = tr.nextElementSibling; if (nx && nx.classList.contains('gdet')) { nx.remove(); tr.classList.remove('sel'); return; }
       const r = rowsAll().find(x => x.ticker === tr.dataset.row); if (!r) return;
       $g('#gruposRoot').querySelectorAll('tr.gdet').forEach(d => { const p = d.previousElementSibling; if (p) { p.classList.remove('sel'); state.expanded.delete(p.dataset.row); } d.remove(); });
       state.expanded.add(r.ticker); tr.classList.add('sel');
-      tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="3">${blockHtml(r)}</td></tr>`); return;
+      tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="9">${blockHtml(r)}</td></tr>`); return;
     }
     const h = e.target.closest('[data-open]');
     if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { lastY = window.scrollY; fullId = h.dataset.open; list(); window.scrollTo(0, 0); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
@@ -308,6 +353,7 @@
     if (e.target.closest('.g2sel')) { const o = e.target.selectedOptions[0]; if (o) { const m = o.text.match(/^(.*?) (\d.*)$/); e.target.previousElementSibling.innerHTML = m ? m[1] + '<br>' + m[2] : o.text; } }
     if (e.target.hasAttribute('data-fsort')) { ui.fav.sort = e.target.value; saveUI(); list(); return; }
     if (e.target.hasAttribute('data-favg')) { ui.fav.avg = +e.target.value; saveUI(); list(); return; }
+    const al = e.target.dataset.alr; if (al) { alrSet(al, e.target.value); return; }
     const mv = e.target.dataset.mv; if (mv) { if (e.target.value) ui.fav.assign[mv] = e.target.value; else delete ui.fav.assign[mv]; saveUI(); }
   });
   document.addEventListener('favs', () => { if (!$g('[data-tabpane="grupos"]').classList.contains('hidden')) list(); });
