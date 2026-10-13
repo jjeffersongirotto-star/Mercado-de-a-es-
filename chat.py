@@ -16,7 +16,8 @@ import requests
 log = logging.getLogger("chat")
 BASE = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE, "cache", "chat_log.jsonl")
-DEADLINE_S = 120  # tempo total da resposta no servidor (o navegador desiste em 150 s)
+DEADLINE_S = 35  # tempo total da resposta no servidor; IA fora do ar não segura a pessoa por mais que isso
+_DOWN = {"until": 0.0}  # Gemini respondeu 503/429: pula a IA por 2 min e responde com o que o site tem
 
 # ============================================================ vocabulário
 IDX = {"@ibov": ["ibovespa", "ibov", "indice bovespa"], "@usd": ["dolar", "usd", "cambio"], "@cdi": ["cdi", "cdb", "renda fixa"],
@@ -1125,6 +1126,18 @@ def kb_context(q, tickers=(), cap=6000):
     return ("CONTEXTO (base do site, dados até " + str(K.get("atualizado", "")) + "; confira na web o que pode ter mudado):\n" + "\n".join(dict.fromkeys(lines)))[:cap]
 
 
+def kb_answer(q, ext_fn=None):
+    """Sem a IA (fora do ar ou sem chave): responde com a base de contexto — quem é/o que é + empresa ligada com os dados do site."""
+    k = kb_context(q)
+    if not k: return None
+    items = [l[2:] for l in k.split("\n")[1:] if l.startswith("- [") and not l.startswith("- [empresa]")]
+    if not items: return None
+    txt = "\n".join("• " + re.sub(r" \(empresas: [^)]*\)$", "", re.sub(r"^\[[^\]]+\] ", "", l)) for l in items[:3])
+    txt += "\n\nEste site é para investimentos; para mais sobre o assunto, veja sites especializados."
+    m = re.search(r"\(empresas: ([A-Z0-9.]+):([a-z]{2})", "\n".join(items))
+    return link_ext({"a": txt + (f"\n[[EMPRESA:{m.group(1)}:{m.group(2)}]]" if m else "")}, q, ext_fn)["a"]
+
+
 # assuntos fora do mercado: a IA só aponta a empresa ligada (marcador); preço e dados vêm do site (link_ext)
 POP = ("O site é para investimentos. Se a pergunta for sobre algo fora do mercado (pessoa, esporte, política, celebridade, filme, série, música, "
        "jogo, marca, produto, evento ou atualidade), diga em uma ou duas frases quem é ou o que é (use o CONTEXTO, se houver), indique procurar "
@@ -1153,11 +1166,13 @@ def link_ext(out, q, ext_fn):
     return out
 
 
-def _post(model, body, deadline, cap=60):
+def _post(model, body, deadline, cap=15):
     left = deadline - time.time()
-    if left < 4: raise TimeoutError("sem tempo")
-    return requests.post(API.format(model), headers={"x-goog-api-key": os.environ.get("GEMINI_API_KEY", ""), "Content-Type": "application/json"},
+    if left < 4 or time.time() < _DOWN["until"]: raise TimeoutError("sem tempo ou IA fora do ar")
+    r = requests.post(API.format(model), headers={"x-goog-api-key": os.environ.get("GEMINI_API_KEY", ""), "Content-Type": "application/json"},
                          json=body, timeout=min(cap, left))
+    if r.status_code in (429, 503): _DOWN["until"] = time.time() + 120
+    return r
 
 
 def _contents(q, hist, n=4):
@@ -1195,7 +1210,7 @@ def interpret(q, hist, D, deadline):
             "generationConfig": {"temperature": 0, "maxOutputTokens": 500, "responseMimeType": "application/json", "thinkingConfig": {"thinkingBudget": 0}}}
     for model in list(reversed(_models()[-2:])) + ([os.environ["GEMINI_MODEL"]] if os.environ.get("GEMINI_MODEL") else []):  # o leve primeiro
         try:
-            r = _post(model, body, deadline, cap=25)
+            r = _post(model, body, deadline, cap=12)
             if r.status_code != 200: continue
             t, _ = _text(r.json())
             t = re.sub(r"^```(?:json)?|```$", "", t.strip()).strip()
@@ -1363,7 +1378,7 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
     if loc:
         out = {"a": loc, "mode": "regras", "tok": 0}
     elif not has_ai:
-        out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+        out = {"a": kb_answer(q, ext_fn) or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
     else:
         # (1) IA interpreta, o Python calcula — só para perguntas objetivas
         if not P["complex"] and not P["complaint"] and not topic:
@@ -1397,8 +1412,10 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
                     log.info("busca web indisponível (cota do Gemini?): %s", str(e)[:60])
                     if out is None:
                         try: a, tok = gemini2(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini", "tok": tok}
-                        except Exception: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
-            if out is None: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+                        except Exception: kb_a = kb_answer(q, ext_fn); out = {"a": kb_a or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+            if out is None:
+                kb_a = kb_answer(q, ext_fn)
+                out = {"a": kb_a, "mode": "regras", "tok": 0} if kb_a else {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
     if out["mode"].startswith("gemini"):
         out = link_ext(out, q, ext_fn)
         if not out.get("sug") and (P["tickers"] or P["metrics"] or P["sector"] or P["idx"]): out["sug"] = suggestions(P, D)[:3]

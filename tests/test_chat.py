@@ -1,5 +1,5 @@
 """Testes do chat: perguntas reais escritas de vários jeitos. Rodar: python -m pytest tests/ (ou python tests/test_chat.py)."""
-import os, sys, json, tempfile
+import os, time, sys, json, tempfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ.pop("GEMINI_API_KEY", None)
 import chat
@@ -333,6 +333,20 @@ def test_knowledge_and_methods():
     assert chat.local("o que é o método graham", D, ret_fn, {}).startswith("Método Graham:")
     assert chat.local("quais métodos de investimento existem?", D, ret_fn, {}).startswith("Métodos de investimento")
 
+
+def test_ai_down_answers_fast_from_knowledge():
+    calls = []
+    def fake(url, headers=None, json=None, timeout=None):
+        calls.append(url); return Resp({}, 503)
+    old = _with_ai(fake)
+    try:
+        chat._DOWN["until"] = 0; t0 = time.time()
+        out = chat.answer2("E o goku?", [], D, ret_fn, {}, None)
+        out2 = chat.answer2("e o naruto?", [], D, ret_fn, {}, None)
+    finally:
+        _restore(old); chat._DOWN["until"] = 0
+    assert "Dragon Ball" in out["a"] and "sites especializados" in out["a"] and time.time() - t0 < 5
+    assert "Naruto" in out2["a"] and len(calls) <= 2  # depois do 503, não tenta a IA de novo por 2 min
 
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]

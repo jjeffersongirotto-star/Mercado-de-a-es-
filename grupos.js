@@ -113,12 +113,13 @@
   const preOk = (p) => state.country === 'br' || !p.m;
   const UKEY = 'screenerB3.gruposUI.v1';
   const ui = (() => { try { return JSON.parse(localStorage.getItem(UKEY) || '{}') || {}; } catch (e) { return {}; } })();
-  ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tabs: [], assign: {}, tab: 'all', sort: 'preco' }; ui.fav.avg = ui.fav.avg || 9;
+  ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tab: 'all', sort: 'preco' }; ui.fav.avg = ui.fav.avg || 9;
+  // abas criadas pelo usuário nos Favoritos foram removidas: apaga as que ficaram salvas no aparelho
+  if (ui.fav.tabs || ui.fav.assign) { delete ui.fav.tabs; delete ui.fav.assign; if (ui.fav.tab !== 'prov') ui.fav.tab = 'all'; try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } }
   const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } };
-  window.gMigrate = (mp) => { // classe trocada (1 ticker por empresa) -> migra grupos e abas dos favoritos
+  window.gMigrate = (mp) => { // classe trocada (1 ticker por empresa) -> migra os grupos
     let ch = false; const m = (t) => mp[t] || t;
     for (const g of groups) { const n = [...new Set(g.tickers.map(m))]; if (n.join() !== g.tickers.join()) { g.tickers = n; ch = true; } }
-    const as = ui.fav.assign || {}; for (const t of Object.keys(as)) if (mp[t]) { if (!as[mp[t]]) as[mp[t]] = as[t]; delete as[t]; ch = true; }
     if (ch) { save(); saveUI(); }
   };
   const favList = () => rowsAll().filter(r => FAVS.has(r.ticker));
@@ -174,7 +175,7 @@
   if (state.data) alrCheck();
   function favRows() {
     const f = ui.fav, s = f.sort || 'preco';
-    let L = favList(); if (f.tab !== 'all' && f.tab !== 'prov') L = L.filter(r => f.assign[r.ticker] === f.tab);
+    const L = favList();
     const key = (r) => s === 'preco' ? (r.v.preco ?? -1e9) : (MX(r.ticker)['ret' + s.slice(1)] ?? -1e9);
     return L.sort((a, b) => key(b) - key(a)).map(r => { const a = avgP(r, f.avg); return [r, a != null ? F2.format(a) : '—']; });
   }
@@ -191,11 +192,11 @@
   const preTitle = (p) => p.name + ' (' + (p.per ? ((ui.per[p.id] || 1) + ' ano' + ((ui.per[p.id] || 1) > 1 ? 's' : '')) : p.t) + ')';
   const perSel = (p) => p.per ? `<select class="gper" data-per="${p.id}" aria-label="Período">${[1, 2, 3, 4, 5].map(k => `<option value="${k}"${k === (ui.per[p.id] || 1) ? ' selected' : ''}>${k} ano${k > 1 ? 's' : ''}</option>`).join('')}</select>` : '';
   function favControls() {
-    const f = ui.fav, tabs = [['all', 'Todos']].concat(f.tabs.map(t => [t.id, t.name]), [['prov', 'Proventos no ano']]), ut = f.tabs.find(t => t.id === f.tab);
+    const f = ui.fav, tabs = [['all', 'Todos'], ['prov', 'Proventos no ano']];
     const two = (l) => { const w = String(l).split(' '); return w.length < 2 ? esc(l) : esc(w[0]) + '<br>' + esc(w.slice(1).join(' ')); };
     const avgL = (n) => `Média ${n} ${n > 1 ? 'meses' : 'mês'}`, sortL = (v) => v === 'preco' ? 'Preço da ação' : `Maiores valorizações ${v.slice(1)} ano${+v.slice(1) > 1 ? 's' : ''}`;
     const twoS = (l) => { const m = l.match(/^(.*?) (\d.*)$/); return m ? esc(m[1]) + '<br>' + esc(m[2]) : two(l); };
-    return `<div class="gt-tabs gfav-row">${tabs.map(([k, l]) => `<button type="button" class="${f.tab === k ? 'on' : ''}" data-ftab="${k}">${two(l)}</button>`).join('')}<button type="button" data-ftab="+" aria-label="Nova aba">＋</button>
+    return `<div class="gt-tabs gfav-row">${tabs.map(([k, l]) => `<button type="button" class="${f.tab === k ? 'on' : ''}" data-ftab="${k}">${two(l)}</button>`).join('')}
       ${f.tab !== 'prov' ? `<label class="g2sel"><span>${twoS(avgL(f.avg || 1))}</span><select data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>${avgL(n)}</option>`).join('')}</select></label><label class="g2sel"><span>${twoS(sortL(f.sort || 'preco'))}</span><select data-fsort aria-label="Ordenar favoritos">${['preco', 'v1', 'v2', 'v3', 'v4', 'v5'].map(v => `<option value="${v}"${(f.sort || 'preco') === v ? ' selected' : ''}>${sortL(v)}</option>`).join('')}</select></label>` : ''}</div>`;
   }
   function provCols(list0, empty) {
@@ -220,7 +221,6 @@
     const R = favRows();
     if (!R.length) return '<p class="gt-empty">Toque na ☆ de uma empresa para favoritar.</p>';
     let html = tbl(R, 'Média ' + f.avg + (f.avg > 1 ? ' meses' : ' mês'), full, true);
-    if (f.tabs.length && full) html += `<div class="gmvbox">${R.map(([r]) => `<label>${esc(r.ticker)} → <select class="gmv" data-mv="${r.ticker}"><option value="">—</option>${f.tabs.map(x => `<option value="${x.id}"${f.assign[r.ticker] === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`).join('')}</div>`;
     return html;
   }
   function groupData(id) {
@@ -340,9 +340,7 @@
     if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { lastY = window.scrollY; fullId = h.dataset.open; list(); window.scrollTo(0, 0); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
     const fp = e.target.closest('[data-flowp]'); if (fp) { ui.flowP = fp.dataset.flowp; saveUI(); list(); return; }
     const ft = e.target.closest('[data-ftab]');
-    if (ft) { const k = ft.dataset.ftab; if (k === '+') { const n = ((await uiPrompt('Nome da nova aba:', '', { ok: 'Criar' })) || '').trim().slice(0, 30); if (!n) return; const id = 't' + Date.now().toString(36); ui.fav.tabs.push({ id, name: n }); ui.fav.tab = id; } else ui.fav.tab = k; saveUI(); list(); return; }
-    const fr = e.target.closest('[data-fren]'); if (fr) { const t = ui.fav.tabs.find(x => x.id === fr.dataset.fren); const n = ((await uiPrompt('Novo nome da aba:', t.name)) || '').trim().slice(0, 30); if (n) { t.name = n; saveUI(); list(); } return; }
-    const fd = e.target.closest('[data-fdel]'); if (fd) { const t = ui.fav.tabs.find(x => x.id === fd.dataset.fdel); if (t && await uiConfirm(`Excluir a aba "${t.name}"? As empresas continuam nos Favoritos.`, { ok: 'Excluir', danger: true })) { ui.fav.tabs = ui.fav.tabs.filter(x => x !== t); for (const k in ui.fav.assign) if (ui.fav.assign[k] === t.id) delete ui.fav.assign[k]; ui.fav.tab = 'all'; saveUI(); list(); } return; }
+    if (ft) { ui.fav.tab = ft.dataset.ftab; saveUI(); list(); return; }
     if (e.target.closest('[data-g="reorg"]')) {
       const w = await uiChoose('Reorganizar quais grupos?', [{ label: '★ Favoritados', value: 'star' }, { label: 'Demais', value: 'rest' }]);
       if (w) openReorg(w); return;
@@ -354,7 +352,6 @@
     if (e.target.hasAttribute('data-fsort')) { ui.fav.sort = e.target.value; saveUI(); list(); return; }
     if (e.target.hasAttribute('data-favg')) { ui.fav.avg = +e.target.value; saveUI(); list(); return; }
     const al = e.target.dataset.alr; if (al) { alrSet(al, e.target.value); return; }
-    const mv = e.target.dataset.mv; if (mv) { if (e.target.value) ui.fav.assign[mv] = e.target.value; else delete ui.fav.assign[mv]; saveUI(); }
   });
   document.addEventListener('favs', () => { if (!$g('[data-tabpane="grupos"]').classList.contains('hidden')) list(); });
   function exportG() {
