@@ -1,0 +1,67 @@
+name: Rotina diária de dados
+
+# Roda scripts/push_snapshot_from_here.sh (as mesmas etapas da rotina manual) e grava na branch "data"
+# (não dispara deploy). Status Invest tem workflow próprio. Etapa bloqueada no runner só gera aviso; o
+# snapshot anterior dela fica. No fim pede ao site para recarregar os dados.
+on:
+  schedule:
+    - cron: "45 22 * * 1-5"   # 19:45 BRT, dias úteis (depois do Status Invest)
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Etapas (vazio = todas, menos Status Invest)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Arquivos anuais COTAHIST (cache)
+        uses: actions/cache@v4
+        with:
+          path: cotahist
+          key: cotahist-${{ github.run_id }}
+          restore-keys: cotahist-
+      - name: Baixar anos que faltam do COTAHIST
+        run: |
+          mkdir -p cotahist
+          Y=$(date +%Y)
+          for y in $(seq 1994 $((Y-1))); do
+            f="cotahist/COTAHIST_A$y.ZIP"
+            [ -s "$f" ] && continue
+            curl -sfL -A "Mozilla/5.0" --max-time 600 -o "$f.tmp" "https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_A$y.ZIP" \
+              && mv "$f.tmp" "$f" || { rm -f "$f.tmp"; echo "::warning::COTAHIST $y não baixou"; }
+          done
+          du -sh cotahist
+      - name: Gerar e publicar snapshots
+        env:
+          REPO_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          ONLY: ${{ inputs.only || 'yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics' }}
+          COTA_DIR: ${{ github.workspace }}/cotahist
+          CVM_CACHE: ${{ runner.temp }}/cvmraw
+          GIT_NAME: github-actions[bot]
+          GIT_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: bash scripts/push_snapshot_from_here.sh
+      - name: Recarregar dados do site
+        run: |
+          # endereço do site: fonte única em snapshots.py
+          URL=$(grep -oP 'APP_API", "\K[^"]+' snapshots.py)
+          sleep 300   # cópia do GitHub (raw) leva alguns minutos para mostrar o snapshot novo
+          curl -s -X POST --max-time 120 "$URL/api/refresh" || echo "::warning::site não respondeu"
