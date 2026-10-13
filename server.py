@@ -770,7 +770,20 @@ def api_chat(body: dict):
                     "preco": v.get("preco"), "valmerc": v.get("valmerc"), "pl": v.get("pl")}
         except Exception as e:
             log.warning("chat ext %s/%s: %s", c, t, e); return None
-    return JSONResponse(chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}, ext_fn), headers={"Cache-Control": "no-store"})
+    def quote_fn(k):  # cotação atual de dólar, ouro e Ibovespa (mesmos dados dos gráficos)
+        try:
+            if k == "@usd": b = history.bcb("usd"); return b["d"][-1], b["v"][-1]
+            if k == "@gold": b = history.gold(); return b["d"][-1], b["v"][-1]
+            if k == "@ibov": h = history.get("IBOV", "d"); return datetime.utcfromtimestamp(h["t"][-1]).strftime("%Y-%m-%d"), h["c"][-1]
+        except Exception as e:
+            log.warning("chat cotação %s: %s", k, e)
+        return None
+    try:
+        out = chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}, ext_fn, quote_fn)
+    except Exception:  # nunca devolve erro 500 ao usuário: registra a causa e responde com uma mensagem
+        log.exception("chat: erro na pergunta %r", q[:200])
+        out = {"a": "Tive um problema para responder agora. Tente de novo em instantes ou reformule a pergunta.", "mode": "regras"}
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
 _chat_D = {}
 

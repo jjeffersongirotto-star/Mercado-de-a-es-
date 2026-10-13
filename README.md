@@ -35,6 +35,7 @@ Variáveis de ambiente:
 | Variável | Para quê |
 |---|---|
 | `GEMINI_API_KEY` | chat com IA (sem ela o chat responde só com as regras) |
+| `GITHUB_TOKEN` | (opcional) token do GitHub com permissão de escrita no conteúdo do repositório: guarda o registro do chat em `data/chat_log.jsonl` na branch `data` (sem ele, o registro some a cada publicação) |
 | `GEMINI_MODEL` | (opcional) modelo do Gemini usado primeiro |
 | `YF_LIVE` | `1` liga a consulta ao vivo do Yahoo (no Render fica desligada: o Yahoo bloqueia IPs de nuvem) |
 | `TW_CDN` | `1` volta ao Tailwind do CDN em vez do CSS gerado no build |

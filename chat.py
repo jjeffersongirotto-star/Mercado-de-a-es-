@@ -344,12 +344,20 @@ BETW_RE = re.compile(r"entre\s+(-?\d+(?:[.,]\d+)?)\s*%?\s+e\s+(-?\d+(?:[.,]\d+)?
 SIGN_RE = re.compile(r"\b(positivo|positiva|positivos|positivas|negativo|negativa|negativos|negativas|maior que zero|menor que zero)\b")
 
 
+# qualificadores -> filtros quando vêm com outro critério; sozinhos viram o critério (indicador, ordem)
+QUALS = [(r"\bbarat[ao]s?\b|\bdescontad\w*", [("pl", ">", 0), ("pl", "<=", 10)], ("pl", "asc")),
+         (r"\b(divida baixa|baixa divida|pouca divida|baixo endividamento|pouco endividad\w*|sem divida|menos endividad\w*)\b", [("dlebit", "<=", 2)], ("dlebit", "asc")),
+         (r"\b(boas? pagadoras?|bons dividendos|bom dividendo|pagam bem)\b", [("dy", ">=", 6)], ("dy", "desc"))]
+# índice da B3 como filtro de lista ("mais barata do Ibovespa", "small caps")
+IXF = [(r"\b(do|da|no|na|dentro do)\s+(ibov|ibovespa|indice bovespa)\b", "IBOV"), (r"\bsmall ?caps?\b|\bsmll\b", "SMLL"), (r"\bidiv\b", "IDIV")]
+
+
 def parse(q, D, hist=None):
     """Interpretação sem IA. -> dict com tickers, idx, metrics, sector, filters, period, order, n, flags e 'left' (palavras não entendidas)."""
     nq0 = _clean(q)
     nq, fixes = _fix_typos(nq0, D)
     work = " " + nq + " "
-    P = {"q": q, "nq": nq, "fixes": fixes, "tickers": [], "idx": [], "metrics": [], "sector": None, "filters": [], "period": None,
+    P = {"q": q, "nq": nq, "fixes": fixes, "ixf": None, "tickers": [], "idx": [], "metrics": [], "sector": None, "filters": [], "period": None,
          "order": None, "n": None, "notes": [], "from_hist": False, "all_classes": bool(re.search(r"\btodas as classes\b", nq)),
          "illiquid": bool(re.search(r"\b(iliquidas|incluindo iliquidas|todas as acoes|sem filtro de liquidez)\b", nq))}
     used = []  # trechos consumidos
@@ -435,11 +443,28 @@ def parse(q, D, hist=None):
         if not k and re.search(r"\blucro\b", nq[max(0, m.start() - 25):m.start()]): k = "lpa"; used.append("lucro")
         if k and k != RET:
             P["filters"].append((k, ">" if m.group(1).startswith(("positiv", "maior")) else "<", 0))
+    # --- índice como filtro e qualificadores
+    for rx, ix in IXF:
+        if re.search(rx, nq):
+            P["ixf"] = ix
+            if ix == "IBOV": P["idx"] = [x for x in P["idx"] if x != "@ibov"]
+            break
+    quals = [(rx, f, m) for rx, f, m in QUALS if re.search(rx, nq)]
+    qwords = set()
+    for rx, f, m in quals:
+        for mm in re.finditer(rx, nq): qwords |= set(mm.group(0).split())
+    if quals:
+        if any("divid" in w or "endivid" in w for w in qwords): P["metrics"] = [k for k in P["metrics"] if k != "dlpl"]
+        own = [k for k in P["metrics"] if k != RET and k not in {m[0] for _, _, m in quals}]
+        for rx, f, m in quals:
+            if own or len(quals) > 1: P["filters"] += [x for x in f if x[0] not in own]
+            if not own and m[0] not in P["metrics"]: P["metrics"].insert(0, m[0])
     # --- ordem e quantidade
     if re.search(r"\b(maiores|maior|top|mais altos?|mais altas?|mais elevad[oa]s?|lideres|primeiros|mais)\b", nq): P["order"] = "desc"
     if re.search(r"\b(menores|menor|mais baix[oa]s?|menos)\b", nq): P["order"] = "asc" if P["order"] is None or re.search(r"\bmenor(es)?\b", nq) else P["order"]
     if re.search(r"\b(melhores|melhor)\b", nq): P["order"] = "best"
     if re.search(r"\b(piores|pior)\b", nq): P["order"] = "worst"
+    if quals and len(quals) == 1 and P["metrics"] and P["metrics"][0] == quals[0][2][0]: P["order"] = quals[0][2][1]
     if RET in P["metrics"] and re.search(r"\b(quedas?|cairam|caiu|desvaloriz\w*|perderam|perdeu)\b", nq) and P["order"] != "asc":
         P["order"] = "worst"
     if not P["metrics"] and not P["tickers"] and re.search(r"\b(maiores|grandes|mais valiosas|gigantes)\s+(empresas|acoes|companhias)\b", nq):
@@ -450,7 +475,9 @@ def parse(q, D, hist=None):
     # --- flags de intenção
     P["complaint"] = any(re.search(r"\b" + w + r"\b", nq) for w in WRONG)
     P["howto"] = any(w in nq for w in HOWW)
-    P["complex"] = any(w in (" " + nq + " ") for w in COMPLEX) and not P["howto"]
+    nqc = nq
+    for rx, _, _ in quals: nqc = re.sub(rx, " ", nqc)  # qualificador entendido não pede análise
+    P["complex"] = any(w in (" " + nqc + " ") for w in COMPLEX) and not P["howto"]
     if P["order"] in ("best", "worst") and not P["metrics"]: P["complex"] = True
     P["define"] = bool(re.search(r"\b(o que (e|sao|significa|quer dizer)|que e|significado|significa|defin[ae]|definicao|conceito)\b", nq))
     P["colors"] = bool(re.search(r"\b(cor|cores|colorid\w*)\b", nq)) or bool(re.search(
@@ -478,7 +505,8 @@ def parse(q, D, hist=None):
                 if P["tickers"] or P["idx"]: break
     # --- palavras não entendidas
     rest = re.sub(r"-?\d+(?:[.,]\d+)?%?", " ", work)
-    P["left"] = [w for w in re.findall(r"[a-z][a-z']*", rest) if w not in STOP and w not in COMMON_WORDS and len(w) > 1
+    P["left"] = [w for w in re.findall(r"[a-z][a-z']*", rest) if w not in STOP and w not in COMMON_WORDS and len(w) > 1 and w not in qwords
+                 and not (P.get("ixf") and w in ("ibov", "ibovespa", "indice", "bovespa", "small", "smll", "caps", "cap", "idiv"))
                  and not any(w in x.split() for x in used) and w not in ("mi", "bi", "mil", "milhoes", "bilhoes", "reais", "rs")]
     return P
 
@@ -576,6 +604,7 @@ def ranking(P, D):
     rows = _sector_rows(D, P["sector"]) if P["sector"] else list(D["rows"])
     crit = []
     if P["sector"]: crit.append(f"setor {P['sector']}")
+    if P.get("ixf"): rows = [r for r in rows if (r.get("ix") or {}).get(P["ixf"])]; crit.append(f"índice {P['ixf']}")
     if not P["illiquid"]:
         rows = [r for r in rows if (val(D, r, "liq2m") or 0) >= 5e5]
         crit.append("liquidez ≥ R$ 500 mil/dia")
@@ -611,7 +640,7 @@ def ranking(P, D):
         per = {"var": "no dia", "anual": f"em {year}"}.get(k) or "em " + MX[k][0].split(" ", 1)[1]
         head = f"{'Maiores quedas' if asc else 'Maiores altas'} {per}" + (f" — {P['sector']}" if P["sector"] else "") + ":"
     else:
-        head = f"{'Menores' if asc else 'Maiores'} {lab}" + (f" — {P['sector']}" if P["sector"] else "") + ":"
+        head = f"{'Menores' if asc else 'Maiores'} {lab}" + (f" — {P['sector']}" if P["sector"] else "") + (f" — {P['ixf']}" if P.get("ixf") else "") + ":"
     lines = [f"{i + 1}. {r['ticker']} ({(r.get('nome') or '')[:30]}): {fmt(D, unit_k, x)}" for i, (r, x) in enumerate(L[:n])]
     tail = f"\nCritérios: {' · '.join(crit)}." if crit else ""
     if len(L) > n: tail += f" Mostrando {n} de {len(L)}."
@@ -679,6 +708,48 @@ def values(P, D, ks=None):
     return s
 
 
+CMP_KEYS = ["dy", "pl", "pvp", "roe", "mliq", "dlebit"]
+
+
+def compare(P, D):
+    """Ações lado a lado: valor de cada indicador, a melhor em cada um (direção do indicador) e um resumo."""
+    T = P["tickers"][:4]; wins = {t: 0 for t in T}; n = 0; lines = []
+    for k in CMP_KEYS:
+        f = D["F"].get(k) or {}
+        vs = [(t, val(D, D["by"][t], k)) for t in T]
+        if all(x is None for _, x in vs): continue
+        ok = [(t, x) for t, x in vs if x is not None and not (f.get("neg") and x <= 0)]
+        best = None
+        if len(ok) >= 2:
+            best = (min if f.get("dir") == "low" else max)(ok, key=lambda z: z[1])[0]; wins[best] += 1; n += 1
+        lines.append(f"• {label(D, k)}: " + " · ".join(f"{t} {fmt(D, k, x) if x is not None else '—'}" for t, x in vs) + (f" → melhor: {best}" if best else ""))
+    rk = sorted(wins.items(), key=lambda z: -z[1])
+    price = " · ".join(f"{t} R$ {br(val(D, D['by'][t], 'preco'))}" for t in T if val(D, D["by"][t], "preco") is not None)
+    summ = f"Resumo: {rk[0][0]} se sai melhor em {rk[0][1]} de {n} indicadores" + "".join(f"; {t} em {w}" for t, w in rk[1:]) + ". Não é recomendação de compra."
+    return "Comparação " + " x ".join(T) + ":\nCotação: " + price + "\n" + "\n".join(lines) + "\n" + summ
+
+
+def day_move(P, D):
+    """“Caiu/subiu hoje?”: só a variação do dia (o site não tem notícias para explicar o motivo)."""
+    out = []
+    for t in P["tickers"]:
+        r = D["by"][t]; v, p = r.get("var"), val(D, r, "preco")
+        out.append(f"{t}: {_sgn(v) + ' hoje' if v is not None else 'sem variação registrada hoje'}" + (f" (R$ {br(p)})" if p is not None else ""))
+    s = "\n".join(out)
+    if re.search(r"\b(por que|porque|motivo|razao)\b", P["nq"]):
+        s += "\nO site não acompanha notícias, então não sabe o motivo da variação. Veja os fatos relevantes no site de RI da empresa ou na B3."
+    return s
+
+
+def quote(P, quote_fn):
+    """Cotação atual de dólar, ouro e Ibovespa (mesmos dados dos gráficos)."""
+    L = []
+    for k in P["idx"]:
+        x = quote_fn(k) if quote_fn else None
+        if x: L.append(f"{IDXN[k]}: " + (f"R$ {br(x[1])}" + (" por onça" if k == "@gold" else "") if k in ("@usd", "@gold") else f"{br(x[1])} pts") + f" (fechamento de {dbr(x[0])})")
+    return "\n".join(L) if L else None
+
+
 def card(D, t):
     r = D["by"][t]; v = r.get("v") or {}; m = D["M"].get(t) or {}
     keys = [k for k in ("preco", "dy", "pl", "pvp", "roe", "roic", "mliq", "dlpl", "dlebit", "lpa", "vpa", "valmerc", "liq2m") if v.get(k) is not None]
@@ -714,9 +785,9 @@ def execute(P, D, ret_fn):
         if RET in K or I or P["period"]:
             return pre + returns(P, D, ret_fn)
         if len(T) == 1: return pre + card(D, T[0])
-        return pre + values(P, D, DEFAULT_KEYS) + "\n\n" + returns(P, D, ret_fn)
+        return pre + compare(P, D) + "\n\n" + returns(P, D, ret_fn)
     if K:
-        listy = P["sector"] or P["filters"] or P["order"] or P["n"] or re.search(r"\b(quais|qual|liste|lista|listar|ranking|top|acoes|empresas)\b", P["nq"])
+        listy = P["sector"] or P.get("ixf") or P["filters"] or P["order"] or P["n"] or re.search(r"\b(quais|qual|liste|lista|listar|ranking|top|acoes|empresas)\b", P["nq"])
         if listy: return pre + ranking(P, D)
         return None
     if P["sector"]:
@@ -894,6 +965,9 @@ def howto(P):
 
 def suggestions(P, D):
     T, K = P["tickers"], [k for k in P["metrics"] if k != RET]
+    if P["idx"] and not T:
+        nm = IDXN[P["idx"][0]]
+        return [f"{nm} rendeu quanto em 1 ano?", f"Quanto está o {nm} hoje?"] + ([f"{nm} vs Ibovespa em 2 anos"] if P["idx"][0] != "@ibov" else ["Ibovespa vs Dólar em 2 anos"])
     if T:
         t = T[0]
         return [f"DY e P/L da {t}", f"{t} rendeu quanto em 1 ano?", f"{t} vs Ibovespa em 2 anos", f"Resumo da {t}"]
@@ -905,11 +979,17 @@ def suggestions(P, D):
     return ["DY do BBAS3", "Maiores DY dos bancos", "PETR4 vs Ibovespa em 2024", "Ações com ROE acima de 20 e P/L abaixo de 8"]
 
 
-def local(q, D, ret_fn, cx, P=None):
+def local(q, D, ret_fn, cx, P=None, quote_fn=None):
     """Resposta sem IA quando a interpretação é confiável. -> texto ou None."""
     P = P or parse(q, D)
     nq = P["nq"]
     if P["complaint"]: return None
+    today = not P["period"] or P["period"][3] == "dia"
+    if P["tickers"] and today and re.search(r"\b(hoje|hj|no dia|agora)\b", nq) and re.search(r"\b(caiu|cai|caindo|subiu|sobe|subindo|variou|variacao|por que|motivo)\b", nq):
+        return day_move(P, D)
+    if P["idx"] and not P["tickers"] and today and not P["metrics"][1:] and re.search(r"\b(quanto|cotacao|valor|preco|hoje|esta|custa)\b", nq):
+        a = quote(P, quote_fn)
+        if a: return a
     if P.get("unknown_tickers") and not P["tickers"]: return " ".join(P["notes"])
     if re.fullmatch(r"(oi|ola|bom dia|boa tarde|boa noite|e ai|opa|hello|hi)( tudo bem| tudo bom)?", nq):
         return "Olá! Pergunte sobre as ações do site, por exemplo: “DY do Itaú”, “maiores DY dos bancos”, “PETR4 vs Ibovespa em 2024”."
@@ -1190,7 +1270,7 @@ def ground(q, ctx, hist, deadline):
 _QA = {}  # mesma pergunta no mesmo dia (sem histórico)
 
 
-def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None):
+def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None):
     t0 = time.time(); deadline = t0 + DEADLINE_S
     cx = cx or {}
     P = parse(q, D, hist)
@@ -1201,7 +1281,7 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None):
         out = dict(_QA[key], cached=True); _log(q, out, P, t0); return out
     has_ai = bool(os.environ.get("GEMINI_API_KEY"))
     loc = None
-    try: loc = local(q, D, ret_fn, cx, P)
+    try: loc = local(q, D, ret_fn, cx, P, quote_fn)
     except Exception as e: log.info("local: %s", e)
     out = None
     if loc:
@@ -1241,7 +1321,9 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None):
                         try: a, tok = gemini2(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini", "tok": tok}
                         except Exception: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
             if out is None: out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
-    if out["mode"].startswith("gemini"): out = link_ext(out, q, ext_fn)
+    if out["mode"].startswith("gemini"):
+        out = link_ext(out, q, ext_fn)
+        if not out.get("sug") and (P["tickers"] or P["metrics"] or P["sector"] or P["idx"]): out["sug"] = suggestions(P, D)[:3]
     if out["a"].startswith("Não consegui entender") or out["mode"] == "regras" and out["a"].startswith("Não encontrei"):
         out["sug"] = suggestions(P, D)
     elif out["mode"] in ("regras", "ia+dados") and (P["tickers"] or P["metrics"] or P["sector"]):
@@ -1267,18 +1349,64 @@ def _log(q, out, P, t0):
                "a": a[:400]}
         with open(LOG_FILE, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        sync_log()
     except Exception as e:
         log.info("chat log: %s", e)
 
 
+# Registro preservado: o disco do Render zera a cada publicação. Com GITHUB_TOKEN (variável do Render), as perguntas novas vão
+# para data/chat_log.jsonl na branch `data` (no máximo a cada 6 h) e read_log junta o que já estava lá.
+_SYNC = {"t": 0.0, "remote": None, "rt": 0.0}
+
+
+def _gh():
+    import snapshots
+    m = re.search(r"githubusercontent\.com/([^/]+)/([^/]+)/", snapshots.RAW)
+    return (f"https://api.github.com/repos/{m.group(1)}/{m.group(2)}/contents/data/chat_log.jsonl", snapshots.RAW + "/chat_log.jsonl") if m else (None, None)
+
+
+def sync_log(force=False):
+    tok = os.environ.get("GITHUB_TOKEN")
+    if not tok or not os.path.exists(LOG_FILE) or (not force and time.time() - _SYNC["t"] < 6 * 3600): return
+    _SYNC["t"] = time.time()
+
+    def run():
+        import base64
+        try:
+            api, _ = _gh(); h = {"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json"}
+            r = requests.get(api, params={"ref": "data"}, headers=h, timeout=20)
+            old, sha = (base64.b64decode(r.json()["content"]).decode(), r.json()["sha"]) if r.status_code == 200 else ("", None)
+            seen = set(old.splitlines())
+            new = [l for l in open(LOG_FILE, encoding="utf-8").read().splitlines() if l and l not in seen]
+            if not new: return
+            lines = (old.splitlines() + new)[-20000:]
+            requests.put(api, headers=h, timeout=30, json={"message": "Registro do chat", "branch": "data", **({"sha": sha} if sha else {}),
+                                                            "content": base64.b64encode(("\n".join(lines) + "\n").encode()).decode()})
+        except Exception as e:
+            log.warning("registro do chat no GitHub: %s", e)
+    import threading
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _remote_log():
+    if time.time() - _SYNC["rt"] > 3600:
+        _SYNC["rt"] = time.time()
+        try:
+            r = requests.get(_gh()[1], timeout=20)
+            _SYNC["remote"] = r.text.splitlines() if r.status_code == 200 else []
+        except Exception: _SYNC["remote"] = _SYNC["remote"] or []
+    return _SYNC["remote"] or []
+
+
 def read_log(n=200, only=None):
-    out = []
+    lines = list(_remote_log())
     for fn in (LOG_FILE + ".1", LOG_FILE):
         if os.path.exists(fn):
-            with open(fn, encoding="utf-8") as fh:
-                for l in fh:
-                    try: out.append(json.loads(l))
-                    except ValueError: pass
+            with open(fn, encoding="utf-8") as fh: lines += fh.read().splitlines()
+    out = []
+    for l in dict.fromkeys(lines):  # sem repetir o que já foi salvo no GitHub
+        try: out.append(json.loads(l))
+        except ValueError: pass
     if only == "sem_resposta": out = [r for r in out if r.get("sem_resposta")]
     elif only == "reclamacao": out = [r for r in out if r.get("reclamacao")]
     return out[-n:][::-1]
