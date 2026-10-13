@@ -730,6 +730,12 @@ def _idx_returns(di, df):
 
 _retw = {"busy": False}
 
+@app.get("/api/idxret")
+def api_idxret(di: str, df: str):
+    """Só os índices (Ibovespa, CDB, IPCA…) entre di e df: aba Carteira (leve, sem as ações)."""
+    try: return JSONResponse(_idx_returns(di, df), headers={"Cache-Control": "public, max-age=3600"})
+    except ValueError: return JSONResponse({"error": "datas inválidas"}, status_code=400)
+
 @app.get("/api/returns")
 def api_returns(di: str, df: str):
     """Variação % de todas as ações mantidas + índices entre di e df. Se o histórico ainda está aquecendo

@@ -249,6 +249,8 @@
   .gtab td b { color: rgb(110 231 183); } .gtab .gc2 { color: rgb(226 232 240); } .gtab .gc3 { color: rgb(203 213 225); }
   .gtab .up { color: rgb(52 211 153); } .gtab .dn { color: rgb(251 113 133); }
   .gtab tr.tap { cursor: pointer; } .gtab tr.sel td { background: rgb(6 78 59 / .35); }
+  .gtab .galr { padding: .15rem .15rem; white-space: normal; line-height: 1.15; } body .gtab .galr .pv-in { width: 3.6rem; min-height: 0; height: 1.65rem; padding: 0 .3rem; font-size: 12px; text-align: right; }
+  .gtab tr.galr-on td { background: var(--c-amber-bg); } .gtab tr.galr-on td b { color: var(--c-amber); }
   .gtab tr.gdet > td { padding: .4rem 0; white-space: normal; text-align: left; }
   .nova { margin-left: .35rem; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: rgb(14 165 233 / .2); color: rgb(125 211 252); border: 1px solid rgb(14 165 233 / .5); vertical-align: middle; }
   .gstar { font-size: 16px; line-height: 1; color: rgb(100 116 139); padding: 0 .15rem; } .gstar.on { color: rgb(250 204 21); }
@@ -274,6 +276,18 @@
   .gmv { margin: 0 0 0 .3rem; max-width: 80px; }
   .gt-tabs { display: flex; flex-wrap: wrap; gap: .25rem; padding: .35rem .45rem 0; align-items: center; }
   .gflow th:last-child, .gflow td:last-child { text-align: right; } .gflow td.pos { color: var(--c-pos, rgb(52 211 153)); } .gflow td.neg { color: var(--c-neg, rgb(248 113 113)); }
+  /* Carteira */
+  .kt-box { border: 1px solid var(--bd-card); border-radius: var(--r-card); background: var(--bg-card); padding: .75rem; }
+  .kt-f { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; } @media (min-width: 640px) { .kt-f { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; } }
+  .kt-f label { display: flex; flex-direction: column; gap: .2rem; font-size: 12px; color: var(--c-mut); } .kt-fb { display: flex; gap: .4rem; align-items: end; grid-column: 1 / -1; } @media (min-width: 640px) { .kt-fb { grid-column: auto; } }
+  .kt-sum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-bottom: .5rem; } @media (min-width: 640px) { .kt-sum { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .kt-sum > div { border: 1px solid var(--bd-card); border-radius: var(--r); background: var(--bg-card); padding: .5rem .6rem; display: flex; flex-direction: column; gap: .15rem; }
+  .kt-sum span { font-size: 11px; color: var(--c-mut); } .kt-sum b { font-size: 14px; }
+  .kt-wrap { overflow-x: auto; } .kt-t { width: 100%; font-size: 13px; border-collapse: collapse; }
+  .kt-t th { font-size: 11px; color: var(--c-mut); font-weight: 600; text-align: right; padding: .3rem .35rem; border-bottom: 1px solid var(--bd); } .kt-t th:first-child, .kt-t td:first-child { text-align: left; }
+  .kt-t td { text-align: right; padding: .4rem .35rem; border-bottom: 1px solid var(--bd); vertical-align: top; white-space: nowrap; } .kt-t small { display: block; font-size: 11px; color: var(--c-mut); }
+  .kt-t tbody tr { cursor: pointer; } .kt-t tbody tr:hover td, .kt-t tr.on td { background: var(--bg-sec); } @media (max-width: 400px) { .kt-t { font-size: 12px; } .kt-t th, .kt-t td { padding-left: .2rem; padding-right: .2rem; } }
+  .kt-sum .up, .kt-t .up { color: var(--c-pos); } .kt-sum .dn, .kt-t .dn { color: var(--c-neg); }
   .pv-sub { padding: 0 0 .25rem; } .al-it { border: 1px solid rgb(51 65 85); border-radius: .75rem; padding: .5rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
   .al-it.ok { border-color: rgb(16 185 129 / .55); } .al-it > label:first-child { grid-column: 1 / -1; } .al-btns { display: flex; gap: .4rem; align-items: end; justify-content: flex-end; }
   .al-info, .al-warn { grid-column: 1 / -1; } .al-warn { font-size: 11.5px; color: rgb(251 191 36); margin: 0; }
@@ -343,7 +357,7 @@
   .rg-t { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rg-h { color: rgb(100 116 139); }
   /* ================= Design system (único para todas as abas) ================= */
   :root { --c-pos: rgb(52 211 153); --c-pos-bg: rgb(5 150 105); --c-pos-bd: rgb(16 185 129); --c-neg: rgb(251 113 133); --c-neg-bg: rgb(190 18 60); --c-neg-bd: rgb(244 63 94);
-          --c-amber: rgb(251 191 36); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
+          --c-amber: rgb(251 191 36); --c-amber-bg: rgb(120 53 15 / .45); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
           --bg-card: rgb(15 23 42 / .6); --bg-in: rgb(2 6 23); --bg-sec: rgb(30 41 59); --bd: rgb(51 65 85); --bd-card: rgb(30 41 59);
           --h: 38px; --h-sm: 32px; --r: .6rem; --r-card: 1rem; --sh: 0 1px 2px rgb(0 0 0 / .3); --sp: .6rem; --ring: 0 0 0 2px rgb(16 185 129 / .35); }
   /* Botões por função */
@@ -376,6 +390,7 @@
   /* Segmentados: abas, períodos, direção da ordem, abas internas */
   body .tabs button, body .gc-bar button[data-per], body #sortDir, body .gt-tabs button { min-height: var(--h); border-radius: var(--r); font-size: 13px; font-weight: 600; }
   body .tabs button { min-height: var(--h); padding-left: .2rem; padding-right: .2rem; }
+  @media (max-width: 400px) { body .tabs { gap: .1rem; } body .tabs button { flex: 1 1 auto; font-size: 12px; min-width: 0; padding-left: .1rem; padding-right: .1rem; } }
   body .gc-bar button[data-per], body #sortDir { padding: 0 .7rem; background: var(--bg-sec); border: 1px solid var(--bd); color: var(--c-txt); }
   body #sortDir { min-height: var(--h); }
   body .gc-bar button[data-per].on, body .gt-tabs button.on, body .tabs button.on { background: rgb(6 78 59 / .55); border-color: var(--c-pos-bd); color: rgb(110 231 183); box-shadow: none; }
@@ -448,6 +463,7 @@
 <main class="max-w-[1800px] mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3">
   <nav class="tabs" role="tablist">
     <button type="button" data-tab="acoes" role="tab">Ações</button>
+    <button type="button" data-tab="carteira" role="tab">Carteira</button>
     <button type="button" data-tab="grupos" role="tab">Grupos</button>
     <button type="button" data-tab="comparar" role="tab">Comparar</button>
     <button type="button" data-tab="previsao" role="tab">Previsão</button>
@@ -511,6 +527,7 @@
   </div>
   <div data-tabpane="grupos" class="hidden space-y-3"><div id="gruposRoot"><div class="ldr" role="status" aria-label="Carregando"><svg viewBox="0 0 220 150" width="220" height="150" fill="none" stroke-linecap="round" stroke-linejoin="round">     <g stroke="rgb(100 116 139)" stroke-width="2">       <path d="M10 118 H210"/><path d="M30 118 V144 M190 118 V144"/>       <rect x="128" y="62" width="62" height="42" rx="3"/><path d="M152 104 v8 h14 v-8 M146 113 h26"/>       <path d="M135 70 h18 M135 77 h30 M135 84 h22" stroke="rgb(16 185 129)" stroke-width="1.6"/>       <path class="ldr-line" d="M137 96 l8 -5 l7 3 l9 -8 l9 2 l9 -7" stroke="rgb(16 185 129)"/>     </g>     <g stroke="rgb(203 213 225)" stroke-width="2">       <path d="M44 44 q2 -12 18 -12 q14 0 16 10 q-16 -4 -34 2 z"/><circle cx="73" cy="31" r="2"/>       <path d="M48 46 q-2 16 12 20 q14 -2 14 -18"/><path d="M55 53 h3 M65 53 h3"/><path d="M56 61 q4 3 9 0"/>       <path d="M52 58 q-4 6 0 8 M70 58 q4 6 0 8" stroke="rgb(148 163 184)"/>       <path d="M44 118 q-6 -40 16 -48 q22 6 18 48"/>       <path d="M50 84 q14 14 34 22"/><path d="M76 82 q12 10 22 20"/>     </g>     <g stroke="rgb(52 211 153)" stroke-width="1.8">       <rect x="84" y="104" width="30" height="12" rx="1.5"/><path d="M86 101 h28 M86 98 h28"/><circle cx="99" cy="110" r="2.5"/>       <g class="ldr-note"><rect x="84" y="92" width="30" height="5" rx="1.5" fill="rgb(6 78 59)"/></g>     </g></svg><span>Carregando…</span></div></div></div>
   <div data-tabpane="comparar" class="hidden space-y-3"><div id="compRoot"><div class="ldr" role="status" aria-label="Carregando"><svg viewBox="0 0 220 150" width="220" height="150" fill="none" stroke-linecap="round" stroke-linejoin="round">     <g stroke="rgb(100 116 139)" stroke-width="2">       <path d="M10 118 H210"/><path d="M30 118 V144 M190 118 V144"/>       <rect x="128" y="62" width="62" height="42" rx="3"/><path d="M152 104 v8 h14 v-8 M146 113 h26"/>       <path d="M135 70 h18 M135 77 h30 M135 84 h22" stroke="rgb(16 185 129)" stroke-width="1.6"/>       <path class="ldr-line" d="M137 96 l8 -5 l7 3 l9 -8 l9 2 l9 -7" stroke="rgb(16 185 129)"/>     </g>     <g stroke="rgb(203 213 225)" stroke-width="2">       <path d="M44 44 q2 -12 18 -12 q14 0 16 10 q-16 -4 -34 2 z"/><circle cx="73" cy="31" r="2"/>       <path d="M48 46 q-2 16 12 20 q14 -2 14 -18"/><path d="M55 53 h3 M65 53 h3"/><path d="M56 61 q4 3 9 0"/>       <path d="M52 58 q-4 6 0 8 M70 58 q4 6 0 8" stroke="rgb(148 163 184)"/>       <path d="M44 118 q-6 -40 16 -48 q22 6 18 48"/>       <path d="M50 84 q14 14 34 22"/><path d="M76 82 q12 10 22 20"/>     </g>     <g stroke="rgb(52 211 153)" stroke-width="1.8">       <rect x="84" y="104" width="30" height="12" rx="1.5"/><path d="M86 101 h28 M86 98 h28"/><circle cx="99" cy="110" r="2.5"/>       <g class="ldr-note"><rect x="84" y="92" width="30" height="5" rx="1.5" fill="rgb(6 78 59)"/></g>     </g></svg><span>Carregando…</span></div></div></div>
+  <div data-tabpane="carteira" class="hidden space-y-3"><div id="carteiraRoot"></div></div>
   <div data-tabpane="chat" class="hidden space-y-3"><div id="chatRoot"></div></div>
   <div data-tabpane="previsao" class="hidden space-y-3">
     <div class="gt-tabs pv-sub" role="tablist"><button type="button" data-pvsub="rent" class="on">Previsão rentabilidade</button><button type="button" data-pvsub="alug">Previsão aluguel</button></div>
@@ -569,10 +586,12 @@
     <details class="icard"><summary>Como usar (passo a passo)</summary><div class="ib">
 <h3>Ações</h3>
 <ol class="list-decimal pl-5"><li>Cada card mostra preço, variação e os indicadores (consenso das fontes em Todos).</li><li>No topo escolha país e fonte; veja 'Status das fontes' abaixo dos filtros.</li><li>Toque no card para expandir (Expandir todos/Recolher todos, ao lado de resultados, abrem ou fecham todos): histórico, índices B3, peso no Ibovespa e outras classes da ação.</li><li>As cores indicam concordância entre fontes (pergunte 'o que significam as cores').</li><li>Use a busca, a lupa de filtros e Ordenar para refinar; Carregar mais mostra mais resultados.</li></ol>
+<h3>Carteira</h3>
+<ol class="list-decimal pl-5"><li>Abra a aba Carteira (só ações da B3).</li><li>Preencha Ticker, Quantidade, Preço médio e Data da compra e toque em ＋ Adicionar.</li><li>O resumo mostra Investido, Valor atual (preço da aba Ações, na fonte escolhida no topo), Ganho em R$ e %, Proventos recebidos desde a data e o Total.</li><li>Se fosse no Ibovespa / no CDB: quanto o mesmo valor teria rendido desde a data de cada posição.</li><li>Toque numa posição da tabela para editar (Salvar) ou Excluir. Fica salva no seu aparelho; use Exportar para guardar um arquivo e Importar para trazê-lo em outro aparelho.</li></ol>
 <h3>Filtros e ordenação</h3>
 <ol class="list-decimal pl-5"><li>Digite em 'Buscar ticker ou nome…' – a lista filtra enquanto você digita.</li><li>Toque na lupa 🔍 para Mais filtros: Só líquidas, Índice B3, Setor e Indicadores (toque em + para abrir os campos de mínimo/máximo).</li><li>Nos campos: ≥ maior é melhor, ≤ menor é melhor; campo vazio = sem filtro; os filtros se somam (todos precisam ser atendidos); percentuais como número (8 = 8%); ≤ com + exclui negativos (ex.: P/L negativo = prejuízo).</li><li>Em Volume (média diária) escolha o período (dia, 10 pregões, 1 a 12 meses) e digite em milhões da moeda (10 = 10 mi/dia); em Crescimento escolha Receita ou Lucro e o período (1 a 5 anos).</li><li>Toque na ☆ de um campo para levá-lo ao topo; arraste pela alça ⠿ para reordenar ou para Filtros ocultos (ocultos não são aplicados); Limpar filtros zera os valores.</li><li>Em Ordenar, escolha o indicador (começa em Alta do dia (%)) e toque no botão de setas ao lado (˄˅; seta verde = ordem atual, ex.: Maior → menor) para inverter.</li><li>↓ CSV exporta o resultado.</li></ol>
 <h3>Favoritos</h3>
-<ol class="list-decimal pl-5"><li>Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.</li><li>Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.</li><li>Ficam salvos no seu navegador.</li></ol>
+<ol class="list-decimal pl-5"><li>Na aba Ações, toque na ☆ do card para favoritar (ele vai para o topo da lista); toque em ★ para remover.</li><li>Na aba Grupos, toque na ☆ de um grupo para favoritá-lo; ele aparece em ★ Favoritados.</li><li>No card ★ Favoritos (aba Grupos), preencha 🔔 Abaixo de e/ou 🔔 Acima de: com o app aberto ou em segundo plano, você recebe um aviso uma vez quando o preço passa do limite (de novo só depois de voltar ao intervalo). Ao abrir o app, o que ainda estiver fora do intervalo é avisado de novo e a linha fica em laranja. Deixe o campo vazio para desligar.</li><li>Ficam salvos no seu navegador.</li></ol>
 <h3>Grupos (criar e editar)</h3>
 <ol class="list-decimal pl-5"><li>Na aba Ações (＋ Criar grupo) ou na aba Grupos (＋ Criar), comece um grupo.</li><li>Toque nos cards das empresas para selecioná-las (uma ação por empresa).</li><li>Digite o Nome do grupo e toque em Salvar.</li><li>Na aba Grupos, abra o grupo para ver só as empresas dele na lista; use Editar ou Excluir, no canto inferior direito do card, para alterar.</li><li>Para guardar seus grupos ou levá-los a outro aparelho, use Exportar grupos (ícone de arquivo com seta para baixo) para baixar um arquivo e Importar grupos (seta para cima) para carregá-lo, no topo da aba Grupos.</li></ol>
 <h3>Reorganizar</h3>
@@ -672,7 +691,7 @@
       <li><span class="badge bg-sky-600 text-white font-bold">aj</span><span class="t">Azul: concorda via EBIT ajustado</span></li>
       <li><span class="sw sw-bank"></span><span class="t">Azul escuro: banco/seguradora (indicador não comparável)</span></li>
       <li><span class="badge bg-amber-500 text-slate-900 font-bold">±</span><span class="t">Fonte excluída pela checagem de sinal</span></li>
-      <li><span class="t">Nas outras telas: <b class="text-emerald-400">verde</b> = positivo/ganho/confirmar; <b class="text-rose-400">vermelho</b> = negativo/perda/excluir; <b class="text-violet-400">violeta</b> = Valorização total (Previsão); <b class="text-yellow-300">amarelo</b> = imposto (Previsão).</span></li></ul>
+      <li><span class="t">Nas outras telas: <b class="text-emerald-400">verde</b> = positivo/ganho/confirmar; <b class="text-rose-400">vermelho</b> = negativo/perda/excluir; <b class="text-violet-400">violeta</b> = Valorização total (Previsão); <b class="text-yellow-300">amarelo</b> = imposto (Previsão); <b class="text-amber-400">laranja</b> = alerta de preço atingido (Favoritos).</span></li></ul>
     <h3>Particularidades</h3>
     <ul>
       <li>Fundamentus usa <b>EBIT ajustado</b>; CVM e Dados de Mercado votam com o EBIT padrão ou o ajustado (o que formar o maior grupo).</li>
@@ -759,6 +778,7 @@
 <script src="/static/aluguel.js?v=c25"></script>
 <script src="/static/chatui.js?v=c5" defer></script>
 <script src="/static/comparar.js?v=c25"></script>
+<script src="/static/carteira.js"></script>
 
 </body>
 </html>

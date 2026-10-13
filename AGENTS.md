@@ -55,9 +55,10 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Nomes de botões, abas, campos e opções | a própria interface (`index.html` e `*.js`) | chat e Gemini (`chat.ui_labels()` lê da interface) |
 | Significado de cada cor | seção **Cores** do painel ⓘ | usuário; chat |
 | Paleta, alturas, raios, sombras | `index.html` → bloco `/* Design system */` (`:root { --c-pos … }`) | todo CSS (`var(--…)`) |
-| Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry` | `ui.js` (topo) | todos os scripts |
+| Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
 | Diálogos, toast, carregamento | `ui.js` → `uiConfirm`, `uiAlert`, `uiPrompt`, `uiChoose`, `uiToast`, `loaderHTML` | todas as abas |
-| Formatação de indicadores (`fmt`, `fmtPrice`, `fmtBig`, `fmtMoneyBig`) | `app.js` | aba Ações, Comparar |
+| Formatação de indicadores (`fmt`, `fmtPrice`, `fmtBig`, `fmtMoneyBig`) e preço exibido (`priceOf`) | `app.js` | aba Ações, Comparar, Carteira |
+| Rendimento dos índices entre duas datas (Ibovespa, CDB…) | `server._idx_returns` | Comparar e chat (`/api/returns`), Carteira (`/api/idxret`) |
 | Lista de scripts JS | tags `<script src="/static/…">` do `index.html` | servidor (`JS_FILES` é lido delas) |
 | Versão (`?v=`) de JS/CSS | **automática** (hash do conteúdo, `server._index_html`) | não edite `?v=` à mão |
 | Configuração do Tailwind | `tailwind.config.js` | build do CSS e, sem ele, o CDN no navegador |
@@ -90,7 +91,7 @@ roteamento (sinônimos → indicador/termo, palavras → seção do painel); `te
 | `index.html` | estrutura de todas as abas, CSS próprio (design system) e painel ⓘ |
 | `ui.js` | utilitários e componentes compartilhados (carregado antes dos outros scripts) |
 | `app.js` | aba Ações, estado global (`state`) e formatação de indicadores |
-| `grupos.js`, `comparar.js`, `previsao.js`, `aluguel.js`, `grafico.js`, `chatui.js` | uma aba/recurso por arquivo |
+| `grupos.js`, `carteira.js`, `comparar.js`, `previsao.js`, `aluguel.js`, `grafico.js`, `chatui.js` | uma aba/recurso por arquivo |
 | `scripts/` | rotinas que geram snapshots na branch `data` (não rodam no Render) e `build_css.sh` (roda no build) |
 | `tests/` | `test_*.py` (Python) e `test_*.js` (Node) |
 
@@ -123,6 +124,7 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
   Trabalho pesado é feito **uma vez** (na atualização dos dados ou nas rotinas de snapshot), nunca a cada visita.
   Respostas grandes reaproveitam o JSON pronto (`_json_fast`).
 - A branch `data` guarda os snapshots e **não** dispara deploy. Código vai na `main`; dados, na `data`.
+- Alertas de preço dos Favoritos: `grupos.js` (`screenerB3.alertas.v1`), conferidos a cada carga de dados (`dataload`).
 - Chaves no `localStorage` seguem `screenerB3.<nome>.v<N>`. Mudou o formato salvo? Suba o `v<N>` (e migre se necessário) em vez de ler formato antigo como novo.
 - Segredos (chave do Gemini, do Render etc.) ficam só nas variáveis de ambiente do Render/GitHub. Nunca no código, em commits ou no chat.
 
