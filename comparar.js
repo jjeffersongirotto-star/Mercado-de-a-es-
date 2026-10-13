@@ -25,7 +25,7 @@
   const cached = (c) => RC[c] || (c === 'br' && state.country === 'br' && state.data ? state.data.rows : []);
   const rows = () => ctList().flatMap(c => cached(c).map(r => (r.cid ? r : { ...r, cid: idOf(c, r.ticker) })));
   const idxList = () => S.ct === 'br' ? IDX : S.ct === 'all' ? IDX.concat((state.countries || []).filter(c => c.id !== 'br').map(c => ['@ix:' + c.id, c.index + ' (' + c.name + ')', 'ibov']))
-    : [['@ix:' + S.ct, ctry(S.ct).index, 'ibov']].concat(IDX.filter(x => x[0] === '@usd' || (x[0] === '@gold' && S.ct === 'us')));
+    : [['@ix:' + S.ct, ctry(S.ct).index, 'ibov']].concat(IDX.filter(x => x[0] === '@usd' || x[0] === '@gold'));
   const isIdx = (id) => id[0] === '@';
   const label = (id) => isIdx(id) ? ((idxList().concat(IDX)).find(x => x[0] === id) || [id, id])[1] : cOf(id) === 'br' || S.ct !== 'all' ? tOf(id) : `${tOf(id)} (${ctry(cOf(id)).name})`;  // país no nome só no 🌐
   const root = $c('#compRoot');
@@ -128,7 +128,7 @@
       else {
         const k = (idxList().concat(IDX)).find(x => x[0] === id)[2], d = payC(idxC(id))[k];
         if (d && !d.error) pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end);
-        vfmt = k === 'ibov' ? (v) => F2.format(v) + ' pts' : k === 'usd' ? (v) => fmtPrice(v, 'BRL') : k === 'gold' ? (v) => fmtPrice(v, idxC(id) === 'us' ? 'USD' : 'BRL') : null;
+        vfmt = k === 'ibov' ? (v) => F2.format(v) + ' pts' : k === 'usd' ? (v) => fmtPrice(v, 'BRL') : k === 'gold' ? (v) => fmtPrice(v, idxC(id) === 'br' ? 'BRL' : ctry(idxC(id)).currency) : null;
       }
       if (pts.length) { vals[id] = pts[pts.length - 1][1]; series.push({ id: i === 0 ? 'stock' : id, label: label(id), color: COLORS[i % COLORS.length], pts, base: pts.base, vfmt }); }
     });

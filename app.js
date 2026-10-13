@@ -622,6 +622,7 @@ async function load() {
     if (!built) { buildFilters(); buildSort(); built = true; } else { renderFilterUI(); buildSortOptions(); }
     renderSource();
     computeFilters(); apply();
+    document.dispatchEvent(new CustomEvent('dataload'));  // outras abas (Grupos) se refazem com o país/dados novos
     if (d.refreshing) setTimeout(load, 3000);
   } catch (e) { if (seq === loadSeq) { $('#updated').textContent = 'Erro ao carregar: ' + e; setTimeout(load, 5000); } }
 }

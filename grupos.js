@@ -343,6 +343,7 @@
   }
 
   loadMetrics().then(() => { if (state.data && window.apply) apply(); });
+  document.addEventListener('dataload', () => { if (!document.querySelector('[data-tabpane="grupos"]').classList.contains('hidden')) list(); });
   document.addEventListener('tabshow', (e) => {
     if (e.detail === 'grupos') { list(); if (viewing || state.group) { viewing = null; state.group = null; refresh(); } }
     if (e.detail === 'acoes' && !state.selMode && viewing) { /* abrindo grupo */ }
