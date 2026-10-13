@@ -58,7 +58,9 @@ que não dispara deploy.
 | B3 (COTAHIST, proventos, índices, cadastro, aluguel, fluxo) | snapshots diários | BR |
 
 Rotina diária (19:05): `scripts/push_snapshot_from_here.sh` atualiza os snapshots em sequência numa máquina cujo IP não é bloqueado
-(`ONLY="cvm tradingview"` limita as etapas). O Status Invest também tem o workflow `.github/workflows/statusinvest.yml` (dias úteis, 19:30).
+(`ONLY="cvm tradingview"` limita as etapas). No GitHub, `.github/workflows/data.yml` roda o mesmo script em dias úteis às 19:45
+(todas as etapas menos Status Invest, que tem o workflow `.github/workflows/statusinvest.yml`, 19:30) e depois recarrega o site;
+etapa bloqueada no runner mantém o snapshot anterior. Rodar à mão: Actions → Rotina diária de dados → Run workflow.
 A fonte usada e a data de cada snapshot aparecem em `/api/status`.
 
 ## Chat
@@ -71,4 +73,6 @@ Registro de perguntas: `/api/chat/log` (`?only=sem_resposta` ou `?only=reclamaca
 ```bash
 python tests/test_consensus.py && python tests/test_chat.py
 for f in tests/*.js; do node "$f"; done
+node tests/ui_smoke.cjs http://127.0.0.1:8000   # telas (precisa do Playwright e do servidor rodando)
 ```
+Em cada PR o workflow `.github/workflows/ui-test.yml` roda tudo isso sozinho.

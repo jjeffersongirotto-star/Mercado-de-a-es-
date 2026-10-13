@@ -1,0 +1,45 @@
+name: Testes
+
+# Em cada PR: testes Python/Node e teste de telas (tests/ui_smoke.cjs) com o servidor de verdade
+# usando os snapshots da branch data.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pip install -r requirements.txt
+      - name: Testes Python e Node
+        run: |
+          python tests/test_consensus.py
+          python tests/test_chat.py
+          for f in tests/*.js; do node "$f"; done
+      - name: Subir o servidor
+        run: |
+          nohup uvicorn server:app --port 8000 > server.log 2>&1 &
+          for i in $(seq 120); do
+            curl -s localhost:8000/api/status | grep -q '"updated_at": *"' && exit 0
+            sleep 5
+          done
+          echo "servidor não carregou os dados"; tail -50 server.log; exit 1
+      - name: Teste de telas
+        run: |
+          npm i --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node tests/ui_smoke.cjs http://127.0.0.1:8000
+      - if: failure()
+        run: tail -100 server.log || true
