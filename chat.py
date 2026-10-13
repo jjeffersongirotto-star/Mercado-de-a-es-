@@ -1069,35 +1069,146 @@ def _sentences(x, n=2, skip=0):
     return " ".join(s[skip:skip + n]).strip()
 
 
-def _kb_hits(q, tickers=()):
-    """Itens da base citados na pergunta -> [{rot, n, d, e, w}] (w = resumo da Wikipedia, se houver)."""
-    K, nq, W = kb(), " " + norm(q) + " ", wiki()
-    if not K: return []
-    hit = lambda it: any(re.search(r"(?<![a-z0-9])" + re.escape(norm(w)) + r"(?![a-z0-9])", nq) for w in [it["n"]] + it.get("a", []) if len(norm(w)) >= 2)
-    out, emp = [], [t[:4] if t[:4].isalpha() else t for t in tickers]
-    for cat, rot in (("pessoas", "pessoa"), ("obras", "filme/série"), ("animes", "anime"), ("jogos", "jogo"), ("temas", "tema")):
-        for it in K.get(cat, []):
-            if hit(it):
-                out.append({"rot": rot, "n": it["n"], "d": it["d"], "e": it.get("e", []), "w": (W.get(f"{cat}|{norm(it['n'])}") or {}).get("x", "")})
-                emp += [x.split(":")[0] for x in it.get("e", [])]
-    F = K.get("futebol") or {}
-    js = [j for j in F.get("jogadores", []) if hit(j)]
-    out += [{"rot": "futebol", "n": j["n"], "d": j["d"], "e": [], "w": (W.get(f"jogadores|{norm(j['n'])}") or {}).get("x", "")} for j in js]
-    if re.search(r"\b(copa|copas|campeao|campeoes|campea|selecao|mundial)\b", nq):
-        out += [{"rot": "futebol", "n": "", "d": F.get(k, ""), "e": [], "w": ""} for k in ("campeoes", "copas")]
-    E = K.get("empresas", {})
-    for t in dict.fromkeys(emp):
-        k = next((x for x in (t, t[:4], re.sub(r"\d+$", "", t)) if x in E), None)
-        if k: out.append({"rot": "empresa", "n": t, "d": E[k], "e": [], "w": (W.get(f"empresas|{k}") or {}).get("x", "")})
+# categorias da base (conhecimento.json) -> rótulo; também usadas por scripts/build_kb.py
+KB_CATS = [("pessoas", "pessoa"), ("filmes", "filme"), ("series", "série"), ("animes", "anime"), ("jogos", "jogo"),
+           ("estudios", "empresa/estúdio"), ("temas", "tema"), ("jogadores", "futebol")]
+_NM = {"key": None}
+
+
+def _nk(s):
+    """Nome normalizado para casar com a pergunta: só letras e números separados por espaço."""
+    return " ".join(re.findall(r"[a-z0-9]+", norm(s)))
+
+
+def _ph(w):
+    """Chave fonética para nomes estrangeiros: l = r (japonês), letras repetidas = uma (kulilin/krillin -> kuririn)."""
+    return re.sub(r"(.)\1+", r"\1", w.replace("l", "r").replace("y", "i").replace("k", "c"))
+
+
+def _kb_items():
+    """-> {chave "categoria|nome": (categoria, item)} de toda a base."""
+    K = kb(); out = {}
+    for cat, _ in KB_CATS:
+        lst = (K.get("futebol") or {}).get("jogadores", []) if cat == "jogadores" else K.get(cat, [])
+        for it in lst: out[f"{cat}|{norm(it['n'])}"] = (cat, it)
     return out
 
 
-def kb_context(q, tickers=(), cap=6000):
-    """Itens da base cujos nomes/apelidos aparecem na pergunta + o que fazem as empresas ligadas a eles e às ações citadas."""
-    H = _kb_hits(q, tickers)
+def _names():
+    """Índice nome -> [(chave, tipo, nome exibido, descrição)]: títulos e apelidos (conhecimento.json + Wikidata), personagens e elenco
+    (snapshot kb). Recalculado só quando a base muda."""
+    W = wiki(); key = (id(kb()), id(W), len(W))
+    if _NM["key"] == key: return _NM
+    skip = set(VOC.get("nomes_ignorados", [])) | STOP | COMMON_WORDS | METRIC_WORDS
+    idx, items = {}, _kb_items()
+
+    def add(name, k, kind, label, d=""):
+        n = _nk(name)
+        if len(n) < 3 or n in skip or (kind != "item" and (len(n) < 4 or n.isdigit())): return
+        lst = idx.setdefault(n, [])
+        if not any(x[0] == k and x[1] == kind for x in lst): lst.append((k, kind, label, d))
+    for k, (cat, it) in items.items():
+        w = W.get(k) or {}
+        for n in [it["n"]] + it.get("a", []) + w.get("al", []): add(n, k, "item", it["n"])
+        for p in w.get("p", []):
+            for n in [p["n"]] + p.get("a", []):
+                add(n, k, "personagem", p["n"], p.get("d", ""))
+                parts = _nk(n).split()  # "Monkey D. Luffy" -> também "luffy"
+                if len(parts) > 1 and len(parts[-1]) >= 5: add(parts[-1], k, "personagem", p["n"], p.get("d", ""))
+        for p in w.get("c", []): add(p["n"], k, "elenco", p["n"], p.get("d", ""))
+    ph = {}
+    for n in idx:
+        if " " not in n and len(n) >= 5: ph.setdefault(_ph(n), []).append(n)
+    _NM.update(key=key, idx=idx, ph=ph, items=items)
+    return _NM
+
+
+def _find(q, fuzzy=True):
+    """Nomes da base citados na pergunta (o trecho mais longo primeiro) -> [(trecho, entradas)]; sem nenhum, tenta grafia parecida."""
+    N = _names(); w = _nk(q).split(); used, out = set(), []
+    for size in (5, 4, 3, 2, 1):
+        for i in range(len(w) - size + 1):
+            if any(j in used for j in range(i, i + size)): continue
+            n = " ".join(w[i:i + size])
+            if n in N["idx"]: out.append((n, N["idx"][n])); used.update(range(i, i + size))
+    if out or not fuzzy: return out
+    keys = list(N["ph"])
+    for x in w:
+        if len(x) < 5 or x in STOP or x in COMMON_WORDS or x in METRIC_WORDS: continue
+        m = difflib.get_close_matches(_ph(x), keys, 1, 0.85)
+        if m: out += [(n, N["idx"][n]) for n in N["ph"][m[0]]]
+    return out
+
+
+def kb_resolve(q, force=None, fuzzy=True):
+    """-> {"keys": itens da base ligados à pergunta, "who": [(tipo, nome, descrição, [chaves])], "amb": (nome, [chaves]) se o nome
+    existe em obras diferentes e a pergunta não diz qual}. force = chave escolhida pela pessoa ("Está falando de qual?")."""
+    keys, who, amb = [], [], None
+    hits = _find(q, fuzzy)
+    direct = {k for _, es in hits for k, kind, *_ in es if kind == "item"}
+    for n, es in hits:
+        for lvl in ("item", "personagem", "elenco"):
+            sel = [e for e in es if e[1] == lvl and (not force or e[0] == force)]
+            if sel: break
+        if not sel: continue
+        ks = list(dict.fromkeys(e[0] for e in sel))
+        if lvl == "personagem" and len(ks) > 1 and not (direct & set(ks)) and not force:
+            amb = amb or (sel[0][2], ks); continue
+        if lvl == "personagem" and direct & set(ks): ks = [k for k in ks if k in direct]
+        if lvl != "item": who.append((lvl, sel[0][2], next((e[3] for e in sel if e[3]), ""), ks))
+        keys += ks
+    if force and force not in keys: keys.insert(0, force)
+    return {"keys": list(dict.fromkeys(keys)), "who": who, "amb": amb}
+
+
+def kb_ambiguous(q, force=None):
+    """Nome em mais de uma obra -> resposta perguntando qual (botões com cada obra); senão None."""
+    R = kb_resolve(q, force)
+    if not R["amb"]: return None
+    name, ks = R["amb"]; items = _names()["items"]
+    return {"a": f"“{name}” aparece em mais de uma obra. Está falando de qual?", "mode": "regras", "tok": 0,
+            "sug": [{"l": items[k][1]["n"], "q": q, "topic": "kb:" + k} for k in ks[:8]], "sugl": "Escolha:"}
+
+
+def _kb_hits(q, tickers=(), force=None, fuzzy=True):
+    """Itens da base ligados à pergunta -> [{rot, n, d, e, w, k, who}] (w = resumo da Wikipedia; who = personagem/ator citado)."""
+    K, nq, W = kb(), norm(q), wiki()
+    if not K: return []
+    R = kb_resolve(q, force, fuzzy); items = _names()["items"]; rot = dict(KB_CATS)
+    out, emp = [], [t[:4] if t[:4].isalpha() else t for t in tickers]
+    for k in R["keys"]:
+        if k not in items: continue
+        cat, it = items[k]
+        out.append({"rot": rot[cat], "n": it["n"], "d": it["d"], "e": it.get("e", []), "w": (W.get(k) or {}).get("x", ""), "k": k,
+                    "who": [w for w in R["who"] if k in w[3]]})
+        emp += [x.split(":")[0] for x in it.get("e", [])]
+    F = K.get("futebol") or {}
+    if re.search(r"\b(copa|copas|campeao|campeoes|campea|selecao|mundial)\b", nq):
+        out += [{"rot": "futebol", "n": "", "d": F.get(k, ""), "e": [], "w": "", "k": "", "who": []} for k in ("campeoes", "copas")]
+    E = K.get("empresas", {})
+    for t in dict.fromkeys(emp):
+        k = next((x for x in (t, t[:4], re.sub(r"\d+$", "", t)) if x in E), None)
+        if k: out.append({"rot": "empresa", "n": t, "d": E[k], "e": [], "w": (W.get(f"empresas|{k}") or {}).get("x", ""), "k": "", "who": []})
+    return out
+
+
+def _who_txt(w, H):
+    """'Kuririn: personagem de Dragon Ball (…)' / 'Tom Holland: ator (…); atuou em A, B'."""
+    kind, name, d, ks = w; items = _names()["items"]
+    obras = ", ".join(items[k][1]["n"] for k in ks if k in items)
+    if kind == "personagem": return f"{name}: personagem de {obras}" + (f" ({d})" if d else "")
+    return f"{name}" + (f": {d}" if d else "") + f"; atuou em {obras}"
+
+
+def kb_context(q, tickers=(), cap=6000, force=None, fuzzy=True):
+    """Itens da base ligados à pergunta (nomes, apelidos, personagens, elenco) + o que fazem as empresas ligadas a eles e às ações citadas."""
+    H = _kb_hits(q, tickers, force, fuzzy)
     if not H: return ""
-    lines = [f"- [{h['rot']}] " + (f"{h['n']}: " if h["n"] else "") + h["d"] + (f" (empresas: {', '.join(h['e'])})" if h["e"] else "")
-             + (f" | Wikipedia: {_sentences(h['w'], 3)}" if h["w"] else "") for h in H]
+    lines = []
+    for h in H:
+        lines += [f"- [{'personagem' if w[0] == 'personagem' else 'elenco'}] " + _who_txt(w, H) for w in h["who"]]
+        lines.append(f"- [{h['rot']}] " + (f"{h['n']}: " if h["n"] else "") + h["d"] + (f" (empresas: {', '.join(h['e'])})" if h["e"] else "")
+                     + (f" | Wikipedia: {_sentences(h['w'], 3)}" if h["w"] else ""))
     return ("CONTEXTO (base do site, dados até " + str(kb().get("atualizado", "")) + "; confira na web o que pode ter mudado):\n"
             + "\n".join(dict.fromkeys(lines)))[:cap]
 
@@ -1111,14 +1222,17 @@ def _kb_text(h, hist):
     return random.choice(opts)
 
 
-def kb_answer(q, ext_fn=None, hist=None):
-    """Sem a IA (fora do ar ou sem chave): responde com a base de contexto — quem é/o que é + empresa ligada com os dados do site."""
-    H = [h for h in _kb_hits(q) if h["rot"] != "empresa"]
+def kb_answer(q, ext_fn=None, hist=None, force=None):
+    """Sem a IA (fora do ar ou sem chave): responde com a base — quem é/o que é, depois a empresa ligada com os dados do site,
+    depois o aviso de sites especializados."""
+    H = [h for h in _kb_hits(q, (), force) if h["rot"] != "empresa"]
     if not H: return None
-    txt = "\n".join("• " + (f"{h['n']}: " if h["n"] else "") + _kb_text(h, hist) for h in H[:3])
-    txt += "\n\n" + frase("fora_do_site", hist)
+    lines = []
+    for h in H[:3]:
+        lines += ["• " + _who_txt(w, H) + "." for w in h["who"]]
+        lines.append("• " + (f"{h['n']}: " if h["n"] else "") + _kb_text(h, hist))
     e = next((h["e"][0] for h in H if h["e"]), None)
-    return link_ext({"a": txt + ("\n[[EMPRESA:" + e + "]]" if e else "")}, q, ext_fn)["a"]
+    return link_ext({"a": "\n".join(dict.fromkeys(lines)) + "\n[[FORA]]" + ("\n[[EMPRESA:" + e + "]]" if e else "")}, q, ext_fn, hist)["a"]
 
 
 # busca por relevância (BM25) no painel ⓘ e na base, para perguntas que nenhuma regra entendeu
@@ -1134,10 +1248,8 @@ def _index():
     if _IX["key"] != key:
         docs = [("guia", t, b) for t, b in guide_sections().items() if b and t != "Glossário"]
         docs += [("glos", l.split(":")[0].strip("- "), l.strip("- ")) for l in guide_sections().get("Glossário", "").split("\n") if ":" in l]
-        K = kb()
-        for cat in ("pessoas", "obras", "animes", "jogos", "temas"):
-            for it in K.get(cat, []):
-                docs.append(("kb", it["n"], it["d"] + " " + (W.get(f"{cat}|{norm(it['n'])}") or {}).get("x", "")))
+        for k, (cat, it) in _kb_items().items():
+            docs.append(("kb", it["n"], it["d"] + " " + (W.get(k) or {}).get("x", "")))
         T = [_toks(d[1] + " " + d[1] + " " + d[2]) for d in docs]  # título conta em dobro
         df = {}
         for t in T:
@@ -1176,18 +1288,29 @@ TOPICS = ["Cinema", "Música", "Esporte", "Jogos", "Política", "Atualidades", "
 _MK = re.compile(r"\[\[EMPRESA:([A-Za-z0-9.\-]+):([a-z]{2})\]\]")
 
 
-def link_ext(out, q, ext_fn):
-    """Troca os marcadores da IA: empresa ligada -> dados do site (qualquer país); assunto incerto -> botões de tema."""
-    a = out["a"]; m = _MK.search(a); ask = "[[ASSUNTO]]" in a
-    a = _MK.sub("", a).replace("[[ASSUNTO]]", "").strip()
+_FORA = re.compile(r"[^.!?\n]*sites? especializad[^.!?\n]*[.!?]?")
+
+
+def link_ext(out, q, ext_fn, hist=None):
+    """Troca os marcadores da IA: empresa ligada -> dados do site (qualquer país); assunto incerto -> botões de tema.
+    Ordem da resposta fora do mercado: quem é/o que é -> empresa ligada (bolsa e índice do país) -> sites especializados -> pergunta final."""
+    a = out["a"]; m = _MK.search(a); ask = "[[ASSUNTO]]" in a; fora = "[[FORA]]" in a
+    a = _MK.sub("", a).replace("[[ASSUNTO]]", "").replace("[[FORA]]", "")
+    s = _FORA.search(a)
+    if s: fora = s.group(0).strip(); a = a.replace(s.group(0), "")
+    elif fora: fora = frase("fora_do_site", hist)
+    a = re.sub(r"\n{3,}", "\n\n", a).strip()
     r = ext_fn(m.group(1).upper(), m.group(2)) if m and ext_fn else None
     if r:
         cur, big = r.get("cur") or "", lambda x: f"{br(x / 1e9, 1)} bi" if abs(x) >= 1e9 else f"{br(x / 1e6, 1)} mi"
         var = r.get("var")
-        a += (f"\n\n**{r.get('nome') or r['ticker']} ({r['ticker']})** — {r['pais']}: preço {br(r.get('preco'))} {cur}"
+        onde = " · ".join(x for x in (r["pais"], r.get("bolsa"), f"índice {r['indice']}" if r.get("indice") else "") if x)
+        a += (f"\n\n**{r.get('nome') or r['ticker']} ({r['ticker']})** — {onde}: preço {br(r.get('preco'))} {cur}"
               + (f" ({'+' if var >= 0 else ''}{br(var)}% hoje)" if var is not None else "")
               + (f" · valor de mercado {big(r['valmerc'])} {cur}" if r.get("valmerc") else "")
-              + (f" · P/L {br(r['pl'])}" if r.get("pl") else "") + "\n\nDeseja mais alguma informação sobre ela?")
+              + (f" · P/L {br(r['pl'])}" if r.get("pl") else ""))
+    if fora: a += "\n\n" + fora
+    if r: a += "\n\nDeseja mais alguma informação sobre ela?"
     out = dict(out, a=a)
     if ask: out["sug"], out["sugl"] = [{"l": t, "q": q, "topic": t} for t in TOPICS], "Está falando sobre:"  # refaz a mesma pergunta com o tema
     return out
@@ -1393,7 +1516,8 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
     P = parse(q, D, hist)
     nq = P["nq"]
     rel = "|".join(str(cx.get(k, ""))[:3000] for k in ("prev", "alug", "comp") if any(w in nq for w in ("previs", "aluguel", "compar", "minha", "meu")))
-    topic = topic if topic in TOPICS else None  # tema escolhido em "Está falando sobre:": a mesma pergunta vai à IA com o contexto
+    kbk = topic[3:] if (topic or "").startswith("kb:") and topic[3:] in _names()["items"] else None  # obra escolhida em "Está falando de qual?"
+    topic = _names()["items"][kbk][1]["n"] if kbk else topic if topic in TOPICS else None  # tema escolhido em "Está falando sobre:": a mesma pergunta vai à IA com o contexto
     key = date.today().isoformat() + "|" + hashlib.sha1((nq + "|" + rel + "|" + (topic or "")).encode()).hexdigest()
     if key in _QA and not hist:
         out = dict(_QA[key], cached=True); _log(q, out, P, t0); return out
@@ -1402,10 +1526,13 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
     try: loc = None if topic else local(q, D, ret_fn, cx, P, quote_fn)
     except Exception as e: log.info("local: %s", e)
     out = None
+    plain = not (P["tickers"] or P["metrics"] or P["sector"] or P["idx"])  # sem ação/indicador: pode ser assunto fora do mercado
     if loc:
         out = {"a": loc, "mode": "regras", "tok": 0}
+    elif plain and not kbk and kb_ambiguous(q):  # nome em mais de uma obra: pergunta qual antes de responder
+        out = kb_ambiguous(q)
     elif not has_ai:
-        out = {"a": kb_answer(q, ext_fn, hist) or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+        out = {"a": kb_answer(q, ext_fn, hist, kbk) or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
     else:
         # (1) IA interpreta, o Python calcula — só para perguntas objetivas
         if not P["complex"] and not P["complaint"] and not topic:
@@ -1421,7 +1548,7 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
                 if a: out = {"a": a, "mode": "regras", "tok": 0}
         if out is None:
             ctx = rel_context(q, D, ret_fn, cx, P)
-            k = kb_context(q, P["tickers"])
+            k = kb_context(q, P["tickers"], force=kbk, fuzzy=plain)
             if k: ctx = k + "\n\n" + ctx
             red_asked = any(((D["by"].get(t) or {}).get("st") or {}).get(k) == "red" for t in P["tickers"] for k in P["metrics"])
             want = P["complaint"] or red_asked
@@ -1439,12 +1566,12 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
                     log.info("busca web indisponível (cota do Gemini?): %s", str(e)[:60])
                     if out is None:
                         try: a, tok = gemini2(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini", "tok": tok}
-                        except Exception: kb_a = kb_answer(q, ext_fn, hist); out = {"a": kb_a or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+                        except Exception: kb_a = kb_answer(q, ext_fn, hist, kbk); out = {"a": kb_a or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
             if out is None:
-                kb_a = kb_answer(q, ext_fn, hist)
+                kb_a = kb_answer(q, ext_fn, hist, kbk)
                 out = {"a": kb_a, "mode": "regras", "tok": 0} if kb_a else {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
     if out["mode"].startswith("gemini"):
-        out = link_ext(out, q, ext_fn)
+        out = link_ext(out, q, ext_fn, hist)
         if not out.get("sug") and (P["tickers"] or P["metrics"] or P["sector"] or P["idx"]): out["sug"] = suggestions(P, D)[:3]
     if out["a"].startswith("Não consegui entender") or out["mode"] == "regras" and out["a"].startswith("Não encontrei"):
         out["sug"] = suggestions(P, D)

@@ -293,6 +293,7 @@
   "sardinhas": "sardinha",
   "micos": "mico"
  },
+ "nomes_ignorados": ["mestre", "mestra", "rei", "rainha", "principe", "princesa", "pai", "mae", "irmao", "irma", "doutor", "doutora", "professor", "professora", "capitao", "general", "comandante", "morte", "deus", "deusa", "anjo", "demonio", "narrador", "narradora", "garoto", "garota", "menino", "menina", "homem", "mulher", "senhor", "senhora", "policial", "soldado", "robo", "monstro", "dragao", "gato", "cachorro", "lider", "chefe", "presidente", "vilao", "heroi", "heroina", "amigo", "amiga", "the", "king", "queen", "father", "mother", "doctor", "captain", "death", "god", "narrator", "master", "boss", "leader"],
  "frases": {
   "ola": ["Olá! Pergunte sobre as ações do site, por exemplo: “DY do Itaú”, “maiores DY dos bancos”, “PETR4 vs Ibovespa em 2024”.", "Olá, tudo bem? Posso ajudar com as ações do site. Experimente: “P/L da Vale”, “maiores ROE dos bancos” ou “ITUB4 rendeu quanto em 1 ano?”.", "Olá! Me pergunte sobre indicadores, rankings ou comparações. Ex.: “ações com DY acima de 8”, “WEGE3 vs Ibovespa em 2 anos”.", "Olá! O que quer saber hoje? Ex.: “resumo da BBAS3”, “ações baratas do Ibovespa”, “método Barsi”."],
   "obrigado": ["De nada! Se quiser, pergunte outra coisa sobre as ações do site.", "Por nada! Estou aqui se precisar de mais algum dado.", "Disponha! Quer ver mais alguma ação ou indicador?", "Imagina! Qualquer dúvida sobre as ações, é só perguntar."],
