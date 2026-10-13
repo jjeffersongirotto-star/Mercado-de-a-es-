@@ -47,5 +47,13 @@ if [ -n "$(ls "$TMP/data/history4" 2>/dev/null | head -1)" ]; then
   for d in history history2 history3; do [ -d "$TMP/data/$d" ] && find "$TMP/data/$d" -type f ! -name 'IBOV*' ! -name 'gold*' ! -name 'bcb_*' -delete; done
 fi
 [ ${#MSG[@]} -eq 0 ] && { echo "Nenhum snapshot gerado" >&2; exit 1; }
-cd "$TMP" && git add -A data && (git diff --cached --quiet || git -c user.name="${GIT_NAME:-jjeffersongirotto-star}" -c user.email="${GIT_EMAIL:-jjeffersongirotto-star@users.noreply.github.com}" commit -q -m "Snapshot ${MSG[*]} $(date -u +%Y-%m-%dT%H:%MZ)") && git push -q origin data
+cd "$TMP" && git add -A data && (git diff --cached --quiet || git -c user.name="${GIT_NAME:-jjeffersongirotto-star}" -c user.email="${GIT_EMAIL:-jjeffersongirotto-star@users.noreply.github.com}" commit -q -m "Snapshot ${MSG[*]} $(date -u +%Y-%m-%dT%H:%MZ)")
+# A rotina leva mais de 1 h; nesse tempo outra gravação (registro do chat, Status Invest) pode entrar na branch data:
+# traz o que entrou e reaplica o snapshot por cima antes de gravar (até 4 tentativas).
+for i in 1 2 3 4; do
+  git push -q origin data && break
+  [ $i -eq 4 ] && { echo "Não foi possível gravar na branch data" >&2; exit 1; }
+  git fetch -q origin data && git -c user.name="${GIT_NAME:-jjeffersongirotto-star}" -c user.email="${GIT_EMAIL:-jjeffersongirotto-star@users.noreply.github.com}" rebase -q -X theirs origin/data || { git rebase --abort; exit 1; }
+  sleep $((i * 5))
+done
 echo "Snapshot publicado na branch data: ${MSG[*]}."
