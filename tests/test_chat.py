@@ -170,7 +170,7 @@ def test_fake_labels_only_for_site_buttons():
 
 
 def test_open_questions_go_to_ai():
-    for q in ("ações mais baratas", "vale ou itau, qual melhor", "o roe do banco do brasil ta errado", "qual empresa tem o maior lucro",
+    for q in ("vale ou itau, qual melhor", "o roe do banco do brasil ta errado", "qual empresa tem o maior lucro",
               "explique o que é roic e por que importa"):
         assert ask(q)[1] is None, q
 
@@ -283,6 +283,23 @@ def test_pop_culture_links_company_and_topics():
     assert "[[" not in a1["a"] and "TTWO" in a1["a"] and "200,00 USD" in a1["a"] and "Deseja mais alguma informação" in a1["a"]
     assert "[[" not in a2["a"] and [x["l"] for x in a2["sug"]][-1] == "Outros"
     assert "Busca na web indisponível" not in open(chat.__file__, encoding="utf-8").read()
+
+
+
+def test_weak_points_fixed():
+    ROWS[0]["ix"] = {"IBOV": [1.0]}; ROWS[2]["ix"] = {"IBOV": [1.0]}  # PETR4 e VALE3 no Ibovespa
+    a = ask("qual a ação mais barata do ibov?")[1]
+    assert a and "Menores P/L — IBOV" in a and "PETR4" in a and "ITUB4" not in a
+    P, a = ask("ações com roe acima de 20 e divida baixa")
+    assert ("dlebit", "<=", 2) in P["filters"] and ("roe", ">=", 20) in P["filters"] and "≤ 2,00" in a
+    a = ask("bbas3 caiu pq hj?")[1]
+    assert a.startswith("BBAS3: +1,60% hoje") and "não sabe o motivo" in a
+    P = chat.parse("quanto ta o dolar hoje", D)
+    a = chat.local("quanto ta o dolar hoje", D, ret_fn, {}, P, lambda k: ("2026-10-09", 5.43) if k == "@usd" else None)
+    assert a == "Dólar: R$ 5,43 (fechamento de 09/10/2026)" and chat.suggestions(P, D)[0] == "Dólar rendeu quanto em 1 ano?"
+    a = ask("compara itau e bradesco")[1]
+    assert a.startswith("Comparação ") and "ITUB4" in a and "BBDC4" in a and "Resumo: BBDC4 se sai melhor em 3 de 4" in a and "melhor:" in a
+    assert ask("ações mais baratas")[1].startswith("Menores P/L")
 
 
 if __name__ == "__main__":
