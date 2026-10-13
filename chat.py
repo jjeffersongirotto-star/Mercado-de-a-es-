@@ -9,7 +9,7 @@ Fluxo (answer2):
 4. Reclamação ("está errado"), dado faltando ou indicador citado sem maioria entre as fontes: Gemini com busca na web.
 5. Sem IA disponível: melhor esforço das regras e sugestões ("Você quis dizer…").
 Toda pergunta é registrada em cache/chat_log.jsonl (veja /api/chat/log)."""
-import os, re, json, time, difflib, hashlib, unicodedata, logging, html as _html
+import os, re, json, time, random, difflib, hashlib, unicodedata, logging, math, html as _html
 from datetime import date, timedelta, datetime, timezone
 import requests
 
@@ -31,46 +31,17 @@ MX = {"ret1": ("Valorização 1 ano", "%"), "ret2": ("Valorização 2 anos", "%"
 BIG = {"valmerc", "patrliq"}  # + campos de volume (grp "vol" em /api/data)
 RET = "ret"  # pseudo-indicador: variação de preço no período (calculada pelo histórico)
 
-# indicador -> sinônimos (texto normalizado: sem acento, minúsculo). Casam por palavra inteira, o mais longo primeiro.
-SYN = {
-    "dy": ["dividend yield", "dividendyield", "yield", "dy", "dividendo", "dividendos", "dividend", "rendimento em dividendos"],
-    "prov12": ["proventos", "provento"],
-    "pl": ["p/l", "p / l", "p l", "pl", "preco/lucro", "preco lucro", "preco sobre lucro", "preco sobre o lucro"],
-    "pvp": ["p/vp", "p / vp", "p vp", "pvp", "preco/valor patrimonial", "preco sobre valor patrimonial", "preco sobre o valor patrimonial"],
-    "psr": ["psr", "p/receita", "preco/receita", "preco sobre receita"],
-    "evebitda": ["ev/ebitda", "ev ebitda", "evebitda", "ebitda"],
-    "evebit": ["ev/ebit", "ev ebit", "evebit"],
-    "pebit": ["p/ebit", "pebit"],
-    "pativo": ["p/ativo", "p/ativos", "preco/ativo", "preco sobre ativo", "preco sobre ativos"],
-    "roe": ["roe", "retorno sobre patrimonio", "retorno sobre o patrimonio", "retorno sobre patrimonio liquido"],
-    "roic": ["roic", "retorno sobre capital investido", "retorno sobre o capital investido"],
-    "roa": ["roa", "retorno sobre ativos", "retorno sobre os ativos", "retorno sobre o ativo"],
-    "mbruta": ["margem bruta", "marg bruta"],
-    "mebit": ["margem ebit", "margem operacional", "marg ebit"],
-    "mliq": ["margem liquida", "marg liquida", "margem", "margens"],
-    "liqcorr": ["liquidez corrente", "liq corrente"],
-    "dlebit": ["divida liquida/ebit", "divida liquida / ebit", "divida liquida sobre ebit", "div liq/ebit", "dl/ebit", "divida/ebit", "divida sobre ebit"],
-    "dlpl": ["divida liquida/patrimonio", "divida liquida / patrimonio", "divida liquida sobre patrimonio", "div liq/pl", "div liq/patrim",
-             "dl/pl", "divida/pl", "divida/patrimonio", "divida sobre patrimonio", "divida liquida", "divida", "dividas", "endividamento",
-             "endividada", "endividadas", "endividado", "alavancagem", "alavancada", "alavancadas"],
-    "liq2m": ["liquidez diaria", "liquidez 2 meses", "liquidez media", "liquidez", "liquidas", "liquida", "negociacao", "volume 2 meses"],
-    "vol30": ["volume financeiro", "volume medio", "volume", "volume 1 mes", "volume mensal"],
-    "cresc5a": ["crescimento de receita", "crescimento da receita", "crescimento das receitas", "cresc receita", "cagr receita", "cagr receitas",
-                "cagr de receita", "receita cresceu", "crescimento de receitas"],
-    "lucro5a": ["crescimento de lucro", "crescimento do lucro", "crescimento dos lucros", "cresc lucro", "cagr lucro", "cagr lucros",
-                "cagr de lucro", "lucro cresceu", "crescimento de lucros"],
-    "lpa": ["lpa", "lucro por acao"],
-    "vpa": ["vpa", "valor patrimonial por acao", "valor patrimonial"],
-    "peg": ["peg ratio", "peg"],
-    "valmerc": ["valor de mercado", "market cap", "valor da empresa", "capitalizacao"],
-    "patrliq": ["patrimonio liquido", "patrimonio"],
-    "preco": ["cotacao", "cotacoes", "preco atual", "preco", "precos", "valor da acao", "quanto custa", "quanto esta", "quanto ta",
-              "quanto vale", "valendo", "custando"],
-    RET: ["valorizacao", "valorizacoes", "rentabilidade", "retorno", "rendeu", "rende", "rendimento", "subiu", "subiram", "valorizou",
-          "valorizaram", "caiu", "cairam", "desvalorizou", "desvalorizacao", "variacao", "variou", "performance", "desempenho",
-          "performou", "ganhou", "perdeu", "oscilou", "alta", "queda", "rendem",
-          "renderam", "subindo", "caindo", "altas", "quedas", "valorizacao de preco"],
-}
+# vocabulário do chat: fonte única em vocabulario.json (sinônimos, gírias, abreviações, apelidos, frases)
+VOC = json.load(open(os.path.join(BASE, "vocabulario.json"), encoding="utf-8"))
+# indicador -> sinônimos e gírias (texto normalizado: sem acento, minúsculo). Casam por palavra inteira, o mais longo primeiro.
+SYN = {k: list(dict.fromkeys(ws + VOC["girias"].get(k, []))) for k, ws in VOC["sinonimos"].items()}
+
+
+def frase(kind, hist=None):
+    """Uma das variações da frase (vocabulario.json -> frases), evitando as que já apareceram nas respostas da conversa."""
+    opts = VOC["frases"][kind]
+    used = " ".join(str(h.get("t", "")) for h in (hist or []) if h.get("r") != "u")
+    return random.choice([o for o in opts if o.strip() not in used] or opts)
 SYN_LIST = sorted(((w, k) for k, ws in SYN.items() for w in ws), key=lambda x: -len(x[0]))
 METRIC_WORDS = {p for w, _ in SYN_LIST for p in re.split(r"[\s/]+", w) if p}
 
@@ -102,34 +73,7 @@ SECTORS = {
 SECT_WORDS = sorted(((w, s) for s, (ws, _) in SECTORS.items() for w in ws), key=lambda x: -len(x[0]))
 
 # apelidos -> raiz de 4 letras (só valem se a raiz existir nos dados)
-ALIAS = {
-    "petrobras": "PETR", "petrobas": "PETR", "petro": "PETR", "petrobrás": "PETR", "vale": "VALE", "itau": "ITUB", "itau unibanco": "ITUB",
-    "itausa": "ITSA", "bradesco": "BBDC", "banco do brasil": "BBAS", "bb": "BBAS", "bco brasil": "BBAS", "santander": "SANB",
-    "bb seguridade": "BBSE", "caixa seguridade": "CXSE", "btg": "BPAC", "btg pactual": "BPAC", "banrisul": "BRSR", "abc brasil": "ABCB",
-    "weg": "WEGE", "ambev": "ABEV", "b3": "B3SA", "bolsa b3": "B3SA", "magalu": "MGLU", "magazine luiza": "MGLU", "magazine": "MGLU",
-    "taesa": "TAEE", "eletrobras": "AXIA", "eletrobrás": "AXIA", "axia": "AXIA", "suzano": "SUZB", "gerdau": "GGBR",
-    "metalurgica gerdau": "GOAU", "embraer": "EMBJ", "localiza": "RENT", "rumo": "RAIL", "cemig": "CMIG", "copel": "CPLE",
-    "sabesp": "SBSP", "klabin": "KLBN", "jbs": "JBSS", "brf": "MBRF", "marfrig": "MBRF", "mbrf": "MBRF", "raia": "RADL",
-    "raia drogasil": "RADL", "drogasil": "RADL", "rd saude": "RADL", "natura": "NATU", "renner": "LREN", "lojas renner": "LREN",
-    "hapvida": "HAPV", "rede dor": "RDOR", "rede d'or": "RDOR", "americanas": "AMER", "casas bahia": "BHIA", "azul": "AZUL",
-    "gol": "GOLL", "cosan": "CSAN", "ultrapar": "UGPA", "ipiranga": "UGPA", "vibra": "VBBR", "br distribuidora": "VBBR",
-    "prio": "PRIO", "petrorio": "PRIO", "petro rio": "PRIO", "engie": "EGIE", "equatorial": "EQTL", "cpfl": "CPFE",
-    "energisa": "ENGI", "isa energia": "ISAE", "cteep": "ISAE", "isa cteep": "ISAE", "sanepar": "SAPR", "copasa": "CSMG",
-    "usiminas": "USIM", "csn": "CSNA", "csn mineracao": "CMIN", "cba": "CBAV", "tim": "TIMS", "vivo": "VIVT", "telefonica": "VIVT",
-    "totvs": "TOTS", "assai": "ASAI", "carrefour": "CRFB", "mateus": "GMAT", "grupo mateus": "GMAT", "pao de acucar": "PCAR",
-    "gpa": "PCAR", "multiplan": "MULT", "iguatemi": "IGTI", "cyrela": "CYRE", "mrv": "MRVE", "direcional": "DIRR", "eztec": "EZTC",
-    "cury": "CURY", "randon": "RAPT", "randoncorp": "RAPT", "marcopolo": "POMO", "tupy": "TUPY", "fleury": "FLRY",
-    "odontoprev": "ODPV", "porto seguro": "PSSA", "porto": "PSSA", "irb": "IRBR", "unipar": "UNIP", "braskem": "BRKM",
-    "bradespar": "BRAP", "alpargatas": "ALPA", "azzas": "AZZA", "arezzo": "AZZA", "vivara": "VIVA", "smart fit": "SMFT",
-    "smartfit": "SMFT", "cogna": "COGN", "yduqs": "YDUQ", "minerva": "BEEF", "sao martinho": "SMTO", "slc": "SLCE",
-    "slc agricola": "SLCE", "3tentos": "TTEN", "kepler": "KEPL", "kepler weber": "KEPL", "wiz": "WIZC", "neoenergia": "NEOE",
-    "alupar": "ALUP", "auren": "AURE", "aes brasil": "AESB", "eneva": "ENEV", "romi": "ROMI", "pagseguro": "PAGS",
-    "mercado livre": "MELI", "dexco": "DXCO", "vamos": "VAMO", "movida": "MOVI", "simpar": "SIMH", "ecorodovias": "ECOR",
-    "motiva": "MOTV", "ccr": "MOTV", "hypera": "HYPE", "camil": "CAML", "m dias branco": "MDIA", "grendene": "GRND",
-    "intelbras": "INTB", "lwsa": "LWSA", "locaweb": "LWSA", "ser educacional": "SEER", "cielo": "CIEL",
-    "raizen": "RAIZ", "allos": "ALOS", "jhsf": "JHSF", "even": "EVEN", "tenda": "TEND", "lavvi": "LAVV", "plano e plano": "PLPL",
-    "petz": "PETZ", "c&a": "CEAB", "cea": "CEAB", "guararapes": "GUAR", "riachuelo": "GUAR", "sanepar": "SAPR", "copel": "CPLE",
-}
+ALIAS = VOC["apelidos"]
 # apelidos que também são palavras comuns: só valem com contexto de ação (ou escritos em maiúsculas)
 GUARDED = {"vale", "azul", "gol", "tim", "rumo", "porto", "vivo", "even", "positivo", "vamos", "prio", "wiz", "raia", "natura",
            "movida", "camil", "tenda", "motiva", "cury", "bb", "b3"}
@@ -169,12 +113,7 @@ WRONG = ("esta errado", "ta errado", "errado", "errada", "nao e isso", "incorret
          "verifique", "nao bate", "desatualizado", "desatualizada", "mentira", "nao esta certo", "esta certo", "ta certo")
 MISSING = ("nao tem esse dado", "nao possui", "nao ha informac", "nao contem", "nao dispoe", "nao tem informac", "nao consta",
            "nao encontrei", "nao tem dados", "nao tenho")
-ABBR = {"oq": "o que", "oque": "o que", "q": "que", "pq": "por que", "porq": "por que", "vc": "voce", "vcs": "voces", "ta": "esta",
-        "tao": "estao", "hj": "hoje", "qto": "quanto", "qt": "quanto", "qnt": "quanto", "qnto": "quanto", "qtos": "quantos",
-        "tb": "tambem", "tbm": "tambem", "mt": "muito", "mto": "muito", "mtas": "muitas", "c/": "com", "s/": "sem", "p/": "para",
-        "msm": "mesmo", "eh": "e", "n": "nao", "naum": "nao", "blz": "beleza", "obg": "obrigado", "vlw": "valeu", "dps": "depois",
-        "td": "tudo", "tds": "todos", "qdo": "quando", "qnd": "quando", "ngm": "ninguem", "agr": "agora", "aki": "aqui",
-        "acoes?": "acoes", "x": "x"}
+ABBR = VOC["abreviacoes"]
 MONTHS = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
 
 
@@ -347,9 +286,10 @@ SIGN_RE = re.compile(r"\b(positivo|positiva|positivos|positivas|negativo|negativ
 
 
 # qualificadores -> filtros quando vêm com outro critério; sozinhos viram o critério (indicador, ordem)
-QUALS = [(r"\bbarat[ao]s?\b|\bdescontad\w*", [("pl", ">", 0), ("pl", "<=", 10)], ("pl", "asc")),
-         (r"\b(divida baixa|baixa divida|pouca divida|baixo endividamento|pouco endividad\w*|sem divida|menos endividad\w*)\b", [("dlebit", "<=", 2)], ("dlebit", "asc")),
-         (r"\b(boas? pagadoras?|bons dividendos|bom dividendo|pagam bem)\b", [("dy", ">=", 6)], ("dy", "desc"))]
+_QW = lambda k: r"\b(" + "|".join(re.escape(w) for w in sorted(VOC["qualificadores"][k], key=len, reverse=True)) + r")\b"  # palavras: vocabulario.json
+QUALS = [(_QW("barato"), [("pl", ">", 0), ("pl", "<=", 10)], ("pl", "asc")),
+         (_QW("pouca_divida"), [("dlebit", "<=", 2)], ("dlebit", "asc")),
+         (_QW("boa_pagadora"), [("dy", ">=", 6)], ("dy", "desc"))]
 # índice da B3 como filtro de lista ("mais barata do Ibovespa", "small caps")
 IXF = [(r"\b(do|da|no|na|dentro do)\s+(ibov|ibovespa|indice bovespa)\b", "IBOV"), (r"\bsmall ?caps?\b|\bsmll\b", "SMLL"), (r"\bidiv\b", "IDIV")]
 
@@ -361,7 +301,7 @@ def parse(q, D, hist=None):
     work = " " + nq + " "
     P = {"q": q, "nq": nq, "fixes": fixes, "ixf": None, "tickers": [], "idx": [], "metrics": [], "sector": None, "filters": [], "period": None,
          "order": None, "n": None, "notes": [], "from_hist": False, "all_classes": bool(re.search(r"\btodas as classes\b", nq)),
-         "illiquid": bool(re.search(r"\b(iliquidas|incluindo iliquidas|todas as acoes|sem filtro de liquidez)\b", nq))}
+         "illiquid": bool(re.search(r"\b(iliquidas|incluindo iliquidas|todas as acoes|sem filtro de liquidez)\b", nq)), "hist": hist or []}
     used = []  # trechos consumidos
 
     def take(span_text):
@@ -467,7 +407,7 @@ def parse(q, D, hist=None):
     if re.search(r"\b(melhores|melhor)\b", nq): P["order"] = "best"
     if re.search(r"\b(piores|pior)\b", nq): P["order"] = "worst"
     if quals and len(quals) == 1 and P["metrics"] and P["metrics"][0] == quals[0][2][0]: P["order"] = quals[0][2][1]
-    if RET in P["metrics"] and re.search(r"\b(quedas?|cairam|caiu|desvaloriz\w*|perderam|perdeu)\b", nq) and P["order"] != "asc":
+    if RET in P["metrics"] and re.search(_QW("queda"), nq) and P["order"] != "asc":
         P["order"] = "worst"
     if not P["metrics"] and not P["tickers"] and re.search(r"\b(maiores|grandes|mais valiosas|gigantes)\s+(empresas|acoes|companhias)\b", nq):
         P["metrics"] = ["valmerc"]; P["order"] = "desc"
@@ -870,14 +810,7 @@ def ui_labels():
 
 
 # palavra do usuário -> termo do Glossário do painel ⓘ (só o vocabulário; as definições ficam no painel)
-GLOSS_SYN = {"pl": "p/l", "preco/lucro": "p/l", "preco lucro": "p/l", "pvp": "p/vp", "dividendo": "dy", "dividendos": "dy", "yield": "dy",
-             "ev ebitda": "ev/ebitda", "evebitda": "ev/ebitda", "ev ebit": "ev/ebit", "margem": "margem liquida", "divida": "divida liquida",
-             "dl/pl": "div.liq/pl", "divida/pl": "div.liq/pl", "divida liquida/patrimonio": "div.liq/pl", "dl/ebit": "div.liq/ebit",
-             "divida/ebit": "div.liq/ebit", "divida liquida/ebit": "div.liq/ebit", "ordinaria": "on", "preferencial": "pn", "units": "unit",
-             "ibov": "ibovespa", "juros sobre capital proprio": "jcp", "juros sobre capital": "jcp", "data ex": "data com", "split": "desdobramento",
-             "inplit": "grupamento", "lucro por acao": "lpa", "valor patrimonial": "vpa", "valor patrimonial por acao": "vpa", "crescimento": "cagr",
-             "cagr receita": "cagr", "cagr lucro": "cagr", "proventos": "dy", "ebit ajustado": "ebit", "small cap": "small caps",
-             "liquidez": "volume", "magic": "magic formula", "preco justo": "graham"}
+GLOSS_SYN = VOC["glossario"]
 # assunto da pergunta -> seções do painel ⓘ (títulos <h3>/<summary>); o texto fica só no painel
 HOWTO_KEYS = [
     (("metodo de investimento", "metodos de investimento", "estrategia de investimento"), ["Métodos de investimento"]),
@@ -1027,9 +960,9 @@ def local(q, D, ret_fn, cx, P=None, quote_fn=None):
         if a: return a
     if P.get("unknown_tickers") and not P["tickers"]: return " ".join(P["notes"])
     if re.fullmatch(r"(oi|ola|bom dia|boa tarde|boa noite|e ai|opa|hello|hi)( tudo bem| tudo bom)?", nq):
-        return "Olá! Pergunte sobre as ações do site, por exemplo: “DY do Itaú”, “maiores DY dos bancos”, “PETR4 vs Ibovespa em 2024”."
+        return frase("ola", P["hist"])
     if re.fullmatch(r"(obrigad[oa]|valeu|beleza|ok|show|perfeito|otimo|blz|top)( mesmo)?", nq):
-        return "De nada! Se quiser, pergunte outra coisa sobre as ações do site."
+        return frase("obrigado", P["hist"])
     fk = fake_label(q, P)
     if fk: return fk
     m = method(P, D)
@@ -1070,8 +1003,14 @@ def rules(q, D, ret_fn, P=None):
     near = []
     for w in P["left"]:
         if len(w) >= 5: near += difflib.get_close_matches(w, list(D["alias"]) + list(D["tok"]), 1, 0.85)
+    if not near and not P["tickers"]:
+        f = search(P["nq"])
+        if f:
+            src, title, body = f
+            body = f"{title}: {_sentences(body, 3)}" if src == "kb" else body if src == "glos" else f"{title}:\n{body[:900]}"
+            return frase("busca", P["hist"]) + "\n" + body
     extra = f" Você quis dizer “{near[0]}”?" if near else ""
-    return "Não consegui entender essa pergunta só com as regras do site." + extra + " Tente uma das sugestões abaixo."
+    return "Não consegui entender essa pergunta só com as regras do site." + extra + frase("nao_entendi", P["hist"])
 
 
 # ============================================================ IA (Gemini)
@@ -1103,39 +1042,127 @@ def kb():
     return _KB
 
 
-def kb_context(q, tickers=(), cap=6000):
-    """Itens da base cujos nomes/apelidos aparecem na pergunta + o que fazem as empresas ligadas a eles e às ações citadas."""
-    K, nq = kb(), " " + norm(q) + " "
-    if not K: return ""
+_WIKI = {"t": 0.0, "d": None}
+
+
+def _load_wiki():
+    try:
+        import snapshots
+        p, _ = snapshots.load("kb", max_mem_age=43200)
+        _WIKI["d"] = (p or {}).get("itens") or _WIKI["d"] or {}
+    except Exception as e:
+        log.info("kb: %s", e); _WIKI["d"] = _WIKI["d"] or {}
+
+
+def wiki():
+    """Resumos da Wikipedia dos itens do conhecimento.json (snapshot kb, scripts/build_kb.py) -> {"categoria|nome": {t, x, u}}.
+    Baixa em segundo plano (a cada 12 h) para não atrasar a resposta; sem o snapshot, o chat segue só com o conhecimento.json."""
+    if time.time() - _WIKI["t"] > 43200:
+        _WIKI["t"] = time.time()
+        import threading
+        threading.Thread(target=_load_wiki, daemon=True).start()
+    return _WIKI["d"] or {}
+
+
+def _sentences(x, n=2, skip=0):
+    s = re.split(r"(?<=[.!?])\s+(?=[A-ZÀ-Ú0-9])", x or "")
+    return " ".join(s[skip:skip + n]).strip()
+
+
+def _kb_hits(q, tickers=()):
+    """Itens da base citados na pergunta -> [{rot, n, d, e, w}] (w = resumo da Wikipedia, se houver)."""
+    K, nq, W = kb(), " " + norm(q) + " ", wiki()
+    if not K: return []
     hit = lambda it: any(re.search(r"(?<![a-z0-9])" + re.escape(norm(w)) + r"(?![a-z0-9])", nq) for w in [it["n"]] + it.get("a", []) if len(norm(w)) >= 2)
-    lines, emp = [], [t[:4] if t[:4].isalpha() else t for t in tickers]
+    out, emp = [], [t[:4] if t[:4].isalpha() else t for t in tickers]
     for cat, rot in (("pessoas", "pessoa"), ("obras", "filme/série"), ("animes", "anime"), ("jogos", "jogo"), ("temas", "tema")):
         for it in K.get(cat, []):
             if hit(it):
-                lines.append(f"- [{rot}] {it['n']}: {it['d']}" + (f" (empresas: {', '.join(it['e'])})" if it.get("e") else ""))
+                out.append({"rot": rot, "n": it["n"], "d": it["d"], "e": it.get("e", []), "w": (W.get(f"{cat}|{norm(it['n'])}") or {}).get("x", "")})
                 emp += [x.split(":")[0] for x in it.get("e", [])]
     F = K.get("futebol") or {}
     js = [j for j in F.get("jogadores", []) if hit(j)]
-    lines += [f"- [futebol] {j['n']}: {j['d']}" for j in js]
-    if js or re.search(r"\b(copa|copas|campe\w*|selecao|futebol|mundial)\b", nq): lines += [f"- [futebol] {F.get('campeoes', '')}", f"- [futebol] {F.get('copas', '')}"]
+    out += [{"rot": "futebol", "n": j["n"], "d": j["d"], "e": [], "w": (W.get(f"jogadores|{norm(j['n'])}") or {}).get("x", "")} for j in js]
+    if re.search(r"\b(copa|copas|campeao|campeoes|campea|selecao|mundial)\b", nq):
+        out += [{"rot": "futebol", "n": "", "d": F.get(k, ""), "e": [], "w": ""} for k in ("campeoes", "copas")]
     E = K.get("empresas", {})
     for t in dict.fromkeys(emp):
         k = next((x for x in (t, t[:4], re.sub(r"\d+$", "", t)) if x in E), None)
-        if k: lines.append(f"- [empresa] {t}: {E[k]}")
-    if not lines: return ""
-    return ("CONTEXTO (base do site, dados até " + str(K.get("atualizado", "")) + "; confira na web o que pode ter mudado):\n" + "\n".join(dict.fromkeys(lines)))[:cap]
+        if k: out.append({"rot": "empresa", "n": t, "d": E[k], "e": [], "w": (W.get(f"empresas|{k}") or {}).get("x", "")})
+    return out
 
 
-def kb_answer(q, ext_fn=None):
+def kb_context(q, tickers=(), cap=6000):
+    """Itens da base cujos nomes/apelidos aparecem na pergunta + o que fazem as empresas ligadas a eles e às ações citadas."""
+    H = _kb_hits(q, tickers)
+    if not H: return ""
+    lines = [f"- [{h['rot']}] " + (f"{h['n']}: " if h["n"] else "") + h["d"] + (f" (empresas: {', '.join(h['e'])})" if h["e"] else "")
+             + (f" | Wikipedia: {_sentences(h['w'], 3)}" if h["w"] else "") for h in H]
+    return ("CONTEXTO (base do site, dados até " + str(kb().get("atualizado", "")) + "; confira na web o que pode ter mudado):\n"
+            + "\n".join(dict.fromkeys(lines)))[:cap]
+
+
+def _kb_text(h, hist):
+    """Descrição do item sem repetir o que a conversa já mostrou: base do site -> 1º trecho da Wikipedia -> trecho seguinte."""
+    used = " ".join(str(x.get("t", "")) for x in (hist or []) if x.get("r") != "u")
+    opts = [h["d"]] + [s for s in (_sentences(h["w"], 2), _sentences(h["w"], 2, 2)) if s]
+    for o in opts:
+        if o[:60] not in used: return o + (" (Wikipédia)" if o != h["d"] else "")
+    return random.choice(opts)
+
+
+def kb_answer(q, ext_fn=None, hist=None):
     """Sem a IA (fora do ar ou sem chave): responde com a base de contexto — quem é/o que é + empresa ligada com os dados do site."""
-    k = kb_context(q)
-    if not k: return None
-    items = [l[2:] for l in k.split("\n")[1:] if l.startswith("- [") and not l.startswith("- [empresa]")]
-    if not items: return None
-    txt = "\n".join("• " + re.sub(r" \(empresas: [^)]*\)$", "", re.sub(r"^\[[^\]]+\] ", "", l)) for l in items[:3])
-    txt += "\n\nEste site é para investimentos; para mais sobre o assunto, veja sites especializados."
-    m = re.search(r"\(empresas: ([A-Z0-9.]+):([a-z]{2})", "\n".join(items))
-    return link_ext({"a": txt + (f"\n[[EMPRESA:{m.group(1)}:{m.group(2)}]]" if m else "")}, q, ext_fn)["a"]
+    H = [h for h in _kb_hits(q) if h["rot"] != "empresa"]
+    if not H: return None
+    txt = "\n".join("• " + (f"{h['n']}: " if h["n"] else "") + _kb_text(h, hist) for h in H[:3])
+    txt += "\n\n" + frase("fora_do_site", hist)
+    e = next((h["e"][0] for h in H if h["e"]), None)
+    return link_ext({"a": txt + ("\n[[EMPRESA:" + e + "]]" if e else "")}, q, ext_fn)["a"]
+
+
+# busca por relevância (BM25) no painel ⓘ e na base, para perguntas que nenhuma regra entendeu
+_IX = {"key": None}
+
+
+def _toks(s):
+    return [w for w in re.findall(r"[a-z0-9]{3,}", norm(s)) if w not in STOP]
+
+
+def _index():
+    W = wiki(); key = (len(guide()), len(W))
+    if _IX["key"] != key:
+        docs = [("guia", t, b) for t, b in guide_sections().items() if b and t != "Glossário"]
+        docs += [("glos", l.split(":")[0].strip("- "), l.strip("- ")) for l in guide_sections().get("Glossário", "").split("\n") if ":" in l]
+        K = kb()
+        for cat in ("pessoas", "obras", "animes", "jogos", "temas"):
+            for it in K.get(cat, []):
+                docs.append(("kb", it["n"], it["d"] + " " + (W.get(f"{cat}|{norm(it['n'])}") or {}).get("x", "")))
+        T = [_toks(d[1] + " " + d[1] + " " + d[2]) for d in docs]  # título conta em dobro
+        df = {}
+        for t in T:
+            for w in set(t): df[w] = df.get(w, 0) + 1
+        _IX.update(key=key, docs=docs, T=T, df=df, avg=sum(map(len, T)) / max(1, len(T)))
+    return _IX
+
+
+def search(q, k1=1.5, b=0.75):
+    """-> (origem, título, texto) do trecho mais relevante, ou None se nada casa o bastante."""
+    I = _index(); qs = list(dict.fromkeys(_toks(q)))
+    if not qs or not I["docs"]: return None
+    N, best = len(I["docs"]), (0.0, None, 0)
+    for i, t in enumerate(I["T"]):
+        tf = {}
+        for w in t: tf[w] = tf.get(w, 0) + 1
+        s, hit = 0.0, 0
+        for w in qs:
+            if w in tf:
+                idf = math.log(1 + (N - I["df"][w] + 0.5) / (I["df"][w] + 0.5)); hit += 1
+                s += idf * tf[w] * (k1 + 1) / (tf[w] + k1 * (1 - b + b * len(t) / I["avg"]))
+        if s > best[0]: best = (s, i, hit)
+    s, i, hit = best
+    if i is None or s < 4 or hit < 2: return None  # pouca semelhança: melhor dizer que não entendeu
+    return I["docs"][i]
 
 
 # assuntos fora do mercado: a IA só aponta a empresa ligada (marcador); preço e dados vêm do site (link_ext)
@@ -1378,7 +1405,7 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
     if loc:
         out = {"a": loc, "mode": "regras", "tok": 0}
     elif not has_ai:
-        out = {"a": kb_answer(q, ext_fn) or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+        out = {"a": kb_answer(q, ext_fn, hist) or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
     else:
         # (1) IA interpreta, o Python calcula — só para perguntas objetivas
         if not P["complex"] and not P["complaint"] and not topic:
@@ -1412,9 +1439,9 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
                     log.info("busca web indisponível (cota do Gemini?): %s", str(e)[:60])
                     if out is None:
                         try: a, tok = gemini2(q, ctx, hist, deadline); out = {"a": a, "mode": "gemini", "tok": tok}
-                        except Exception: kb_a = kb_answer(q, ext_fn); out = {"a": kb_a or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
+                        except Exception: kb_a = kb_answer(q, ext_fn, hist); out = {"a": kb_a or rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
             if out is None:
-                kb_a = kb_answer(q, ext_fn)
+                kb_a = kb_answer(q, ext_fn, hist)
                 out = {"a": kb_a, "mode": "regras", "tok": 0} if kb_a else {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
     if out["mode"].startswith("gemini"):
         out = link_ext(out, q, ext_fn)

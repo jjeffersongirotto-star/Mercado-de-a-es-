@@ -3,6 +3,7 @@ import os, time, sys, json, tempfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ.pop("GEMINI_API_KEY", None)
 import chat
+chat._WIKI.update(t=time.time(), d={})  # testes sem rede: base da Wikipedia vazia (cada teste injeta o que precisa)
 
 FIELDS = [("preco", "Cotação", "R$", None, False), ("dy", "Div. Yield", "%", "high", False), ("pl", "P/L", "x", "low", True),
           ("pvp", "P/VP", "x", "low", True), ("roe", "ROE", "%", "high", False), ("roic", "ROIC", "%", "high", False),
@@ -347,6 +348,42 @@ def test_ai_down_answers_fast_from_knowledge():
         _restore(old); chat._DOWN["until"] = 0
     assert "Dragon Ball" in out["a"] and "sites especializados" in out["a"] and time.time() - t0 < 5
     assert "Naruto" in out2["a"] and len(calls) <= 2  # depois do 503, não tenta a IA de novo por 2 min
+
+def test_slang_typos_and_synonyms():
+    for q, k in (("vacas leiteiras dos bancos", "dy"), ("blue chips", "valmerc"), ("ações lucrativas", "roe"), ("dy da petrobars", "dy")):
+        assert ask(q)[0]["metrics"] == [k], q
+    assert ask("dy da petrobars")[0]["tickers"] == ["PETR4"] and ask("dividendos do bradesko")[0]["tickers"] == ["BBDC4"]
+    P, a = ask("quais ações estão sangrando em 2024")
+    assert a.startswith("Maiores quedas em 2024") and "MGLU3" in a
+    assert ask("ações em conta")[1].startswith("Menores P/L")
+    assert ask("o que é vaca leiteira")[1].startswith("Vaca leiteira:")
+    V = json.load(open(os.path.join(os.path.dirname(chat.__file__), "vocabulario.json"), encoding="utf-8"))  # fonte única do vocabulário
+    assert chat.SYN["pl"] == V["sinonimos"]["pl"] and chat.ALIAS == V["apelidos"] and "vaca leiteira" in chat.SYN["dy"]
+
+
+def test_offline_base_search_and_variety():
+    old = chat._WIKI.copy()
+    chat._WIKI.update(t=time.time(), d={"animes|dragon ball": {"t": "Dragon Ball", "x": "Dragon Ball é uma franquia de mídia japonesa criada por Akira Toriyama. "
+                                         "Começou como mangá em 1984. Virou anime pela Toei Animation. É uma das séries mais vendidas."}})
+    chat._IX["key"] = None
+    try:
+        h = []
+        a1 = chat.kb_answer("e o goku?", None, h); h += [{"r": "u", "t": "e o goku?"}, {"r": "a", "t": a1}]
+        a2 = chat.kb_answer("e o goku?", None, h)
+        assert a1 != a2 and "Wikipédia" in a2 and "sites especializados" in a1 and "sites especializados" in a2
+        assert "franquia de mídia japonesa" in chat.kb_context("e o goku?")
+    finally:
+        chat._WIKI.clear(); chat._WIKI.update(old); chat._IX["key"] = None
+    P = chat.parse("onde vejo os alertas de preço dos favoritos", D)
+    assert "Favoritos" in chat.rules(P["q"], D, ret_fn, P)
+    P = chat.parse("qual empresa tem o maior lucro", D)
+    assert chat.rules(P["q"], D, ret_fn, P).startswith("Não consegui entender")  # uma palavra só não basta para a busca
+    h = [{"r": "u", "t": "oi"}]
+    seen = set()
+    for _ in range(3):
+        a = chat.local("oi", D, ret_fn, {}, chat.parse("oi", D, h)); seen.add(a); h += [{"r": "a", "t": a}, {"r": "u", "t": "oi"}]
+    assert len(seen) == 3 and all(x.startswith("Olá") for x in seen)
+
 
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
