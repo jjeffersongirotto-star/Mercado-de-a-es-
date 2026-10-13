@@ -55,6 +55,8 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Nomes de botões, abas, campos e opções | a própria interface (`index.html` e `*.js`) | chat e Gemini (`chat.ui_labels()` lê da interface) |
 | Significado de cada cor | seção **Cores** do painel ⓘ | usuário; chat |
 | Paleta, alturas, raios, sombras | `index.html` → bloco `/* Design system */` (`:root { --c-pos … }`) | todo CSS (`var(--…)`) |
+| Contexto para a IA do chat (pessoas, futebol, filmes, animes, jogos, o que fazem as empresas, temas → setores) | `conhecimento.json` (data em `atualizado`) | `chat.kb_context` → Gemini (só os itens citados na pergunta) |
+| Métodos de investimento (Barsi, Bazin, Graham, Buffett, Fórmula Mágica…) | painel ⓘ → seção **Métodos de investimento** | usuário; chat (`chat.method`, critérios em `METHODS`) |
 | Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
 | Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
 | Diálogos, toast, carregamento | `ui.js` → `uiConfirm`, `uiAlert`, `uiPrompt`, `uiChoose`, `uiToast`, `loaderHTML` | todas as abas |

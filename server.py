@@ -811,7 +811,7 @@ def api_chat(body: dict):
             log.warning("chat cotação %s: %s", k, e)
         return None
     try:
-        out = chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}, ext_fn, quote_fn)
+        out = chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}, ext_fn, quote_fn, (body or {}).get("topic"))
     except Exception:  # nunca devolve erro 500 ao usuário: registra a causa e responde com uma mensagem
         log.exception("chat: erro na pergunta %r", q[:200])
         out = {"a": "Tive um problema para responder agora. Tente de novo em instantes ou reformule a pergunta.", "mode": "regras"}
