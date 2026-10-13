@@ -385,6 +385,58 @@ def test_offline_base_search_and_variety():
     assert len(seen) == 3 and all(x.startswith("Olá") for x in seen)
 
 
+def _with_wiki(d):
+    old = (chat._WIKI.copy(), chat._NM.get("key"))
+    chat._WIKI.update(t=time.time(), d=d); chat._NM["key"] = None; chat._IX["key"] = None
+    return old
+
+
+def _restore_wiki(old):
+    chat._WIKI.clear(); chat._WIKI.update(old[0]); chat._NM["key"] = None; chat._IX["key"] = None
+
+
+WIKI = {"animes|dragon ball": {"t": "Dragon Ball", "x": "Dragon Ball é uma franquia japonesa.", "al": ["Dragon Ball Z"],
+                               "p": [{"n": "Kuririn", "a": ["Krillin"], "d": "melhor amigo de Goku"}, {"n": "Son Goku", "a": []}, {"n": "Sakura"}]},
+        "animes|naruto": {"t": "Naruto", "x": "Naruto é um mangá.", "p": [{"n": "Sakura Haruno", "a": ["Sakura"]}, {"n": "Sasuke Uchiha"}]},
+        "filmes|homem-aranha": {"t": "Homem-Aranha", "x": "", "c": [{"n": "Tom Holland", "d": "ator britânico"}]},
+        "filmes|vingadores: ultimato": {"t": "Vingadores", "x": "", "c": [{"n": "Tom Holland", "d": "ator britânico"}]}}
+
+
+def test_characters_cast_and_ambiguity():
+    old = _with_wiki(WIKI)
+    ext = lambda t, c: {"ticker": t, "nome": "Toei Animation", "pais": "Japão", "bolsa": "Bolsa de Tóquio", "indice": "Nikkei 225",
+                        "preco": 2911.0, "var": 2.46, "cur": "JPY", "valmerc": 5.9e11, "pl": 23.0} if t == "4816" else None
+    try:
+        for q in ("E o kuririn?", "e o kulilin?", "e o krillin?"):
+            a = chat.kb_answer(q, ext, [])
+            assert a and "Kuririn: personagem de Dragon Ball" in a, (q, a)
+        a = chat.kb_answer("E o kuririn?", ext, [])
+        i_who, i_emp, i_fora, i_fim = (a.index("Kuririn"), a.index("Toei Animation (4816)"), a.index("sites especializados"),
+                                       a.index("Deseja mais alguma informação"))
+        assert i_who < i_emp < i_fora < i_fim and "Japão · Bolsa de Tóquio · índice Nikkei 225" in a  # ordem: quem é, ação, sites, pergunta
+        a = chat.kb_answer("quem é tom holland?", None, [])
+        assert "Tom Holland: ator britânico; atuou em" in a and "Homem-Aranha" in a and "Vingadores" in a  # ator em 2 filmes: não pergunta
+        amb = chat.kb_ambiguous("e a sakura?")
+        assert amb and "Está falando de qual?" in amb["a"] and {s["l"] for s in amb["sug"]} == {"Dragon Ball", "Naruto"}
+        assert chat.kb_ambiguous("e a sakura de naruto?") is None  # a obra citada desfaz a dúvida
+        k = [s["topic"] for s in amb["sug"] if s["l"] == "Naruto"][0]
+        out = chat.answer2("e a sakura?", [], D, ret_fn, {}, None, None, k)  # botão escolhido: responde sobre a obra
+        assert "Sakura Haruno: personagem de Naruto" in out["a"] and "Dragon Ball" not in out["a"]
+        out = chat.answer2("e a sakura?", [], D, ret_fn, {}, None)
+        assert out["a"].startswith("“Sakura") and len(out["sug"]) == 2
+        assert chat.kb_ambiguous("dy da petr4") is None and "Kuririn" not in chat.kb_context("dividendos da taesa", ["TAEE11"], fuzzy=False)
+    finally:
+        _restore_wiki(old)
+
+
+def test_ai_answer_order_moves_specialized_sites():
+    ext = lambda t, c: {"ticker": "4816", "nome": "Toei Animation", "pais": "Japão", "bolsa": "Bolsa de Tóquio", "indice": "Nikkei 225", "preco": 2911.0}
+    a = chat.link_ext({"a": "Goku é o protagonista de Dragon Ball. Para informações sobre entretenimento, procure sites especializados no assunto.\n"
+                            "[[EMPRESA:4816:jp]]"}, "e o goku?", ext)["a"]
+    assert a.index("protagonista") < a.index("(4816)") < a.index("sites especializados") < a.index("Deseja mais")
+    assert "Para informações sobre entretenimento, procure sites especializados no assunto." in a
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

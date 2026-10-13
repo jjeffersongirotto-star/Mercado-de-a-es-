@@ -31,18 +31,19 @@
   };
   draw();
   root.querySelector('#chtClr').onclick = async () => { if (!H.length || (window.uiConfirm ? await uiConfirm('Apagar o histórico do chat?') : true)) { H = []; save(); draw(); } };
-  let topic = null;
+  let topic = null, topicL = null;
   L.addEventListener('click', (e) => {  // sugestões clicáveis
     const c = e.target.closest('.cht-c'); if (!c) return;
-    topic = c.dataset.topic || null;  // "Está falando sobre:": refaz a mesma pergunta com o tema
+    topic = c.dataset.topic || null; topicL = c.textContent;  // "Está falando sobre/de qual:": refaz a mesma pergunta com o tema/obra
     root.querySelector('#chtQ').value = c.dataset.q; root.querySelector('#chtF').requestSubmit();
   });
   root.querySelector('#chtF').onsubmit = async (e) => {
     e.preventDefault(); const inp = root.querySelector('#chtQ'), q = inp.value.trim(); if (!q || root.querySelector('#chtS').disabled) return;
     const hist = H.slice(-6).map(m => ({ r: m.r, t: m.t }));
     const tp = topic; topic = null;
-    H.push({ r: 'u', t: tp ? 'Sobre: ' + tp : q }); inp.value = ''; draw();
-    L.insertAdjacentHTML('beforeend', `<div class="cht-m a cht-w">${window.loaderHTML ? loaderHTML('Pensando…') : '…'}</div>`); L.scrollTop = L.scrollHeight;
+    const first = !H.some(m => m.r === 'a');  // sem resposta anterior: boneco maior, no meio do chat
+    H.push({ r: 'u', t: tp ? 'Sobre: ' + topicL : q }); inp.value = ''; draw();
+    L.insertAdjacentHTML('beforeend', `<div class="cht-m a cht-w${first ? ' big' : ''}">${window.loaderHTML ? loaderHTML('Pensando…') : '…'}</div>`); L.scrollTop = L.scrollHeight;
     const slow = setTimeout(() => { const w = L.querySelector('.cht-w span'); if (w) w.textContent = 'A IA está demorando, aguarde…'; }, 10000);
     const btn = root.querySelector('#chtS'); btn.disabled = true;
     try {

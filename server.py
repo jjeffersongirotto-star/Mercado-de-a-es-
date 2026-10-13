@@ -799,6 +799,7 @@ def api_chat(body: dict):
             if not r: return None
             v = r.get("v") or {}
             return {"ticker": r["ticker"], "nome": r.get("nome"), "var": r.get("var"), "cur": r.get("cur"), "pais": tradingview.COUNTRIES[c][1],
+                    "bolsa": tradingview.BOLSA.get(c), "indice": tradingview.YAHOO[c][2],
                     "preco": v.get("preco"), "valmerc": v.get("valmerc"), "pl": v.get("pl")}
         except Exception as e:
             log.warning("chat ext %s/%s: %s", c, t, e); return None

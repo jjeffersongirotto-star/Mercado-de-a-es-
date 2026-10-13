@@ -15,6 +15,8 @@ COUNTRIES = {
     "jp": ("japan", "Japão", "JPY", 1500),
 }
 # Yahoo por país: sufixo do ticker, índice principal (símbolo, nome). Histórico de ações/índices de fora (gráficos e Comparar).
+# bolsa principal de cada país (chat: "empresa — país · bolsa · índice")
+BOLSA = {"br": "B3", "us": "NYSE/Nasdaq", "gb": "Bolsa de Londres", "de": "Bolsa de Frankfurt", "pt": "Euronext Lisboa", "jp": "Bolsa de Tóquio"}
 YAHOO = {"br": ("SA", "^BVSP", "Ibovespa"), "us": ("", "^GSPC", "S&P 500"), "gb": ("L", "^FTSE", "FTSE 100"),
          "de": ("DE", "^GDAXI", "DAX"), "pt": ("LS", "PSI20.LS", "PSI"), "jp": ("T", "^N225", "Nikkei 225")}
 COLS = ["name", "description", "type", "sector", "industry", "close", "change", "currency", "market_cap_basic",

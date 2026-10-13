@@ -47,7 +47,8 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Campos com Período e posição em Ordenar | `server.py` → `FIELD_EXTRA` (`grp`, `per`, `sub`, `sort`) | filtros, cards e Ordenar (`app.js`) |
 | Universo exibido (ilíquidas, 1 ticker por empresa) | `scripts/universe.py` (`mark` grava `il` e `k1` em cada linha de `/api/data`) | site (`tradable`, `universe` em `app.js`), Grupos, `/api/returns`, scripts de snapshot |
 | Nomes dos índices (Ibovespa, Dólar, CDB, IPCA, Poupança, Ouro) | `history.py` → `INDICES` (o site recebe em `window.INDICES`) | gráficos (`grafico.js`), Comparar, chat (`IDXN`) |
-| Índice de cada país e símbolo no Yahoo | `tradingview.py` → `YAHOO` | `/api/countries` (`index`), gráficos e Comparar de ações estrangeiras |
+| Índice de cada país e símbolo no Yahoo | `tradingview.py` → `YAHOO` | `/api/countries` (`index`), gráficos e Comparar de ações estrangeiras, chat (empresa ligada) |
+| Bolsa principal de cada país (B3, NYSE/Nasdaq, Bolsa de Tóquio…) | `tradingview.py` → `BOLSA` | chat (empresa ligada: "país · bolsa · índice") |
 | Registro de erros | `server.py` → `ERRS` (`/api/errors`) e log do Render | quem mantém o site |
 | Variação de preço entre duas datas escolhidas | `server.period_returns` | aba Comparar (`/api/returns`), perguntas do chat com período |
 | Data de listagem | Brasil: `metrics.ftd` (1º pregão na B3) · exterior: `ipo` (TradingView) | Novidades e etiqueta NOVA (`grupos.js` → `listDate`) |
@@ -55,9 +56,9 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Nomes de botões, abas, campos e opções | a própria interface (`index.html` e `*.js`) | chat e Gemini (`chat.ui_labels()` lê da interface) |
 | Significado de cada cor | seção **Cores** do painel ⓘ | usuário; chat |
 | Paleta, alturas, raios, sombras | `index.html` → bloco `/* Design system */` (`:root { --c-pos … }`) | todo CSS (`var(--…)`) |
-| Contexto para a IA do chat (pessoas, futebol, filmes, animes, jogos, o que fazem as empresas, temas → setores) | `conhecimento.json` (data em `atualizado`) | `chat.kb_context` → Gemini (só os itens citados na pergunta); `chat.kb_answer` sem IA; lista de itens do snapshot `kb` |
-| Resumos da Wikipedia dos itens do `conhecimento.json` (base do chat sem IA) | snapshot `kb` (`scripts/build_kb.py`, rotina diária; renova 1×/semana) | `chat.wiki` → `kb_context`, `kb_answer`, busca (`chat.search`) |
-| Vocabulário do chat: sinônimos e gírias → indicador, qualificadores (barato, pouca dívida, boa pagadora, queda), abreviações, apelidos de empresas, palavras → termo do Glossário, variações de frases | `vocabulario.json` | `chat.py` (`SYN`, `QUALS`, `ABBR`, `ALIAS`, `GLOSS_SYN`, `frase`) |
+| Contexto para a IA do chat (pessoas, futebol, filmes, séries, animes, jogos, estúdios, o que fazem as empresas, temas → setores) | `conhecimento.json` (data em `atualizado`; grupos em `chat.KB_CATS`) | `chat.kb_context` → Gemini (só os itens citados na pergunta); `chat.kb_answer` sem IA; lista de itens do snapshot `kb` |
+| Resumos da Wikipedia, outros nomes, personagens e elenco dos itens do `conhecimento.json` | snapshot `kb` (`scripts/build_kb.py`: Wikipedia + Wikidata; rotina diária, renova 1×/semana) | `chat.wiki` → índice de nomes (`chat._names`), `kb_context`, `kb_answer`, "Está falando de qual?" (`kb_ambiguous`), busca (`chat.search`) |
+| Vocabulário do chat: sinônimos e gírias → indicador, qualificadores (barato, pouca dívida, boa pagadora, queda), abreviações, apelidos de empresas, palavras → termo do Glossário, variações de frases, nomes que não viram personagem | `vocabulario.json` | `chat.py` (`SYN`, `QUALS`, `ABBR`, `ALIAS`, `GLOSS_SYN`, `frase`) |
 | Métodos de investimento (Barsi, Bazin, Graham, Buffett, Fórmula Mágica…) | painel ⓘ → seção **Métodos de investimento** | usuário; chat (`chat.method`, critérios em `METHODS`) |
 | Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
 | Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
