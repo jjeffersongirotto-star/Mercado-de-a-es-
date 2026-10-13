@@ -72,11 +72,12 @@
       <div><span>Se fosse no Ibovespa</span><b>${gain(x.ibov, x.bought)}</b></div>
       <div><span>Se fosse no CDB</span><b>${gain(x.cdi, x.bought)}</b></div></div>`;
   }
-  function hist(L) {
-    const rows = chron(L).reverse().map(([m]) => { const i = mov.indexOf(m); return `<tr data-k="edit" data-i="${i}"${i === editing ? ' class="on"' : ''}>
-      <td>${dataBR(m.d)}</td><td><span class="${m.op === 'c' ? 'up' : 'dn'}">${m.op === 'c' ? 'Compra' : 'Venda'}</span></td><td>${esc(m.t)}</td>
-      <td>${F0.format(m.q)}</td><td>${F2.format(m.p)}</td><td>${money(m.q * m.p)}</td></tr>`; }).join('');
-    return `<div class="kt-h"><b>Histórico de movimentações</b><div class="kt-wrap"><table class="kt-t"><thead><tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  function hist(L, all) {  // all = Total da carteira (mostra a coluna Ativo)
+    const rows = chron(L).reverse().map(([m]) => { const i = mov.indexOf(m); return `<tr${i === editing ? ' class="on"' : ''}>
+      <td>${dataBR(m.d)}</td><td><span class="${m.op === 'c' ? 'up' : 'dn'}">${m.op === 'c' ? 'Compra' : 'Venda'}</span></td>${all ? `<td>${esc(m.t)}</td>` : ''}
+      <td>${F0.format(m.q)}</td><td>${F2.format(m.p)}</td><td>${F2.format(m.q * m.p)}</td>
+      <td class="kt-act"><button type="button" class="gbtn" data-k="edit" data-i="${i}" title="Editar" aria-label="Editar">✎</button><button type="button" class="gbtn dan" data-k="del" data-i="${i}" title="Excluir" aria-label="Excluir">🗑</button></td></tr>`; }).join('');
+    return `<div class="kt-h"><b>Histórico de movimentações</b><div class="kt-wrap"><table class="kt-t"><thead><tr><th>Data</th><th>Tipo</th>${all ? '<th>Ativo</th>' : ''}<th>Qtd</th><th>Preço</th><th>Total R$</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 
   function form() {
@@ -113,7 +114,7 @@
     const X = await Promise.all(Object.keys(by).sort().map(t => calc(t, by[t])));
     const el = $k('#ktBody'); if (!el) return;
     const T = total(X);
-    const det = (k, x) => open.has(k) ? `<tr class="kt-det"><td colspan="5">${cards(x)}${hist(x.L)}</td></tr>` : '';
+    const det = (k, x) => open.has(k) ? `<tr class="kt-det"><td colspan="5">${cards(x)}${hist(x.L, k === '*')}</td></tr>` : '';
     const num = (v) => v == null ? '—' : F2.format(v);  // na tabela sem "R$" (cabe no celular); nos cards com "R$"
     const gcell = (x) => x.unreal != null ? `<span class="${cls(x.unreal)}">${num(x.unreal)}</span><small>${pct(x.cost ? x.unreal / x.cost * 100 : null)}</small>` : '—';
     const row = (x) => `<tr class="kt-row${open.has(x.t) ? ' on' : ''}" data-k="open" data-t="${esc(x.t)}"><td><b>${esc(x.t)}</b></td>
