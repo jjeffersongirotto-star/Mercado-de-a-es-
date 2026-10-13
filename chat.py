@@ -611,6 +611,7 @@ def ranking(P, D):
         crit.append("liquidez ≥ R$ 500 mil/dia")
     if k == "dy" and not P["illiquid"]:
         rows = [r for r in rows if (val(D, r, "dy") or 0) < 40]; crit.append("DY < 40% (evita distorções, como nos grupos)")
+    if P.get("only"): rows = [r for r in rows if P["only"][0](r)]; crit.append(P["only"][1])  # setor exigido pelo método
     if P["filters"]:
         rows = [r for r in rows if _passes(D, r, P["filters"])]
         crit += [f"{label(D, fk)} {_ops(op)} {fmt(D, fk, x)}" for fk, op, x in P["filters"]]
@@ -878,6 +879,7 @@ GLOSS_SYN = {"pl": "p/l", "preco/lucro": "p/l", "preco lucro": "p/l", "pvp": "p/
              "liquidez": "volume", "magic": "magic formula", "preco justo": "graham"}
 # assunto da pergunta -> seções do painel ⓘ (títulos <h3>/<summary>); o texto fica só no painel
 HOWTO_KEYS = [
+    (("metodo de investimento", "metodos de investimento", "estrategia de investimento"), ["Métodos de investimento"]),
     (("carteira", "posicao", "posicoes", "preco medio"), ["Carteira"]),
     (("alerta", "sininho", "avisar", "aviso de preco", "notifica"), ["Favoritos"]),
     (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), ["Previsão aluguel"]),
@@ -982,6 +984,35 @@ def suggestions(P, D):
     return ["DY do BBAS3", "Maiores DY dos bancos", "PETR4 vs Ibovespa em 2024", "Ações com ROE acima de 20 e P/L abaixo de 8"]
 
 
+# Métodos de investimento: texto no painel ⓘ (seção do método) + ações do site que passam em critérios aproximados do método
+# setores perenes do Barsi: energia elétrica/saneamento (Utilities), bancos, seguros, papel e celulose
+PERENE = (lambda r: r.get("setor") == "Utilities" or bool(re.search(r"banco|segur|papel|celulose|saneamento|energia", norm(f"{r.get('subsetor') or ''} {r.get('pind') or ''}"))),
+          "setores perenes (energia, saneamento, bancos, seguros, papel e celulose)")
+METHODS = [(r"\bbarsi\b", "Método Barsi", [("dy", ">=", 6), ("roe", ">=", 10)], "dy", "desc", None, PERENE),
+           (r"\bbazin\b", "Método Bazin", [("dy", ">=", 6), ("dlpl", "<=", 0.5), ("pl", ">", 0)], "dy", "desc", None, None),
+           (r"\bgraham\b", "Método Graham", [("pl", ">", 0), ("pl", "<=", 15), ("pvp", ">", 0), ("pvp", "<=", 1.5)], "pvp", "asc", None, None),
+           (r"\bbuff?ett?\b", "Método Buffett", [("roe", ">=", 15), ("mliq", ">=", 10), ("dlebit", "<=", 2)], "roe", "desc", None, None),
+           (r"\b(formula magica|magic formula|greenblatt)\b", "Fórmula Mágica", [("evebit", ">", 0), ("evebit", "<=", 10), ("roic", ">=", 15)], "roic", "desc", None, None),
+           (r"\bsmall ?caps?\b", "Small caps", [("roe", ">=", 10), ("dlebit", "<=", 3)], "roe", "desc", "SMLL", None),
+           (r"\b(growth|crescimento)\b", "Dividendos x Crescimento", [("lucro5a", ">=", 15), ("pl", ">", 0)], "lucro5a", "desc", None, None)]
+
+
+def method(P, D):
+    """'como monto uma carteira pelo método X' / 'o que é o método X' -> seção do painel + ações que passam nos critérios."""
+    nq = P["nq"]
+    if not re.search(r"\b(metodos?|estrategias?|carteira|formula magica|magic formula|barsi|bazin|greenblatt)\b", nq): return None
+    secs = guide_sections()
+    if re.search(r"\b(metodos|estrategias)\b", nq) and not any(re.search(rx, nq) for rx, *_ in METHODS):
+        return "Métodos de investimento (painel ⓘ):\n" + secs.get("Métodos de investimento", "") + "\n\nMétodos: " + ", ".join(t for _, t, *_ in METHODS) + "."
+    for rx, title, filt, k, order, ixf, only in METHODS:
+        if re.search(rx, nq):
+            txt = f"{title}:\n{secs.get(title, '')}"
+            if not re.search(r"\b(carteira|montar|monto|monte|quais|acoes|lista)\b", nq): return txt
+            P2 = dict(P, metrics=[k], filters=filt, order=order, n=P["n"] or 10, sector=None, ixf=ixf or P.get("ixf"), only=only)
+            return txt + "\n\nAções do site que passam em critérios aproximados do método (estudo, não recomendação):\n" + ranking(P2, D)
+    return None
+
+
 def local(q, D, ret_fn, cx, P=None, quote_fn=None):
     """Resposta sem IA quando a interpretação é confiável. -> texto ou None."""
     P = P or parse(q, D)
@@ -1000,6 +1031,8 @@ def local(q, D, ret_fn, cx, P=None, quote_fn=None):
         return "De nada! Se quiser, pergunte outra coisa sobre as ações do site."
     fk = fake_label(q, P)
     if fk: return fk
+    m = method(P, D)
+    if m: return m
     if P["colors"] and not P["tickers"]: return colors_text()
     if (P["howto"] or re.search(r"\baba\b", nq)) and not P["tickers"] and not P["idx"]:
         h = howto(P)
@@ -1057,11 +1090,48 @@ def _sys(extra=""):
             "aos critérios, sem recomendação personalizada de investimento. " + POP + extra)
 
 
+# Base de contexto (conhecimento.json, fonte única): pessoas, futebol, filmes, animes, jogos, empresas e temas -> só os itens citados na pergunta
+_KB = None
+
+
+def kb():
+    global _KB
+    if _KB is None:
+        try: _KB = json.load(open(os.path.join(BASE, "conhecimento.json"), encoding="utf-8"))
+        except Exception as e: log.warning("conhecimento.json: %s", e); _KB = {}
+    return _KB
+
+
+def kb_context(q, tickers=(), cap=6000):
+    """Itens da base cujos nomes/apelidos aparecem na pergunta + o que fazem as empresas ligadas a eles e às ações citadas."""
+    K, nq = kb(), " " + norm(q) + " "
+    if not K: return ""
+    hit = lambda it: any(re.search(r"(?<![a-z0-9])" + re.escape(norm(w)) + r"(?![a-z0-9])", nq) for w in [it["n"]] + it.get("a", []) if len(norm(w)) >= 2)
+    lines, emp = [], [t[:4] if t[:4].isalpha() else t for t in tickers]
+    for cat, rot in (("pessoas", "pessoa"), ("obras", "filme/série"), ("animes", "anime"), ("jogos", "jogo"), ("temas", "tema")):
+        for it in K.get(cat, []):
+            if hit(it):
+                lines.append(f"- [{rot}] {it['n']}: {it['d']}" + (f" (empresas: {', '.join(it['e'])})" if it.get("e") else ""))
+                emp += [x.split(":")[0] for x in it.get("e", [])]
+    F = K.get("futebol") or {}
+    js = [j for j in F.get("jogadores", []) if hit(j)]
+    lines += [f"- [futebol] {j['n']}: {j['d']}" for j in js]
+    if js or re.search(r"\b(copa|copas|campe\w*|selecao|futebol|mundial)\b", nq): lines += [f"- [futebol] {F.get('campeoes', '')}", f"- [futebol] {F.get('copas', '')}"]
+    E = K.get("empresas", {})
+    for t in dict.fromkeys(emp):
+        k = next((x for x in (t, t[:4], re.sub(r"\d+$", "", t)) if x in E), None)
+        if k: lines.append(f"- [empresa] {t}: {E[k]}")
+    if not lines: return ""
+    return ("CONTEXTO (base do site, dados até " + str(K.get("atualizado", "")) + "; confira na web o que pode ter mudado):\n" + "\n".join(dict.fromkeys(lines)))[:cap]
+
+
 # assuntos fora do mercado: a IA só aponta a empresa ligada (marcador); preço e dados vêm do site (link_ext)
-POP = ("Se a pergunta for sobre algo fora do mercado (jogo, filme, série, música, esporte, pessoa, marca, produto, evento, política ou atualidade), "
-       "diga em uma ou duas frases qual empresa de capital aberto está mais ligada a ele (dona, fabricante, distribuidora, patrocinadora) e em que bolsa "
-       "ela é negociada, sem escrever preço, e termine com uma linha só com [[EMPRESA:TICKER:PAIS]] (PAIS = br, us, gb, de, pt ou jp; ex.: [[EMPRESA:TTWO:us]]). "
-       "Se não houver empresa ligada ou você não souber do que se trata, peça para a pessoa escolher o tema e termine com uma linha só com [[ASSUNTO]]. ")
+POP = ("O site é para investimentos. Se a pergunta for sobre algo fora do mercado (pessoa, esporte, política, celebridade, filme, série, música, "
+       "jogo, marca, produto, evento ou atualidade), diga em uma ou duas frases quem é ou o que é (use o CONTEXTO, se houver), indique procurar "
+       "sites especializados no assunto (esporte, política, notícias ou entretenimento) e, se houver informação que afete alguma empresa da bolsa, "
+       "inclua. Se houver empresa de capital aberto ligada (dona, fabricante, distribuidora, patrocinadora), diga qual e em que bolsa, sem escrever "
+       "preço, e termine com uma linha só com [[EMPRESA:TICKER:PAIS]] (PAIS = br, us, gb, de, pt ou jp; ex.: [[EMPRESA:TTWO:us]]). "
+       "Se você não souber do que se trata, peça para a pessoa escolher o tema e termine com uma linha só com [[ASSUNTO]]. ")
 TOPICS = ["Cinema", "Música", "Esporte", "Jogos", "Política", "Atualidades", "Outros"]
 _MK = re.compile(r"\[\[EMPRESA:([A-Za-z0-9.\-]+):([a-z]{2})\]\]")
 
@@ -1079,7 +1149,7 @@ def link_ext(out, q, ext_fn):
               + (f" · valor de mercado {big(r['valmerc'])} {cur}" if r.get("valmerc") else "")
               + (f" · P/L {br(r['pl'])}" if r.get("pl") else "") + "\n\nDeseja mais alguma informação sobre ela?")
     out = dict(out, a=a)
-    if ask: out["sug"] = [{"l": t, "q": f"{q} (assunto: {t.lower()})"} for t in TOPICS]
+    if ask: out["sug"], out["sugl"] = [{"l": t, "q": q, "topic": t} for t in TOPICS], "Está falando sobre:"  # refaz a mesma pergunta com o tema
     return out
 
 
@@ -1222,9 +1292,11 @@ def table(D, cx):
     return "\n".join(out)
 
 
-def gemini2(q, ctx, hist, deadline):
+def gemini2(q, ctx, hist, deadline, topic=None):
     if not os.environ.get("GEMINI_API_KEY"): raise RuntimeError("sem chave")
-    sys_t = _sys("Use SOMENTE os dados abaixo. Se um dado não estiver aqui, diga que o site não tem.\n\nDADOS DO SITE:\n" + ctx)
+    tp = (f"A pessoa indicou que a pergunta é sobre o tema {topic}: interprete-a nesse contexto e responda à pergunta em si "
+          "(não explique o tema). Não peça para escolher o tema de novo. ") if topic else ""
+    sys_t = _sys(tp + "Use SOMENTE os dados abaixo. Se um dado não estiver aqui, diga que o site não tem.\n\nDADOS DO SITE:\n" + ctx)
     err = None
     for model, th in [(m, True) for m in _models()] + [("gemini-flash-latest", False)]:
         body = {"systemInstruction": {"parts": [{"text": sys_t}]}, "contents": _contents(q, hist),
@@ -1273,18 +1345,19 @@ def ground(q, ctx, hist, deadline):
 _QA = {}  # mesma pergunta no mesmo dia (sem histórico)
 
 
-def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None):
+def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None):
     t0 = time.time(); deadline = t0 + DEADLINE_S
     cx = cx or {}
     P = parse(q, D, hist)
     nq = P["nq"]
     rel = "|".join(str(cx.get(k, ""))[:3000] for k in ("prev", "alug", "comp") if any(w in nq for w in ("previs", "aluguel", "compar", "minha", "meu")))
-    key = date.today().isoformat() + "|" + hashlib.sha1((nq + "|" + rel).encode()).hexdigest()
+    topic = topic if topic in TOPICS else None  # tema escolhido em "Está falando sobre:": a mesma pergunta vai à IA com o contexto
+    key = date.today().isoformat() + "|" + hashlib.sha1((nq + "|" + rel + "|" + (topic or "")).encode()).hexdigest()
     if key in _QA and not hist:
         out = dict(_QA[key], cached=True); _log(q, out, P, t0); return out
     has_ai = bool(os.environ.get("GEMINI_API_KEY"))
     loc = None
-    try: loc = local(q, D, ret_fn, cx, P, quote_fn)
+    try: loc = None if topic else local(q, D, ret_fn, cx, P, quote_fn)
     except Exception as e: log.info("local: %s", e)
     out = None
     if loc:
@@ -1293,7 +1366,7 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None):
         out = {"a": rules(q, D, ret_fn, P), "mode": "regras", "tok": 0}
     else:
         # (1) IA interpreta, o Python calcula — só para perguntas objetivas
-        if not P["complex"] and not P["complaint"]:
+        if not P["complex"] and not P["complaint"] and not topic:
             J = interpret(q, hist, D, deadline)
             if J and J.get("tipo") in ("valor", "ranking", "retorno"):
                 P2 = from_interp(J, q, D, P)
@@ -1306,11 +1379,13 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None):
                 if a: out = {"a": a, "mode": "regras", "tok": 0}
         if out is None:
             ctx = rel_context(q, D, ret_fn, cx, P)
+            k = kb_context(q, P["tickers"])
+            if k: ctx = k + "\n\n" + ctx
             red_asked = any(((D["by"].get(t) or {}).get("st") or {}).get(k) == "red" for t in P["tickers"] for k in P["metrics"])
             want = P["complaint"] or red_asked
             if not want:
                 try:
-                    a, tok = gemini2(q, ctx, hist, deadline)
+                    a, tok = gemini2(q, ctx, hist, deadline, topic)
                     out = {"a": a, "mode": "gemini", "tok": tok}
                     if any(w in norm(a) for w in MISSING) and deadline - time.time() > 20: want = True
                 except Exception as e:

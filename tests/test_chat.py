@@ -285,6 +285,22 @@ def test_pop_culture_links_company_and_topics():
         _restore(old)
     assert "[[" not in a1["a"] and "TTWO" in a1["a"] and "200,00 USD" in a1["a"] and "Deseja mais alguma informação" in a1["a"]
     assert "[[" not in a2["a"] and [x["l"] for x in a2["sug"]][-1] == "Outros"
+    assert a2["sugl"] == "Está falando sobre:" and all(x["q"] == "e aquele lance do zorbax?" and x["topic"] for x in a2["sug"])
+
+
+def test_topic_resends_same_question_with_context():
+    seen = []
+    def fake(url, headers=None, json=None, timeout=None):
+        seen.append((json["systemInstruction"]["parts"][0]["text"], json["contents"][-1]["parts"][0]["text"]))
+        return _gem("Eleições costumam mexer com estatais e bancos.")
+    old = _with_ai(fake)
+    try:
+        chat._QA.clear()
+        out = chat.answer2("e as eleições?", [], D, ret_fn, {}, None, None, "Política")
+    finally:
+        _restore(old)
+    sys_t, q = seen[-1]
+    assert q == "e as eleições?" and "tema Política" in sys_t and "assunto:" not in q and out["mode"] == "gemini"
     assert "Busca na web indisponível" not in open(chat.__file__, encoding="utf-8").read()
 
 
@@ -303,6 +319,19 @@ def test_weak_points_fixed():
     a = ask("compara itau e bradesco")[1]
     assert a.startswith("Comparação ") and "ITUB4" in a and "BBDC4" in a and "Resumo: BBDC4 se sai melhor em 3 de 4" in a and "melhor:" in a
     assert ask("ações mais baratas")[1].startswith("Menores P/L")
+
+
+
+
+def test_knowledge_and_methods():
+    k = chat.kb_context("e o barsi?")
+    assert "Luiz Barsi Filho" in k and "TAEE11" in k
+    assert "Take-Two" in chat.kb_context("e o gta 6?") and "Campeões da Copa" in chat.kb_context("quem ganhou a copa de 2014")
+    assert chat.kb_context("bom dia") == ""
+    a = chat.local("como monto uma carteira pelo método Barsi?", D, ret_fn, {})
+    assert a.startswith("Método Barsi:") and "critérios aproximados" in a
+    assert chat.local("o que é o método graham", D, ret_fn, {}).startswith("Método Graham:")
+    assert chat.local("quais métodos de investimento existem?", D, ret_fn, {}).startswith("Métodos de investimento")
 
 
 if __name__ == "__main__":
