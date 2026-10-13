@@ -81,7 +81,7 @@ if (typeof document !== 'undefined') (function () {
     const I = items(), R = aluguelSim(I, { fee: st.fee, desc: st.desc, ex: st.ex.filter(e => e.t && e.m > 0) });
     const m0 = Math.max(1, Math.min(960, parseInt(st.mes, 10) || 1)), dv = false;
     root.innerHTML = `<section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4 space-y-2">
-      <div class="flex items-baseline justify-between gap-2"><h2 class="text-base font-bold">Ações para alugar</h2><button type="button" class="gbtn pri" data-a="new">＋ Ação</button></div>
+      <div class="flex items-center justify-between gap-2"><h2 class="text-base font-bold">Ações para alugar</h2><button type="button" class="gbtn pri" data-a="new">＋ Ação</button></div>
       ${BTB.err ? '<p class="gt-help">Dados de aluguel da B3 indisponíveis agora: informe a taxa manualmente.</p>' : ''}<div id="alItems" class="space-y-2">${inputsHtml()}</div>
       <div class="al-opts"><label class="pv-f"><span>Taxa da corretora (% do aluguel)</span><input id="alFee" class="pv-in" inputmode="decimal" value="${String(st.fee).replace('.', ',')}"></label>
         <label class="al-ck"><input id="alDesc" type="checkbox" class="accent-emerald-500 w-4 h-4"${st.desc ? ' checked' : ''}> Descontar automaticamente taxa da corretora + IR 15%</label></div>

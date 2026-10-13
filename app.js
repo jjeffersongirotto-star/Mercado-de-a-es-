@@ -116,7 +116,7 @@ function itemHtml(id, inFolder) {
   if (GROUPS[id]) {  // seletores do grupo: Receita/Lucro (se houver) e Período
     const fs = groupFields(id), subs = [...new Set(fs.map(x => x.sub).filter(Boolean))];
     const opt = (x, on, txt) => `<option value="${x}"${on ? ' selected' : ''}>${esc(txt)}</option>`;
-    sel = `<div class="flex gap-1">${subs.length ? `<select class="fsub sel flex-1 min-w-0" data-key="${k}" aria-label="Receita ou lucro">${subs.map(x => opt(x, x === f.sub, x)).join('')}</select>` : ''}
+    sel = `<div class="flex items-center gap-1">${subs.length ? `<select class="fsub sel flex-1 min-w-0" data-key="${k}" aria-label="Receita ou lucro">${subs.map(x => opt(x, x === f.sub, x)).join('')}</select>` : ''}
       <select class="fper sel flex-1 min-w-0" data-key="${k}" aria-label="Período">${fs.filter(x => x.sub === f.sub).map(x => opt(x.key, x.key === f.key, x.per)).join('')}</select></div>`;
   }
   return `<div class="fitem flex flex-col gap-1 bg-slate-950/60 border ${active ? 'border-emerald-600' : 'border-slate-800'} rounded-lg px-2 py-1.5${GROUPS[id] ? ' col-span-2 sm:col-span-3 md:col-span-2 xl:col-span-3 fgrp' : ''}" data-key="${k}" title="${esc(h.txt + (f.unit === '%' ? ' — digite 8 para 8%' : ''))}">
@@ -370,7 +370,7 @@ function blockHtml(r) {
     <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
         ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<button type="button" class="star${FAVS.has(r.ticker) ? ' on' : ''}" data-fav="${r.ticker}" aria-pressed="${FAVS.has(r.ticker)}" aria-label="Favoritar ${r.ticker}">${FAVS.has(r.ticker) ? '★' : '☆'}</button><div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>${window.isNova && isNova(r) ? '<span class="nova">NOVA</span>' : ''}
-        <div class="ml-auto flex items-baseline gap-2 whitespace-nowrap"><span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}</div>
+        <div class="ml-auto flex items-center gap-2 whitespace-nowrap"><span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}</div>
       </div>
       ${tags || r.macro || r.ix ? `<div class="flex flex-wrap items-center gap-1 mt-1">${tags}${r.macro && r.macro !== 'Outros' ? `<span class="ctag ctag-sec">${esc(r.macro)}</span>` : ''}${ixTags(r)}</div>` : ''}
       <div class="flex items-center gap-3 mt-1">
