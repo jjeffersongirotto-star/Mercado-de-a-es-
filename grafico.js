@@ -11,7 +11,7 @@
   ];
   window.GC_LINES = LINES;
   // Ação de fora do Brasil: índice do país (nome em /api/countries) na linha "ibov", dólar e ouro só nos EUA; sem índices brasileiros
-  const linesFor = (c) => c === 'br' ? LINES : LINES.filter(L => ['stock', 'ibov', 'usd'].includes(L.id) || (L.id === 'gold' && c === 'us'))
+  const linesFor = (c) => c === 'br' ? LINES : LINES.filter(L => ['stock', 'ibov', 'usd', 'gold'].includes(L.id))
     .map(L => L.id === 'ibov' ? { ...L, label: (((typeof state !== 'undefined' && state.countries) || []).find(x => x.id === c) || {}).index || 'Índice' } : L);
   window.gcLinesFor = linesFor;
   const PERIODS = [['1d', '1 dia'], ['7d', '7 dias'], ['1m', '1 mês'], ['1y', '1 ano'], ['2y', '2 anos'], ['3y', '3 anos'], ['4y', '4 anos'], ['5y', '5 anos']];
@@ -76,7 +76,7 @@
       else {
         // Eixo Y em R$ da ação: as outras linhas são rebaseadas no preço inicial da ação (mesma escala)
         let base = null; if (S.on.stock && sd.t && sd.t.length) { for (let i = 0; i < sd.t.length; i++) { if (sd.t[i] * 1000 <= start || base == null) base = sd.c[i]; if (sd.t[i] * 1000 > start) break; } }
-        render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind, base);
+        render(plot, q('.gc-leg'), series.filter(s => s.pts.length), start, end, kind, base, { cur: C === 'br' ? 'BRL' : (((typeof state !== 'undefined' && state.countries) || []).find(x => x.id === C) || {}).currency });
       }
       const notes = [];
       if (skipped.length) notes.push((kind === 'i' ? 'Sem dados intradiários: ' : 'Ocultos: ') + skipped.join(', ') + '.');
@@ -166,6 +166,7 @@
   window.gcPts = { pricePts, ratePts };
   // opt (Comparar): mode 'val' = legenda com preço inicial → final e %; cross = toque/arraste mostra valor e % na data
   function render(plot, leg, series, start, end, kind, base, opt) {
+    const o = opt || {}, money = (v) => fmtPrice(v, o.cur || 'BRL');  // eixo na moeda da ação
     const W = 600, H = 240, pad = 4;
     if (!series.length || !series[0].pts.length) { plot.innerHTML = '<div class="gc-load">Sem dados no período.</div>'; leg.innerHTML = ''; return; }
     { const xe = Math.max(...series.map(s => s.pts.length ? s.pts[s.pts.length - 1][0] : -Infinity)); series = series.map(s => { const l = s.pts[s.pts.length - 1]; return l && l[0] < xe ? { ...s, pts: s.pts.concat([[xe, l[1]]]) } : s; }); }
@@ -182,9 +183,9 @@
       ${ticks.map(v => `<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" class="${!B && Math.abs(v) < 1e-9 ? 'gc-zero' : 'gc-grid'}"/>`).join('')}${B ? `<line x1="0" x2="${W}" y1="${Y(B)}" y2="${Y(B)}" class="gc-zero"/>` : ''}
       ${series.slice().reverse().map(s => `<polyline fill="none" stroke="${s.color}" stroke-width="${s.id === 'stock' ? 2.4 : 1.6}" vector-effect="non-scaling-stroke" stroke-linejoin="round" points="${s.pts.map(p => X(p[0]).toFixed(1) + ',' + Y(toY(p[1])).toFixed(1)).join(' ')}"/>`).join('')}
     </svg>
-    <div class="gc-yl">${ticks.map(v => `<span style="top:${(Y(v) / H * 100).toFixed(2)}%">${B ? 'R$ ' + F2.format(v) : P2.format(v).replace(',00', '') + '%'}</span>`).join('')}</div>
+    <div class="gc-yl">${ticks.map(v => `<span style="top:${(Y(v) / H * 100).toFixed(2)}%">${B ? money(v) : P2.format(v).replace(',00', '') + '%'}</span>`).join('')}</div>
     <div class="gc-xl"><span>${fmtX(x0)}</span><span>${fmtX((x0 + x1) / 2)}</span><span>${fmtX(x1)}</span></div>`;
-    const val = (s, p) => s.base > 0 && s.vfmt ? s.vfmt(s.base * (1 + p / 100)) : null, o = opt || {};
+    const val = (s, p) => s.base > 0 && s.vfmt ? s.vfmt(s.base * (1 + p / 100)) : null;
     leg.innerHTML = series.map(s => { const v = s.pts[s.pts.length - 1][1], a = o.mode === 'val' && val(s, 0);
       return `<div style="--lc:${s.color}"><b>${a ? `${a} → ${val(s, v)} · ` : ''}${P2.format(v)}%</b><span>${s.label}</span></div>`; }).join('');
     if (!o.cross) return;

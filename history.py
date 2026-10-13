@@ -258,11 +258,17 @@ def chart_foreign(t, kind, country):
         t0 = out["stock"]["t"][0] if out["stock"].get("t") else 0
         try: out["usd"] = _cut(bcb("usd"), t0)
         except Exception as e: out["usd"] = {"error": str(e)[:120]}
-        if country == "us":
-            try:
-                g = yget("GC=F", "d")
-                out["gold"] = _cut({"d": [datetime.utcfromtimestamp(x).strftime("%Y-%m-%d") for x in g["t"]], "v": g["c"]}, t0)
-            except Exception as e: out["gold"] = {"error": str(e)[:120]}
+        try:  # ouro (US$/onça) na moeda do país: câmbio do Yahoo do mesmo dia (ou o último anterior); sem câmbio, sem ouro
+            g = yget("GC=F", "d"); cur = tradingview.COUNTRIES[country][2]
+            fx = {}
+            if cur != "USD":
+                f = yget(f"USD{cur}=X", "d"); fx = {datetime.utcfromtimestamp(x).strftime("%Y-%m-%d"): c for x, c in zip(f["t"], f["c"])}
+            d, v, last = [], [], None
+            for x, c in zip(g["t"], g["c"]):
+                k = datetime.utcfromtimestamp(x).strftime("%Y-%m-%d"); last = fx.get(k, last) if fx else 1.0
+                if last: d.append(k); v.append(round(c * last, 2))
+            out["gold"] = _cut({"d": d, "v": v}, t0) if v else {"error": "sem câmbio"}
+        except Exception as e: out["gold"] = {"error": str(e)[:120]}
     return out
 
 def chart(t, kind, country="br"):

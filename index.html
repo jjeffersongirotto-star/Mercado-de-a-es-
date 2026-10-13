@@ -178,7 +178,8 @@
   .gc-chk { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin: .3rem 0 .5rem; }
   .gc-chk label { display: inline-flex; align-items: center; gap: .3rem; font-size: 12px; color: var(--lc); font-weight: 600; }
   .gc-chk input { accent-color: var(--lc); width: 15px; height: 15px; }
-  .gc-wrap { display: flex; gap: .5rem; align-items: stretch; }
+  .gc-wrap, .gc-body { display: flex; flex-direction: column; gap: .35rem; }  /* legenda embaixo: o gráfico usa a largura toda */
+  .gc-wrap > .gc-plot, .gc-body > .gc-plot { flex: none; padding-left: 50px; } .gc-yl { width: 48px !important; } .gc-yl span { white-space: nowrap; }
   .gc-plot { position: relative; flex: 1; min-width: 0; height: 220px; padding-left: 38px; padding-bottom: 18px; }
   @media (min-width: 768px) { .gc-plot { height: 280px; } }
   .gc-vl { position: absolute; top: 0; bottom: 18px; width: 1px; background: var(--c-mut); pointer-events: none; }
@@ -192,9 +193,9 @@
   .gc-yl { position: absolute; left: 0; top: 0; bottom: 18px; width: 36px; }
   .gc-yl span { position: absolute; right: 2px; transform: translateY(-50%); font-size: 9.5px; color: rgb(100 116 139); }
   .gc-xl { position: absolute; left: 38px; right: 0; bottom: 0; display: flex; justify-content: space-between; font-size: 9.5px; color: rgb(100 116 139); }
-  .gc-leg { flex: none; width: 84px; display: flex; flex-direction: column; justify-content: center; gap: .35rem; }
-  .gc-leg div { border-left: 3px solid var(--lc); padding-left: .35rem; line-height: 1.15; }
-  .gc-leg b { display: block; font-size: 12.5px; color: var(--lc); } .gc-leg span { font-size: 10px; color: rgb(148 163 184); }
+  .gc-leg { display: flex; flex-wrap: wrap; justify-content: center; gap: .15rem .7rem; max-height: 2.9em; overflow: hidden; font-size: 11.5px; line-height: 1.4; }
+  .gc-leg div { display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap; } .gc-leg div::before { content: ''; width: 9px; height: 9px; border-radius: 2px; background: var(--lc); }
+  .gc-leg b { font-weight: 700; color: var(--lc); order: 2; } .gc-leg span { color: rgb(203 213 225); order: 1; }
   .gc-load { display: grid; place-items: center; height: 100%; font-size: 12px; color: rgb(148 163 184); text-align: center; }
   .gc-empty { display: grid; place-items: center; height: 100%; font-size: 13px; color: rgb(148 163 184); border: 1px dashed rgb(51 65 85); border-radius: .5rem; text-align: center; padding: 1rem; }
   .gc-nodata .gc-chk label, .gc-nodata .gc-dates label { opacity: .4; filter: grayscale(1); }
