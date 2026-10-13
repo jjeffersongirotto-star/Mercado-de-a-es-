@@ -878,6 +878,8 @@ GLOSS_SYN = {"pl": "p/l", "preco/lucro": "p/l", "preco lucro": "p/l", "pvp": "p/
              "liquidez": "volume", "magic": "magic formula", "preco justo": "graham"}
 # assunto da pergunta -> seções do painel ⓘ (títulos <h3>/<summary>); o texto fica só no painel
 HOWTO_KEYS = [
+    (("carteira", "posicao", "posicoes", "preco medio"), ["Carteira"]),
+    (("alerta", "sininho", "avisar", "aviso de preco", "notifica"), ["Favoritos"]),
     (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), ["Previsão aluguel"]),
     (("previsao rentab", "rentabilidade", "previsao", "simula", "simulacao", "projecao", "projecoes", "aporte"), ["Previsão rentabilidade"]),
     (("compar",), ["Comparar"]),

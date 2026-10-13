@@ -93,7 +93,8 @@ roteamento (sinônimos → indicador/termo, palavras → seção do painel); `te
 | `app.js` | aba Ações, estado global (`state`) e formatação de indicadores |
 | `grupos.js`, `carteira.js`, `comparar.js`, `previsao.js`, `aluguel.js`, `grafico.js`, `chatui.js` | uma aba/recurso por arquivo |
 | `scripts/` | rotinas que geram snapshots na branch `data` (não rodam no Render) e `build_css.sh` (roda no build) |
-| `tests/` | `test_*.py` (Python) e `test_*.js` (Node) |
+| `tests/` | `test_*.py` (Python), `test_*.js` (Node) e `ui_smoke.cjs` (telas no celular, Playwright) |
+| `.github/workflows/` | `data.yml` (rotina diária de dados), `statusinvest.yml`, `ui-test.yml` (testes e telas em cada PR), `keepalive.yml` |
 
 Crie arquivo novo só para um recurso novo e independente; caso contrário, estenda o arquivo do recurso.
 
