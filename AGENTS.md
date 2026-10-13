@@ -55,7 +55,9 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Nomes de botões, abas, campos e opções | a própria interface (`index.html` e `*.js`) | chat e Gemini (`chat.ui_labels()` lê da interface) |
 | Significado de cada cor | seção **Cores** do painel ⓘ | usuário; chat |
 | Paleta, alturas, raios, sombras | `index.html` → bloco `/* Design system */` (`:root { --c-pos … }`) | todo CSS (`var(--…)`) |
-| Contexto para a IA do chat (pessoas, futebol, filmes, animes, jogos, o que fazem as empresas, temas → setores) | `conhecimento.json` (data em `atualizado`) | `chat.kb_context` → Gemini (só os itens citados na pergunta) |
+| Contexto para a IA do chat (pessoas, futebol, filmes, animes, jogos, o que fazem as empresas, temas → setores) | `conhecimento.json` (data em `atualizado`) | `chat.kb_context` → Gemini (só os itens citados na pergunta); `chat.kb_answer` sem IA; lista de itens do snapshot `kb` |
+| Resumos da Wikipedia dos itens do `conhecimento.json` (base do chat sem IA) | snapshot `kb` (`scripts/build_kb.py`, rotina diária; renova 1×/semana) | `chat.wiki` → `kb_context`, `kb_answer`, busca (`chat.search`) |
+| Vocabulário do chat: sinônimos e gírias → indicador, qualificadores (barato, pouca dívida, boa pagadora, queda), abreviações, apelidos de empresas, palavras → termo do Glossário, variações de frases | `vocabulario.json` | `chat.py` (`SYN`, `QUALS`, `ABBR`, `ALIAS`, `GLOSS_SYN`, `frase`) |
 | Métodos de investimento (Barsi, Bazin, Graham, Buffett, Fórmula Mágica…) | painel ⓘ → seção **Métodos de investimento** | usuário; chat (`chat.method`, critérios em `METHODS`) |
 | Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
 | Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
@@ -77,8 +79,8 @@ Informação nova sem lugar nesta tabela → escolha a fonte, acrescente a linha
 
 ### 1.4 Chat e Gemini
 O chat e o Gemini **não têm conteúdo próprio**: respondem com `/api/data`, `metrics`, `period_returns`, o painel ⓘ e os nomes da interface.
-Para o chat explicar algo novo, escreva no painel ⓘ (o usuário também passa a ver). Em `chat.py` só ficam vocabulário e
-roteamento (sinônimos → indicador/termo, palavras → seção do painel); `tests/test_chat.py` falha se uma seção citada não existir no painel.
+Para o chat explicar algo novo, escreva no painel ⓘ (o usuário também passa a ver). O vocabulário (sinônimos, gírias,
+apelidos, frases) fica no `vocabulario.json`; em `chat.py` só fica o roteamento (palavras → indicador/filtro/seção do painel); `tests/test_chat.py` falha se uma seção citada não existir no painel.
 
 ---
 

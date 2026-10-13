@@ -60,13 +60,16 @@ que não dispara deploy.
 Rotina diária (19:05): `scripts/push_snapshot_from_here.sh` atualiza os snapshots em sequência numa máquina cujo IP não é bloqueado
 (`ONLY="cvm tradingview"` limita as etapas). No GitHub, `.github/workflows/data.yml` roda o mesmo script em dias úteis às 19:45
 (todas as etapas menos Status Invest, que tem o workflow `.github/workflows/statusinvest.yml`, 19:30) e depois recarrega o site;
-etapa bloqueada no runner mantém o snapshot anterior. Rodar à mão: Actions → Rotina diária de dados → Run workflow.
+etapa bloqueada no runner mantém o snapshot anterior. A etapa `kb` (base do chat: resumos da Wikipedia dos itens do
+`conhecimento.json`) só baixa tudo de novo uma vez por semana; nos outros dias busca apenas os itens novos. Rodar à mão: Actions → Rotina diária de dados → Run workflow.
 A fonte usada e a data de cada snapshot aparecem em `/api/status`.
 
 ## Chat
 `chat.py` entende a pergunta sem IA quando consegue (tickers, nomes e apelidos, indicadores, setor, filtros, período, conversa anterior);
 o que não entende vai ao Gemini, que interpreta a pergunta e os números saem dos dados do site. Explicações, passo a passo e glossário
 vêm do painel ⓘ; os nomes de botões, da própria interface.
+Sem a IA (fora do ar ou sem chave), responde com o `conhecimento.json` + resumos da Wikipedia (snapshot `kb`) e com uma busca
+no painel ⓘ; gírias, sinônimos, apelidos e as variações de frases (para não repetir a mesma resposta) ficam em `vocabulario.json`.
 Registro de perguntas: `/api/chat/log` (`?only=sem_resposta` ou `?only=reclamacao`, `&n=500`; apagado a cada reinício do servidor).
 
 ## Testes
