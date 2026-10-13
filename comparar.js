@@ -41,7 +41,7 @@
       <div class="cmp-srch" data-w="q"><input id="cmpQ" type="search" placeholder="Adicionar ação ou índice…" autocomplete="off"><div class="pv-combo hidden"></div></div>
       <div class="cmp-row frm"><label><span>Critério</span><select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
         <label><span>Início</span><input id="cmpDi" type="date" class="sel"></label><label><span>Fim</span><input id="cmpDf" type="date" class="sel"></label></div>
-      <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpGo" class="gbtn pri w-full">Pesquisar</button><button type="button" id="cmpAll" class="cmp-allb"></button></section>
+      <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpGo" class="gbtn pri w-full">Pesquisar</button><button type="button" id="cmpAll" class="cmp-allb"></button><button type="button" id="cmpClr" class="gbtn w-full cmp-clr">Limpar tudo</button></section>
       <div class="cmp-bar"><div class="cmp-vm" role="group" aria-label="Mostrar no gráfico"><button type="button" data-vm="pct">%</button><button type="button" data-vm="val">Valor</button></div><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
       <section class="cmp-cols"><div class="cmp-col"><h3 class="dn">Renderam menos</h3><input class="cmp-f" data-q="qa" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpLess"></div></div>
@@ -176,6 +176,7 @@
     root.addEventListener('click', async (e) => {
       if (e.target.closest('#cmpMin')) { S.min = !S.min; $c('#cmpChart').classList.toggle('hidden', S.min || S.all || S.crit !== 'preco'); chips(); save(); return; }
       if (e.target.closest('#cmpAll')) { S.all = !S.all; all(); return; }
+      if (e.target.closest('#cmpClr')) { S.items = []; S.all = false; $c('#cmpP').value = $c('#cmpQ').value = ''; all(); return; }  // tira todas as ações/índices e o Comparar tudo
       if (e.target.closest('#cmpGo')) { S.all = false; all(); return; }  // Pesquisar: volta do "Comparar tudo" e compara só os escolhidos
       const vm = e.target.closest('[data-vm]'); if (vm) { S.vm = vm.dataset.vm; chips(); save(); draw(); return; }
       const fl = e.target.closest('[data-ct]');
