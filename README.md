@@ -76,7 +76,7 @@ Registro de perguntas: `/api/chat/log` (`?only=sem_resposta` ou `?only=reclamaca
 
 ## Testes
 ```bash
-python tests/test_consensus.py && python tests/test_chat.py
+python tests/test_consensus.py && python tests/test_chat.py && python tests/test_medo.py
 for f in tests/*.js; do node "$f"; done
 node tests/ui_smoke.cjs http://127.0.0.1:8000   # telas (precisa do Playwright e do servidor rodando)
 ```

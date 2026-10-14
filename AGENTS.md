@@ -61,6 +61,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Vocabulário do chat: sinônimos e gírias → indicador, qualificadores (barato, pouca dívida, boa pagadora, queda), abreviações, apelidos de empresas, palavras → termo do Glossário, variações de frases, nomes que não viram personagem | `vocabulario.json` | `chat.py` (`SYN`, `QUALS`, `ABBR`, `ALIAS`, `GLOSS_SYN`, `frase`) |
 | Barato/Caro (valor justo de Graham √(22,5 × LPA × VPA)) | `app.js` → `fairOf` (preço e indicadores do card, respeita o seletor de fonte); o chat faz a mesma conta com o consenso (`chat.fair`) | barra do card (Ações e Grupos), chat |
 | Índice de Medo e Ganância da B3 (0–100, diário desde 1997; faixas e partes) | snapshot `fg` (`scripts/build_fg.py`: COTAHIST, fluxo B3, CDI; rotina diária) → `/api/fg` | velocímetro (`medo.js` → `fgLoad`, `fgBand`), Comparar, chat (`chat.fg_answer`) |
+| Comparar → Medo e Ganância (ação × faixas do índice, base mensal) | `medo.py` → `analyze` (histórico B3 mensal + proventos do bundle, snapshot `fg`, Ibovespa) → `/api/fgcmp` | aba Comparar (`comparar.js` → `fgRun`, `fgHtml`) |
 | Métodos de investimento (Barsi, Bazin, Graham, Buffett, Fórmula Mágica…) | painel ⓘ → seção **Métodos de investimento** | usuário; chat (`chat.method`, critérios em `METHODS`) |
 | Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
 | Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
@@ -91,6 +92,7 @@ apelidos, frases) fica no `vocabulario.json`; em `chat.py` só fica o roteamento
 
 | Arquivo | Responsabilidade |
 |---|---|
+| `medo.py` | análise Comparar → Medo e Ganância (`analyze`, testada em `tests/test_medo.py`) |
 | `server.py` | API FastAPI, montagem dos dados (`build`, `finalize`), cache, rotas, servir HTML/JS/CSS |
 | `consensus.py` | consenso entre fontes (testado em `tests/test_consensus.py`) |
 | `chat.py` | chat: entendimento sem IA (`parse`), respostas com dados (`execute`), Gemini (`interpret`, `gemini2`, `ground`) |

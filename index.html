@@ -433,6 +433,13 @@
   .fg-v { font-size: 15px; font-weight: 700; } .fg-v b { font-size: 22px; margin-right: .2rem; } .fg-p { font-size: 11px; color: var(--c-mut); white-space: nowrap; } .fg-d { font-size: 10.5px; color: var(--c-dim); }
   .fg-0 { color: var(--c-neg); stroke: var(--c-neg); } .fg-1 { color: var(--c-orange); stroke: var(--c-orange); } .fg-2 { color: var(--c-amber); stroke: var(--c-amber); }
   .fg-3 { color: var(--c-lime); stroke: var(--c-lime); } .fg-4 { color: var(--c-pos); stroke: var(--c-pos); }
+  /* Comparar → Medo e Ganância */
+  .fgx-off { display: none !important; } .fgx-w { display: flex; flex-direction: column; gap: .5rem; } .fgx-w.hidden { display: none; }
+  .fgx { border: 1px solid var(--bd); border-radius: var(--r-card); background: var(--bg-card); padding: .6rem .7rem; display: flex; flex-direction: column; gap: .4rem; font-size: 13px; line-height: 1.4; }
+  .fgx .gtab th, .fgx .gtab td:first-child { white-space: normal; } .fgx .gtab td { padding: .28rem .2rem; }
+  .fgx h3 { font-size: 13px; font-weight: 700; color: var(--c-txt); } .fgx-hd { font-size: 13px; font-weight: 600; color: var(--c-txt); } .fgx-few { font-size: 11px; color: var(--c-dim); }
+  .fgx-ch { width: 100%; height: 180px; display: block; border-radius: .4rem; } .fgx-ch rect { fill: currentColor; stroke: none; shape-rendering: crispEdges; } .fgx-n { font-weight: 700; } .fgx-ch polyline { fill: none; stroke: var(--c-txt); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .fgx-ax { display: flex; justify-content: space-between; font-size: 11px; color: var(--c-dim); } .fgx-lg { display: flex; flex-wrap: wrap; gap: .2rem .7rem; font-size: 11px; }
   /* Cores com significado fixo */
   body .up, body .gtab .up, body .cmp-it .up, body .cmp-col h3.up { color: var(--c-pos); }
   body .dn, body .gtab .dn, body .cmp-it .dn, body .cmp-col h3.dn { color: var(--c-neg); }
@@ -786,6 +793,7 @@
     </div></details>
     <details class="icard"><summary>Comparar, Novidades, CDB e Ouro</summary><div class="ib"><ul>
       <li><b>Comparar</b>: busque e adicione ações e índices (Ibovespa, Dólar, CDB, IPCA, Poupança, Ouro). O primeiro item é a referência (⇅ troca). Com o critério <b>Preço da ação</b>, compara a variação % entre as datas; com um indicador (DY, P/L, ROE…), compara os valores atuais só entre ações (índices e datas ficam bloqueados). “Renderam menos/mais” mostram cada item e a diferença em pontos para a referência; favoritos primeiro, depois a maior diferença. <b>Comparar com tudo</b> coloca nas colunas todas as ações mantidas e todos os índices (o gráfico mostra só os itens escolhidos); a variação usa fechamentos diários (até 10 anos; antes disso, mensais) e o preço atual quando o fim é hoje.</li>
+      <li><b>Comparar → Medo e Ganância</b>: escolha uma ação da B3 como Principal, o critério <b>Medo e Ganância</b>, Início e Fim, e toque em Pesquisar. Mostra, contando os meses do período: situação de hoje (o que a ação fez nas outras vezes com o índice na mesma faixa), maiores quedas e altas e o índice no mês anterior, retorno de quem comprou em cada faixa (1, 6 e 12 meses), em que faixa aconteceram as mínimas e máximas de 1 ano, tempo para voltar ao preço depois de entrar em Medo extremo, se a ação é defensiva ou de ciclo (comparada ao Ibovespa), DY de quem comprou em cada faixa e o gráfico do preço com a faixa do índice em cada mês. Cálculo mensal; menos de 5 ocorrências aparece como "poucas ocorrências". Comportamento passado, não é garantia nem recomendação.</li>
       <li><b>Novidades</b>: as 10 listagens mais recentes pela primeira data de negociação (B3/COTAHIST, no Brasil; data de IPO do TradingView, no exterior). Etiqueta <b>NOVA</b> = listada há menos de 3 meses. Mudanças de ticker podem aparecer como listagem nova.</li>
       <li><b>CDB</b> (rende 100% do CDI): acumula a taxa CDI diária do Banco Central (SGS 12) × 100%, sem impostos.</li>
       <li><b>Ouro</b>: contrato futuro de ouro (Yahoo, GC=F, US$/onça) × dólar PTAX do Banco Central, em R$ por onça; desde 11/2006.</li></ul></div></details>

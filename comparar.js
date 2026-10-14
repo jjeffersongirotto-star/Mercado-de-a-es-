@@ -37,22 +37,26 @@
       <div class="cmp-head"><label class="cmp-lbl">Principal</label><div id="cmpFlags" class="cmp-flags">${(state.countries || []).map(c => `<button type="button" data-ct="${c.id}" title="Comparar ações de ${esc(c.name)}" aria-label="${esc(c.name)}"><img class="flag" src="${c.flag}" alt=""></button>`).join('')}<button type="button" data-ct="all" title="Comparar todos os países" aria-label="Todos os países">🌐</button></div></div>
       <div id="cmpPrin" class="cmp-prin"></div>
       <div class="cmp-srch" data-w="p"><input id="cmpP" type="search" placeholder="Buscar ação ou índice principal…" autocomplete="off"><div class="pv-combo hidden"></div></div>
-      <label class="cmp-lbl">Comparar com</label>
+      <label class="cmp-lbl" id="cmpQl">Comparar com</label>
       <div class="cmp-srch" data-w="q"><input id="cmpQ" type="search" placeholder="Adicionar ação ou índice…" autocomplete="off"><div class="pv-combo hidden"></div></div>
-      <div class="cmp-row frm"><label><span>Critério</span><select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
+      <div class="cmp-row frm"><label><span>Critério</span><select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option><option value="fg">Medo e Ganância</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
         <label><span>Início</span><input id="cmpDi" type="date" class="sel"></label><label><span>Fim</span><input id="cmpDf" type="date" class="sel"></label></div>
       <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpGo" class="gbtn pri w-full">Pesquisar</button><button type="button" id="cmpAll" class="cmp-allb"></button><button type="button" id="cmpClr" class="gbtn w-full cmp-clr">Limpar tudo</button></section>
       <div class="cmp-bar"><div class="cmp-vm" role="group" aria-label="Mostrar no gráfico"><button type="button" data-vm="pct">%</button><button type="button" data-vm="val">Valor</button></div><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
       <section class="cmp-cols"><div class="cmp-col"><h3 class="dn">Renderam menos</h3><input class="cmp-f" data-q="qa" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpLess"></div></div>
-        <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>`;
+        <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>
+      <section id="cmpFg" class="fgx-w hidden"></section>`;
     $c('#cmpCrit').value = S.crit; $c('#cmpDi').value = S.di; $c('#cmpDf').value = S.df;
   }
   function chips() {
-    const ind = S.crit !== 'preco', ref = S.items[0];
+    const fgm = S.crit === 'fg', ind = S.crit !== 'preco' && !fgm, ref = S.items[0];
+    // Medo e Ganância: só a ação principal (B3) e o período
+    for (const s of ['#cmpQl', '.cmp-srch[data-w="q"]', '#cmpChips', '.cmp-bar', '.cmp-cols', '#cmpChart']) root.querySelectorAll(s).forEach(e => e.classList.toggle('fgx-off', fgm));
+    $c('#cmpFg').classList.toggle('hidden', !fgm);
     root.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', b.dataset.ct === S.ct));
     root.querySelectorAll('[data-vm]').forEach(b => b.classList.toggle('on', b.dataset.vm === S.vm));
-    $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br');  // "Comparar tudo" usa o histórico da B3: só no Brasil
+    $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br' || fgm);  // "Comparar tudo" usa o histórico da B3: só no Brasil
     $c('#cmpPrin').innerHTML = ref ? `<span class="cmp-chip ref" style="--cc:${COLORS[0]}">${esc(label(ref))}<b class="cmp-pv ${vals[ref] > 0 ? 'up' : vals[ref] < 0 ? 'dn' : ''}">${vals[ref] != null ? (ind ? F2.format(vals[ref]) : pc(vals[ref])) : ''}</b><button type="button" data-rm="${esc(ref)}" aria-label="Remover principal">✕</button></span>${S.items.length > 1 ? '<button type="button" id="cmpSwap" class="cmp-swap" title="Trocar principal" aria-label="Trocar principal">⇅</button>' : ''}` : '';
     $c('#cmpP').closest('.cmp-srch').classList.toggle('hidden', !!ref);
     $c('#cmpChips').innerHTML = S.items.slice(1).map((id, j) => `<span class="cmp-chip${ind && isIdx(id) ? ' off' : ''}" style="--cc:${COLORS[(j + 1) % COLORS.length]}">${esc(label(id))}<button type="button" data-rm="${esc(id)}" aria-label="Remover ${esc(label(id))}">✕</button></span>`).join('');
@@ -75,16 +79,17 @@
   function drop(e) {
     const box = e.target.closest('.cmp-srch'), q = norm(e.target.value).trim(), d = box.querySelector('.pv-combo');
     if (!q) { d.classList.add('hidden'); return; }
-    const ind = S.crit !== 'preco';
+    const ind = S.crit !== 'preco', fgm = S.crit === 'fg';
     const idx = idxList().filter(x => norm(x[1]).includes(q) && !S.items.includes(x[0])).map(x => ({ id: x[0], t: x[1], s: 'índice', off: ind }));
-    const st = rows().filter(r => !S.items.includes(r.cid) && (r._s ? r._s.includes(q) : norm(r.ticker + ' ' + r.nome).includes(q))).map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30).map(r => ({ id: r.cid, t: label(r.cid), s: r.nome || '' }));
+    const st = rows().filter(r => !S.items.includes(r.cid) && (!fgm || cOf(r.cid) === 'br') && (r._s ? r._s.includes(q) : norm(r.ticker + ' ' + r.nome).includes(q))).map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30).map(r => ({ id: r.cid, t: label(r.cid), s: r.nome || '' }));
     const L = idx.concat(st);
-    d.innerHTML = L.length ? L.map(o => `<button type="button" data-add="${esc(o.id)}" data-w="${box.dataset.w}"${o.off ? ' disabled' : ''}><b>${esc(o.t)}</b><span>${esc(o.s)}${o.off ? ' · indisponível para indicadores' : ''}</span></button>`).join('') : '<div class="px-3 py-2 text-xs text-slate-500">Nada encontrado.</div>';
+    d.innerHTML = L.length ? L.map(o => `<button type="button" data-add="${esc(o.id)}" data-w="${box.dataset.w}"${o.off ? ' disabled' : ''}><b>${esc(o.t)}</b><span>${esc(o.s)}${o.off ? (fgm ? ' · escolha uma ação da B3' : ' · indisponível para indicadores') : ''}</span></button>`).join('') : '<div class="px-3 py-2 text-xs text-slate-500">Nada encontrado.</div>';
     d.classList.remove('hidden');
   }
   async function compute() {
     const my = ++seq, ind = S.crit !== 'preco', chart = $c('#cmpChart');
     vals = {};
+    if (S.crit === 'fg') { fgRun(my); return; }
     if (ind) {
       chart.classList.add('hidden');
       const byT = new Map(rows().map(r => [r.cid, r]));
@@ -162,6 +167,58 @@
     if (S._miss) $c('#cmpLess').insertAdjacentHTML('afterbegin', '<p class="gt-help">Alguns dados não carregaram agora; mostrando o que veio.</p>');
     $c('#cmpMore').innerHTML = (rv != null ? `<p class="cmp-ref">Principal ${esc(label(ref))}: ${fmt(rv)}</p>` : '') + html(M, S.qb, 'up');
   }
+  // ---------- Medo e Ganância × ação (análise do servidor: /api/fgcmp, medo.py) ----------
+  async function fgRun(my) {
+    const box = $c('#cmpFg'), ref = S.items[0];
+    if (!ref || isIdx(ref) || cOf(ref) !== 'br') { box.innerHTML = '<p class="gt-help">Escolha uma ação da B3 como Principal e toque em Pesquisar.</p>'; return; }
+    box.innerHTML = loaderHTML('Analisando…');
+    const d = await getRetry(`/api/fgcmp?t=${encodeURIComponent(tOf(ref))}&di=${S.di}&df=${S.df}`, 3, 20000);
+    if (my !== seq) return;
+    box.innerHTML = d && !d.error && d.n ? fgHtml(d) : `<p class="gt-help">${esc((d && d.error) || 'Sem dados para esta análise no período.')}</p>`;
+  }
+  function fgHtml(d) {
+    const fx = d.faixas, T = esc(d.t), nm = (i) => esc(fx[i][1]), few = (n) => n < 5 ? ' <span class="fgx-few">(poucas ocorrências)</span>' : '';
+    const bnd = (v, i) => `<span class="fgx-n ${fgCls(i)}">${v}</span> <span class="${fgCls(i)}">${nm(i)}</span>`;
+    const mes = (m) => m.slice(5) + '/' + m.slice(0, 4), p = (v) => v == null ? '—' : pc(v), cl = (v) => v == null ? '' : v > 0 ? 'up' : 'dn';
+    const G = [[0, 1, `${nm(0)} ou ${nm(1)}`], [2, 2, nm(2)], [3, 4, `${nm(3)} ou ${nm(4)}`]];
+    const grp = (cnt) => G.map(([a, b, l]) => [cnt.slice(a, b + 1).reduce((s, x) => s + x, 0), l]).sort((x, y) => y[0] - x[0])[0];
+    const cntOf = (L) => fx.map((_, i) => L.filter(x => x.b === i).length);
+    const top = (L, verbo) => {
+      const n5 = L.slice(0, 5), n10 = L.slice(0, 10), [k5, l5] = grp(cntOf(n5)), [k10, l10] = grp(cntOf(n10));
+      return `<p><b>${k5} das ${n5.length}</b> ${verbo} com o índice em ${l5} no fim do mês anterior.${n10.length > 5 ? ` Nas ${n10.length} maiores: ${k10} em ${l10}.` : ''}${few(n5.length)}</p>
+        <table class="gtab"><thead><tr><th>Mês</th><th>Variação</th><th>Índice antes</th></tr></thead><tbody>${n5.map(x => `<tr><td>${mes(x.m)}</td><td class="${cl(x.r)}">${p(x.r)}</td><td>${bnd(x.fg, x.b)}</td></tr>`).join('')}</tbody></table>`;
+    };
+    const h = d.hoje, sec = (t, body) => `<div class="fgx"><h3>${t}</h3>${body}</div>`;
+    const out = [];
+    if (h.v != null) out.push(sec('Situação de hoje', `<p>O índice está em ${bnd(h.v, h.b)} (${dataBR(h.d)}). Nas outras <b>${h.n}</b> vezes em que um mês fechou nessa faixa, a ${T} subiu em <b>${h.up}</b> e caiu em <b>${h.dn}</b> nos 3 meses seguintes (média <span class="${cl(h.r3)}">${p(h.r3)}</span>).${few(h.n)}</p>`));
+    out.push(sec('Maiores quedas', top(d.quedas, 'maiores quedas mensais vieram')));
+    out.push(sec('Maiores altas', top(d.altas, 'maiores altas mensais começaram')));
+    out.push(sec('Retorno por faixa', `<p>O que aconteceu com quem comprou a ${T} no fim de um mês em cada faixa.</p>
+      <table class="gtab"><thead><tr><th>Comprou com</th><th>Vezes</th><th>1 mês</th><th>6 meses</th><th>12 meses</th><th>Subiu em 12 m</th></tr></thead><tbody>${d.faixa.map(x => `<tr><td class="${fgCls(x.b)}">${nm(x.b)}</td><td>${x.n}</td><td class="${cl(x.r1)}">${p(x.r1)}</td><td class="${cl(x.r6)}">${p(x.r6)}</td><td class="${cl(x.r12)}">${p(x.r12)}</td><td>${x.n12 ? `${x.up12} de ${x.n12}` : '—'}${x.n12 && x.n12 < 5 ? '*' : ''}</td></tr>`).join('')}</tbody></table>${d.faixa.some(x => x.n12 && x.n12 < 5) ? '<p class="fgx-few">* poucas ocorrências</p>' : ''}`));
+    const tf = (arr, o) => { const n = arr.reduce((s, x) => s + x, 0); if (!n) return `Nenhuma ${o} de 1 ano no período.`; const [k, l] = grp(arr); return `<b>${k} das ${n}</b> ${o}s de 1 ano aconteceram com o índice em ${l}.${few(n)}`; };
+    out.push(sec('Topos e fundos', `<p>${tf(d.fundos, 'mínima')}</p><p>${tf(d.topos, 'máxima')}</p>`));
+    const r = d.recup;
+    out.push(sec('Tempo de recuperação', r.n ? `<p>Depois de o índice entrar em ${nm(0)} (<b>${r.n}</b> vezes), a ${T} levou em média <b>${r.media == null ? '—' : F2.format(r.media)} meses</b> para voltar ao preço de antes; o pior caso, <b>${r.pior ?? '—'} meses</b>.${r.aberto ? ` Em ${r.aberto} vez(es) ainda não voltou.` : ''}${few(r.n)}</p>` : `<p>O índice não entrou em ${nm(0)} no período.</p>`));
+    const m = d.defe.medo, g = d.defe.gan;
+    if (m.n && g.n && m.ibov != null) {
+      const def = m.acao > m.ibov;
+      out.push(sec('Defensiva ou de ciclo', `<p>Nos meses de medo, a ${T} variou em média <span class="${cl(m.acao)}">${p(m.acao)}</span> e o Ibovespa <span class="${cl(m.ibov)}">${p(m.ibov)}</span>; nos de ganância, <span class="${cl(g.acao)}">${p(g.acao)}</span> e <span class="${cl(g.ibov)}">${p(g.ibov)}</span>.</p><p><b>${def ? 'Defensiva' : 'De ciclo'}</b>: ${def ? 'cai menos que o mercado no medo' : 'cai mais que o mercado no medo'} e ${g.acao > g.ibov ? 'sobe mais' : 'sobe menos'} na ganância.${few(Math.min(m.n, g.n))}</p>`));
+    }
+    if (d.faixa.some(x => x.dy != null)) out.push(sec('Dividendos comprando em cada faixa', `<p>Proventos dos 12 meses seguintes ÷ preço de compra.</p><table class="gtab"><thead><tr><th>Comprou com</th><th>DY em 12 meses</th></tr></thead><tbody>${d.faixa.map(x => `<tr><td class="${fgCls(x.b)}">${nm(x.b)}</td><td>${x.dy == null ? '—' : F2.format(x.dy) + '%'}${x.ndy && x.ndy < 5 ? '*' : ''}</td></tr>`).join('')}</tbody></table>`));
+    out.push(sec('Preço × humor do mercado', fgChart(d)));
+    return `<p class="fgx-hd">${T} × Medo e Ganância · ${mes(d.per[0])} a ${mes(d.per[1])} (${d.n} meses)</p>${out.join('')}<p class="fgx-few">Comportamento passado, não é garantia nem recomendação. Cálculo mensal: fechamento do mês da ação e índice no último pregão do mês.</p>`;
+  }
+  function fgChart(d) {  // linha do preço (escala log) e, embaixo, uma faixa com a cor do índice em cada mês
+    const s = d.serie, n = s.m.length, W = 600, H = 150, R = 16; if (n < 2) return '';
+    const lg = s.c.map(Math.log), lo = Math.min(...lg), hi = Math.max(...lg), x = (i) => i / (n - 1) * W, y = (v) => H - 6 - (v - lo) / (hi - lo || 1) * (H - 12);
+    const runs = [];  // meses seguidos na mesma faixa viram um bloco só
+    s.fg.forEach((v, i) => { const b = fgBand(v, d.faixas).i, L = runs[runs.length - 1]; if (L && L.b === b) L.e = i; else runs.push({ b, s: i, e: i }); });
+    const half = W / (n - 1) / 2;
+    const bars = runs.map(r => `<rect class="${fgCls(r.b)}" x="${Math.max(0, x(r.s) - half).toFixed(1)}" y="${H + 6}" width="${(Math.min(W, x(r.e) + half) - Math.max(0, x(r.s) - half)).toFixed(1)}" height="${R}"/>`).join('');
+    const line = lg.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    return `<svg class="fgx-ch" viewBox="0 0 ${W} ${H + 6 + R}" preserveAspectRatio="none" role="img" aria-label="Preço de ${esc(d.t)} e faixa do índice em cada mês">${bars}<polyline points="${line}"/></svg>
+      <div class="fgx-ax"><span>${s.m[0].slice(0, 4)}</span><span>${s.m[n - 1].slice(0, 4)}</span></div><div class="fgx-lg">${d.faixas.map((f, i) => `<span class="${fgCls(i)}">■ ${esc(f[1])}</span>`).join('')}</div>`;
+  }
   let LAST = null;
   const draw = () => LAST && gcRender(...LAST, undefined, { mode: S.vm, cross: true });
   function all() { chips(); compute(); save(); }
@@ -195,7 +252,12 @@
       }
     });
     document.addEventListener('click', (e) => { root.querySelectorAll('.cmp-srch').forEach(b => { if (!b.contains(e.target)) b.querySelector('.pv-combo').classList.add('hidden'); }); });
-    $c('#cmpCrit').addEventListener('change', () => { S.crit = $c('#cmpCrit').value; if (S.crit !== 'preco' && S.items[0] && isIdx(S.items[0])) { const f = S.items.find(x => !isIdx(x)); if (f) S.items = [f].concat(S.items.filter(x => x !== f)); } prep(); });
+    $c('#cmpCrit').addEventListener('change', () => {
+      S.crit = $c('#cmpCrit').value;
+      const ok = (x) => !isIdx(x) && (S.crit !== 'fg' || cOf(x) === 'br');  // Medo e Ganância: principal precisa ser ação da B3
+      if (S.crit !== 'preco' && S.items[0] && !ok(S.items[0])) { const f = S.items.find(ok); if (f) S.items = [f].concat(S.items.filter(x => x !== f)); }
+      prep();
+    });
     $c('#cmpDi').addEventListener('change', () => { S.di = $c('#cmpDi').value || yago; prep(); });
     $c('#cmpDf').addEventListener('change', () => { S.df = $c('#cmpDf').value || today; prep(); });
     root.addEventListener('input', (e) => { const k = e.target.dataset.q; if (k) { S[k] = e.target.value; cols(); } });
