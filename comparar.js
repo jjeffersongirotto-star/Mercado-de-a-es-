@@ -7,7 +7,8 @@
   const today = new Date().toISOString().slice(0, 10), yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();
   S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.ct = S.ct || 'br'; S.vm = S.vm || 'pct'; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct, vm: S.vm, fgOrd: S.fgOrd })); } catch (e) { } };
+  S.ini = S.ini >= 0 ? S.ini : 20000; S.ap = S.ap >= 0 ? S.ap : 500; S.mu = S.mu || 'sel'; S.mv = S.mv || 'media';  // Modelos: valores, empresas e tabela
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct, vm: S.vm, fgOrd: S.fgOrd, ini: S.ini, ap: S.ap, mu: S.mu, mv: S.mv })); } catch (e) { } };
   // País da comparação (bandeiras): 'br' (padrão), outro país ou 'all' (🌐). Ação de fora = "us:AAPL"; índice do país = "@ix:us".
   // Linhas de cada país = mesmo /api/data das abas (carregadas uma vez); Brasil reaproveita state.data quando a aba Ações está no Brasil.
   const RC = {};
@@ -39,24 +40,30 @@
       <div class="cmp-srch" data-w="p"><input id="cmpP" type="search" placeholder="Buscar ação ou índice principal…" autocomplete="off"><div class="pv-combo hidden"></div></div>
       <label class="cmp-lbl" id="cmpQl">Comparar com</label>
       <div class="cmp-srch" data-w="q"><input id="cmpQ" type="search" placeholder="Adicionar ação ou índice…" autocomplete="off"><div class="pv-combo hidden"></div></div>
-      <div class="cmp-row frm"><label><span>Critério</span><select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option><option value="fg">Medo e Ganância</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
-        <label><span>Início</span><input id="cmpDi" type="date" class="sel"></label><label><span>Fim</span><input id="cmpDf" type="date" class="sel"></label></div>
+      <div class="cmp-row frm"><label><span>Critério</span><select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option><option value="fg">Medo e Ganância</option><option value="mod">Modelos</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
+        <label><span>Início</span><input id="cmpDi" type="date" class="sel"></label><label><span>Fim</span><input id="cmpDf" type="date" class="sel"></label>
+        <label class="cmp-mod"><span>Valor inicial</span><input id="cmpIni" inputmode="decimal" class="sel"></label><label class="cmp-mod"><span>Aporte mensal</span><input id="cmpAp" inputmode="decimal" class="sel"></label>
+        <label class="cmp-mod"><span>Empresas</span><select id="cmpMu" class="sel"><option value="sel">Escolhidas</option><option value="all">Todas</option><option value="top5">5 maiores de cada setor</option></select></label></div>
       <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpGo" class="gbtn pri w-full">Pesquisar</button><button type="button" id="cmpAll" class="cmp-allb"></button><button type="button" id="cmpClr" class="gbtn w-full cmp-clr">Limpar tudo</button></section>
       <div class="cmp-bar"><div class="cmp-vm" role="group" aria-label="Mostrar no gráfico"><button type="button" data-vm="pct">%</button><button type="button" data-vm="val">Valor</button></div><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
       <section class="cmp-cols"><div class="cmp-col"><h3 class="dn">Renderam menos</h3><input class="cmp-f" data-q="qa" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpLess"></div></div>
         <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>
-      <section id="cmpFg" class="fgx-w hidden"></section>`;
+      <section id="cmpFg" class="fgx-w hidden"></section><section id="cmpMod" class="fgx-w hidden"></section>`;
     $c('#cmpCrit').value = S.crit; $c('#cmpDi').value = S.di; $c('#cmpDf').value = S.df;
+    $c('#cmpIni').value = F2.format(S.ini); $c('#cmpAp').value = F2.format(S.ap); $c('#cmpMu').value = S.mu;
   }
   function chips() {
-    const fgm = S.crit === 'fg', ind = S.crit !== 'preco' && !fgm, ref = S.items[0];
-    // Medo e Ganância: só a ação principal (B3) e o período
-    for (const s of ['#cmpQl', '.cmp-srch[data-w="q"]', '#cmpChips', '.cmp-bar', '.cmp-cols', '#cmpChart']) root.querySelectorAll(s).forEach(e => e.classList.toggle('fgx-off', fgm));
-    $c('#cmpFg').classList.toggle('hidden', !fgm);
+    const mod = S.crit === 'mod', fgm = S.crit === 'fg', ind = S.crit !== 'preco' && !fgm && !mod, ref = S.items[0];
+    // Medo e Ganância: só a ação principal (B3) e o período · Modelos: empresas escolhidas (ou Todas / 5 maiores de cada setor), período e valores
+    for (const s of ['#cmpQl', '.cmp-srch[data-w="q"]', '#cmpChips']) root.querySelectorAll(s).forEach(e => e.classList.toggle('fgx-off', fgm || (mod && S.mu !== 'sel')));
+    for (const s of ['.cmp-bar', '.cmp-cols', '#cmpChart']) root.querySelectorAll(s).forEach(e => e.classList.toggle('fgx-off', fgm || mod));
+    root.querySelectorAll('#cmpPrin, .cmp-srch[data-w="p"], .cmp-head').forEach(e => e.classList.toggle('fgx-off', mod && S.mu !== 'sel'));
+    root.querySelectorAll('.cmp-mod').forEach(e => e.classList.toggle('fgx-off', !mod));
+    $c('#cmpFg').classList.toggle('hidden', !fgm); $c('#cmpMod').classList.toggle('hidden', !mod);
     root.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', b.dataset.ct === S.ct));
     root.querySelectorAll('[data-vm]').forEach(b => b.classList.toggle('on', b.dataset.vm === S.vm));
-    $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br' || fgm);  // "Comparar tudo" usa o histórico da B3: só no Brasil
+    $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br' || fgm || mod);  // "Comparar tudo" usa o histórico da B3: só no Brasil
     $c('#cmpPrin').innerHTML = ref ? `<span class="cmp-chip ref" style="--cc:${COLORS[0]}">${esc(label(ref))}<b class="cmp-pv ${vals[ref] > 0 ? 'up' : vals[ref] < 0 ? 'dn' : ''}">${vals[ref] != null ? (ind ? F2.format(vals[ref]) : pc(vals[ref])) : ''}</b><button type="button" data-rm="${esc(ref)}" aria-label="Remover principal">✕</button></span>${S.items.length > 1 ? '<button type="button" id="cmpSwap" class="cmp-swap" title="Trocar principal" aria-label="Trocar principal">⇅</button>' : ''}` : '';
     $c('#cmpP').closest('.cmp-srch').classList.toggle('hidden', !!ref);
     $c('#cmpChips').innerHTML = S.items.slice(1).map((id, j) => `<span class="cmp-chip${ind && isIdx(id) ? ' off' : ''}" style="--cc:${COLORS[(j + 1) % COLORS.length]}">${esc(label(id))}<button type="button" data-rm="${esc(id)}" aria-label="Remover ${esc(label(id))}">✕</button></span>`).join('');
@@ -79,7 +86,7 @@
   function drop(e) {
     const box = e.target.closest('.cmp-srch'), q = norm(e.target.value).trim(), d = box.querySelector('.pv-combo');
     if (!q) { d.classList.add('hidden'); return; }
-    const ind = S.crit !== 'preco', fgm = S.crit === 'fg';
+    const ind = S.crit !== 'preco', fgm = S.crit === 'fg' || S.crit === 'mod';  // Medo e Ganância e Modelos: só ações da B3
     const idx = idxList().filter(x => norm(x[1]).includes(q) && !S.items.includes(x[0])).map(x => ({ id: x[0], t: x[1], s: 'índice', off: ind }));
     const st = rows().filter(r => !S.items.includes(r.cid) && (!fgm || cOf(r.cid) === 'br') && (r._s ? r._s.includes(q) : norm(r.ticker + ' ' + r.nome).includes(q))).map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30).map(r => ({ id: r.cid, t: label(r.cid), s: r.nome || '' }));
     const L = idx.concat(st);
@@ -90,6 +97,7 @@
     const my = ++seq, ind = S.crit !== 'preco', chart = $c('#cmpChart');
     vals = {};
     if (S.crit === 'fg') { fgRun(my); return; }
+    if (S.crit === 'mod') { modRun(my); return; }
     if (ind) {
       chart.classList.add('hidden');
       const byT = new Map(rows().map(r => [r.cid, r]));
@@ -256,6 +264,47 @@
     put(box.querySelector('.fgc-pr'), FGD._y1(i), `${fmtPrice(s.c[i], 'BRL')} · ${dataBR(s.d[i])}`, '');
     put(box.querySelector('.fgc-ix'), FGD._y2(i), `${s.fg[i]} · ${FGD.faixas[b.i][1]}`, fgCls(b.i));
   }
+  // ---------- Modelos: todos os modelos da Previsão nas empresas escolhidas (simulação do servidor: modelos.compare) ----------
+  let MD = null, MN = {};
+  const RK = (p) => `<i class="rk rk-${p}" aria-label="${p + 1}º"></i>`;  // cor fixa por colocação (seção Cores do painel ⓘ)
+  const MV = [['media', 'Média'], ['emp', 'Por empresa'], ['pos', 'Colocações'], ['con', 'Consistência']];
+  async function modRun(my) {
+    const box = $c('#cmpMod'), t = S.items.filter(x => !isIdx(x) && cOf(x) === 'br').map(tOf);
+    if (S.mu === 'sel' && !t.length) { box.innerHTML = '<p class="gt-help">Escolha uma ou mais ações da B3 (ou Todas / 5 maiores de cada setor em Empresas) e toque em Pesquisar.</p>'; return; }
+    box.innerHTML = loaderHTML('Simulando os modelos…');
+    if (!Object.keys(MN).length) { try { const m = await (await fetch('/api/modelos')).json(); (m.modelos || []).forEach(x => { MN[x.id] = x.n; }); } catch (e) { } }
+    let d = null;
+    for (let k = 0; k < 20 && my === seq; k++) {
+      try {
+        const r = await fetch('/api/modelos/comparar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ u: S.mu, t, di: S.di, df: S.df, ini: S.ini, ap: S.ap }) });
+        if (r.status === 202) { await new Promise(z => setTimeout(z, 3000)); continue; }
+        d = await r.json(); break;
+      } catch (e) { await new Promise(z => setTimeout(z, 3000)); }
+    }
+    if (my !== seq) return;
+    MD = d && !d.error && d.t ? d : null;
+    box.innerHTML = MD ? modHtml() : `<p class="gt-help">${esc((d && d.error) || 'Não foi possível comparar agora.')}</p>`;
+  }
+  function modHtml() {
+    const d = MD, nm = (i) => esc(MN[d.m[i]] || d.m[i]), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
+    const posOf = (ord) => { const o = {}; ord.forEach((i, p) => { o[i] = p; }); return o; };
+    const tab = (h, body) => `<div class="pv-scroll"><table class="gtab cmp-mt"><thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+    let html = '';
+    if (S.mv === 'media') {
+      const ps = posOf(d.ord_media);
+      html = tab(['Modelo', 'Lucro médio', 'Valor final médio'], d.ord_media.map(i => `<tr><td>${RK(ps[i])}${nm(i)}</td><td class="${cl(R[i].media)}">${pp(R[i].media)}</td><td>${brl.format(R[i].vmedio)}</td></tr>`).join(''));
+    } else if (S.mv === 'emp') {
+      const cols = d.ord_pos;
+      html = tab(['Ativo'].concat(cols.map(nm)), d.t.map((tk, j) => `<tr><td><b>${esc(tk)}</b></td>${cols.map(i => `<td class="tap" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
+    } else if (S.mv === 'pos') {
+      html = tab(['Modelo'].concat(d.m.map((_, p) => `${RK(p)}${p + 1}º`)).concat(['Lucro mediano']), d.ord_pos.map((i, p) => `<tr><td>${RK(p)}${nm(i)}</td>${R[i].pos.map(c => `<td>${c || '—'}</td>`).join('')}<td class="${cl(R[i].mediana)}">${pp(R[i].mediana)}</td></tr>`).join(''));
+    } else {
+      const ord = R.map((_, i) => i).sort((a, b) => R[b].mediana - R[a].mediana), ps = posOf(ord);
+      html = tab(['Modelo', 'Lucro mediano', 'Ganha de Comprar e segurar', 'Pior colocação'], ord.map(i => `<tr><td>${RK(ps[i])}${nm(i)}</td><td class="${cl(R[i].mediana)}">${pp(R[i].mediana)}</td><td>${R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas'}</td><td>${RK(R[i].pior - 1)}${R[i].pior}º</td></tr>`).join(''));
+    }
+    return `<div class="gt-tabs" role="tablist">${MV.map(([k, l]) => `<button type="button" data-mv="${k}" class="${S.mv === k ? 'on' : ''}">${l}</button>`).join('')}</div>${html}
+      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · ${d.t.length} de ${d.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(d.apT)} por empresa · lucro = (valor final − aportado) ÷ aportado.${S.mv === 'emp' ? ' Toque num valor para ver o mês a mês na Previsão.' : ''}</p>`;
+  }
   let LAST = null;
   const draw = () => LAST && gcRender(...LAST, undefined, { mode: S.vm, cross: true });
   function all() { chips(); compute(); save(); }
@@ -276,7 +325,10 @@
         if (ids) { S.fgOrd = ids; save(); if (FGD) $c('#cmpFg').innerHTML = fgHtml(FGD); }
         return;
       }
-      if (e.target.closest('#cmpGo')) { S.all = false; all(); return; }  // Pesquisar: volta do "Comparar tudo" e compara só os escolhidos
+      if (e.target.closest('#cmpGo')) { S.all = false; all(); return; }
+      const mv = e.target.closest('[data-mv]'); if (mv && MD) { S.mv = mv.dataset.mv; save(); $c('#cmpMod').innerHTML = modHtml(); return; }
+      const mo = e.target.closest('[data-mo]');
+      if (mo && MD) { const [t, m] = mo.dataset.mo.split('|'); if (window.pvOpen) pvOpen({ t, m, di: MD.ini, df: MD.fim, ini: S.ini, ap: S.ap }); return; }  // Pesquisar: volta do "Comparar tudo" e compara só os escolhidos
       const vm = e.target.closest('[data-vm]'); if (vm) { S.vm = vm.dataset.vm; chips(); save(); draw(); return; }
       const fl = e.target.closest('[data-ct]');
       if (fl) {  // país escolhido: só ações dele (e seus índices); 🌐 mantém tudo
@@ -298,12 +350,15 @@
     $c('#cmpCrit').addEventListener('change', () => {
       S.crit = $c('#cmpCrit').value;
       if (S.crit === 'fg') { S.di = yrsBack(S.df, 10); $c('#cmpDi').value = S.di; }  // Medo e Ganância: começa com 10 anos
-      const ok = (x) => !isIdx(x) && (S.crit !== 'fg' || cOf(x) === 'br');  // Medo e Ganância: principal precisa ser ação da B3
+      if (S.crit === 'mod') { S.ct = 'br'; S.di = yrsBack(S.df, 10); $c('#cmpDi').value = S.di; }  // Modelos: ações da B3, começa com 10 anos
+      const ok = (x) => !isIdx(x) && ((S.crit !== 'fg' && S.crit !== 'mod') || cOf(x) === 'br');  // Medo e Ganância e Modelos: principal precisa ser ação da B3
       if (S.crit !== 'preco' && S.items[0] && !ok(S.items[0])) { const f = S.items.find(ok); if (f) S.items = [f].concat(S.items.filter(x => x !== f)); }
       prep();
     });
     $c('#cmpDi').addEventListener('change', () => { S.di = $c('#cmpDi').value || yago; prep(); });
     $c('#cmpDf').addEventListener('change', () => { S.df = $c('#cmpDf').value || today; prep(); });
+    for (const [id, k] of [['#cmpIni', 'ini'], ['#cmpAp', 'ap']]) $c(id).addEventListener('change', () => { S[k] = Math.max(0, parseBR($c(id).value)); $c(id).value = F2.format(S[k]); prep(); });
+    $c('#cmpMu').addEventListener('change', () => { S.mu = $c('#cmpMu').value; prep(); });
     root.addEventListener('input', (e) => { const k = e.target.dataset.q; if (k) { S[k] = e.target.value; cols(); } });
     all();
   }

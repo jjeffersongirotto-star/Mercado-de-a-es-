@@ -879,6 +879,22 @@ def api_modelos_sim(body: dict):
         log.exception("modelos: simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
+@app.post("/api/modelos/comparar")
+def api_modelos_comparar(body: dict):
+    """Comparar → Modelos: empresas escolhidas, todas (1 ticker por empresa) ou as 5 maiores de cada setor."""
+    import modelos
+    rows = universe.universe((cache.data or {}).get("rows") or [])
+    if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
+    b = body or {}
+    u = b.get("u") or "sel"
+    tick = [r["ticker"] for r in rows] if u == "all" else modelos.top_sector(rows) if u == "top5" else [str(t).upper() for t in (b.get("t") or [])][:60]
+    try:
+        ini, ap = max(0.0, float(b.get("ini") or 0)), max(0.0, float(b.get("ap") or 0))
+        out = modelos.compare(modelos.data(), tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], ini, ap)
+    except Exception:
+        log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
+    return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
+
 @app.get("/api/indices/{name}")
 def api_indices(name: str):
     if name not in history.SGS:

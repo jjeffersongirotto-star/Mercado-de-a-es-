@@ -13,6 +13,9 @@ Idioma: português do Brasil em textos da interface, mensagens de commit, coment
 Toda informação existe em **um único lugar** (a fonte). Todo o resto — outras abas, o chat, o Gemini, scripts, testes — **lê da fonte**.
 Alterou a fonte, tudo que depende dela muda junto. Uma mudança que copia informação já existente **não é aceita**: refaça lendo da fonte.
 
+**Campos, botões e filtros podem se repetir** em outras abas quando a tela precisa deles (ex.: Valor inicial e Aporte mensal na Previsão e no Comparar → Modelos).
+O que não se repete é **informação**: dados, regras, cálculos, textos de explicação e listas — esses são lidos da fonte.
+
 ### 1.1 Antes de criar qualquer coisa
 1. **Procure** se já existe (`grep` pelo nome, rótulo, valor ou texto). Existe → **use ou estenda**.
 2. Precisa de uma variação → **parametrize** a função/classe existente; não copie e altere.
@@ -61,7 +64,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Vocabulário do chat: sinônimos e gírias → indicador, qualificadores (barato, pouca dívida, boa pagadora, queda), abreviações, apelidos de empresas, palavras → termo do Glossário, variações de frases, nomes que não viram personagem | `vocabulario.json` | `chat.py` (`SYN`, `QUALS`, `ABBR`, `ALIAS`, `GLOSS_SYN`, `frase`) |
 | Barato/Caro (valor justo de Graham √(22,5 × LPA × VPA)) | `app.js` → `fairOf` (preço e indicadores do card, respeita o seletor de fonte); o chat faz a mesma conta com o consenso (`chat.fair`) | barra do card (Ações e Grupos), chat |
 | Índice de Medo e Ganância da B3 (0–100, diário desde 1997; faixas e partes) | snapshot `fg` (`scripts/build_fg.py`: COTAHIST, fluxo B3, CDI; rotina diária) → `/api/fg` | velocímetro (`medo.js` → `fgLoad`, `fgBand`), Comparar, chat (`chat.fg_answer`) |
-| Modelos da Previsão (regras, custos, IR, grupos prontos do rodízio) | `modelos.py` → `MODELOS`, `GRUPOS`, `HIB` (híbrido; explicação no painel ⓘ → **Modelos da Previsão**) | `/api/modelos` → card Modelos, abas Tabela/Desempenho (`previsao.js`), chat |
+| Modelos da Previsão (regras, custos, IR, grupos prontos do rodízio) | `modelos.py` → `MODELOS`, `GRUPOS`, `HIB` (híbrido; explicação no painel ⓘ → **Modelos da Previsão**) | `/api/modelos` → card Modelos, abas Tabela/Desempenho (`previsao.js`); `/api/modelos/comparar` (`modelos.compare`, `ranking`, `top_sector`) → Comparar → Modelos (`comparar.js` → `modRun`, `modHtml`); chat |
 | Sinais semanais dos modelos (índice da ação, média de 200 dias, alta em 12 meses, chance do algoritmo 1 e 3 meses) | snapshot `modelos` (`scripts/build_modelos.py`; "mercado" de `build_fg.market`, índice da ação de `medo.stock_index`; CDB de `history.bcb`) | `modelos.py` |
 | Aporte e retirada de cada mês da Previsão | `previsao.js` → `flows` | tabela da Previsão e simulação dos modelos |
 | Comparar → Medo e Ganância de uma ação (índice da ação: `medo.stock_index`, mesma nota 0–100 de `medo.rank` usada pelo índice do mercado; altas/quedas semanais, demais mensais) | `medo.py` → `analyze` (histórico diário completo `history.b3full`, snapshot `fg`, Ibovespa) → `/api/fgcmp` | aba Comparar (`comparar.js` → `fgRun`, `fgHtml`) |

@@ -107,8 +107,7 @@ def ready_groups(rows):
 
 
 def meta(D):
-    return {"modelos": [{"id": m["id"], "n": m["n"], "vende": m["vende"]} for m in MODELOS], "ini": D["ini"], "fim": D["fim"],
-            "acerto": D["acerto"], "at": D["at"], "tick": D["tick"]}
+    return {"modelos": [{"id": m["id"], "n": m["n"], "vende": m["vende"]} for m in MODELOS], "ini": D["ini"], "fim": D["fim"], "at": D["at"], "tick": D["tick"]}
 
 
 def _span(D, di, df):
@@ -356,6 +355,48 @@ def run(D, req):
                              "c": int(r["c"][0]), "s": int(r["s"][0])})
         rows.sort(key=lambda x: (x["k"] != "g", -(x["pct"] if x["pct"] is not None else -1e9)))
         out = dict(ini, rows=rows)
+    _C[key] = out
+    while len(_C) > 60: _C.popitem(last=False)
+    return out
+
+
+def top_sector(rows, n=5):
+    """As n maiores empresas (valor de mercado) de cada setor, 1 ticker por empresa (linhas de /api/data já filtradas)."""
+    by = {}
+    for r in rows: by.setdefault(r.get("setor") or "?", []).append(r)
+    vm = lambda r: (r.get("v") or {}).get("valmerc") or 0
+    return [r["ticker"] for rs in by.values() for r in sorted(rs, key=lambda r: -vm(r))[:n]]
+
+
+def ranking(V):
+    """V: modelos × empresas (valor final). -> posição (0 = 1º) de cada modelo em cada empresa e a ordem das Colocações:
+    mais 1º lugares; empate -> mais 2º lugares, e assim por diante; empate em tudo -> maior média."""
+    rk = (-V).argsort(axis=0, kind="stable").argsort(axis=0)
+    cnt = np.array([[int((rk[i] == p).sum()) for p in range(V.shape[0])] for i in range(V.shape[0])])
+    order = sorted(range(V.shape[0]), key=lambda i: tuple(-cnt[i]) + (-V[i].mean(),))
+    return rk, cnt, order
+
+
+def compare(D, tickers, di, df, ini, ap):
+    """Comparar → Modelos: todos os modelos em cada empresa com o mesmo valor inicial e aporte mensal.
+    -> empresas usadas (com preço no início), lucro % de cada modelo × empresa, posições e os resumos das tabelas."""
+    me = _span(D, di, df)
+    if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
+    key = repr(("cmp", D["at"], tuple(tickers), di, df, ini, ap))
+    if key in _C: _C.move_to_end(key); return _C[key]
+    aps = [ini] + [ap] * (len(me) - 1); apT = sum(aps); w = [0.0] * len(me)
+    idx = [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
+    if not idx: return {"error": f"Nenhuma das empresas tinha preço em {D['ym'][me[0]]}."}
+    V = np.array([simulate(D, m["id"], idx, me, aps, w)["v"] for m in MODELOS])
+    P = (V / apT - 1) * 100
+    rk, cnt, order = ranking(V)
+    hold = V[[m["id"] for m in MODELOS].index("hold")]
+    res = [{"m": m["id"], "media": round(float(P[i].mean()), 2), "vmedio": round(float(V[i].mean()), 2), "mediana": round(float(np.median(P[i])), 2),
+            "ganha": None if m["id"] == "hold" else round(float((V[i] > hold).mean() * 100), 1), "pior": int(rk[i].max()) + 1, "pos": cnt[i].tolist()}
+           for i, m in enumerate(MODELOS)]
+    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)),
+           "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in MODELOS], "p": np.round(P, 2).tolist(), "rk": rk.tolist(),
+           "res": res, "ord_media": sorted(range(len(MODELOS)), key=lambda i: -P[i].mean()), "ord_pos": order}
     _C[key] = out
     while len(_C) > 60: _C.popitem(last=False)
     return out

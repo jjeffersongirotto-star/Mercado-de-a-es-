@@ -85,6 +85,21 @@ def test_hibrido_nunca_vende_e_segue_quem_acerta():
     assert r["s"][0] == 0 and r["ir"][0] == 0 and "Comprar e segurar" in r["rows"][0][-1]["pos"]
 
 
+def test_colocacoes_desempate_pelo_segundo_lugar():
+    # 3 modelos × 4 empresas: A e B têm dois 1º lugares cada; B tem mais 2º lugares -> B antes de A
+    V = np.array([[10, 10, 1, 1], [9, 9, 11, 11], [1, 1, 10, 10]], dtype=float)  # B: 1º nas duas últimas, 2º nas duas primeiras
+    rk, cnt, order = modelos.ranking(V)
+    assert cnt[0].tolist() == [2, 0, 2] and cnt[1].tolist() == [2, 2, 0] and order == [1, 0, 2]
+
+
+def test_comparar_media_e_empresas_sem_preco():
+    D = modelos.build(snap({"AAA3": {"c": [10.0 + k * .1 for k in range(NW)]}, "BBB3": {"c": 10.0}}), cdi())
+    out = modelos.compare(D, ["AAA3", "BBB3", "XXX3"], "2020-09", "2021-12", 1000.0, 100.0)
+    assert out["t"] == ["AAA3", "BBB3"] and out["pedidas"] == 3 and len(out["p"]) == len(modelos.MODELOS)
+    i = out["m"].index("hold"); assert abs(out["res"][i]["media"] - sum(out["p"][i]) / 2) < 0.01
+    assert [out["res"][k]["media"] for k in out["ord_media"]] == sorted((r["media"] for r in out["res"]), reverse=True)
+
+
 def test_run_todos_ordena_grupos_primeiro():
     D = modelos.build(snap({"AAA3": {"c": [10.0 + k * .1 for k in range(NW)]}, "BBB3": {"c": 10.0}}), cdi())
     out = modelos.run(D, {"di": "2020-09", "df": "2021-12", "ap": [1000] + [100] * 15, "ticker": "*", "modelo": "*", "universo": ["AAA3", "BBB3"],
