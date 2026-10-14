@@ -65,6 +65,15 @@ def features(c, v, dv, mi, mk):
     return X.replace([np.inf, -np.inf], np.nan)
 
 
+def lucro(f, W):
+    """Último balanço anual já publicado em cada semana teve lucro? 1 sim, 0 não, None sem balanço ainda.
+    O exercício do ano Y vale a partir de 1º de maio de Y+1 (prazo de publicação): nunca usa um balanço que ainda não saiu."""
+    if not f: return None
+    av = pd.to_datetime([f"{y + 1}-05-01" for y in f["y"]])
+    j = np.searchsorted(av.values, pd.DatetimeIndex(W).values, side="right") - 1
+    return [None if k < 0 else int((f["ni"][k] or 0) > 0 and (f["eq"][k] or 0) > 0) for k in j]
+
+
 def logit_fit(X, y, it=300, lr=0.2, l2=1.0):
     w, b = np.zeros(X.shape[1]), 0.0
     for _ in range(it):
@@ -106,6 +115,8 @@ def main(out):
     weeks = C.index.to_series().groupby(C.index.to_period("W-FRI")).max()  # último pregão de cada semana
     weeks = weeks[weeks >= pd.Timestamp(START)]
     W = pd.DatetimeIndex(weeks.values)
+    try: FD = json.load(open(os.path.join(out, "fund.json")))["a"]  # fundamentos anuais (scripts/build_fund.py)
+    except Exception as e: FD = {}; print("modelos: sem fundamentos (fund.json):", e)
     rows, series = [], {}
     for t in C.columns:
         c = C[t].dropna()
@@ -135,7 +146,7 @@ def main(out):
         Xw = X.reindex(W, method="ffill", limit=10).iloc[i0:]
         a = {"i0": i0, "c": [None if x != x else round(float(x), 4) for x in cw.iloc[i0:]],
              "dv": {str(i - i0): round(float(x), 6) for i, x in enumerate(dw.to_numpy()) if x > 0 and i >= i0},
-             "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000)}
+             "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000), "lp": lucro(FD.get(t), W[i0:])}
         for H, k in zip(HS, ("p1", "p3")):
             p = pred[H].xs(t, level=1) if t in pred[H].index.get_level_values(1) else pd.Series(dtype=float)
             a[k] = q(p.reindex(W, method="ffill", limit=2).iloc[i0:], 1000)
