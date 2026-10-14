@@ -210,6 +210,14 @@
   html { background: rgb(2 6 23); }  /* mesma cor do body (bg-slate-950): sem fio claro no fim da página */
   .sd-ic { display: block; } .sd-ic path { fill: none; stroke: var(--c-mut); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; } .sd-ic path.on { stroke: var(--c-pos); }
   #sortDir { display: inline-flex; align-items: center; gap: .3rem; }
+  /* Celular: busca e Ordenar em grade de 3 colunas alinhadas — [+ Grupo | Ordenar] [busca | indicador] [lupa | setas] */
+  @media (max-width: 639px) {
+    body .atop-r { display: grid; grid-template-columns: 5.2rem minmax(0, 1fr) var(--h); gap: .5rem; align-items: center; }
+    body .atop-r [data-g="new"] { order: -1; width: 100%; padding: 0 .25rem; min-height: var(--h); }
+    body .atop-r label[for="sortKey"] { text-align: center; }
+    body .atop-r #q, body .atop-r #sortKey { width: 100%; max-width: none; min-height: var(--h); }
+    body .atop-r .lupa, body .atop-r #sortDir { width: var(--h); height: var(--h); min-height: var(--h); }
+  }
   .gc-note { display: none; }
   .gc-nodata-msg { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: rgb(148 163 184); pointer-events: none; text-align: center; }
   .umod { position: fixed; inset: 0; z-index: 300; background: rgb(2 6 23 / .7); display: grid; place-items: center; padding: 1rem; }
@@ -487,7 +495,7 @@
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 <header class="border-b border-slate-800 bg-slate-900/80">
-  <div id="hdr" class="max-w-[1200px] mx-auto px-3 sm:px-4 py-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+  <div id="hdr" class="mx-auto px-3 sm:px-4 lg:px-6 py-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
       <h1 class="m-0 order-1 w-full sm:w-auto sm:flex-1 min-w-0"><picture><source media="(min-width: 640px)" srcset="/static/brand/jg-investing-wide.webp" width="2111" height="115"><img src="/static/brand/jg-investing.webp" alt="JG Investing" width="411" height="56" class="block w-full h-auto"></picture></h1>
       <div id="hdrBtns" class="order-3 sm:order-2 ml-auto flex-none flex items-center gap-2 text-sm">
         <button id="btnRefresh" type="button" class="ricon" title="Atualizar" aria-label="Atualizar dados"><svg class="ri" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -512,7 +520,7 @@
   </div>
 </header>
 
-<main class="max-w-[1200px] mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3">
+<main class="mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-3">
   <nav class="tabs" role="tablist">
     <button type="button" data-tab="acoes" role="tab">Ações</button>
     <button type="button" data-tab="carteira" role="tab">Carteira</button>
@@ -524,7 +532,7 @@
   <div data-tabpane="acoes" class="space-y-3">
   <section id="fgCard" class="fg hidden" aria-label="Índice de Medo e Ganância"></section>
   <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 space-y-2.5">
-    <div class="flex items-center gap-2">
+    <div class="atop-r flex items-center gap-2">
       <input id="q" type="search" placeholder="Buscar ticker ou nome…" class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
       <button id="btnFilt" type="button" class="lupa" aria-expanded="false" aria-controls="moreFilt" title="Mais filtros" aria-label="Mostrar mais filtros">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span class="lupa-plus">+</span></button>
@@ -560,7 +568,7 @@
         <button id="btnClear" type="button" class="gbtn ml-auto">Limpar filtros</button>
       </div>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="atop-r flex items-center gap-2">
       <label for="sortKey" class="text-xs text-slate-400">Ordenar</label>
       <select id="sortKey" class="sel flex-1 min-w-0 max-w-[260px]"></select>
       <button id="sortDir" title="Inverter ordem" class="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm whitespace-nowrap" aria-label="Maior → menor"></button>
