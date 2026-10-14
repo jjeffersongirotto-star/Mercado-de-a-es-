@@ -17,6 +17,7 @@ MODELOS = [
     {"id": "alg1", "n": "Algoritmo 1 mês", "vende": True, "p": "p1", "min": 12},
     {"id": "alg3", "n": "Algoritmo 3 meses", "vende": True, "p": "p3", "min": 12},
     {"id": "tendencia", "n": "Tendência", "vende": True, "min": 4},
+    {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
 ]
 MOD = {m["id"]: m for m in MODELOS}
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
@@ -26,6 +27,12 @@ MED_SEM = 52       # chance do algoritmo "favorável" = acima da mediana das úl
 TROCA_SEM = 12     # rodízio: semanas mínimas na empresa antes de trocar por outra melhor
 # rodízio: grupos prontos (nome, subsetor, quantas maiores por valor de mercado) + os grupos do usuário (aba Grupos)
 GRUPOS = [("5 maiores bancos", r"^Bancos", 5), ("5 maiores de energia elétrica", r"^Energia Elétrica", 5), ("10 maiores da B3", None, 10)]
+# Híbrido: especialistas (exposição de cada um) e peso pelo acerto recente na própria ação (painel ⓘ → Modelos da Previsão)
+HIB = ("hold", "alg1", "alg3", "media200")
+# Ajusta a parte na ação com aportes e proventos (compra só até a exposição alvo; o resto espera no CDB) e não vende:
+# no teste com IR e custos, vender (mesmo em parte ou dentro da isenção) sempre rendeu menos que manter.
+HIB_SEM, HIB_ETA = 52, 5  # janela do acerto recente (semanas) e o quanto o melhor recebe mais peso
+HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
 MARGEM = {"alg1": 20, "alg3": 20, "tendencia": 100}  # rodízio: vantagem mínima para trocar (chance ×1000; alta 12 m ×1000)
 
 _D = {"at": 0, "key": None, "d": None}
@@ -57,10 +64,20 @@ def build(snap, cdi):
     cdb = np.ones(T)
     ok = ~np.isnan(acc)
     cdb[1:] = np.where(ok[1:] & ok[:-1], acc[1:] / np.where(ok[:-1], acc[:-1], 1), 1.0)
+    # híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições dos especialistas, pesadas pelo retorno de cada um nas últimas
+    # HIB_SEM semanas (ação + proventos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte)
+    Cf = pd.DataFrame(C.T).ffill().to_numpy().T
+    rs = np.zeros((N, T)); rs[:, 1:] = np.nan_to_num((Cf[:, 1:] + np.nan_to_num(DV[:, 1:])) / Cf[:, :-1] - 1)
+    X = np.stack([np.ones((N, T)), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0]).astype(float)
+    lr = np.zeros_like(X); lr[:, :, 1:] = np.log1p(X[:, :, :-1] * rs[None, :, 1:] + (1 - X[:, :, :-1]) * (cdb[1:] - 1)[None, None, :])
+    cs = np.cumsum(lr, axis=2); perf = cs.copy(); perf[:, :, HIB_SEM:] -= cs[:, :, :-HIB_SEM]
+    wt = np.exp(HIB_ETA * (perf - perf.max(axis=0, keepdims=True))); wt /= wt.sum(axis=0, keepdims=True)
+    HX = np.round((wt * X).sum(axis=0) * 4) / 4
+    HW = np.round(wt * 100).astype(np.int16)  # peso de cada especialista (%): a tabela mostra quem o híbrido está seguindo
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb,
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "HX": HX, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb,
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at")}
 
@@ -108,6 +125,7 @@ def _signals(D, mid, idx, i):
     if mid == "medo_mercado": return np.full(n, bool(D["MI"][i] < MEDO))
     if mid == "medo_acao": return D["SI"][idx, i] < MEDO
     if mid in ("media200", "tendencia"): return D["M2"][idx, i] > 0
+    if mid == "hibrido": return D["HX"][idx, i] > 0  # (só para o 1º sinal; a simulação usa a exposição HX)
     return D["FAV"][MOD[mid]["p"]][idx, i]
 
 
@@ -128,11 +146,13 @@ class Conta:
         if frac is None: s.vendas += mask & (q > 0)
         return g
 
-    def buy(s, mask, p):
-        m = mask & (s.cash > 0.005)
-        s.compras += m & (s.sh <= 0)
-        s.sh += np.where(m, s.cash * (1 - CUSTO) / np.where(m, p, 1), 0); s.basis += np.where(m, s.cash, 0)
-        s.cash = np.where(m, 0, s.cash)
+    def buy(s, mask, p, amt=None):
+        """Compra com todo o caixa (ou só `amt`) das ações marcadas."""
+        a = s.cash if amt is None else np.minimum(s.cash, amt)
+        m = mask & (a > 0.005)
+        s.compras += m & (s.sh <= 0) if amt is None else m
+        s.sh += np.where(m, a * (1 - CUSTO) / np.where(m, p, 1), 0); s.basis += np.where(m, a, 0)
+        s.cash = s.cash - np.where(m, a, 0)
 
     def raise_cash(s, need, p):
         """Vende só o necessário para ter `need` em caixa (retirada, imposto)."""
@@ -150,6 +170,9 @@ class Conta:
         s.msales[:] = 0; s.mgain[:] = 0; s.mdiv[:] = 0
         s.cash += ap
         return tax + dt
+
+
+F0 = lambda x: f"{x:.0f}"
 
 
 def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
@@ -170,23 +193,33 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
                 d = A.sh * np.nan_to_num(DV[idx, i]); A.cash += d; A.mdiv += d; A.divT += d
         sig = _signals(D, mid, idx, i - 1) if i > s else sig0
         sig = np.nan_to_num(sig, nan=0).astype(bool)
-        if mod["vende"]:  # entra/sai com tempo mínimo em cada posição
+        if mod.get("frac"):  # híbrido: ajusta a parte na ação à exposição alvo (vende ou compra só a diferença)
+            want = buy = None
+        elif mod["vende"]:  # entra/sai com tempo mínimo em cada posição
             k += 1; ch = (sig != st) & (k >= mod["min"]); st = np.where(ch, sig, st); k = np.where(ch, 0, k)
             want = buy = st
         else:
             want, buy = np.ones(n, bool), sig
-        if i > s:
+        if mod.get("frac"):
+            e = D["HX"][idx, i - 1] if i > 0 else np.ones(n)
+        elif i > s:
             A.sell(~want & (A.sh > 0) & ok, P)
         tax = 0
         j = meset.get(i)
         if j is not None and i > s:
             tax = A.close_month(P, ap[j] if j < len(ap) else 0, wd[j] if j < len(wd) else 0, tx)
-        A.buy(buy & ok, P)
+        if mod.get("frac"):
+            V = A.sh * P + A.cash; falta = e * V - A.sh * P
+            A.buy(ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P, falta)  # só compra quando a diferença para o alvo é relevante
+        else:
+            A.buy(buy & ok, P)
         if rec and j is not None:
             v = A.sh * P + A.cash
             for q in range(n):
                 rows[q].append({"ym": D["ym"][i], "v": float(v[q]), "div": float(A.divT[q]), "tax": float(A.ir[q] + A.dtax[q]),
-                                "pos": "Ação" if A.sh[q] > 0 and A.cash[q] < 1 else "CDB" if A.sh[q] <= 0 else "Ação + CDB",
+                                "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {MOD[HIB[int(np.argmax(D['HW'][:, idx[q], i - 1]))]]['n']}"
+                                        if mod.get("frac") and v[q] > 0 else
+                                        "Ação" if A.sh[q] > 0 and A.cash[q] < 1 else "CDB" if A.sh[q] <= 0 else "Ação + CDB"),
                                 "c": int(A.compras[q]), "s": int(A.vendas[q])})
         mi += 1
     v = A.sh * lastp + A.cash
@@ -299,7 +332,7 @@ def run(D, req):
             uni = [D["ix"][t] for t in (req.get("universo") or []) if t in D["ix"]]
             uni = [k for k in uni if ok(k)]
             for mid in mids:
-                if MOD[mid]["vende"]:
+                if MOD[mid]["vende"] and not MOD[mid].get("frac"):  # rodízio: uma empresa por vez (o híbrido divide a exposição na própria ação)
                     for g in (req.get("grupos") or [])[:12]:
                         gi = [D["ix"][t] for t in (g.get("t") or [])[:30] if t in D["ix"]]
                         if len(gi) < 2: continue  # empresa listada depois do início entra no rodízio quando passa a ter preço
