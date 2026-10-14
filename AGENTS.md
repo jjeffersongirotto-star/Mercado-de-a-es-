@@ -14,7 +14,8 @@ Toda informação existe em **um único lugar** (a fonte). Todo o resto — outr
 Alterou a fonte, tudo que depende dela muda junto. Uma mudança que copia informação já existente **não é aceita**: refaça lendo da fonte.
 
 **Campos, botões e filtros podem se repetir** em outras abas quando a tela precisa deles (ex.: Valor inicial e Aporte mensal na Previsão e no Comparar → Modelos).
-O que não se repete é **informação**: dados, regras, cálculos, textos de explicação e listas — esses são lidos da fonte.
+**Informação** (dados, regras, cálculos, textos de explicação, listas) pode **aparecer** em vários lugares, mas é **guardada só na fonte** e todos
+leem dela — nunca escreva uma segunda cópia, para não existirem duas versões diferentes do mesmo assunto.
 
 ### 1.1 Antes de criar qualquer coisa
 1. **Procure** se já existe (`grep` pelo nome, rótulo, valor ou texto). Existe → **use ou estenda**.
