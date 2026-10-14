@@ -209,6 +209,7 @@
   .gc-note { display: none; }
   .gc-nodata-msg { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: rgb(148 163 184); pointer-events: none; text-align: center; }
   .umod { position: fixed; inset: 0; z-index: 300; background: rgb(2 6 23 / .7); display: grid; place-items: center; padding: 1rem; }
+  .umod-wide .umod-box { width: min(96vw, 640px); max-height: 88vh; overflow: auto; } .umod-html { margin: .5rem 0; overflow-x: auto; }
   .umod-box { width: min(92vw, 380px); background: rgb(15 23 42); border: 1px solid rgb(51 65 85); border-radius: 1rem; padding: 1rem; box-shadow: 0 20px 50px rgb(0 0 0 / .5); }
   .umod-box h3 { font-weight: 700; margin-bottom: .35rem; } .umod-box p { font-size: 14px; color: rgb(203 213 225); white-space: pre-line; }
   .umod-in { margin-top: .7rem; width: 100%; padding: .55rem .7rem; border-radius: .6rem; background: rgb(2 6 23); border: 1px solid rgb(51 65 85); color: rgb(226 232 240); outline: none; }
@@ -252,6 +253,8 @@
   .gtab td { padding: .28rem .3rem; border-bottom: 1px solid rgb(30 41 59 / .7); text-align: center; white-space: nowrap; }
   .gtab td b { color: rgb(110 231 183); } .gtab .gc2 { color: rgb(226 232 240); } .gtab .gc3 { color: rgb(203 213 225); }
   .gtab .up { color: rgb(52 211 153); } .gtab .dn { color: rgb(251 113 133); }
+  .pvd-a { display: flex; justify-content: space-between; align-items: flex-start; gap: .4rem; } .pvd-m { display: block; font-size: 10px; color: var(--c-mut); }
+  .pvd-a .pv-i { width: 22px; height: 22px; font-size: 12px; } .pvd-g td:first-child b { color: var(--c-info); } .pvd-note { font-size: 11px; color: var(--c-mut); margin: .4rem .2rem 0; }
   .gtab tr.tap { cursor: pointer; } .gtab tr.sel td { background: rgb(6 78 59 / .35); }
   .gtab .galr { padding: .15rem .15rem; white-space: normal; line-height: 1.15; } .gtab th.galr-h { white-space: nowrap; } body .gtab .galr .pv-in { width: 3.6rem; min-height: 0; height: 1.65rem; padding: 0 .3rem; font-size: 12px; text-align: center; }
   .gtab tr.galr-on td { background: var(--c-amber-bg); } .gtab tr.galr-on td b { color: var(--c-amber); }
@@ -595,6 +598,10 @@
               <button id="pvOldest" type="button" class="pv-i" aria-label="Data mais antiga disponível">ⓘ</button>
             </span></div>
           <p id="pvStatus" class="text-xs text-amber-300 mt-1"></p></div>
+        <div id="pvModBox" class="pv-f pv-c-p pv-wide"><span>Modelos</span>
+          <div class="flex items-center gap-2"><div class="flex-1 min-w-0 max-w-xs"><select id="pvMod" class="pv-in" aria-label="Modelo"></select></div>
+            <button id="pvModI" type="button" class="pv-i" aria-label="Como funcionam os modelos">ⓘ</button></div>
+          <p id="pvModInfo" class="text-xs text-slate-400"></p></div>
         <div id="pvExBox" class="pv-f pv-c-ap pv-wide"><span class="flex items-center justify-between">Aportes extraordinários
           <button id="pvAddEx" type="button" class="pv-plus" aria-label="Adicionar aporte extraordinário">+</button></span>
           <div id="pvEx" class="flex flex-col gap-1.5"></div></div>
@@ -604,6 +611,9 @@
       </div>
     </section>
     <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-2 sm:p-3 space-y-3">
+      <div id="pvTabs" class="gt-tabs hidden" role="tablist"><button type="button" data-pvt="tab" class="on">Tabela</button><button type="button" data-pvt="des">Desempenho</button></div>
+      <div id="pvDes" class="hidden"></div>
+      <p id="pvTabMsg" class="hidden text-xs text-slate-400 text-center"></p>
       <div id="pvSumScroll" class="pv-scroll"><table class="pv-t pv-sum"><thead id="pvSumHead"></thead><tbody id="pvSumBody"></tbody></table></div>
       <div id="pvMainScroll" class="pv-scroll pv-main"><table id="pvMainT" class="pv-t"><thead id="pvHead"></thead><tbody id="pvBody"></tbody></table></div>
       <div class="flex flex-col items-center gap-1 pb-1"><span id="pvCount" class="text-xs text-slate-500"></span>
@@ -637,7 +647,7 @@
 <h3>Comparar</h3>
 <ol class="list-decimal pl-5"><li>Abra a aba Comparar.</li><li>Nas bandeiras (canto direito) escolha o país das ações (começa no Brasil); 🌐 compara ações de todos os países. Cada país tem o seu índice (Brasil: Ibovespa; EUA: S&amp;P 500; Reino Unido: FTSE 100; Alemanha: DAX; Portugal: PSI; Japão: Nikkei 225). Comparar tudo funciona só no Brasil.</li><li>Em 'Buscar ação ou índice principal…' escolha a referência.</li><li>Em 'Adicionar ação ou índice…' inclua as outras para comparar.</li><li>Toque em Pesquisar para comparar (escolher itens, critério ou datas não compara sozinho). Comparar tudo compara com todas as ações; Pesquisar volta a comparar só as escolhidas.</li><li>No gráfico, % mostra quanto cada item rendeu e Valor mostra também o preço no início e no fim; toque ou arraste sobre o gráfico para ver valor e % em cada data.</li><li>O resultado separa as colunas Renderam menos e Renderam mais que a principal; use 'Filtrar…' em cada coluna e o botão Remover para tirar itens.</li></ol><p class="text-slate-400 text-xs mt-1">Aqui no Chat você também pode perguntar, por exemplo: “PETR4 vs VALE3 vs Ibovespa em 2 anos”.</p>
 <h3>Previsão rentabilidade</h3>
-<ol class="list-decimal pl-5"><li>Abra a aba Previsão (sub-aba Previsão rentabilidade).</li><li>Em Referências, preencha Valor inicial, Aporte mensal, Dividendos e Rentabilidade (MÊS ou ANO) e o Imposto s/ dividendo.</li><li>Em Projeções, busque uma empresa para usar os números dela; ou em 'E se eu tivesse investido?' escolha a ação e a Data inicial/final para simular com o histórico real.</li><li>Use + em Aportes extraordinários e Retiradas extraordinárias para lançamentos avulsos.</li><li>A tabela mostra mês a mês (imposto em amarelo, Valorização total em violeta); toque em Mostrar mais meses para continuar.</li></ol>
+<ol class="list-decimal pl-5"><li>Abra a aba Previsão (sub-aba Previsão rentabilidade).</li><li>Em Referências, preencha Valor inicial, Aporte mensal, Dividendos e Rentabilidade (MÊS ou ANO) e o Imposto s/ dividendo.</li><li>Em Projeções, busque uma empresa para usar os números dela; ou em 'E se eu tivesse investido?' escolha a ação e a Data inicial/final para simular com o histórico real.</li><li>Em Modelos, escolha um modelo (ou Todos) para simular a mesma empresa com regras de compra e venda; em 'E se eu tivesse investido?' a opção Todos mostra as 10 melhores empresas de cada modelo.</li><li>Com um modelo escolhido aparecem as abas Tabela e Desempenho: Desempenho ordena pelo rendimento em %; toque numa empresa para ver o mês a mês em Tabela; nos grupos, toque em ⓘ para ver o histórico de movimentação.</li><li>Use + em Aportes extraordinários e Retiradas extraordinárias para lançamentos avulsos.</li><li>A tabela mostra mês a mês (imposto em amarelo, Valorização total em violeta); toque em Mostrar mais meses para continuar.</li></ol>
 <h3>Previsão aluguel</h3>
 <ol class="list-decimal pl-5"><li>Abra a aba Previsão e toque em Previsão aluguel.</li><li>Toque em ＋ Ação, busque a ação e informe Quantidade, Adições mensais, Prazo e % não alugado.</li><li>A Taxa (% a.a.) vem preenchida com a taxa de aluguel da B3 (se indisponível, digite-a); confirme com ✓.</li><li>Ajuste a Taxa da corretora e marque 'Descontar automaticamente taxa da corretora + IR 15%' se quiser.</li><li>A tabela mostra o valor recebido mês a mês; use ✏ Editar/Excluir em cada ação.</li></ol>
 <h3>Exportar (CSV)</h3>
@@ -778,6 +788,19 @@
       <li>Filtros, ordenação e CSV usam o <b>valor exibido</b>.</li>
       <li>Países estrangeiros: só TradingView.</li></ul>
     </div></details>
+    <details class="icard"><summary>Modelos da Previsão</summary><div class="ib">
+    <ul>
+      <li><b>Como simula</b>: semana a semana com o histórico da B3 (preço de fechamento e proventos). A decisão usa os dados da semana anterior. Dinheiro fora da ação rende o <b>CDB</b> do período (100% do CDI). Aportes e retiradas entram no fim de cada mês, como na tabela. Cada compra ou venda custa 0,3% (corretagem, taxas e diferença de preço).</li>
+      <li><b>Imposto</b>: 15% sobre o lucro das vendas do mês quando o total vendido no mês passa de R$ 20 mil (abaixo disso é isento); prejuízo é descontado dos lucros dos meses seguintes. Proventos seguem o Imposto s/ dividendo da tabela.</li>
+      <li><b>Comprar e segurar</b>: compra no início e a cada aporte; nunca vende.</li>
+      <li><b>Aporta com medo do mercado</b>: o dinheiro só entra na ação quando o índice de Medo e Ganância da B3 está abaixo de 45 (Medo); até lá espera no CDB e entra todo o acumulado de uma vez. Nunca vende.</li>
+      <li><b>Aporta com medo da ação</b>: igual, mas com o índice de Medo e Ganância da própria ação (o mesmo do Comparar).</li>
+      <li><b>Aporta acima da média de 200 dias</b>: o dinheiro só entra quando o preço está acima da média dos últimos 200 pregões. Nunca vende.</li>
+      <li><b>Algoritmo 1 mês</b> e <b>Algoritmo 3 meses</b>: regressão logística que estima a chance de a ação subir em 1 ou 3 meses com indicadores de gráfico (tendência, médias, máximas e mínimas, oscilação, volume), Medo e Ganância do mercado e da ação e dividendos. É treinada a cada ano só com os anos anteriores. Fica comprado quando a chance está acima da mediana do último ano da própria ação; senão vende e vai para o CDB. Fica pelo menos 12 semanas em cada posição. O acerto histórico aparece no card Modelos: perto de 50% indica que é quase uma moeda — use como estudo, não como garantia.</li>
+      <li><b>Tendência</b>: fica comprado enquanto o preço está acima da média de 200 pregões; abaixo, vende e vai para o CDB (pelo menos 4 semanas em cada posição).</li>
+      <li><b>Rodízio (grupos)</b>: com Todos, os modelos que vendem também rodam em grupos (5 maiores bancos, 5 maiores de energia elétrica, 10 maiores da B3 e os seus grupos da aba Grupos), uma empresa por vez. Algoritmos: fica na empresa favorável com a maior chance de alta; troca só se outra tiver chance pelo menos 2 pontos maior e depois de 12 semanas; se a atual fica desfavorável, sai. Tendência: fica na empresa acima da média de 200 pregões com a maior alta em 12 meses; troca se outra tiver alta pelo menos 10 pontos maior depois de 12 semanas; se a atual cai abaixo da média, sai. Nenhuma favorável: CDB.</li>
+      <li><b>Desempenho</b>: rendimento % = (patrimônio final − aporte total) ÷ aporte total. Grupos primeiro, depois as empresas, do maior para o menor. ⓘ do grupo: por empresa, compras, tempo médio antes de vender, resultado (inclui proventos) e IR; no rodapé, trocas, tempo no CDB, maior queda e o motivo de cada troca.</li>
+      <li>Modelos só para ações da B3 com pelo menos 1 ano de histórico, a partir do primeiro mês com CDB disponível. Os sinais são recalculados todo dia na rotina de dados.</li></ul></div></details>
     <details class="icard"><summary>Como funciona a Previsão</summary><div class="ib">
     <ul>
       <li><b>Valor inicial</b>: quanto você começa investindo (mês 1).</li>
@@ -788,6 +811,7 @@
       <li><b>Rascunho</b>: linhas de retirada ou aporte só entram no cálculo depois de tocar no botão de salvar da linha.</li>
       <li><b>Retiradas extraordinárias</b>: <i>Retirada mensal</i> vale do mês indicado até a próxima retirada mensal (valor 0 encerra). <i>Retirada única</i>: uma vez no mês indicado. <i>Retirada por período</i>: a cada N meses (inteiro ≥ 2, ex.: 2, 6, 12, 24) a partir do mês indicado. Em todo mês com qualquer retirada, o aporte é 0 (inclusive aportes extraordinários daquele mês) e sai o valor inteiro das retiradas somadas, primeiro dos dividendos, depois da rentabilidade e por fim do patrimônio.</li>
       <li><b>Aportes extraordinários</b>: <i>Aporte mensal</i> substitui o aporte regular do mês indicado até a próxima linha desse tipo (0 encerra; durante retiradas vira 0). <i>Aporte único</i> entra uma vez no mês indicado. <i>Aporte por período</i> entra a cada N meses (N inteiro ≥ 2) a partir do mês indicado. Único e por período entram mesmo durante retiradas. Todos somam no aporte do mês e no aporte total.</li>
+      <li><b>Modelos</b>: com uma empresa (ou Todos) em <i>E se eu tivesse investido?</i>, simula o mesmo valor inicial, aportes e retiradas seguindo regras de compra e venda (detalhes em <b>Modelos da Previsão</b>). <i>Sem modelo</i> é a simulação normal.</li>
       <li><b>Célula Mês do resumo</b>: digite um mês para ver a linha dele no resumo e esconder os meses anteriores na tabela; vazio ou 1 mostra tudo.</li>
       <li>A tabela mostra 240 meses por vez; “Mostrar mais meses” acrescenta mais 240 (até 960).</li></ul>
     <h3>Colunas</h3>

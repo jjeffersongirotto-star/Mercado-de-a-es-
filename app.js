@@ -667,6 +667,8 @@ $('#btnClear').addEventListener('click', () => { $('#q').value = ''; clearFilter
 $('#btnCsv').addEventListener('click', exportCsv);
 const infoOpen = (o) => { $('#infoModal').classList.toggle('hidden', !o); document.body.style.overflow = o ? 'hidden' : ''; };
 $('#btnInfo').addEventListener('click', () => infoOpen(true));
+// abre o painel ⓘ já na seção com este título (ex.: ⓘ do card Modelos da Previsão)
+window.infoSection = (title) => { infoOpen(true); const d = [...document.querySelectorAll('#infoModal details')].find(x => (x.querySelector('summary') || {}).textContent === title); if (d) { d.open = true; setTimeout(() => d.scrollIntoView({ block: 'start' }), 30); } };
 $('#infoModal').addEventListener('click', (e) => { if (e.target.id === 'infoModal' || e.target.closest('[data-close]')) infoOpen(false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#infoModal').classList.contains('hidden')) infoOpen(false); });
 $('#btnExpandAll').addEventListener('click', () => expandAll(true));

@@ -862,6 +862,7 @@ HOWTO_KEYS = [
     (("carteira", "posicao", "posicoes", "preco medio"), ["Carteira"]),
     (("alerta", "sininho", "avisar", "aviso de preco", "notifica"), ["Favoritos"]),
     (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), ["Previsão aluguel"]),
+    (("modelos da previsao", "modelo de investimento", "modelos de investimento", "rodizio", "algoritmo", "comprar e segurar"), ["Modelos da Previsão"]),
     (("previsao rentab", "rentabilidade", "previsao", "simula", "simulacao", "projecao", "projecoes", "aporte"), ["Previsão rentabilidade"]),
     (("compar",), ["Comparar"]),
     (("favorit", "estrela"), ["Favoritos"]),

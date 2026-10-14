@@ -852,6 +852,31 @@ def api_fgcmp(t: str, di: str, df: str):
         log.warning("fgcmp %s: %s", t, e)
         return JSONResponse({"error": "Sem dados para esta análise agora."}, status_code=502)
 
+@app.get("/api/modelos")
+def api_modelos():
+    """Previsão → Modelos: lista de modelos e meses com dados (modelos.py, snapshot modelos)."""
+    import modelos
+    try: return JSONResponse(modelos.meta(modelos.data()), headers={"Cache-Control": "public, max-age=1800"})
+    except Exception as e:
+        log.warning("modelos: %s", e)  # sem snapshot ainda: estado normal (card mostra "indisponível"), não erro do servidor
+        return JSONResponse({"error": "Modelos indisponíveis agora."}, headers={"Cache-Control": "no-store"})
+
+@app.post("/api/modelos")
+def api_modelos_sim(body: dict):
+    """Simulação dos modelos (Desempenho) ou a tabela mês a mês de uma empresa (tab). Grupos prontos + grupos do usuário."""
+    import modelos
+    rows = universe.universe((cache.data or {}).get("rows") or [])
+    if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
+    body = dict(body or {})
+    body["universo"] = [r["ticker"] for r in rows]
+    user = [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (body.get("grupos") or [])[:9]]
+    body["grupos"] = modelos.ready_groups(rows) + user
+    try:
+        out = modelos.run(modelos.data(), body)
+    except Exception:
+        log.exception("modelos: simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
+    return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
+
 @app.get("/api/indices/{name}")
 def api_indices(name: str):
     if name not in history.SGS:
