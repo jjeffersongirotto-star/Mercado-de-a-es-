@@ -4,13 +4,14 @@ Só dados da B3 que o site já guarda: histórico COTAHIST (history4/), fluxo po
 "Mercado" = média dos retornos diários das 50 ações mais negociadas (volume médio de 60 pregões), parecido com o Ibovespa,
 mas disponível desde 1995 (o Ibovespa diário do Yahoo só tem 5 anos). Cada parte vira uma nota de 0 a 100 pela posição do
 valor de hoje entre os valores do último ano (252 pregões); o índice é a média das partes disponíveis no dia.
-Também calcula o índice de cada ação (fg.json -> acoes: {TICKER: [hoje, ontem, 1 semana, 1 mês]}) com as partes que fazem
-sentido para uma ação só: preço × média de 6 meses, posição entre a mínima e a máxima de 1 ano, oscilação e volume em altas × quedas.
+O índice de cada ação (Comparar) é calculado na hora por medo.stock_index, com a mesma regra de nota (medo.rank).
 Uso: build_fg.py OUT_DIR   (lê OUT_DIR/history4, OUT_DIR/b3_flow.json, OUT_DIR/history/bcb_cdi.json)."""
 import glob, gzip, json, os, sys
 from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import medo  # noqa: E402  (regra da nota 0–100: fonte única)
 
 OUT = sys.argv[1]
 WIN = 252
@@ -38,44 +39,9 @@ def load_hist():
 
 
 def pct_rank(s, invert=False):
-    """Nota 0–100: fração dos últimos 252 valores abaixo do valor do dia (precisa de 120 valores)."""
-    a = s.to_numpy(dtype="float64"); out = np.full(len(a), np.nan)
-    for i in range(len(a)):
-        if np.isnan(a[i]): continue
-        w = a[max(0, i - WIN + 1):i + 1]; w = w[~np.isnan(w)]
-        if len(w) < 120: continue
-        out[i] = (w < a[i]).mean() * 100 + (w == a[i]).mean() * 50
-    r = pd.Series(out, index=s.index)
-    return 100 - r if invert else r
-
-
-def _rank_at(a, i, invert):
-    """Nota 0–100 do valor a[i] entre os 252 anteriores (mesma regra de pct_rank, só num ponto)."""
-    x = a[i]
-    if np.isnan(x): return None
-    w = a[max(0, i - WIN + 1):i + 1]; w = w[~np.isnan(w)]
-    if len(w) < 120: return None
-    p = (w < x).mean() * 100 + (w == x).mean() * 50
-    return 100 - p if invert else p
-
-
-def stocks(C, V, R):
-    """Índice de Medo e Ganância de cada ação: hoje, ontem, 1 semana e 1 mês (5 e 21 pregões)."""
-    hi, lo = C.rolling(WIN, min_periods=200).max(), C.rolling(WIN, min_periods=200).min()
-    parts = [(C / C.rolling(125, min_periods=100).mean() - 1, False),          # preço × média de 6 meses
-             ((C - lo) / (hi - lo).replace(0, np.nan), False),                    # posição entre mínima e máxima de 1 ano
-             (R.rolling(20, min_periods=15).std(), True),                         # oscilação (alta = medo)
-             (V.where(R > 0).rolling(20, min_periods=15).sum() / V.where(R.notna()).rolling(20, min_periods=15).sum().replace(0, np.nan), False)]
-    out, n = {}, len(C)
-    for t in C.columns:
-        if np.isnan(C[t].iloc[-1]) or C[t].notna().sum() < 400: continue  # sem negócio no último pregão ou histórico curto
-        A = [(p[t].to_numpy(dtype="float64"), inv) for p, inv in parts]
-        vals = []
-        for k in (0, 1, 5, 21):
-            sc = [s for s in (_rank_at(a, n - 1 - k, inv) for a, inv in A) if s is not None]
-            vals.append(int(round(sum(sc) / len(sc))) if len(sc) >= 3 else None)
-        if vals[0] is not None: out[t] = vals
-    return out
+    """Nota 0–100 de cada dia: posição do valor entre os últimos 252 (mesma regra de medo.rank)."""
+    a = s.to_numpy(dtype="float64")
+    return pd.Series([np.nan if (x := medo.rank(a, i, invert)) is None else x for i in range(len(a))], index=s.index)
 
 
 def main():
@@ -118,10 +84,9 @@ def main():
     out = {"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "fonte": "B3 (COTAHIST, fluxo por investidor) e BCB (CDI); cálculo do site", "faixas": FAIXAS,
            "d": [x.strftime("%Y-%m-%d") for x in fg.index], "v": [int(x) for x in fg.to_numpy()],
-           "partes": {k: {"n": PARTES[k][0], "v": None if np.isnan(last.get(k, np.nan)) else int(round(last[k]))} for k in PARTES},
-           "acoes_d": C.index[-1].strftime("%Y-%m-%d"), "acoes": stocks(C, V, R)}
+           "partes": {k: {"n": PARTES[k][0], "v": None if np.isnan(last.get(k, np.nan)) else int(round(last[k]))} for k in PARTES}}
     json.dump(out, open(os.path.join(OUT, "fg.json"), "w"), ensure_ascii=False, separators=(",", ":"))
-    print(f"fg: {out['d'][0]} a {out['d'][-1]}, hoje {out['v'][-1]}, {len(out['d'])} pregões; {len(out['acoes'])} ações; partes {out['partes']}")
+    print(f"fg: {out['d'][0]} a {out['d'][-1]}, hoje {out['v'][-1]}, {len(out['d'])} pregões; partes {out['partes']}")
 
 
 if __name__ == "__main__":

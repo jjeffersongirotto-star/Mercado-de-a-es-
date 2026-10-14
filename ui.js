@@ -57,6 +57,33 @@ const parseBR = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if
       <g class="ldr-note"><rect x="84" y="92" width="30" height="5" rx="1.5" fill="rgb(6 78 59)"/></g>
     </g></svg>${txt ? `<span>${txt}</span>` : ''}</div>`;
 })();
+// Reorganizar (arrastar pela alça ⠿, Salvar/Cancelar): items = [{id, label}] -> nova ordem de ids, ou null se cancelar. Grupos e Comparar.
+window.uiReorder = (title, items) => new Promise((res) => {
+  const ov = document.createElement('div'); ov.className = 'rg-ov';
+  ov.innerHTML = `<div class="rg-top"><button type="button" class="gbtn" data-rg="cancel">Cancelar</button><b>${esc(title)}</b><button type="button" class="gbtn pri" data-rg="save">Salvar</button></div><div class="rg-grid"></div>`;
+  document.body.appendChild(ov);
+  const grid = ov.querySelector('.rg-grid');
+  grid.innerHTML = items.map(x => `<div class="rg-card" data-id="${esc(x.id)}"><span class="rg-n"></span><span class="rg-t">${esc(x.label)}</span><span class="rg-h">⠿</span></div>`).join('');
+  const num = () => [...grid.children].forEach((c, i) => { c.querySelector('.rg-n').textContent = i + 1; });
+  const fit = () => {
+    const n = items.length, H = window.innerHeight - ov.querySelector('.rg-top').offsetHeight - 24, W = Math.min(window.innerWidth - 24, 900);
+    const h0 = 64, w0 = 340, gap = 8;
+    let s = Math.min(1, (H - gap * (n - 1)) / (n * h0)), cols = 1;
+    if (w0 * s < W / 2 && n > 1) { cols = 2; const r2 = Math.ceil(n / 2); s = Math.min(1, (H - gap * (r2 - 1)) / (r2 * h0)); }
+    const rows = Math.ceil(n / cols), ch = Math.max(26, h0 * s), cw = cols === 1 ? Math.min(W, w0) : Math.min(W / 2 - gap, w0);
+    grid.style.gridTemplateRows = `repeat(${rows}, ${ch}px)`; grid.style.gridTemplateColumns = `repeat(${cols}, ${cw}px)`;
+    grid.style.fontSize = Math.max(10, 15 * Math.min(1, ch / h0)) + 'px';
+  };
+  num(); fit(); window.addEventListener('resize', fit);
+  const so = window.Sortable ? Sortable.create(grid, { animation: 150, onSort: num }) : null;
+  ov.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rg]'); if (!b) return;
+    const ids = b.dataset.rg === 'save' ? [...grid.children].map(c => c.dataset.id) : null;
+    so && so.destroy(); window.removeEventListener('resize', fit); ov.remove();
+    if (ids) uiToast('Ordem salva');
+    res(ids);
+  });
+});
 window.uiChoose = (msg, options) => new Promise((res) => {
   const w = document.createElement('div'); w.className = 'umod';
   w.innerHTML = `<div class="umod-box" role="dialog" aria-modal="true"><p></p><div class="umod-list">${options.map((o, i) => `<button type="button" data-i="${i}">${o.label}</button>`).join('')}</div><div class="umod-btns"><button type="button" class="umod-c">Cancelar</button></div></div>`;

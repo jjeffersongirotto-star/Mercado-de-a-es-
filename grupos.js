@@ -288,31 +288,12 @@
       onEnd: () => { ui.order = [...$g('#gGrid').children].map(x => x.dataset.id).filter(x => x !== 'fav'); saveUI(); } });
   }
   // Tela de reorganização: só os grupos escolhidos, numerados, ajustados para caber na tela
-  function openReorg(which) {
+  async function openReorg(which) {
     const ids = tileIds().filter(x => x !== 'fav' && (which === 'star') === ui.gstar.includes(x));
     if (!ids.length) { uiAlert(which === 'star' ? 'Nenhum grupo favoritado. Toque na ☆ de um grupo.' : 'Não há outros grupos.'); return; }
-    const ov = document.createElement('div'); ov.className = 'rg-ov';
-    ov.innerHTML = `<div class="rg-top"><button type="button" class="gbtn" data-rg="cancel">Cancelar</button><b>${which === 'star' ? 'Favoritados' : 'Demais grupos'}</b><button type="button" class="gbtn pri" data-rg="save">Salvar</button></div><div class="rg-grid"></div>`;
-    document.body.appendChild(ov);
-    const grid = ov.querySelector('.rg-grid');
-    grid.innerHTML = ids.map(id => `<div class="rg-card" data-id="${esc(id)}"><span class="rg-n"></span><span class="rg-t">${esc(groupData(id)?.title || id)}</span><span class="rg-h">⠿</span></div>`).join('');
-    const num = () => [...grid.children].forEach((c, i) => { c.querySelector('.rg-n').textContent = i + 1; });
-    const fit = () => {
-      const n = ids.length, H = window.innerHeight - ov.querySelector('.rg-top').offsetHeight - 24, W = Math.min(window.innerWidth - 24, 900);
-      const h0 = 64, w0 = 340, gap = 8;
-      let s = Math.min(1, (H - gap * (n - 1)) / (n * h0)), cols = 1;
-      if (w0 * s < W / 2 && n > 1) { cols = 2; const r2 = Math.ceil(n / 2); s = Math.min(1, (H - gap * (r2 - 1)) / (r2 * h0)); }
-      const rows = Math.ceil(n / cols), ch = Math.max(26, h0 * s), cw = cols === 1 ? Math.min(W, w0) : Math.min(W / 2 - gap, w0);
-      grid.style.gridTemplateRows = `repeat(${rows}, ${ch}px)`; grid.style.gridTemplateColumns = `repeat(${cols}, ${cw}px)`;
-      grid.style.fontSize = Math.max(10, 15 * Math.min(1, ch / h0)) + 'px';
-    };
-    num(); fit(); window.addEventListener('resize', fit);
-    const so = window.Sortable ? Sortable.create(grid, { animation: 150, onSort: num }) : null;
-    ov.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-rg]'); if (!b) return;
-      if (b.dataset.rg === 'save') { const neu = [...grid.children].map(c => c.dataset.id); ui.order = neu.concat(tileIds().filter(x => x !== 'fav' && !neu.includes(x))); saveUI(); uiToast('Ordem salva'); }
-      so && so.destroy(); window.removeEventListener('resize', fit); ov.remove(); list();
-    });
+    const neu = await uiReorder(which === 'star' ? 'Favoritados' : 'Demais grupos', ids.map(id => ({ id, label: groupData(id)?.title || id })));
+    if (neu) { ui.order = neu.concat(tileIds().filter(x => x !== 'fav' && !neu.includes(x))); saveUI(); }
+    list();
   }
   window.gruposRefresh = () => { if (!$g('[data-tabpane="grupos"]').classList.contains('hidden')) list(); };
   // Card aberto dentro do grupo: tocar no cabeçalho para fechar remove o card inteiro (fica só a linha)

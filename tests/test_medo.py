@@ -18,33 +18,37 @@ for i in range(len(DAYS)):
 
 
 def setup():
-    history.b3full = lambda t: {"t": [ts(x) for x in DAYS], "c": C}
+    history.b3full = lambda t: {"t": [ts(x) for x in DAYS], "c": C, "v": [1e6 + (i % 7) * 1e5 for i in range(len(DAYS))]}
     history.get = lambda t, k: {"t": [ts(x) for x in DAYS[::21]], "c": [100 + i for i in range(len(DAYS[::21]))]}
     snapshots.load = lambda name, **k: ({"d": [x.isoformat() for x in DAYS], "v": [FG[x.isoformat()] for x in DAYS], "faixas": FX,
-                                         "fetched_at": "x", "acoes": {"TEST3": [60, 58, 55, 40]}}, "teste")
+                                         "fetched_at": "x"}, "teste")
     medo._C.clear()
 
 
 def test_analysis():
     setup()
     d = medo.analyze("TEST3", "2010-01-01", "2013-12-31")
+    SI = medo.stock_index(C, [1e6 + (i % 7) * 1e5 for i in range(len(DAYS))])  # índice da própria ação
     assert d["n"] == 48 and d["per"] == ["2010-01", "2013-12"]
-    q = d["quedas"][0]; assert q["d"] == DAYS[299].isoformat() and round(q["r"]) == -30 and q["fg"] == 90 and q["b"] == 4
-    a = d["altas"][0]; assert a["d"] == DAYS[99].isoformat() and round(a["r"]) == 40 and a["fg"] == 10 and a["b"] == 0
+    q = d["quedas"][0]; assert q["d"] == DAYS[299].isoformat() and round(q["r"]) == -30 and q["fg"] == SI[299]
+    assert q["b"] == medo._band(SI[299], FX) and SI[299] >= 55  # depois de mais de um ano subindo, a ação estava em ganância
     assert len(d["altas"]) == 10 and all(x["r"] > 0 for x in d["altas"])
     starts = sorted(DAYS.index(date.fromisoformat(x["d"])) for x in d["altas"])
     assert all(b - a >= 5 for a, b in zip(starts, starts[1:]))  # semanas sem sobreposição
-    fa = {x["b"]: x for x in d["faixa"]}
-    assert fa[0]["n"] == 12 and fa[4]["n"] == 36 and fa[0]["n12"] == 12
-    assert d["acao"] == [60, 58, 55, 40] and d["mercado"][0] == 90 and d["hoje"]["v"] == 90 and d["hoje"]["b"] == 4
-    s = d["serie"]; assert s["d"][0] >= "2010-01-01" and len(s["d"]) == len(s["c"]) == len(s["fg"])
-    assert "dy" not in fa[0]
+    L = [s for s in SI if s is not None]
+    assert d["acao"] == [L[-1], L[-2], L[-6], L[-22]] and d["mercado"][0] == 90  # velocímetros: ação e mercado
+    assert d["hoje"]["v"] == L[-1] and d["hoje"]["b"] == medo._band(L[-1], FX)
+    assert sum(x["n"] for x in d["faixa"]) == len({x.isoformat()[:7] for i, x in enumerate(DAYS) if SI[i] is not None})  # meses com índice da ação
+    assert sum(d["topos"]) > 0 and d["topos"][4] + d["topos"][0] == sum(d["topos"])  # topos e fundos: índice do mercado (10 ou 90)
+    s = d["serie"]; assert len(s["d"]) == len(s["c"]) == len(s["fg"]) and s["fg"][-1] == L[-1]
+    assert "dy" not in d["faixa"][0]
 
 
 def test_weekly_points_before_6_years_and_cache():
     setup()
     d = medo.analyze("TEST3", "2010-01-01", "2013-12-31")
-    assert len(d["serie"]["d"]) == len(DAYS)  # período menor que 6 anos: todos os pregões
+    SI = medo.stock_index(C, [1e6 + (i % 7) * 1e5 for i in range(len(DAYS))])
+    assert len(d["serie"]["d"]) == sum(1 for s in SI if s is not None)  # período menor que 6 anos: todo pregão com índice da ação
     d2 = medo.analyze("TEST3", "2010-01-01", "2019-12-31")  # fim mais de 6 anos depois: 2010–2013 viram um ponto por semana
     assert len(d2["serie"]["d"]) < len(DAYS) * 0.3
     assert medo.analyze("TEST3", "2010-01-01", "2019-12-31") is d2  # mesmo pedido: vem da memória
