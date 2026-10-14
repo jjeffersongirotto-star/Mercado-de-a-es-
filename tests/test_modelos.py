@@ -76,12 +76,21 @@ def test_rodizio_troca_com_motivo_e_vai_para_cdb():
     assert r["hist"]["trocas"] == 1 and r["hist"]["cdb"] > 0 and {x["t"] for x in r["hist"]["emp"]} == {"AAA3", "BBB3"}
 
 
+def test_hibrido_nunca_vende_e_segue_quem_acerta():
+    c = [10.0 * 1.01 ** k for k in range(NW)]  # ação subindo sempre: o especialista "comprar e segurar" ganha peso
+    D = modelos.build(snap({"AAA3": {"c": c, "p1": 400, "p3": 400, "m2": -10}}), cdi(0.01))
+    assert D["HX"][0, 60] == 1 and D["HW"][:, 0, 60].argmax() == 0  # 100% na ação, seguindo Comprar e segurar
+    me = months(D, "2020-09", "2021-12")
+    r = modelos.simulate(D, "hibrido", [0], me, [1000.0] + [100.0] * (len(me) - 1), [0.0] * len(me), rec=True)
+    assert r["s"][0] == 0 and r["ir"][0] == 0 and "Comprar e segurar" in r["rows"][0][-1]["pos"]
+
+
 def test_run_todos_ordena_grupos_primeiro():
     D = modelos.build(snap({"AAA3": {"c": [10.0 + k * .1 for k in range(NW)]}, "BBB3": {"c": 10.0}}), cdi())
     out = modelos.run(D, {"di": "2020-09", "df": "2021-12", "ap": [1000] + [100] * 15, "ticker": "*", "modelo": "*", "universo": ["AAA3", "BBB3"],
                           "grupos": [{"n": "G", "t": ["AAA3", "BBB3"]}]})
     ks = [x["k"] for x in out["rows"]]
-    assert ks == sorted(ks, key=lambda k: k != "g") and ks.count("g") == 3  # um rodízio por modelo que vende
+    assert ks == sorted(ks, key=lambda k: k != "g") and ks.count("g") == 3  # um rodízio por modelo que troca de empresa (Algoritmos e Tendência)
     emp = [x for x in out["rows"] if x["k"] == "a"]
     assert all(a["pct"] >= b["pct"] for a, b in zip(emp, emp[1:])) and len(emp) == 2 * len(modelos.MODELOS)
 
