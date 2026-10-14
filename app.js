@@ -356,15 +356,21 @@ const chartSlot = (r) => `<div class="gchart" data-gt="${r.ticker}"${state.count
 const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
 // Barato/Caro: preço do card × valor justo de Graham √(22,5 × LPA × VPA) (explicação no Glossário do painel ⓘ).
 // pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
+// Sem cálculo -> { why: motivo curto } (o card mostra "—" e o motivo no lugar da barra).
 function fairOf(r) {
   const p = priceOf(r), l = val(r, 'lpa'), b = val(r, 'vpa');
-  if (!(p > 0 && l > 0 && b > 0)) return null;
+  if (!(p > 0)) return { why: 'Sem preço' };
+  if (l == null || b == null) return { why: state.source === 'all' ? 'Sem LPA/VPA nas fontes' : 'Sem LPA/VPA nesta fonte' };
+  if (l <= 0 && b <= 0) return { why: 'Prejuízo e patrimônio negativo' };
+  if (l <= 0) return { why: 'Prejuízo nos últimos 12 meses' };
+  if (b <= 0) return { why: 'Patrimônio negativo' };
   const j = Math.sqrt(22.5 * l * b);
   return { j, pct: (j / p - 1) * 100, pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) };
 }
 window.fairOf = fairOf;
 function fairHtml(r) {
-  const f = fairOf(r); if (!f) return '';
+  const f = fairOf(r);
+  if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span><div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
   const cheap = f.pct >= 0;
   return `<div class="fv"><span class="fv-t ${cheap ? 'text-emerald-400' : 'text-rose-400'}">${cheap ? 'Barato +' : 'Caro '}${F0.format(f.pct)}%</span>` +
     `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;

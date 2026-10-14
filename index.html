@@ -424,7 +424,7 @@
   body .cmp-ref, body .cmp-it small, body .gt-empty, body .gt-n, body .ldr span, body #activeCount, body .pv-saved + .text-xs { font-size: 11.5px; font-weight: 400; color: var(--c-dim); }
   /* Barato/Caro (Graham) no card e Medo e Ganância: degradê verde → amarelo → vermelho (seção Cores do painel ⓘ) */
   .fv { flex: none; width: 112px; display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
-  .fv-t { font-size: 12px; font-weight: 700; line-height: 1; } .fv-b { display: flex; align-items: center; width: 100%; }
+  .fv-t { font-size: 12px; font-weight: 700; line-height: 1; } .fv-why { flex: 1; font-size: 10.5px; line-height: 1.2; color: var(--c-dim); } .fv-b { display: flex; align-items: center; width: 100%; }
   .fv-bar { position: relative; flex: 1; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--c-pos), var(--c-amber), var(--c-neg)); }
   .fv-bar i { position: absolute; top: -7px; transform: translateX(-50%); border: 5px solid transparent; border-top: 6px solid var(--c-txt); border-bottom: 0; }
   .fg { display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem; border: 1px solid var(--bd); border-radius: var(--r-card); background: var(--bg-card); }
@@ -708,7 +708,7 @@
 <li><b>Bonificação</b>: a empresa entrega ações novas aos acionistas (registrada pela B3 como BONIFICAÇÃO). Desdobramento/grupamento só mudam quantidade e preço.</li>
 <li><b>Desdobramento</b> (split): cada ação vira várias, o preço cai na mesma proporção; o valor investido não muda.</li>
 <li><b>Grupamento</b> (inplit): várias ações viram uma, o preço sobe na mesma proporção; o valor investido não muda.</li>
-<li><b>Barato/Caro</b>: compara o preço com o valor justo de Benjamin Graham, √(22,5 × LPA × VPA). Barato +35% = o preço pode subir 35% até o valor justo; Caro −20% = está 20% acima. A barra vai do verde (barato, à esquerda) ao vermelho (caro, à direita). Só aparece com lucro e patrimônio positivos. Limite: empresas de crescimento (lucro futuro alto) costumam aparecer caras; bancos e empresas com muito patrimônio, baratas.</li>
+<li><b>Barato/Caro</b>: compara o preço com o valor justo de Benjamin Graham, √(22,5 × LPA × VPA). Barato +35% = o preço pode subir 35% até o valor justo; Caro −20% = está 20% acima. A barra vai do verde (barato, à esquerda) ao vermelho (caro, à direita). Sem a barra aparece "—" e o motivo: prejuízo nos últimos 12 meses (LPA negativo), patrimônio negativo (VPA negativo: a empresa deve mais do que tem), sem LPA/VPA na fonte ou sem preço. Limites: empresas de crescimento (lucro futuro alto) costumam aparecer caras; bancos e empresas com muito patrimônio, baratas; lucro pontual (venda de ativo, ganho não recorrente, P/L perto de 1) exagera o "barato".</li>
 <li><b>Medo e Ganância</b>: índice de 0 (medo extremo) a 100 (ganância extrema) do humor do mercado na B3, calculado pelo site. Veja a seção Medo e Ganância do painel.</li>
 <li><b>Small caps</b>: empresas de menor valor de mercado. No site, o grupo 'Pequenas e médias'.</li>
 <li><b>Blue chips</b>: ações das maiores empresas da bolsa, muito negociadas (ex.: Petrobras, Vale, Itaú). No site, ordene por Valor de mercado.</li>

@@ -18,7 +18,7 @@ WIKI_EN = "https://en.wikipedia.org"
 WD = "https://www.wikidata.org/w/api.php"
 UA = {"User-Agent": "JGInvesting/1.0 (https://github.com/jjeffersongirotto-star/Mercado-de-a-es-)"}
 WEEK = 6.5 * 86400
-VERSION = 2  # formato do snapshot; mudou -> baixa tudo de novo
+VERSION = 3  # formato do snapshot; mudou -> baixa tudo de novo
 LANGS = "pt|pt-br|en"
 # categoria -> palavra que ajuda a busca a achar a página certa
 HINT = {"filmes": "filme", "series": "série de televisão", "animes": "anime", "jogos": "jogo eletrônico", "jogadores": "futebolista",
@@ -30,7 +30,10 @@ NOT_CHAR = re.compile(r"\b(personagens?|protagonistas?|antagonistas?|vil[aõ]es|
                       r"fam[ií]lia|aliados|inimigos|refer[eê]ncias|notas|liga[cç][oõ]es|ver tamb[eé]m|bibliografia|elenco|saga|arco|"
                       r"temporada|cap[ií]tulo|filme|s[eé]rie|cria[cç][aã]o|desenvolvimento|recep[cç][aã]o|characters?|main|supporting|"
                       r"recurring|other|minor|villains?|antagonists?|protagonists?|family|allies|enemies|references|notes|see also|"
-                      r"external links|cast|season|arc|introduced|group|team|clan|organization|organiza[cç][aã]o|grupo|equipe|cl[aã])\b", re.I)
+                      r"external links|cast|season|arc|introduced|group|team|clan|organization|organiza[cç][aã]o|grupo|equipe|cl[aã]|"
+                      r"interests?|love|clones?|labs?|industries|enterprises?|corporation|company|empresas?|school|academy|escola|academia|"
+                      r"locais|lugares|places|locations?|items?|itens|weapons?|armas|equipamentos?|powers?|poderes|techniques?|t[eé]cnicas|"
+                      r"race|ra[cç]as|species|esp[eé]cies|creatures?|criaturas|vehicles?|ve[ií]culos|media|m[ií]dia|games?|jogos)\b", re.I)
 
 
 def get(url, **params):
@@ -122,8 +125,12 @@ def work(q, cat):
     if len(chars) < 10 and cat in ("animes", "series", "jogos", "filmes"):  # poucos na Wikidata: completa com a página de lista
         have = {norm(c["n"]) for c in chars}
         sl = me.get("sl") or {}
-        names = (list_page(WIKI, f"Lista de personagens de {sl['ptwiki']}") if sl.get("ptwiki") else []) + \
-                (list_page(WIKI_EN, f"List of {sl['enwiki']} characters") if sl.get("enwiki") else [])
+        base = lambda t: list(dict.fromkeys([t, re.sub(r"\s*\([^)]*\)$", "", t)]))  # "Dragon Ball (anime)" -> também "Dragon Ball"
+        names = []
+        for t in base(sl["ptwiki"]) if sl.get("ptwiki") else []:
+            names += list_page(WIKI, f"Lista de personagens de {t}")
+        for t in base(sl["enwiki"]) if sl.get("enwiki") else []:
+            names += list_page(WIKI_EN, f"List of {t} characters")
         for n in names:
             if norm(n) not in have and len(chars) < MAX_P: chars.append({"n": n}); have.add(norm(n))
     cast = []

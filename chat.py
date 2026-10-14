@@ -708,7 +708,9 @@ def fair_answer(P, D):
     out = []
     for t in P["tickers"][:4]:
         f = fair(D, D["by"][t])
-        if not f: out.append(f"{t}: sem Barato/Caro (precisa de lucro e patrimônio positivos)."); continue
+        if not f:
+            v = lambda k: fmt(D, k, val(D, D["by"][t], k))
+            out.append(f"{t}: sem Barato/Caro (preço {v('preco')}, LPA {v('lpa')}, VPA {v('vpa')})."); continue
         j, pct, p = f
         out.append(f"{t}: {'Barato +' if pct >= 0 else 'Caro '}{br(pct, 0)}% (valor justo de Graham R$ {br(j)}; preço R$ {br(p)})")
     g = glossary().get("barato/caro", "")
