@@ -164,20 +164,20 @@ def _h4file(t):
 _h4f = {}
 
 def b3full(t):
-    """Fechamentos diários completos (o bundle do servidor tem só 6 anos) + os pregões novos que b3hist já juntou.
+    """Fechamentos e volumes diários completos (o bundle do servidor tem só 6 anos) + os pregões novos que b3hist já juntou (sem volume).
     Usado pelo Comparar → Medo e Ganância; guardado em memória (até 40 ações) por 12 h."""
     c = _h4f.get(t)
     if c and time.time() - c[0] < 12 * 3600:
         return c[1]
-    d = _h4file(t)["d"]; T, Cc = list(d["t"]), list(d["c"])
+    d = _h4file(t)["d"]; T, Cc = list(d["t"]), list(d["c"]); Vv = list(d.get("vol") or [None] * len(T))
     try:
         rec = b3hist(t)["d"]
         for a, b in zip(rec["t"], rec["c"]):
-            if a > T[-1]: T.append(a); Cc.append(b)
+            if a > T[-1]: T.append(a); Cc.append(b); Vv.append(None)
     except Exception as e:
         log.info("b3full %s: %s", t, e)
     if len(_h4f) > 40: _h4f.clear()
-    _h4f[t] = (time.time(), {"t": T, "c": Cc})
+    _h4f[t] = (time.time(), {"t": T, "c": Cc, "v": Vv})
     return _h4f[t][1]
 
 def b3hist(t):
