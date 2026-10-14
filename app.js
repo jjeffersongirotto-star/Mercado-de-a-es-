@@ -354,6 +354,21 @@ function tipHtml(r, f) {
 const chartSlot = (r) => `<div class="gchart" data-gt="${r.ticker}"${state.country === 'br' ? '' : ` data-gc="${state.country}"`}></div>`;  // fora do Brasil: índice do país
 // preço exibido (respeita a fonte escolhida no topo): cards da aba Ações e Carteira
 const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
+// Barato/Caro: preço do card × valor justo de Graham √(22,5 × LPA × VPA) (explicação no Glossário do painel ⓘ).
+// pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
+function fairOf(r) {
+  const p = priceOf(r), l = val(r, 'lpa'), b = val(r, 'vpa');
+  if (!(p > 0 && l > 0 && b > 0)) return null;
+  const j = Math.sqrt(22.5 * l * b);
+  return { j, pct: (j / p - 1) * 100, pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) };
+}
+window.fairOf = fairOf;
+function fairHtml(r) {
+  const f = fairOf(r); if (!f) return '';
+  const cheap = f.pct >= 0;
+  return `<div class="fv"><span class="fv-t ${cheap ? 'text-emerald-400' : 'text-rose-400'}">${cheap ? 'Barato +' : 'Caro '}${F0.format(f.pct)}%</span>` +
+    `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
+}
 function blockHtml(r) {
   const price = priceOf(r);
   const open = state.expanded.has(r.ticker);
@@ -376,10 +391,10 @@ function blockHtml(r) {
       <div class="flex items-center gap-3 mt-1">
         <div class="min-w-0 flex-1">
           <div class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</div>
-          <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>${updTxt() ? `<div class="upd">${updTxt()}</div>` : ''}
+          <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
         </div>
-        <button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
-      </div>
+        ${fairHtml(r)}<button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
+      </div>${updTxt() ? `<div class="upd">${updTxt()}</div>` : ''}
     </div>
     <div class="collapse-wrap"><div class="collapse-inner">${open ? chartSlot(r) + ibovW(r) + cardsHtml(r) : ''}</div></div>
   </article>`;
@@ -402,7 +417,7 @@ function setBlockOpen(art, open) {
   btn.firstElementChild.textContent = open ? '−' : '+';
 }
 document.addEventListener('click', (e) => {
-  const head = e.target.closest('.blk-head'); if (!head || e.target.closest('.gsel')) return;
+  const head = e.target.closest('.blk-head'); if (!head || e.target.closest('.gsel') || e.target.closest('[data-gl]')) return;
   if (window.getSelection && String(window.getSelection()).length) return;
   const art = head.closest('.blk'); setBlockOpen(art, !art.classList.contains('open'));
 });

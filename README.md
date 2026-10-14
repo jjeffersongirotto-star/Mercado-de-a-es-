@@ -60,7 +60,7 @@ que não dispara deploy.
 Rotina diária (19:05): `scripts/push_snapshot_from_here.sh` atualiza os snapshots em sequência numa máquina cujo IP não é bloqueado
 (`ONLY="cvm tradingview"` limita as etapas). No GitHub, `.github/workflows/data.yml` roda o mesmo script em dias úteis às 19:45
 (todas as etapas menos Status Invest, que tem o workflow `.github/workflows/statusinvest.yml`, 19:30) e depois recarrega o site;
-etapa bloqueada no runner mantém o snapshot anterior. A etapa `kb` (base do chat: resumos da Wikipedia e personagens/elenco da Wikidata dos itens do
+etapa bloqueada no runner mantém o snapshot anterior. A etapa `fg` calcula o Índice de Medo e Ganância da B3 (`scripts/build_fg.py`, histórico desde 1997). A etapa `kb` (base do chat: resumos da Wikipedia e personagens/elenco da Wikidata dos itens do
 `conhecimento.json`) só baixa tudo de novo uma vez por semana; nos outros dias busca apenas os itens novos. Rodar à mão: Actions → Rotina diária de dados → Run workflow.
 A fonte usada e a data de cada snapshot aparecem em `/api/status`.
 

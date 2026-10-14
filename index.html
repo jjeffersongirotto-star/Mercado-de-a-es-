@@ -363,7 +363,7 @@
   .rg-t { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rg-h { color: rgb(100 116 139); }
   /* ================= Design system (único para todas as abas) ================= */
   :root { --c-pos: rgb(52 211 153); --c-pos-bg: rgb(5 150 105); --c-pos-bd: rgb(16 185 129); --c-neg: rgb(251 113 133); --c-neg-bg: rgb(190 18 60); --c-neg-bd: rgb(244 63 94);
-          --c-amber: rgb(251 191 36); --c-amber-bg: rgb(120 53 15 / .45); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
+          --c-amber: rgb(251 191 36); --c-orange: rgb(251 146 60); --c-lime: rgb(163 230 53); --c-amber-bg: rgb(120 53 15 / .45); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
           --bg-card: rgb(15 23 42 / .6); --bg-in: rgb(2 6 23); --bg-sec: rgb(30 41 59); --bd: rgb(51 65 85); --bd-card: rgb(30 41 59);
           --h: 38px; --h-sm: 32px; --r: .6rem; --r-card: 1rem; --sh: 0 1px 2px rgb(0 0 0 / .3); --sp: .6rem; --ring: 0 0 0 2px rgb(16 185 129 / .35); }
   /* Alinhamento vertical (regra do AGENTS.md): conteúdo lado a lado e células de tabela centralizados na vertical */
@@ -422,6 +422,17 @@
   body .gtab th, body .frm > label > span, body .gtools-l, body label[for="sortKey"], body .pv-mini { font-size: 12px; font-weight: 500; color: var(--c-mut); }
   body .gtab th { text-transform: none; letter-spacing: 0; font-size: 11px; }
   body .cmp-ref, body .cmp-it small, body .gt-empty, body .gt-n, body .ldr span, body #activeCount, body .pv-saved + .text-xs { font-size: 11.5px; font-weight: 400; color: var(--c-dim); }
+  /* Barato/Caro (Graham) no card e Medo e Ganância: degradê verde → amarelo → vermelho (seção Cores do painel ⓘ) */
+  .fv { flex: none; width: 112px; display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
+  .fv-t { font-size: 12px; font-weight: 700; line-height: 1; } .fv-b { display: flex; align-items: center; width: 100%; }
+  .fv-bar { position: relative; flex: 1; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--c-pos), var(--c-amber), var(--c-neg)); }
+  .fv-bar i { position: absolute; top: -7px; transform: translateX(-50%); border: 5px solid transparent; border-top: 6px solid var(--c-txt); border-bottom: 0; }
+  .fg { display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem; border: 1px solid var(--bd); border-radius: var(--r-card); background: var(--bg-card); }
+  .fg-g { flex: none; width: 100px; height: auto; } .fg-g path { fill: none; stroke-width: 10; } .fg-n { stroke: var(--c-txt); stroke-width: 3; stroke-linecap: round; } .fg-c { fill: var(--c-txt); }
+  .fg-t { min-width: 0; display: flex; flex-direction: column; gap: .15rem; } .fg-h { display: flex; align-items: center; font-size: 12px; color: var(--c-mut); }
+  .fg-v { font-size: 15px; font-weight: 700; } .fg-v b { font-size: 22px; margin-right: .2rem; } .fg-p { font-size: 11px; color: var(--c-mut); white-space: nowrap; } .fg-d { font-size: 10.5px; color: var(--c-dim); }
+  .fg-0 { color: var(--c-neg); stroke: var(--c-neg); } .fg-1 { color: var(--c-orange); stroke: var(--c-orange); } .fg-2 { color: var(--c-amber); stroke: var(--c-amber); }
+  .fg-3 { color: var(--c-lime); stroke: var(--c-lime); } .fg-4 { color: var(--c-pos); stroke: var(--c-pos); }
   /* Cores com significado fixo */
   body .up, body .gtab .up, body .cmp-it .up, body .cmp-col h3.up { color: var(--c-pos); }
   body .dn, body .gtab .dn, body .cmp-it .dn, body .cmp-col h3.dn { color: var(--c-neg); }
@@ -479,6 +490,7 @@
     <button type="button" data-tab="chat" role="tab">Chat</button>
   </nav>
   <div data-tabpane="acoes" class="space-y-3">
+  <section id="fgCard" class="fg hidden" aria-label="Índice de Medo e Ganância"></section>
   <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 space-y-2.5">
     <div class="flex items-center gap-2">
       <input id="q" type="search" placeholder="Buscar ticker ou nome…" class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
@@ -643,6 +655,13 @@
 <h3>Diversificação e rebalanceamento</h3>
 <ul><li><b>Diversificar</b>: ter ações de vários setores (e outras aplicações, como renda fixa) para não depender de uma empresa só; algo como 10 a 20 empresas de setores diferentes.</li><li><b>Rebalancear</b>: de tempos em tempos (ex.: a cada 6 ou 12 meses), voltar aos pesos definidos, aportando mais no que ficou abaixo do alvo.</li></ul>
 </div></details>
+<details class="icard"><summary>Medo e Ganância</summary><div class="ib">
+<p>Índice de 0 a 100 que mede o humor do mercado na B3, calculado pelo site todo dia com dados da B3 e do Banco Central. Aparece no topo da aba Ações (país Brasil).</p>
+<ul><li><b>Faixas</b>: <span data-fg-faixas>Medo extremo, Medo, Neutro, Ganância e Ganância extrema</span>.</li>
+<li><b>Partes</b> (cada uma vira nota de 0 a 100 comparando o valor do dia com o último ano; o índice é a média): Ibovespa acima ou abaixo da média de 6 meses; ações na máxima × na mínima de 1 ano; ações acima da média de 50 dias; oscilação do mercado (muita oscilação = medo); volume negociado em altas × em quedas; ações × renda fixa (CDI) em 20 dias; saldo dos investidores estrangeiros em 20 dias (quando a B3 tem histórico suficiente).</li>
+<li><b>Mercado</b>: média das 50 ações mais negociadas, parecida com o Ibovespa, o que permite calcular o índice desde 1997.</li>
+<li><b>Como usar</b>: "seja ganancioso quando os outros têm medo e medroso quando os outros são gananciosos" (Warren Buffett). Medo extremo costuma coincidir com preços deprimidos; ganância extrema, com euforia. É um termômetro, não um sinal de compra: o medo pode durar meses.</li></ul>
+</div></details>
 <details class="icard"><summary>Glossário</summary><div class="ib"><ul>
 <li><b>P/L</b> (preço/lucro): preço da ação ÷ lucro por ação dos últimos 12 meses. Quantos anos de lucro atual pagariam o preço; menor = mais barata (só faz sentido com lucro positivo).</li>
 <li><b>P/VP</b> (preço/valor patrimonial): preço ÷ patrimônio líquido por ação. Mostra quanto se paga pelo patrimônio da empresa: 1 ou abaixo = negocia pelo valor do patrimônio contábil ou abaixo dele.</li>
@@ -682,6 +701,8 @@
 <li><b>Bonificação</b>: a empresa entrega ações novas aos acionistas (registrada pela B3 como BONIFICAÇÃO). Desdobramento/grupamento só mudam quantidade e preço.</li>
 <li><b>Desdobramento</b> (split): cada ação vira várias, o preço cai na mesma proporção; o valor investido não muda.</li>
 <li><b>Grupamento</b> (inplit): várias ações viram uma, o preço sobe na mesma proporção; o valor investido não muda.</li>
+<li><b>Barato/Caro</b>: compara o preço com o valor justo de Benjamin Graham, √(22,5 × LPA × VPA). Barato +35% = o preço pode subir 35% até o valor justo; Caro −20% = está 20% acima. A barra vai do verde (barato, à esquerda) ao vermelho (caro, à direita). Só aparece com lucro e patrimônio positivos. Limite: empresas de crescimento (lucro futuro alto) costumam aparecer caras; bancos e empresas com muito patrimônio, baratas.</li>
+<li><b>Medo e Ganância</b>: índice de 0 (medo extremo) a 100 (ganância extrema) do humor do mercado na B3, calculado pelo site. Veja a seção Medo e Ganância do painel.</li>
 <li><b>Small caps</b>: empresas de menor valor de mercado. No site, o grupo 'Pequenas e médias'.</li>
 <li><b>Blue chips</b>: ações das maiores empresas da bolsa, muito negociadas (ex.: Petrobras, Vale, Itaú). No site, ordene por Valor de mercado.</li>
 <li><b>Vaca leiteira</b>: gíria para empresa madura que paga dividendos altos e constantes. No site, ordene por DY.</li>
@@ -725,6 +746,7 @@
       <li><span class="badge bg-sky-600 text-white font-bold">aj</span><span class="t">Azul: concorda via EBIT ajustado</span></li>
       <li><span class="sw sw-bank"></span><span class="t">Azul escuro: banco/seguradora (indicador não comparável)</span></li>
       <li><span class="badge bg-amber-500 text-slate-900 font-bold">±</span><span class="t">Fonte excluída pela checagem de sinal</span></li>
+      <li><span class="t">Barato/Caro e Medo e Ganância: <b class="text-emerald-400">verde</b> = barato / ganância extrema; <b class="text-lime-400">verde-claro</b> = ganância; <b class="text-amber-400">amarelo</b> = neutro; <b class="text-orange-400">laranja</b> = medo; <b class="text-rose-400">vermelho</b> = caro / medo extremo.</span></li>
       <li><span class="t">Nas outras telas: <b class="text-emerald-400">verde</b> = positivo/ganho/confirmar; <b class="text-rose-400">vermelho</b> = negativo/perda/excluir; <b class="text-violet-400">violeta</b> = Valorização total (Previsão); <b class="text-yellow-300">amarelo</b> = imposto (Previsão); <b class="text-amber-400">laranja</b> = alerta de preço atingido (Favoritos).</span></li></ul>
     <h3>Particularidades</h3>
     <ul>
@@ -806,6 +828,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="/static/ui.js?v=c27"></script>
 <script src="/static/app.js?v=c9"></script>
+<script src="/static/medo.js"></script>
 <script src="/static/previsao.js?v=c27"></script>
 <script src="/static/grafico.js?v=c7"></script>
 <script src="/static/grupos.js?v=c38"></script>

@@ -6,7 +6,7 @@
 #   Investidor10 (~1 req/s, ~1000 páginas)     · Dados de Mercado (~1 req/2,5 s, ~300 páginas)
 #   CVM dados abertos (DFP/ITR, pré-processado: data/cvm.json compacto)
 #   Histórico (Yahoo 20a mensal/5a diário + Ibovespa + BCB) e perfis (brapi) do universo exibido
-#   Base do chat (resumos da Wikipedia dos itens do conhecimento.json; renova uma vez por semana)
+#   Índice de Medo e Ganância (B3: COTAHIST, fluxo, CDI) · Base do chat (resumos da Wikipedia dos itens do conhecimento.json; renova uma vez por semana)
 # ONLY="cvm tradingview" limita as etapas; PYTHON = interpretador com pandas/lxml/yfinance/requests.
 set -e
 REPO_URL="${REPO_URL:-https://github.com/jjeffersongirotto-star/Mercado-de-a-es-.git}"
@@ -15,7 +15,7 @@ PY="${PYTHON:-}"
 if [ -z "$PY" ]; then
   if [ -x /workspace/b3-api/.venv/bin/python ]; then PY=/workspace/b3-api/.venv/bin/python; else PY=python3; fi
 fi
-STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics kb}"
+STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics fg kb}"
 TMP="$(mktemp -d)"
 git clone -q --depth 1 --branch data "$REPO_URL" "$TMP" 2>/dev/null || { git -C "$TMP" init -q -b data; git -C "$TMP" remote add origin "$REPO_URL"; }
 mkdir -p "$TMP/data"
@@ -40,6 +40,7 @@ for s in $STEPS; do
     cotahist)       run "B3 COTAHIST" "$PY" "$HERE/scripts/build_cotahist.py" "${COTA_DIR:-/workspace/scratch/cotahist}" "$TMP/data" ;;
     metrics)        run "Métricas Grupos" "$PY" "$HERE/scripts/build_metrics.py" "$TMP/data" ;;
     dadosdemercado) run "Dados de Mercado" "$PY" "$HERE/scripts/fetch_dadosdemercado.py" "$TMP/data" ;;
+    fg)             run "Medo e Ganância" "$PY" "$HERE/scripts/build_fg.py" "$TMP/data" ;;
     kb)             run "Base do chat" "$PY" "$HERE/scripts/build_kb.py" "$TMP/data" ;;
   esac
 done

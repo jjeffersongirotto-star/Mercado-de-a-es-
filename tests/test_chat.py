@@ -437,6 +437,23 @@ def test_ai_answer_order_moves_specialized_sites():
     assert "Para informações sobre entretenimento, procure sites especializados no assunto." in a
 
 
+def test_fair_value_and_fear_greed():
+    D["by"]["PETR4"]["v"].update(vpa=40.0)  # LPA 10,3 · VPA 40 · preço 56 -> justo √(22,5×10,3×40) = 96,28
+    a = ask("a petr4 está barata?")[1]
+    assert a.startswith("PETR4: Barato +72%") and "valor justo de Graham R$ 96,28" in a and "Graham" in a
+    assert ask("vale3 está cara?")[1].startswith("VALE3: sem Barato/Caro")
+    old = chat.fg_data
+    chat.fg_data = lambda: {"d": ["2026-10-0%d" % i for i in range(1, 9)] + ["2026-10-09"] * 22, "v": [30] * 9 + [50] * 19 + [58, 62],
+                            "faixas": [[25, "Medo extremo"], [45, "Medo"], [55, "Neutro"], [75, "Ganância"], [100, "Ganância extrema"]]}
+    try:
+        a = ask("como está o mercado hoje? medo ou ganância?")[1]
+        assert a.startswith("Medo e Ganância (B3): **62 — Ganância** (09/10/2026)") and "Ontem 58 (Ganância)" in a and "1 mês 30 (Medo)" in a
+        assert "Warren Buffett" not in a and "0 (medo extremo)" in a  # explicação curta do Glossário
+    finally:
+        chat.fg_data = old
+    G = chat.glossary(); assert "barato/caro" in G and "medo" in G and "Medo e Ganância" in chat.guide_sections()
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
