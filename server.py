@@ -839,6 +839,19 @@ def api_fg(full: int = 0):
     if not full: d = dict(d, d=d["d"][-30:], v=d["v"][-30:])
     return JSONResponse(d, headers={"Cache-Control": "public, max-age=1800"})
 
+@app.get("/api/fgcmp")
+def api_fgcmp(t: str, di: str, df: str):
+    """Comparar → Medo e Ganância: comportamento da ação em cada faixa do índice (medo.analyze)."""
+    import medo
+    t = t.upper().strip()
+    if not history.is_br(t) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", di) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", df):
+        return JSONResponse({"error": "parâmetros inválidos"}, status_code=400)
+    try:
+        return JSONResponse(medo.analyze(t, di, df), headers={"Cache-Control": "public, max-age=1800"})
+    except Exception as e:
+        log.warning("fgcmp %s: %s", t, e)
+        return JSONResponse({"error": "Sem dados para esta análise agora."}, status_code=502)
+
 @app.get("/api/indices/{name}")
 def api_indices(name: str):
     if name not in history.SGS:
