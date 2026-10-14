@@ -225,7 +225,7 @@ function buildSort() {
 function updateSortDir() {  // no celular só o ícone (o nome fica no aria-label/título)
   const t = state.sortDir > 0 ? 'Menor → maior' : 'Maior → menor';
   const up = state.sortDir > 0;  // seta ativa em verde: ˄ menor → maior · ˅ maior → menor
-  $('#sortDir').innerHTML = `<svg class="sd-ic" viewBox="0 0 16 18" width="16" height="18" aria-hidden="true"><path class="${up ? 'on' : ''}" d="M4 7 8 3l4 4"/><path class="${up ? '' : 'on'}" d="M4 11l4 4 4-4"/></svg>`;  // só as setas; o sentido fica no título/aria-label
+  $('#sortDir').innerHTML = sortIc(up ? 1 : -1);  // só as setas; o sentido fica no título/aria-label
   $('#sortDir').setAttribute('aria-label', t); $('#sortDir').title = t + ' (toque para inverter)';
 }
 // Confiança do consenso: N = fontes com dados da empresa; A = fontes que concordam com a maioria em todos os indicadores.

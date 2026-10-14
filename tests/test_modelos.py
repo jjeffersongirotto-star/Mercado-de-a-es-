@@ -65,7 +65,7 @@ def test_dinheiro_parado_rende_cdb():
 
 
 def test_rodizio_troca_com_motivo_e_vai_para_cdb():
-    pa = [600] * 80 + [400] * (NW - 80); pb = [590] * 60 + [700] * 20 + [400] * (NW - 80)
+    pa = [500] * 35 + [600] * 45 + [400] * (NW - 80); pb = [500] * 60 + [700] * 20 + [400] * (NW - 80)  # só entra com chance bem acima da mediana
     D = modelos.build(snap({"AAA3": {"c": 10.0, "p1": pa}, "BBB3": {"c": 10.0, "p1": pb}}), cdi())
     me = months(D, "2020-09", "2022-03")
     r = modelos.rotate(D, "alg1", [0, 1], me, [1000.0] + [0.0] * (len(me) - 1), [0.0] * len(me))
@@ -73,6 +73,8 @@ def test_rodizio_troca_com_motivo_e_vai_para_cdb():
     assert mv[:3] == [(None, "AAA3"), ("AAA3", "BBB3"), ("BBB3", None)], mv  # melhor chance, troca por margem, todas desfavoráveis
     # (depois de meses em 400, a mediana do último ano também vira 400 e a empresa volta a ser favorável)
     assert r["hist"]["mov"][1]["d"] == W[61] and "BBB3 com sinal melhor" in r["hist"]["mov"][1]["m"]
+    m = r["hist"]["mov"]
+    assert m[0]["vc"] > 0 and m[1]["vv"] > 0 and m[1]["pct"] is not None and m[1]["vc"] > 0 and m[2]["vv"] > 0  # valores de compra e venda
     assert r["hist"]["trocas"] == 1 and r["hist"]["cdb"] > 0 and {x["t"] for x in r["hist"]["emp"]} == {"AAA3", "BBB3"}
 
 
@@ -88,13 +90,16 @@ def test_hibrido_nunca_vende_e_segue_quem_acerta():
 def test_colocacoes_desempate_pelo_segundo_lugar():
     # 3 modelos × 4 empresas: A e B têm dois 1º lugares cada; B tem mais 2º lugares -> B antes de A
     V = np.array([[10, 10, 1, 1], [9, 9, 11, 11], [1, 1, 10, 10]], dtype=float)  # B: 1º nas duas últimas, 2º nas duas primeiras
-    rk, cnt, order = modelos.ranking(V)
+    rk, cnt, order, pts = modelos.ranking(V)
     assert cnt[0].tolist() == [2, 0, 2] and cnt[1].tolist() == [2, 2, 0] and order == [1, 0, 2]
+    assert pts.tolist() == [8, 12, 4]  # 3 modelos: 1º = 4, 2º = 2, 3º = 0
 
 
 def test_comparar_media_e_empresas_sem_preco():
     D = modelos.build(snap({"AAA3": {"c": [10.0 + k * .1 for k in range(NW)]}, "BBB3": {"c": 10.0}}), cdi())
-    out = modelos.compare(D, ["AAA3", "BBB3", "XXX3"], "2020-09", "2021-12", 1000.0, 100.0)
+    out = modelos.compare(D, ["AAA3", "BBB3", "XXX3"], "2020-09", "2021-12", [1000.0] + [100.0] * 15, grupos=[{"n": "G", "t": ["AAA3", "BBB3"]}])
+    assert len(out["v"]) == len(modelos.MODELOS) and len(out["v"][0]) == 2 and sum(r["pts"] for r in out["res"]) == 2 * sum(range(0, 2 * len(modelos.MODELOS), 2))
+    assert {g["m"] for g in out["g"]} == {"alg1", "alg3", "tendencia"}
     assert out["t"] == ["AAA3", "BBB3"] and out["pedidas"] == 3 and len(out["p"]) == len(modelos.MODELOS)
     i = out["m"].index("hold"); assert abs(out["res"][i]["media"] - sum(out["p"][i]) / 2) < 0.01
     assert [out["res"][k]["media"] for k in out["ord_media"]] == sorted((r["media"] for r in out["res"]), reverse=True)
