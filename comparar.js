@@ -264,9 +264,33 @@
     put(box.querySelector('.fgc-pr'), FGD._y1(i), `${fmtPrice(s.c[i], 'BRL')} · ${dataBR(s.d[i])}`, '');
     put(box.querySelector('.fgc-ix'), FGD._y2(i), `${s.fg[i]} · ${FGD.faixas[b.i][1]}`, fgCls(b.i));
   }
+  const RK = (p) => `<i class="rk rk-${p}" aria-label="${p + 1}º"></i>`;  // cor fixa por colocação (seção Cores do painel ⓘ)
+  // Tabelas dos modelos a partir de modelos.compare (Comparar → Modelos e Previsão com o card Modelos em Todos).
+  // mv: media | emp | pos | con; nm: nomes dos modelos (/api/modelos); only: id de um modelo (filtro da Previsão)
+  window.modTables = (d, mv, nm, only) => {
+    const N = (i) => esc(nm[d.m[i]] || d.m[i]), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
+    const posOf = (ord) => { const o = {}; ord.forEach((i, p) => { o[i] = p; }); return o; };
+    const tab = (h, body) => `<div class="pv-scroll"><table class="gtab cmp-mt" data-srt><thead><tr>${h.map(([l, k]) => thSort(l, k)).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+    const td = (v, html, cls = '') => `<td data-v="${v ?? ''}" class="${cls}">${html}</td>`;
+    if (mv === 'media') {
+      const ps = posOf(d.ord_media);
+      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, brl.format(R[i].vmedio))}</tr>`).join(''));
+    }
+    if (mv === 'emp') {
+      const cols = d.ord_pos.filter(i => !only || d.m[i] === only);
+      return tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
+    }
+    if (mv === 'pos') {  // pontos por colocação: 1º = 14, 2º = 12 … 8º = 0 (modelos.ranking)
+      const ps = posOf(d.ord_pts);
+      return tab([['Modelo', 'm']].concat(d.m.map((_, p) => [`${RK(p)}${p + 1}º`, 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
+        d.ord_pts.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''));
+    }
+    const ord = R.map((_, i) => i).sort((a, b) => R[b].mediana - R[a].mediana), ps = posOf(ord);
+    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior, RK(R[i].pior - 1) + R[i].pior + 'º')}</tr>`).join(''));
+  };
+  window.modRK = (p) => RK(p);
   // ---------- Modelos: todos os modelos da Previsão nas empresas escolhidas (simulação do servidor: modelos.compare) ----------
   let MD = null, MN = {};
-  const RK = (p) => `<i class="rk rk-${p}" aria-label="${p + 1}º"></i>`;  // cor fixa por colocação (seção Cores do painel ⓘ)
   const MV = [['media', 'Média'], ['emp', 'Por empresa'], ['pos', 'Colocações'], ['con', 'Consistência']];
   async function modRun(my) {
     const box = $c('#cmpMod'), t = S.items.filter(x => !isIdx(x) && cOf(x) === 'br').map(tOf);
@@ -286,24 +310,9 @@
     box.innerHTML = MD ? modHtml() : `<p class="gt-help">${esc((d && d.error) || 'Não foi possível comparar agora.')}</p>`;
   }
   function modHtml() {
-    const d = MD, nm = (i) => esc(MN[d.m[i]] || d.m[i]), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
-    const posOf = (ord) => { const o = {}; ord.forEach((i, p) => { o[i] = p; }); return o; };
-    const tab = (h, body) => `<div class="pv-scroll"><table class="gtab cmp-mt"><thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
-    let html = '';
-    if (S.mv === 'media') {
-      const ps = posOf(d.ord_media);
-      html = tab(['Modelo', 'Lucro médio', 'Valor final médio'], d.ord_media.map(i => `<tr><td>${RK(ps[i])}${nm(i)}</td><td class="${cl(R[i].media)}">${pp(R[i].media)}</td><td>${brl.format(R[i].vmedio)}</td></tr>`).join(''));
-    } else if (S.mv === 'emp') {
-      const cols = d.ord_pos;
-      html = tab(['Ativo'].concat(cols.map(nm)), d.t.map((tk, j) => `<tr><td><b>${esc(tk)}</b></td>${cols.map(i => `<td class="tap" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
-    } else if (S.mv === 'pos') {
-      html = tab(['Modelo'].concat(d.m.map((_, p) => `${RK(p)}${p + 1}º`)).concat(['Lucro mediano']), d.ord_pos.map((i, p) => `<tr><td>${RK(p)}${nm(i)}</td>${R[i].pos.map(c => `<td>${c || '—'}</td>`).join('')}<td class="${cl(R[i].mediana)}">${pp(R[i].mediana)}</td></tr>`).join(''));
-    } else {
-      const ord = R.map((_, i) => i).sort((a, b) => R[b].mediana - R[a].mediana), ps = posOf(ord);
-      html = tab(['Modelo', 'Lucro mediano', 'Ganha de Comprar e segurar', 'Pior colocação'], ord.map(i => `<tr><td>${RK(ps[i])}${nm(i)}</td><td class="${cl(R[i].mediana)}">${pp(R[i].mediana)}</td><td>${R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas'}</td><td>${RK(R[i].pior - 1)}${R[i].pior}º</td></tr>`).join(''));
-    }
-    return `<div class="gt-tabs" role="tablist">${MV.map(([k, l]) => `<button type="button" data-mv="${k}" class="${S.mv === k ? 'on' : ''}">${l}</button>`).join('')}</div>${html}
-      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · ${d.t.length} de ${d.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(d.apT)} por empresa · lucro = (valor final − aportado) ÷ aportado.${S.mv === 'emp' ? ' Toque num valor para ver o mês a mês na Previsão.' : ''}</p>`;
+    const d = MD, emp = S.mv === 'emp';
+    return `<div class="gt-tabs" role="tablist">${MV.map(([k, l]) => `<button type="button" data-mv="${k}" class="${S.mv === k ? 'on' : ''}">${l}</button>`).join('')}</div>${modTables(d, S.mv, MN)}
+      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · ${d.t.length} de ${d.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(d.apT)} por empresa · lucro = (valor final − aportado) ÷ aportado.${emp ? ' Toque num valor para ver o mês a mês na Previsão.' : ''}</p>`;
   }
   let LAST = null;
   const draw = () => LAST && gcRender(...LAST, undefined, { mode: S.vm, cross: true });

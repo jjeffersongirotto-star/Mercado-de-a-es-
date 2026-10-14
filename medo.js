@@ -30,5 +30,9 @@
       <div class="fg-v ${CLS[b.i]}"><b>${now}</b> ${esc(b.n)}</div><div class="fg-p">${cmp}</div><div class="fg-d">${dataBR(d.d[d.d.length - 1])}</div></div>`;
     box.classList.remove('hidden');
   }
+  // computador: o velocímetro fica no canto direito da faixa de busca e Ordenar; celular: em cima, no lugar de sempre
+  const mq = window.matchMedia('(min-width: 1024px)'), slot = document.getElementById('fgSlot');
+  const place = () => { if (!box || !slot) return; if (mq.matches) slot.appendChild(box); else slot.closest('section').before(box); };
+  place(); (mq.addEventListener ? mq.addEventListener('change', place) : mq.addListener(place));
   document.addEventListener('dataload', draw);
 })();

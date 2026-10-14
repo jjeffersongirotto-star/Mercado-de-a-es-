@@ -871,6 +871,7 @@ def api_modelos_sim(body: dict):
     if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
     body = dict(body or {})
     body["universo"] = [r["ticker"] for r in rows]
+    if body.get("ticker") == "top5": body["ticker"], body["universo"] = "*", modelos.top_sector(rows)  # 5 maiores de cada setor
     user = [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (body.get("grupos") or [])[:9]]
     body["grupos"] = modelos.ready_groups(rows) + user
     try:
@@ -889,8 +890,14 @@ def api_modelos_comparar(body: dict):
     u = b.get("u") or "sel"
     tick = [r["ticker"] for r in rows] if u == "all" else modelos.top_sector(rows) if u == "top5" else [str(t).upper() for t in (b.get("t") or [])][:60]
     try:
-        ini, ap = max(0.0, float(b.get("ini") or 0)), max(0.0, float(b.get("ap") or 0))
-        out = modelos.compare(modelos.data(), tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], ini, ap)
+        # aportes: lista mês a mês da Previsão (ap, w, tx) ou valor inicial + aporte fixo do Comparar (ini, ap)
+        if isinstance(b.get("ap"), list): aps, wd, tx = b["ap"], b.get("w") or [], b.get("tx")
+        else: aps, wd, tx = [max(0.0, float(b.get("ini") or 0))] + [max(0.0, float(b.get("ap") or 0))] * 600, [], None
+        tx = None if tx is None else max(0.0, min(100.0, float(tx)))
+        grupos = None
+        if b.get("rod"):  # rodízio: grupos prontos + grupos do usuário
+            grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
+        out = modelos.compare(modelos.data(), tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
