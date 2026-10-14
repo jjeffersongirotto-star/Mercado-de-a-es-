@@ -369,11 +369,17 @@ if (typeof document !== 'undefined') {
   function fillMod() {
     const o = [['', 'Sem modelo']].concat(MM ? MM.modelos.map(m => [m.id, m.n]) : []).concat([['*', 'Todos']]);
     el('pvMod').innerHTML = o.map(([v, l]) => `<option value="${v}"${v === st.mod ? ' selected' : ''}>${esc(l)}</option>`).join('');
-    const a = (MM && MM.acerto) || {};
-    el('pvModInfo').textContent = MM ? `Dados de ${dataBR(MM.ini)} a ${dataBR(MM.fim)}. Acerto histórico do algoritmo: 1 mês ${a.p1 != null ? F2.format(a.p1) + '%' : '—'}, 3 meses ${a.p3 != null ? F2.format(a.p3) + '%' : '—'}.` : '';
+    el('pvModInfo').textContent = MM ? `Dados de ${dataBR(MM.ini)} a ${dataBR(MM.fim)}.` : '';
   }
   el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; st.pvt = st.ticker === '*' || st.mod === '*' ? 'des' : 'tab'; save(); compute(); });
   el('pvModI').addEventListener('click', () => infoSection('Modelos da Previsão'));
+  // Comparar → Modelos: tocar numa empresa abre aqui a simulação mês a mês (mesmo valor inicial, aporte e período)
+  window.pvOpen = (o) => {
+    Object.assign(st, { ticker: o.t, mod: o.m, di: o.di, df: o.df, ini: o.ini, ap: o.ap, proj: '', pvt: 'tab', mes: '' }); sel = { t: o.t, m: o.m }; save();
+    const was = inited; showTab('previsao'); document.querySelector('[data-pvsub="rent"]')?.click();
+    if (was) { fill(); loadHist(); }
+    setTimeout(() => el('pvTabs').scrollIntoView({ block: 'start' }), 600);
+  };
   function showTabs(on) {
     el('pvTabs').classList.toggle('hidden', !on);
     const d = on && st.pvt === 'des';
@@ -415,7 +421,6 @@ if (typeof document !== 'undefined') {
   }
   const pcl = (v) => v == null ? '—' : `<span class="${v < 0 ? 'dn' : 'up'}">${pc(v)}</span>`;
   function desHtml(d) {
-    const a = (MM && MM.acerto) || {};
     const tr = d.rows.map((r, i) => {
       const g = r.k === 'g', on = !g && sel && sel.t === r.t && sel.m === r.m;
       const nm = g ? `<div class="pvd-a"><span><b>${esc(r.n)}</b><span class="pvd-m">${esc(modName(r.m))} · rodízio</span></span><button type="button" class="pv-i" data-pvg="${i}" aria-label="Histórico de movimentação">ⓘ</button></div>`
@@ -423,7 +428,7 @@ if (typeof document !== 'undefined') {
       return `<tr class="${g ? 'pvd-g' : 'tap'}${on ? ' sel' : ''}" ${g ? '' : `data-pvsel="${esc(r.t)}|${esc(r.m)}"`}><td>${nm}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`;
     }).join('');
     return `<div class="pv-scroll"><table class="gtab"><thead><tr><th>Ativo</th><th>Rendimento</th><th>Valor final</th><th>Imposto pago</th><th>Compras / vendas</th></tr></thead><tbody>${tr}</tbody></table></div>
-      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · aporte total ${brl.format(d.apT)} · rendimento = (valor final − aporte total) ÷ aporte total. Acerto histórico do algoritmo: 1 mês ${a.p1 != null ? F2.format(a.p1) + '%' : '—'}, 3 meses ${a.p3 != null ? F2.format(a.p3) + '%' : '—'}.${st.ticker === '*' ? ' Toque numa empresa para ver o mês a mês em Tabela.' : ''}</p>`;
+      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · aporte total ${brl.format(d.apT)} · rendimento = (valor final − aporte total) ÷ aporte total.${st.ticker === '*' ? ' Toque numa empresa para ver o mês a mês em Tabela.' : ''}</p>`;
   }
   el('pvDes').addEventListener('click', (e) => {
     const gi = e.target.closest('[data-pvg]');
