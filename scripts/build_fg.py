@@ -13,7 +13,6 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import medo  # noqa: E402  (regra da nota 0–100: fonte única)
 
-OUT = sys.argv[1]
 WIN = 252
 # faixas do índice (fonte única: o site, o chat e o Comparar leem de fg.json)
 FAIXAS = [[25, "Medo extremo"], [45, "Medo"], [55, "Neutro"], [75, "Ganância"], [100, "Ganância extrema"]]
@@ -23,9 +22,10 @@ PARTES = {"mom": ("Ibovespa × média de 6 meses", 1), "forca": ("Máximas × m�
           "estr": ("Saldo de estrangeiros em 20 dias", 1)}
 
 
-def load_hist():
+def load_hist(out):
+    """Fechamentos e volumes diários de todas as ações do history4 (DataFrames: pregões × tickers)."""
     C, V = {}, {}
-    for f in glob.glob(os.path.join(OUT, "history4", "*.json.gz")):
+    for f in glob.glob(os.path.join(out, "history4", "*.json.gz")):
         h = json.loads(gzip.decompress(open(f, "rb").read()))
         d = h.get("d") or {}
         if len(d.get("t") or []) < WIN: continue
@@ -44,13 +44,18 @@ def pct_rank(s, invert=False):
     return pd.Series([np.nan if (x := medo.rank(a, i, invert)) is None else x for i in range(len(a))], index=s.index)
 
 
-def main():
-    C, V = load_hist()
+def market(C, V):
+    """-> (retornos diários, retorno diário do "mercado" = média das 50 mais negociadas, máscara das 150 mais líquidas).
+    Fonte única do "mercado" usado pelo índice e pelos modelos da Previsão (scripts/build_modelos.py)."""
     R = C.pct_change(fill_method=None).where(lambda x: x.abs() < 0.5)  # retornos diários (descarta erros de dado > 50%)
     vol60 = V.rolling(60, min_periods=20).mean().shift(1)
     rk = vol60.rank(axis=1, ascending=False)
-    top = rk <= 50; liq = rk <= 150  # mercado (50 mais negociadas) e universo líquido (150)
-    mret = R.where(top).mean(axis=1)
+    return R, R.where(rk <= 50).mean(axis=1), rk <= 150
+
+
+def main(OUT):
+    C, V = load_hist(OUT)
+    R, mret, liq = market(C, V)
     M = (1 + mret.fillna(0)).cumprod()
     raw = {}
     raw["mom"] = M / M.rolling(125, min_periods=100).mean() - 1
@@ -90,4 +95,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1])

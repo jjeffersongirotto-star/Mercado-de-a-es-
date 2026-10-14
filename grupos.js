@@ -3,6 +3,7 @@
   const KEY = 'screenerB3.grupos.v1';
   const $g = (s) => document.querySelector(s);
   let groups = (() => { try { const g = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(g) ? g : []; } catch (e) { return []; } })();
+  window.userGroups = () => groups.map(g => ({ n: g.name, t: g.tickers }));  // Previsão → Modelos (rodízio nos grupos do usuário)
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(groups)); } catch (e) { uiAlert('Não foi possível salvar no navegador.'); } };
   state.selSet = new Set(); state.selMode = false; state.group = null;
   let editing = null, viewing = null;

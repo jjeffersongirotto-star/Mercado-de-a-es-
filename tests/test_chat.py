@@ -184,6 +184,7 @@ def test_single_source_guide():
     secs = chat.guide_sections()
     assert all(t in secs and secs[t] for _, ts in chat.HOWTO_KEYS for t in ts)  # toda seção citada pelo chat existe no painel
     G = chat.glossary(); assert all(t in G for t in set(chat.GLOSS_SYN.values()) if t not in ("graham", "magic formula"))
+    assert "Modelos da Previsão" in chat.guide_sections() and "Rodízio" in chat.guide_sections()["Modelos da Previsão"]
     assert "Importar grupos" in chat.ui_labels() and "Reorganizar" in chat.ui_labels()
     for name in ("GLOSS", "HOWTO", "LABELS", "COLORS"): assert not hasattr(chat, name)
 

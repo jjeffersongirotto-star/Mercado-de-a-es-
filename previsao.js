@@ -40,6 +40,7 @@ if (typeof document !== 'undefined') {
     { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
   if (!Array.isArray(st.ex)) st.ex = [];
   if (!(st.tx >= 0)) st.tx = 0; st.txc = !!st.txc; // txc=false: automático (10% só em meses com dividendo > R$ 50 mil)
+  if (typeof st.mod !== 'string') st.mod = ''; if (st.pvt !== 'des') st.pvt = 'tab';  // modelo ('' = Sem modelo, '*' = Todos) e aba Tabela/Desempenho
   st.ret.forEach(r => { if (r.ok === undefined) r.ok = true; }); st.ex.forEach(r => { if (r.ok === undefined) r.ok = true; });
   function toast(msg) {
     let t = document.getElementById('pvToast');
@@ -59,7 +60,7 @@ if (typeof document !== 'undefined') {
     save(); renderRet(); renderEx(); applyMode(); compute();
   });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
-  let rows = [], shownRows = PAGE_ROWS, hist = null, histT = '';
+  let rows = [], shownRows = PAGE_ROWS, hist = null, histT = '', modRows = false;
 
   const m2a = (m) => (Math.pow(1 + m / 100, 12) - 1) * 100;
   const a2m = (a) => (Math.pow(1 + a / 100, 1 / 12) - 1) * 100;
@@ -69,7 +70,7 @@ if (typeof document !== 'undefined') {
     el('pvIni').value = fmtIn(st.ini, 2); el('pvAp').value = fmtIn(st.ap, 2);
     el('pvDm').value = fmtIn(st.dm, 3); el('pvDa').value = fmtIn(st.da, 2); el('pvTx').value = st.txc ? fmtIn(st.tx, 2) : fmtIn(10, 2); el('pvTx').disabled = !st.txc; el('pvTxAuto').checked = !st.txc;
     el('pvRm').value = fmtIn(st.rm, 3); el('pvRa').value = fmtIn(st.ra, 2);
-    el('pvTicker').value = st.ticker || ''; el('pvProj').value = st.proj || '';
+    el('pvTicker').value = st.ticker === '*' ? 'Todos' : st.ticker || ''; el('pvProj').value = st.proj || '';
     renderRet(); renderEx(); applyMode();
   }
   const deb = (fn, ms = 150) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
@@ -183,7 +184,7 @@ if (typeof document !== 'undefined') {
   function tickerList() { }
   // Combobox com busca a cada caractere (ticker, nome, setor, descrição; sem acento)
   window.pvCombo = (i, f) => combo(i, f);
-  function combo(inp, onPick) {
+  function combo(inp, onPick, all) {
     const box = document.createElement('div'); box.className = 'pv-combo hidden'; box.setAttribute('role', 'listbox');
     inp.parentNode.style.position = 'relative'; inp.parentNode.appendChild(box);
     inp.setAttribute('autocomplete', 'off'); inp.setAttribute('role', 'combobox');
@@ -192,8 +193,9 @@ if (typeof document !== 'undefined') {
       const q = norm(inp.value.trim());
       const list = rowsAll().filter(r => !q || r.ticker.toLowerCase().startsWith(q) || (r._s || norm(r.ticker + ' ' + r.nome)).includes(q))
         .map(r => [r, searchRank(r, q)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).slice(0, 30);
-      box.innerHTML = list.length ? list.map(r => `<button type="button" data-t="${r.ticker}"><b>${r.ticker}</b><span class="pv-cn">${esc(r.nome || '')}</span><span class="pv-cs">${esc(r.macro || r.setor || '')}</span></button>`).join('')
-        : '<div class="pv-cempty">Nenhuma empresa encontrada.</div>';
+      const tod = all && (!q || 'todos'.startsWith(q)) ? '<button type="button" data-t="*"><b>Todos</b><span class="pv-cn">10 melhores empresas de cada modelo</span></button>' : '';
+      box.innerHTML = tod + (list.length ? list.map(r => `<button type="button" data-t="${r.ticker}"><b>${r.ticker}</b><span class="pv-cn">${esc(r.nome || '')}</span><span class="pv-cs">${esc(r.macro || r.setor || '')}</span></button>`).join('')
+        : '<div class="pv-cempty">Nenhuma empresa encontrada.</div>');
       box.classList.remove('hidden');
     }
     inp.addEventListener('input', show); inp.addEventListener('focus', show);
@@ -201,12 +203,20 @@ if (typeof document !== 'undefined') {
     box.addEventListener('mousedown', (e) => e.preventDefault());
     box.addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) pick(b.dataset.t); });
     inp.addEventListener('blur', () => setTimeout(() => box.classList.add('hidden'), 150));
-    function pick(t) { inp.value = t; box.classList.add('hidden'); inp.blur(); onPick(t); }
+    function pick(t) { inp.value = t === '*' ? 'Todos' : t; box.classList.add('hidden'); inp.blur(); onPick(t); }
   }
   async function loadHist() {
     const t = (st.ticker || '').toUpperCase();
     applyMode();
     if (!t) { hist = null; histT = ''; compute(); return; }
+    if (t === '*') {  // Todos: período = meses com dados dos modelos
+      hist = null; histT = '*'; const M = await modMeta(); if (!M) { compute(); return; }
+      for (const id of ['pvDi', 'pvDf']) { el(id).min = M.ini; el(id).max = M.fim; }
+      if (!st.di || st.di < M.ini || st.di > M.fim) st.di = M.ini;
+      if (!st.df || st.df > M.fim || st.df < st.di) st.df = M.fim;
+      el('pvDi').value = st.di; el('pvDf').value = st.df; el('pvOldest').dataset.tip = `Modelos com dados de ${dataBR(M.ini)} a ${dataBR(M.fim)}.`;
+      el('pvStatus').textContent = ''; compute(); save(); return;
+    }
     if (histT === t && hist) { compute(); return; }
     el('pvStatus').textContent = 'Carregando histórico de ' + t + '…';
     try {
@@ -228,7 +238,7 @@ if (typeof document !== 'undefined') {
   }
   // trocou ação ou datas: o campo Mês volta a vazio para a tabela começar no mês 1
   const resetMes = () => { st.mes = ''; const m = el('pvMes'); if (m) m.value = ''; };
-  combo(el('pvTicker'), (t) => { resetMes(); st.ticker = t; st.proj = ''; projS = null; el('pvProj').value = ''; st.di = st.df = ''; loadHist(); loadProj(); save(); });
+  combo(el('pvTicker'), (t) => { resetMes(); st.ticker = t; st.proj = ''; projS = null; el('pvProj').value = ''; st.di = st.df = ''; loadHist(); loadProj(); save(); }, true);
   combo(el('pvProj'), (t) => { resetMes(); st.proj = t; st.ticker = ''; el('pvTicker').value = ''; loadHist(); loadProj(); save(); });
   el('pvClearP').addEventListener('click', () => { st.proj = ''; el('pvProj').value = ''; projS = null; loadProj(); save(); });
   // Projeções: médias dos últimos 10 anos (ou do que houver) do histórico mensal
@@ -261,12 +271,13 @@ if (typeof document !== 'undefined') {
   }
   function applyMode() {
     const P = !!st.proj, T = !!st.ticker && !P;
-    el('pvMode').textContent = P ? 'Projeção com médias de ' + st.proj : T ? 'Simulação histórica com ' + st.ticker : 'Projeção futura';
+    el('pvMode').textContent = P ? 'Projeção com médias de ' + st.proj : T ? 'Simulação histórica com ' + (st.ticker === '*' ? 'todas as empresas' : st.ticker) : 'Projeção futura';
     ['pvDm', 'pvDa', 'pvRm', 'pvRa'].forEach(id => el(id).disabled = P || T);
     el('pvTicker').disabled = P; el('pvClearT').disabled = P; el('pvProj').disabled = T; el('pvClearP').disabled = T;
     el('pvRetBox').classList.remove('pv-off');
     el('pvRetBox').querySelectorAll('input,button,select').forEach(x => x.disabled = false);
     el('pvDates').classList.toggle('hidden', !T);
+    el('pvMod').disabled = P;
   }
   el('pvClearT').addEventListener('click', () => { resetMes(); st.ticker = ''; el('pvTicker').value = ''; loadHist(); save(); });
   for (const id of ['pvDi', 'pvDf']) el(id).addEventListener('change', () => {
@@ -280,8 +291,17 @@ if (typeof document !== 'undefined') {
 
   // Cálculo. Convenção (igual à planilha): mês 1 = valor inicial; no mês n,
   // rentabilidade = patrimônio_sem(n-1) × r ; dividendo = patrimônio_com(n-1) × d (reinvestido na linha "com").
+  // aporte e retirada de cada mês (mês 1 = valor inicial): mesma regra da tabela e dos modelos
+  function flows(n) {
+    const ap = [st.ini + apAt(1, 0).extra], w = [0];
+    for (let m = 2; m <= n; m++) { const W = wAt(m), W0 = W.reg + W.extra, A = apAt(m, 0); ap.push(W0 > 0 ? 0 : A.reg + A.extra); w.push(W0); }
+    return { ap, w };
+  }
   function compute() {
-    rows = [];
+    rows = []; modRows = false;
+    if (st.mod && st.ticker && !st.proj) { runModels(); return; }
+    showTabs(false);
+    if (st.ticker === '*') { el('pvStatus').textContent = 'Escolha um modelo em Modelos para ver Todos.'; renderAll(); return; }
     let steps = null; // [{r, d, label}]
     if (st.proj && !projS) { renderAll(); return; }
     if (!st.proj && st.ticker && hist) {
@@ -292,12 +312,12 @@ if (typeof document !== 'undefined') {
     } else if (!st.proj && st.ticker) { renderAll(); return; }
     const n = steps ? steps.length : MAXM;
     const r0 = (projS && st.proj ? projS.rm : st.rm) / 100, d0 = (projS && st.proj ? projS.dm : st.dm) / 100;
-    const x1 = apAt(1, 0).extra;
-    let sem = st.ini + x1, com = st.ini + x1, apT = st.ini + x1, divT = 0;
-    rows.push({ m: 1, ap: st.ini + x1, apT, rent: 0, div: 0, tax: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
+    const FL = flows(n);
+    let sem = FL.ap[0], com = FL.ap[0], apT = FL.ap[0], divT = 0;
+    rows.push({ m: 1, ap: FL.ap[0], apT, rent: 0, div: 0, tax: 0, divT: 0, sem, com, w: 0, ym: steps?.[0].ym });
     for (let m = 2; m <= n; m++) {
       const r = steps ? steps[m - 1].r : r0, d = steps ? steps[m - 1].d : d0;
-      const W = wAt(m), W0 = W.reg + W.extra, A = apAt(m, 0), A0 = A.reg + A.extra, ap = W0 > 0 ? 0 : A0, w = W0; // mês com retirada: aporte 0 (inclusive extraordinários) e sai a retirada inteira
+      const ap = FL.ap[m - 1], w = FL.w[m - 1]; // mês com retirada: aporte 0 (inclusive extraordinários) e sai a retirada inteira
       const rent = sem * r, div = com * d, rentC = com * r, tax = st.txc ? div * (st.tx || 0) / 100 : (div > 50000 ? div * 0.10 : 0); // reinveste o dividendo líquido do imposto
       sem = Math.max(0, sem + rent + ap - w);
       com = Math.max(0, com + rentC + div - tax + ap - w);
@@ -311,9 +331,9 @@ if (typeof document !== 'undefined') {
     ['div', 'Dividendo mensal', 'pv-c-d'], ['tax', 'Imposto', 'pv-c-tx'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Rentabilidade total', 'pv-c-r'], ['pv', 'Rentabilidade %', 'pv-c-r'],
     ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d'], ['pd', '% Dividendos', 'pv-c-d']];
   const hasW = () => st.ret.some(r => r.ok && r.v > 0);
-  const cols = () => hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS;
+  const cols = () => (hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS).concat(modRows ? [['pos', 'Posição', 'pv-c-m']] : []);
   const pcell = (r, k) => { const p = pvPcts(r.apT, r.sem, r.com)[k]; if (p == null) return ['—', '']; const cls = k === 'pa' ? (p > 1 ? 'neg' : 'pos') : (p < 0 ? 'neg' : p > 0 ? 'pos' : ''); return [F2.format(p * 100) + '%', cls]; };
-  const cell = (r, k) => ['va', 'pa', 'pv', 'pd'].includes(k) ? pcell(r, k)[0] : k === 'm' ? (r.ym ? `${r.m}<span class="pv-ym">${dataBR(r.ym)}</span>` : r.m) : (k === 'w' && !r.w ? '–' : brl.format(r[k]));
+  const cell = (r, k) => ['va', 'pa', 'pv', 'pd'].includes(k) ? pcell(r, k)[0] : k === 'm' ? (r.ym ? `${r.m}<span class="pv-ym">${dataBR(r.ym)}</span>` : r.m) : (k === 'pos' ? esc(r.pos) : k === 'w' && !r.w ? '–' : brl.format(r[k]));
   const head = () => '<tr>' + cols().map(([k, l, c]) => `<th class="${c}">${l}</th>`).join('') + '</tr>';
   const tdc = (r, k, c) => ['va', 'pa', 'pv', 'pd'].includes(k) ? c + ' ' + pcell(r, k)[1] : c;
   const line = (r) => '<tr>' + cols().map(([k, , c]) => `<td class="${tdc(r, k, c)}">${cell(r, k)}</td>`).join('') + '</tr>';
@@ -342,6 +362,105 @@ if (typeof document !== 'undefined') {
   }
   function syncWidths() { }
 
+  // ---------- Modelos (regras e simulação no servidor: modelos.py; sinais semanais: snapshot modelos) ----------
+  let MM = null, mmP = null, des = null, sel = null, seq = 0;
+  const modMeta = () => mmP || (mmP = fetch('/api/modelos').then(r => r.json()).then(d => { if (d && d.modelos) { MM = d; fillMod(); return d; } mmP = null; return null; }).catch(() => { mmP = null; return null; }));
+  const modName = (id) => ((MM && MM.modelos.find(m => m.id === id)) || {}).n || id;
+  function fillMod() {
+    const o = [['', 'Sem modelo']].concat(MM ? MM.modelos.map(m => [m.id, m.n]) : []).concat([['*', 'Todos']]);
+    el('pvMod').innerHTML = o.map(([v, l]) => `<option value="${v}"${v === st.mod ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    const a = (MM && MM.acerto) || {};
+    el('pvModInfo').textContent = MM ? `Dados de ${dataBR(MM.ini)} a ${dataBR(MM.fim)}. Acerto histórico do algoritmo: 1 mês ${a.p1 != null ? F2.format(a.p1) + '%' : '—'}, 3 meses ${a.p3 != null ? F2.format(a.p3) + '%' : '—'}.` : '';
+  }
+  el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; st.pvt = st.ticker === '*' || st.mod === '*' ? 'des' : 'tab'; save(); compute(); });
+  el('pvModI').addEventListener('click', () => infoSection('Modelos da Previsão'));
+  function showTabs(on) {
+    el('pvTabs').classList.toggle('hidden', !on);
+    const d = on && st.pvt === 'des';
+    el('pvTabs').querySelectorAll('[data-pvt]').forEach(b => b.classList.toggle('on', b.dataset.pvt === (on ? st.pvt : 'tab')));
+    el('pvDes').classList.toggle('hidden', !d);
+    ['pvSumScroll', 'pvMainScroll'].forEach(id => el(id).classList.toggle('hidden', d));
+    el('pvCount').parentNode.classList.toggle('hidden', d);
+    if (!on) el('pvTabMsg').classList.add('hidden');
+  }
+  el('pvTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-pvt]'); if (!b) return; st.pvt = b.dataset.pvt; save(); showTabs(true); });
+  const months = (a, b) => { const out = []; let [y, m] = a.split('-').map(Number); const [y2, m2] = b.split('-').map(Number);
+    while (y < y2 || (y === y2 && m <= m2)) { out.push(`${y}-${String(m).padStart(2, '0')}`); if (++m > 12) { m = 1; y++; } } return out; };
+  function modBody() {
+    const di = st.di && st.di > MM.ini ? st.di : MM.ini, df = st.df && st.df < MM.fim ? st.df : MM.fim;
+    const f = flows(Math.max(2, months(di, df).length));
+    return { di, df, ap: f.ap, w: f.w, tx: st.txc ? st.tx : null };
+  }
+  async function post(b) {
+    for (let k = 0; k < 4; k++) {
+      const r = await fetch('/api/modelos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+      if (r.status === 202) { await new Promise(z => setTimeout(z, 3000)); continue; }
+      const d = await r.json(); if (!r.ok || d.error) throw new Error(d.error || 'erro'); return d;
+    }
+    throw new Error('servidor carregando os dados; tente de novo');
+  }
+  async function runModels() {
+    const my = ++seq; showTabs(true); el('pvStatus').textContent = '';
+    if (!(await modMeta())) { el('pvDes').innerHTML = '<p class="pvd-note">Modelos indisponíveis agora.</p>'; return; }
+    if (my !== seq) return;
+    el('pvDes').innerHTML = loaderHTML('Simulando os modelos…');
+    const b = modBody(); const G = typeof userGroups === 'function' ? userGroups() : [];
+    try {
+      const d = await post(Object.assign({ ticker: st.ticker, modelo: st.mod, grupos: G }, b)); if (my !== seq) return;
+      des = d; const emp = d.rows.filter(r => r.k === 'a');
+      if (st.ticker !== '*') sel = sel && emp.some(r => r.t === sel.t && r.m === sel.m) ? sel : { t: st.ticker, m: st.mod === '*' ? emp[0]?.m : st.mod };
+      else if (sel && !emp.some(r => r.t === sel.t && r.m === sel.m)) sel = null;
+      el('pvDes').innerHTML = desHtml(d); loadTab();
+    } catch (e) { if (my === seq) { el('pvDes').innerHTML = `<p class="pvd-note">Não foi possível simular: ${esc(e.message)}</p>`; rows = []; renderAll(); } }
+  }
+  const pcl = (v) => v == null ? '—' : `<span class="${v < 0 ? 'dn' : 'up'}">${pc(v)}</span>`;
+  function desHtml(d) {
+    const a = (MM && MM.acerto) || {};
+    const tr = d.rows.map((r, i) => {
+      const g = r.k === 'g', on = !g && sel && sel.t === r.t && sel.m === r.m;
+      const nm = g ? `<div class="pvd-a"><span><b>${esc(r.n)}</b><span class="pvd-m">${esc(modName(r.m))} · rodízio</span></span><button type="button" class="pv-i" data-pvg="${i}" aria-label="Histórico de movimentação">ⓘ</button></div>`
+        : `<b>${esc(r.t)}</b><span class="pvd-m">${esc(modName(r.m))}</span>`;
+      return `<tr class="${g ? 'pvd-g' : 'tap'}${on ? ' sel' : ''}" ${g ? '' : `data-pvsel="${esc(r.t)}|${esc(r.m)}"`}><td>${nm}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`;
+    }).join('');
+    return `<div class="pv-scroll"><table class="gtab"><thead><tr><th>Ativo</th><th>Rendimento</th><th>Valor final</th><th>Imposto pago</th><th>Compras / vendas</th></tr></thead><tbody>${tr}</tbody></table></div>
+      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · aporte total ${brl.format(d.apT)} · rendimento = (valor final − aporte total) ÷ aporte total. Acerto histórico do algoritmo: 1 mês ${a.p1 != null ? F2.format(a.p1) + '%' : '—'}, 3 meses ${a.p3 != null ? F2.format(a.p3) + '%' : '—'}.${st.ticker === '*' ? ' Toque numa empresa para ver o mês a mês em Tabela.' : ''}</p>`;
+  }
+  el('pvDes').addEventListener('click', (e) => {
+    const gi = e.target.closest('[data-pvg]');
+    if (gi && des) { const r = des.rows[+gi.dataset.pvg]; uiAlert('', { title: `${esc(r.n)} · ${esc(modName(r.m))}`, html: groupHtml(r) }); return; }
+    const t = e.target.closest('[data-pvsel]'); if (!t) return;
+    const [tk, m] = t.dataset.pvsel.split('|'); sel = { t: tk, m }; resetMes();
+    el('pvDes').querySelectorAll('tr.sel').forEach(x => x.classList.remove('sel')); t.classList.add('sel');
+    st.pvt = 'tab'; save(); showTabs(true); loadTab();
+  });
+  function groupHtml(r) {
+    const h = r.hist, sem = (x) => `${F0.format(x)} sem. (~${F0.format(x / 4.35)} meses)`;
+    const emp = h.emp.map(x => `<tr><td><b>${esc(x.t)}</b></td><td>${x.c}</td><td>${sem(x.sem)}</td><td class="${x.res < 0 ? 'dn' : 'up'}">${brl.format(x.res)}</td><td>${brl.format(x.ir)}</td></tr>`).join('');
+    const mv = h.mov.slice().reverse().map(x => `<tr><td>${dataBR(x.d)}</td><td>${esc(x.de || 'CDB')}</td><td>${esc(x.para || 'CDB')}</td><td style="white-space:normal;text-align:left">${esc([x.m && 'saiu: ' + x.m, x.m2 && 'entrou: ' + x.m2].filter(Boolean).join(' · '))}</td></tr>`).join('');
+    return `<p class="pvd-note">Empresas do grupo: ${esc(r.t.join(', '))}. Tempo médio = semanas com a ação antes de vender; resultado inclui os proventos.</p>
+      <table class="gtab"><thead><tr><th>Ativo</th><th>Compras</th><th>Tempo médio</th><th>Resultado</th><th>Imposto</th></tr></thead><tbody>${emp || '<tr><td colspan="5">Nenhuma compra no período.</td></tr>'}</tbody></table>
+      <p class="pvd-note">Rendimento ${pc(r.pct)} · valor final ${brl.format(r.v)} · ${r.c} compras e ${r.s} vendas · ${h.trocas} trocas diretas entre empresas · ${F2.format(h.cdb)}% do tempo no CDB · maior queda ${F2.format(h.dd)}% · imposto ${brl.format(r.ir)}</p>
+      <table class="gtab"><thead><tr><th>Data</th><th>Saiu</th><th>Entrou</th><th>Motivo</th></tr></thead><tbody>${mv}</tbody></table>`;
+  }
+  async function loadTab() {
+    const my = seq;
+    if (!sel || !sel.m) { rows = []; modRows = false; renderAll(); el('pvTabMsg').textContent = 'Toque numa empresa em Desempenho para ver o mês a mês.'; el('pvTabMsg').classList.toggle('hidden', st.pvt !== 'tab'); return; }
+    el('pvTabMsg').classList.add('hidden');
+    try {
+      const b = modBody(), d = await post(Object.assign({ tab: sel }, b)); if (my !== seq) return;
+      let apT = 0, ps = 0, pd = 0, pt = 0, pc0 = 0, pv0 = 0;
+      rows = d.tab.map((x, q) => {
+        const ap = b.ap[q] || 0, w = b.w[q] || 0; apT += ap;
+        const ops = [x.c > pc0 && 'compra', x.s > pv0 && 'venda'].filter(Boolean).join(' e ');
+        const o = { m: q + 1, ym: x.ym, ap, apT, w, rent: q ? x.sem - ps - ap + w : 0, div: x.div - pd, tax: x.tax - pt, divT: x.div, sem: x.sem, com: x.com,
+          pos: (sel.m !== '' ? x.pos : '') + (ops ? ' · ' + ops : '') };
+        ps = x.sem; pd = x.div; pt = x.tax; pc0 = x.c; pv0 = x.s; return o;
+      });
+      modRows = true; el('pvMode').textContent = `Simulação histórica com ${sel.t} · ${modName(sel.m)}`;
+    } catch (e) { rows = []; modRows = false; el('pvTabMsg').textContent = 'Tabela indisponível: ' + e.message; el('pvTabMsg').classList.remove('hidden'); }
+    shownRows = PAGE_ROWS; renderAll();
+  }
+
   el('pvMoreBtn').addEventListener('click', () => { shownRows += PAGE_ROWS; renderAll(); });
 
   let inited = false;
@@ -349,9 +468,9 @@ if (typeof document !== 'undefined') {
     if (e.detail !== 'previsao') return;
     if (rows.length) setTimeout(syncWidths, 0);
     tickerList();
-    if (!inited) { inited = true; fill(); loadHist(); if (st.proj) loadProj(); }
+    if (!inited) { inited = true; fill(); modMeta(); loadHist(); if (st.proj) loadProj(); }
   });
-  if (!document.querySelector('[data-tabpane="previsao"]').classList.contains('hidden')) { inited = true; fill(); loadHist(); if (st.proj) loadProj(); }
+  if (!document.querySelector('[data-tabpane="previsao"]').classList.contains('hidden')) { inited = true; fill(); modMeta(); loadHist(); if (st.proj) loadProj(); }
 })();
 
 }

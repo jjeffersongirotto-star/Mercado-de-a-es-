@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Sinais semanais dos modelos da Previsão (card Modelos) -> OUT/modelos.json. Regras dos modelos: modelos.py (MODELOS).
+Por ação da B3 (history4) e por semana (último pregão da semana): fechamento, proventos da semana, índice de Medo e Ganância
+da ação (medo.stock_index), distância da média de 200 pregões, alta em 12 meses e a chance de alta prevista pelo algoritmo
+para 1 mês (20 pregões) e 3 meses (60 pregões). O índice do mercado vem de fg.json (scripts/build_fg.py).
+Algoritmo: regressão logística com os indicadores de gráfico, medo e ganância e dividendos, treinada a cada ano só com os anos
+anteriores (a previsão de um ano nunca vê o próprio ano). Uso: build_modelos.py OUT_DIR (lê OUT_DIR/history4 e OUT_DIR/fg.json)."""
+import gzip, json, os, sys, time
+from datetime import datetime, timezone
+import numpy as np
+import pandas as pd
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, ".."))
+sys.path.insert(0, HERE)
+import medo  # noqa: E402  (índice da ação: mesma regra do Comparar)
+from build_fg import load_hist, market  # noqa: E402  (mesmo "mercado" do índice)
+
+START = "2006-01-01"  # primeira semana dos sinais (o algoritmo precisa de anos anteriores para treinar)
+TRAIN0 = "1998-01-01"
+F = ["si", "mi", "dsi20", "dmi20", "r5", "r20", "r60", "r120", "r250", "dd", "up52", "ma50", "ma200", "cross", "brk_hi", "brk_lo", "bb",
+     "vol20", "volr", "vlr", "rsi", "streak_w", "dy12", "ddy", "rs60", "rs250"]
+HS = (20, 60)  # horizontes do algoritmo (pregões): 1 e 3 meses
+
+
+def divs(out, t, idx):
+    """Proventos por pregão (data ex) do arquivo history4 da ação."""
+    h = json.loads(gzip.decompress(open(os.path.join(out, "history4", f"{t}.json.gz"), "rb").read()))
+    dv = np.zeros(len(idx))
+    for x in h.get("divs") or []:
+        j = idx.searchsorted(pd.Timestamp(x[0], unit="s").normalize())
+        if j < len(idx): dv[j] += x[1]
+    return pd.Series(dv, index=idx)
+
+
+def features(c, v, dv, mi, mk):
+    """Indicadores diários de uma ação (c, v: fechamento e volume; dv: proventos; mi: índice do mercado; mk: mercado acumulado)."""
+    r = c.pct_change().where(lambda x: x.abs() < 0.5)
+    X = pd.DataFrame(index=c.index)
+    X["si"] = pd.Series(medo.stock_index(c.tolist(), v.tolist()), index=c.index, dtype="float64")
+    X["mi"] = mi.reindex(c.index).ffill()
+    X["dsi20"], X["dmi20"] = X.si - X.si.shift(20), X.mi - X.mi.shift(20)
+    for n in (5, 20, 60, 120, 250): X[f"r{n}"] = c / c.shift(n) - 1
+    X["dd"] = c / c.rolling(250, min_periods=120).max() - 1
+    X["up52"] = c / c.rolling(250, min_periods=120).min() - 1
+    s50, s200 = c.rolling(50).mean(), c.rolling(200, min_periods=150).mean()
+    X["ma50"], X["ma200"], X["cross"] = c / s50 - 1, c / s200 - 1, s50 / s200 - 1
+    X["brk_hi"] = (c >= c.rolling(20).max().shift(1)).astype(float)
+    X["brk_lo"] = (c <= c.rolling(20).min().shift(1)).astype(float)
+    X["bb"] = (c - c.rolling(20).mean()) / (2 * c.rolling(20).std())
+    X["vol20"] = r.rolling(20).std() * np.sqrt(252)
+    X["volr"] = X.vol20 / (r.rolling(250).std() * np.sqrt(252))
+    X["vlr"] = v.rolling(20).mean() / v.rolling(120).mean()
+    g, l = r.clip(lower=0).rolling(14).mean(), (-r.clip(upper=0)).rolling(14).mean()
+    X["rsi"] = 100 - 100 / (1 + g / l)
+    wk = c.resample("W-FRI").last().pct_change(); st, s_ = [], 0
+    for x in wk:
+        s_ = (s_ + 1 if s_ > 0 else 1) if x > 0 else (s_ - 1 if s_ < 0 else -1) if x < 0 else 0
+        st.append(s_)
+    X["streak_w"] = pd.Series(st, index=wk.index).reindex(c.index, method="ffill")
+    X["dy12"] = dv.rolling(250, min_periods=200).sum() / c
+    X["ddy"] = X.dy12 - X.dy12.shift(60)
+    m = mk.reindex(c.index).ffill()
+    X["rs60"], X["rs250"] = X.r60 - (m / m.shift(60) - 1), X.r250 - (m / m.shift(250) - 1)
+    for n in HS: X[f"f{n}"] = c.shift(-n) / c - 1
+    return X.replace([np.inf, -np.inf], np.nan)
+
+
+def logit_fit(X, y, it=300, lr=0.2, l2=1.0):
+    w, b = np.zeros(X.shape[1]), 0.0
+    for _ in range(it):
+        p = 1 / (1 + np.exp(-(X @ w + b))); g = p - y
+        w -= lr * (X.T @ g / len(y) + l2 * w / len(y)); b -= lr * g.mean()
+    return w, b
+
+
+def walk_forward(P, H):
+    """Chance de alta em H pregões de cada linha a partir de START; cada ano usa um modelo treinado só com os anos anteriores."""
+    out = pd.Series(np.nan, index=P.index)
+    ok = P[F[:1] + ["mi", "r250", "ma200", "rsi", "volr"]].notna().all(axis=1)
+    yrs = sorted({d.year for d in P.index.get_level_values(0) if d >= pd.Timestamp(START)})
+    hits = []
+    for Y in yrs:
+        d = P.index.get_level_values(0)
+        lim = pd.Timestamp(f"{Y}-01-01") - pd.Timedelta(days=int(H * 1.5))  # rótulo (alta em H pregões) não pode entrar no ano testado
+        trn = P[ok & (d < lim) & P.liq & P[f"f{H}"].notna()]
+        te = P[ok & (d.year == Y)]
+        if len(trn) < 5000 or not len(te): continue
+        Xtr = trn[F].to_numpy(float); mu, sd = np.nanmean(Xtr, 0), np.nanstd(Xtr, 0) + 1e-9
+        Z = lambda X: np.nan_to_num((X - mu) / sd).clip(-5, 5)
+        w, b = logit_fit(Z(Xtr), (trn[f"f{H}"] > 0).to_numpy(float))
+        p = 1 / (1 + np.exp(-(Z(te[F].to_numpy(float)) @ w + b)))
+        out.loc[te.index] = p
+        f = te[f"f{H}"].to_numpy(); m = ~np.isnan(f)
+        hits += list((p[m] > 0.5) == (f[m] > 0))
+    return out, (round(float(np.mean(hits)) * 100, 1) if hits else None)
+
+
+def main(out):
+    t0 = time.time()
+    C, V = load_hist(out)
+    R, mret, liq = market(C, V)
+    mk = (1 + mret.fillna(0)).cumprod()
+    fg = json.load(open(os.path.join(out, "fg.json")))
+    mi = pd.Series(fg["v"], index=pd.to_datetime(fg["d"]), dtype="float64")
+    C, V, liq = C[C.index >= TRAIN0], V[V.index >= TRAIN0], liq[liq.index >= TRAIN0]
+    weeks = C.index.to_series().groupby(C.index.to_period("W-FRI")).max()  # último pregão de cada semana
+    weeks = weeks[weeks >= pd.Timestamp(START)]
+    W = pd.DatetimeIndex(weeks.values)
+    rows, series = [], {}
+    for t in C.columns:
+        c = C[t].dropna()
+        if len(c) < 260: continue
+        v, dv = V[t].reindex(c.index), divs(out, t, c.index)
+        X = features(c, v, dv, mi, mk)
+        X["liq"] = liq[t].reindex(c.index).fillna(False).astype(bool)
+        wd = X.index[X.index.isin(C.index.to_series().groupby(C.index.to_period("W-FRI")).transform("max"))]
+        Xw = X.loc[wd]; Xw.index = pd.MultiIndex.from_arrays([Xw.index, [t] * len(Xw)])
+        rows.append(Xw)
+        # séries semanais da simulação (a partir da 1ª semana com preço)
+        cw = c.reindex(W, method="ffill", limit=10)
+        if cw.notna().sum() < 2: continue
+        dw = dv.groupby(dv.index.to_period("W-FRI")).sum()
+        dw.index = dw.index.map(lambda p: weeks.get(p, pd.NaT)); dw = dw[dw.index.notna()].reindex(W).fillna(0)
+        series[t] = (cw, dw, X)
+        print(f"  {t}: {len(c)} pregões ({time.time() - t0:.0f}s)", flush=True) if len(series) % 50 == 0 else None
+    P = pd.concat(rows).sort_index()
+    pred, acerto = {}, {}
+    for H in HS:
+        pred[H], acerto[H] = walk_forward(P, H)
+        print(f"algoritmo {H} pregões: acerto {acerto[H]}% ({time.time() - t0:.0f}s)", flush=True)
+    A = {}
+    q = lambda s, k=1: [None if x != x else (int(round(x * k)) if k != 1 or float(x).is_integer() else round(float(x), 4)) for x in s]
+    for t, (cw, dw, X) in series.items():
+        i0 = int(np.argmax(cw.notna().to_numpy()))
+        Xw = X.reindex(W, method="ffill", limit=10).iloc[i0:]
+        a = {"i0": i0, "c": [None if x != x else round(float(x), 4) for x in cw.iloc[i0:]],
+             "dv": {str(i - i0): round(float(x), 6) for i, x in enumerate(dw.to_numpy()) if x > 0 and i >= i0},
+             "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000)}
+        for H, k in zip(HS, ("p1", "p3")):
+            p = pred[H].xs(t, level=1) if t in pred[H].index.get_level_values(1) else pd.Series(dtype=float)
+            a[k] = q(p.reindex(W, method="ffill", limit=2).iloc[i0:], 1000)
+        A[t] = a
+    res = {"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+           "fonte": "B3 (COTAHIST e proventos), índice de Medo e Ganância do site; cálculo do site",
+           "acerto": {"p1": acerto[20], "p3": acerto[60]},
+           "w": [d.strftime("%Y-%m-%d") for d in W], "mi": [None if x != x else int(x) for x in mi.reindex(W, method="ffill")], "a": A}
+    json.dump(res, open(os.path.join(out, "modelos.json"), "w"), separators=(",", ":"))
+    print(f"modelos: {len(A)} ações, {len(W)} semanas ({res['w'][0]} a {res['w'][-1]}), acerto {res['acerto']}, "
+          f"{os.path.getsize(os.path.join(out, 'modelos.json')) / 1e6:.1f} MB, {time.time() - t0:.0f}s")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])

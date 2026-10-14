@@ -11,15 +11,15 @@ const parseBR = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if
 
 // Diálogos do site (substituem confirm/alert/prompt), toast e animação de carregamento
 (function () {
-  function modal({ title, msg, input, okText = 'OK', cancelText = 'Cancelar', danger = false, noCancel = false, value = '' }) {
+  function modal({ title, msg, html, input, okText = 'OK', cancelText = 'Cancelar', danger = false, noCancel = false, value = '' }) {
     return new Promise((res) => {
-      const w = document.createElement('div'); w.className = 'umod';
+      const w = document.createElement('div'); w.className = 'umod' + (html ? ' umod-wide' : '');
       w.innerHTML = `<div class="umod-box" role="dialog" aria-modal="true">${title ? `<h3>${title}</h3>` : ''}<p></p>
         ${input ? '<input class="umod-in" autocomplete="off" spellcheck="false" maxlength="40">' : ''}
         <div class="umod-btns">${noCancel ? '' : `<button type="button" class="umod-c">${cancelText}</button>`}<button type="button" class="umod-ok${danger ? ' dan' : ''}">${okText}</button></div></div>`;
-      w.querySelector('p').textContent = msg || '';
+      if (html) w.querySelector('p').outerHTML = `<div class="umod-html">${html}</div>`; else w.querySelector('p').textContent = msg || '';
       document.body.appendChild(w);
-      const inp = w.querySelector('.umod-in'); if (inp) { inp.value = value; setTimeout(() => { inp.focus(); inp.select(); }, 30); } else setTimeout(() => w.querySelector('.umod-ok').focus(), 30);
+      const inp = w.querySelector('.umod-in'); if (inp) { inp.value = value; setTimeout(() => { inp.focus(); inp.select(); }, 30); } else setTimeout(() => w.querySelector('.umod-ok').focus({ preventScroll: true }), 30);
       const done = (v) => { w.remove(); document.removeEventListener('keydown', key, true); res(v); };
       const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); done(input ? null : false); } else if (e.key === 'Enter') { e.preventDefault(); done(input ? inp.value : true); } };
       document.addEventListener('keydown', key, true);
@@ -30,7 +30,7 @@ const parseBR = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if
     });
   }
   window.uiConfirm = (msg, o = {}) => modal({ msg, okText: o.ok || 'Confirmar', danger: !!o.danger, title: o.title, cancelText: o.cancel || 'Cancelar' });
-  window.uiAlert = (msg, o = {}) => modal({ msg, title: o.title, noCancel: true });
+  window.uiAlert = (msg, o = {}) => modal({ msg, html: o.html, title: o.title, noCancel: true });  // o.html: conteúdo já escapado (tabelas)
   window.uiPrompt = (msg, value = '', o = {}) => modal({ msg, input: true, value, okText: o.ok || 'Salvar', title: o.title });
   window.uiToast = (msg) => {
     let t = document.getElementById('uiToast');

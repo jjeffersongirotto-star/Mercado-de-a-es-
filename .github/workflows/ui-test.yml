@@ -27,6 +27,7 @@ jobs:
         run: |
           python tests/test_consensus.py
           python tests/test_medo.py
+          python tests/test_modelos.py
           python tests/test_chat.py
           for f in tests/*.js; do node "$f"; done
       - name: Subir o servidor
