@@ -689,8 +689,10 @@ def api_chart(ticker: str, kind: str = "d", country: str = "br"):
 
 @app.get("/api/profiles")
 def api_profiles():
+    import chat
     d, _ = snapshots.load("profiles", max_mem_age=6 * 3600)
-    return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=3600"})
+    # + o que faz cada empresa (conhecimento.json, fonte única também do chat): ⓘ ao lado do nome no card
+    return JSONResponse(dict(d or {}, empresas=chat.kb().get("empresas") or {}), headers={"Cache-Control": "public, max-age=3600"})
 
 def _idx_returns(di, df):
     """Mesmo cálculo do gráfico (grafico.js pricePts/ratePts) para Ibovespa, dólar, CDB 100% CDI, IPCA, poupança e ouro."""
