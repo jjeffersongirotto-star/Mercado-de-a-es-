@@ -858,7 +858,8 @@ def api_modelos():
     import modelos
     try: return JSONResponse(modelos.meta(modelos.data()), headers={"Cache-Control": "public, max-age=1800"})
     except Exception as e:
-        log.warning("modelos: %s", e); return JSONResponse({"error": "Modelos indisponíveis agora."}, status_code=502)
+        log.warning("modelos: %s", e)  # sem snapshot ainda: estado normal (card mostra "indisponível"), não erro do servidor
+        return JSONResponse({"error": "Modelos indisponíveis agora."}, headers={"Cache-Control": "no-store"})
 
 @app.post("/api/modelos")
 def api_modelos_sim(body: dict):
