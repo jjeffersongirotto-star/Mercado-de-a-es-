@@ -672,6 +672,49 @@ def compare(P, D):
     return "Comparação " + " x ".join(T) + ":\nCotação: " + price + "\n" + "\n".join(lines) + "\n" + summ
 
 
+def fg_data():
+    """Índice de Medo e Ganância (snapshot fg, scripts/build_fg.py) ou None."""
+    try:
+        import snapshots
+        return snapshots.load("fg", max_mem_age=3 * 3600)[0]
+    except Exception as e:
+        log.info("fg: %s", e); return None
+
+
+def fg_band(v, fx):
+    return next((n for lim, n in fx if v <= lim), fx[-1][1])
+
+
+def fg_answer():
+    """'Como está o mercado?' -> índice de hoje, ontem/1 semana/1 mês e a explicação do Glossário do painel ⓘ."""
+    d = fg_data()
+    if not d or not d.get("v"): return "O Índice de Medo e Ganância ainda não foi calculado (sai na rotina diária de dados)."
+    v, fx = d["v"], d["faixas"]
+    ago = [(l, v[-1 - n]) for l, n in (("ontem", 1), ("1 semana", 5), ("1 mês", 21)) if len(v) > n]
+    g = glossary().get("medo", "")  # "Medo e Ganância" no Glossário (o nome é dividido no " e ")
+    return (f"Medo e Ganância (B3): **{v[-1]} — {fg_band(v[-1], fx)}** ({dbr(d['d'][-1])}). "
+            + " · ".join(f"{l.capitalize()} {x} ({fg_band(x, fx)})" for l, x in ago) + (f"\n\n{g}" if g else ""))
+
+
+def fair(D, r):
+    """Valor justo de Graham √(22,5 × LPA × VPA) com os valores de consenso — a mesma conta de app.js → fairOf (barra Barato/Caro)."""
+    p, l, b = val(D, r, "preco"), val(D, r, "lpa"), val(D, r, "vpa")
+    if not (p and l and b and p > 0 and l > 0 and b > 0): return None
+    j = (22.5 * l * b) ** 0.5
+    return j, (j / p - 1) * 100, p
+
+
+def fair_answer(P, D):
+    out = []
+    for t in P["tickers"][:4]:
+        f = fair(D, D["by"][t])
+        if not f: out.append(f"{t}: sem Barato/Caro (precisa de lucro e patrimônio positivos)."); continue
+        j, pct, p = f
+        out.append(f"{t}: {'Barato +' if pct >= 0 else 'Caro '}{br(pct, 0)}% (valor justo de Graham R$ {br(j)}; preço R$ {br(p)})")
+    g = glossary().get("barato/caro", "")
+    return "\n".join(out) + (f"\n\n{g}" if g else "")
+
+
 def day_move(P, D):
     """“Caiu/subiu hoje?”: só a variação do dia (o site não tem notícias para explicar o motivo)."""
     out = []
@@ -965,6 +1008,10 @@ def local(q, D, ret_fn, cx, P=None, quote_fn=None):
         return frase("obrigado", P["hist"])
     fk = fake_label(q, P)
     if fk: return fk
+    if not P["tickers"] and re.search(r"\b(medo|ganancia|gananciosos?|sentimento do mercado|humor do mercado|como (esta|anda) o mercado|termometro do mercado)\b", nq):
+        return fg_answer()
+    if P["tickers"] and re.search(r"\b(barat[ao]s?|car[ao]s?|valor justo|preco justo|graham|subvalorizad\w*|sobrevalorizad\w*|descontad\w*)\b", nq):
+        return fair_answer(P, D)
     m = method(P, D)
     if m: return m
     if P["colors"] and not P["tickers"]: return colors_text()

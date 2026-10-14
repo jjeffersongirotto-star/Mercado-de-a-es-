@@ -59,6 +59,8 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Contexto para a IA do chat (pessoas, futebol, filmes, séries, animes, jogos, estúdios, o que fazem as empresas, temas → setores) | `conhecimento.json` (data em `atualizado`; grupos em `chat.KB_CATS`) | `chat.kb_context` → Gemini (só os itens citados na pergunta); `chat.kb_answer` sem IA; lista de itens do snapshot `kb` |
 | Resumos da Wikipedia, outros nomes, personagens e elenco dos itens do `conhecimento.json` | snapshot `kb` (`scripts/build_kb.py`: Wikipedia + Wikidata; rotina diária, renova 1×/semana) | `chat.wiki` → índice de nomes (`chat._names`), `kb_context`, `kb_answer`, "Está falando de qual?" (`kb_ambiguous`), busca (`chat.search`) |
 | Vocabulário do chat: sinônimos e gírias → indicador, qualificadores (barato, pouca dívida, boa pagadora, queda), abreviações, apelidos de empresas, palavras → termo do Glossário, variações de frases, nomes que não viram personagem | `vocabulario.json` | `chat.py` (`SYN`, `QUALS`, `ABBR`, `ALIAS`, `GLOSS_SYN`, `frase`) |
+| Barato/Caro (valor justo de Graham √(22,5 × LPA × VPA)) | `app.js` → `fairOf` (preço e indicadores do card, respeita o seletor de fonte); o chat faz a mesma conta com o consenso (`chat.fair`) | barra do card (Ações e Grupos), chat |
+| Índice de Medo e Ganância da B3 (0–100, diário desde 1997; faixas e partes) | snapshot `fg` (`scripts/build_fg.py`: COTAHIST, fluxo B3, CDI; rotina diária) → `/api/fg` | velocímetro (`medo.js` → `fgLoad`, `fgBand`), Comparar, chat (`chat.fg_answer`) |
 | Métodos de investimento (Barsi, Bazin, Graham, Buffett, Fórmula Mágica…) | painel ⓘ → seção **Métodos de investimento** | usuário; chat (`chat.method`, critérios em `METHODS`) |
 | Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
 | Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
@@ -97,7 +99,7 @@ apelidos, frases) fica no `vocabulario.json`; em `chat.py` só fica o roteamento
 | `index.html` | estrutura de todas as abas, CSS próprio (design system) e painel ⓘ |
 | `ui.js` | utilitários e componentes compartilhados (carregado antes dos outros scripts) |
 | `app.js` | aba Ações, estado global (`state`) e formatação de indicadores |
-| `grupos.js`, `carteira.js`, `comparar.js`, `previsao.js`, `aluguel.js`, `grafico.js`, `chatui.js` | uma aba/recurso por arquivo |
+| `grupos.js`, `carteira.js`, `medo.js`, `comparar.js`, `previsao.js`, `aluguel.js`, `grafico.js`, `chatui.js` | uma aba/recurso por arquivo |
 | `scripts/` | rotinas que geram snapshots na branch `data` (não rodam no Render) e `build_css.sh` (roda no build) |
 | `tests/` | `test_*.py` (Python), `test_*.js` (Node) e `ui_smoke.cjs` (telas no celular, Playwright) |
 | `.github/workflows/` | `data.yml` (rotina diária de dados), `statusinvest.yml`, `ui-test.yml` (testes e telas em cada PR), `keepalive.yml` |

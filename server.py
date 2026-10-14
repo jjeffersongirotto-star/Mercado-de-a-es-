@@ -831,6 +831,14 @@ def api_metrics():
     d, _ = snapshots.load("metrics", max_mem_age=3 * 3600)
     return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=1800"})
 
+@app.get("/api/fg")
+def api_fg(full: int = 0):
+    """Índice de Medo e Ganância da B3 (snapshot fg, scripts/build_fg.py). Sem full: só os últimos 30 pregões."""
+    d, _ = snapshots.load("fg", max_mem_age=3 * 3600)
+    if not d: return JSONResponse({}, headers={"Cache-Control": "no-store"})
+    if not full: d = dict(d, d=d["d"][-30:], v=d["v"][-30:])
+    return JSONResponse(d, headers={"Cache-Control": "public, max-age=1800"})
+
 @app.get("/api/indices/{name}")
 def api_indices(name: str):
     if name not in history.SGS:
