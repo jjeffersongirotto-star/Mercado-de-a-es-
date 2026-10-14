@@ -155,15 +155,38 @@ def _cota_day(d):
             _cotan[k] = time.time()
             return None
 
+def _h4file(t):
+    """Arquivo completo do histórico B3 de uma ação (branch data): diário desde 1995, mensal, proventos."""
+    r = requests.get(f"{RAW}/history4/{t}.json.gz", timeout=(6, 30))
+    r.raise_for_status()
+    return json.loads(gzip.decompress(r.content))
+
+_h4f = {}
+
+def b3full(t):
+    """Fechamentos diários completos (o bundle do servidor tem só 6 anos) + os pregões novos que b3hist já juntou.
+    Usado pelo Comparar → Medo e Ganância; guardado em memória (até 40 ações) por 12 h."""
+    c = _h4f.get(t)
+    if c and time.time() - c[0] < 12 * 3600:
+        return c[1]
+    d = _h4file(t)["d"]; T, Cc = list(d["t"]), list(d["c"])
+    try:
+        rec = b3hist(t)["d"]
+        for a, b in zip(rec["t"], rec["c"]):
+            if a > T[-1]: T.append(a); Cc.append(b)
+    except Exception as e:
+        log.info("b3full %s: %s", t, e)
+    if len(_h4f) > 40: _h4f.clear()
+    _h4f[t] = (time.time(), {"t": T, "c": Cc})
+    return _h4f[t][1]
+
 def b3hist(t):
     c = _h4.get(t)
     if c and time.time() - c[0] < 3 * 3600:
         return c[1]
     base = c[1] if c else _dload("h4_" + t)
     if not base:
-        r = requests.get(f"{RAW}/history4/{t}.json.gz", timeout=(6, 30))
-        r.raise_for_status()
-        base = json.loads(gzip.decompress(r.content))
+        base = _h4file(t)
     d = base["d"]
     if d["t"]:
         day = datetime.utcfromtimestamp(d["t"][-1]).date() + timedelta(days=1)

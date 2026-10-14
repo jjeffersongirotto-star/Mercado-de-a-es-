@@ -1,23 +1,25 @@
-"""Comparar → Medo e Ganância: o que aconteceu com uma ação da B3 em cada faixa do Índice de Medo e Ganância (snapshot fg).
-Tudo em base mensal (fechamento do mês da ação e índice no último pregão do mês), porque o histórico mensal da B3 vai
-até os anos 1990 (o diário guardado no servidor tem 6 anos). Cálculo leve, feito na hora e guardado em memória por ticker/período."""
-import time
+"""Comparar → Medo e Ganância: como uma ação da B3 reage ao Índice de Medo e Ganância (snapshot fg).
+- Maiores altas e quedas: semanais (5 pregões), com o índice do dia em que a semana começou (histórico diário completo, b3full).
+- Retorno por faixa, topos e fundos, recuperação, defensiva ou de ciclo: mensais (fechamento do mês e índice no último pregão do mês).
+- Gráfico: preço e índice diários nos últimos 6 anos do período e semanais antes disso.
+- Velocímetros: índice da ação e do mercado (hoje, ontem, 1 semana, 1 mês), calculados na rotina diária (scripts/build_fg.py).
+Cálculo leve, feito na hora e guardado em memória por ticker/período."""
+import bisect, time
 from collections import OrderedDict
+from datetime import date, timedelta
 import history
 import snapshots
 
 _C = OrderedDict()
+WEEK = 5  # pregões
 
 
 def _ym(ts):
     return time.strftime("%Y-%m", time.gmtime(ts))
 
 
-def _fg():
-    d = snapshots.load("fg", max_mem_age=3 * 3600)[0] or {}
-    fim = {}
-    for day, v in zip(d.get("d", []), d.get("v", [])): fim[day[:7]] = v  # último pregão de cada mês
-    return fim, d.get("faixas") or [], (d["v"][-1] if d.get("v") else None), (d["d"][-1] if d.get("d") else None), d.get("fetched_at")
+def _ds(ts):
+    return time.strftime("%Y-%m-%d", time.gmtime(ts))
 
 
 def _band(v, fx):
@@ -34,41 +36,70 @@ def _add(ym, n):
     return f"{y:04d}-{m:02d}"
 
 
+def _top(moves, n, worst):
+    """As n maiores variações semanais sem sobreposição (duas semanas escolhidas não dividem pregões)."""
+    used, out = [], []
+    for i, r in sorted(moves, key=lambda x: x[1] if worst else -x[1]):
+        if (r < 0) != worst or any(abs(i - j) < WEEK for j in used): continue
+        used.append(i); out.append((i, r))
+        if len(out) == n: break
+    return out
+
+
 def analyze(t, di, df):
-    fim, fx, now, now_d, at = _fg()
-    if not fim: raise RuntimeError("índice de Medo e Ganância ainda não calculado")
-    key = (t, di, df, at)
+    d = snapshots.load("fg", max_mem_age=3 * 3600)[0] or {}
+    if not d.get("d"): raise RuntimeError("índice de Medo e Ganância ainda não calculado")
+    key = (t, di, df, d.get("fetched_at"))
     if key in _C: _C.move_to_end(key); return _C[key]
-    h = history.b3hist(t)
+    fx, FD, FV = d.get("faixas") or [], d["d"], d["v"]
+    fgat = lambda s: FV[max(0, bisect.bisect_right(FD, s) - 1)] if s >= FD[0] else None  # índice do dia (ou do pregão anterior)
+    fim = {}
+    for day, v in zip(FD, FV): fim[day[:7]] = v  # último pregão de cada mês
+    B = lambda m: _band(fim[m], fx)
+    vel = lambda L, k: L[-1 - k] if len(L) > k else None
+    out = {"t": t, "faixas": fx, "hoje_d": FD[-1],
+           "mercado": [vel(FV, k) for k in (0, 1, 5, 21)], "acao": (d.get("acoes") or {}).get(t)}
+    # ---- diário: maiores altas e quedas semanais e série do gráfico
+    h = history.b3full(t)
+    days = [(_ds(a), c) for a, c in zip(h["t"], h["c"]) if c]
+    ix = [i for i, (s, _) in enumerate(days) if di <= s <= df]
+    mv = [(i, (days[i + WEEK][1] / days[i][1] - 1) * 100) for i in ix if i + WEEK < len(days) and days[i + WEEK][0] <= df]
+    wk = lambda L: [{"d": days[i][0], "d2": days[i + WEEK][0], "r": round(r, 2), "fg": fgat(days[i][0]), "b": _band(fgat(days[i][0]), fx)}
+                    for i, r in L if fgat(days[i][0]) is not None]
+    out["quedas"], out["altas"] = wk(_top(mv, 10, True)), wk(_top(mv, 10, False))
+    cut = (date.fromisoformat(df) - timedelta(days=int(6 * 365.25))).isoformat()  # antes disso: um ponto por semana
+    ser, last_w = [], None
+    for i in ix:
+        s = days[i][0]
+        if s < cut:
+            w = date.fromisoformat(s).isocalendar()[:2]
+            if ser and w == last_w: ser[-1] = i
+            else: ser.append(i)
+            last_w = w
+        else: ser.append(i)
+    ser = [i for i in ser if fgat(days[i][0]) is not None]
+    out["serie"] = {"d": [days[i][0] for i in ser], "c": [days[i][1] for i in ser], "fg": [fgat(days[i][0]) for i in ser]}
+    # ---- mensal
     C = {}
-    for ts, c in zip(h["m"]["t"], h["m"]["c"]):
-        if c: C[_ym(ts)] = c
-    divs = {}
-    for x in h.get("divs") or []: divs[_ym(x[0])] = divs.get(_ym(x[0]), 0) + x[1]
+    for a, c in zip(h["t"], h["c"]):
+        if c: C[_ym(a)] = c  # fechamento do mês = último pregão do mês
     try:
         ib = history.get("IBOV", "m"); IB = {_ym(a): b for a, b in zip(ib["t"], ib["c"]) if b}
     except Exception:
         IB = {}
     ms = [m for m in sorted(C) if di[:7] <= m <= df[:7] and m in fim]
+    out["per"], out["n"] = [ms[0] if ms else None, ms[-1] if ms else None], len(ms)
     ret = lambda D, m, n=1: (D[_add(m, n)] / D[m] - 1) * 100 if m in D and _add(m, n) in D else None
-    B = lambda m: _band(fim[m], fx)
-    # 1–2. maiores quedas e altas do mês × índice no fim do mês anterior
-    mv = [(m, ret(C, _add(m, -1)), fim.get(_add(m, -1))) for m in ms]
-    mv = [(m, round(r, 2), f, _band(f, fx)) for m, r, f in mv if r is not None and f is not None]
-    top = lambda L: [{"m": m, "r": r, "fg": f, "b": b} for m, r, f, b in L]
-    out = {"t": t, "faixas": fx, "per": [ms[0] if ms else None, ms[-1] if ms else None], "n": len(ms),
-           "quedas": top(sorted(mv, key=lambda x: x[1])[:10]), "altas": top(sorted(mv, key=lambda x: -x[1])[:10])}
-    # 3. retorno de quem comprou em cada faixa (1, 6, 12 meses) e 7. DY dos 12 meses seguintes
-    fa = [{"b": i, "n": 0, "r1": [], "r6": [], "r12": [], "dy": []} for i in range(len(fx))]
+    # retorno de quem comprou em cada faixa (1, 6, 12 meses)
+    fa = [{"b": i, "n": 0, "r1": [], "r6": [], "r12": []} for i in range(len(fx))]
     for m in ms:
         x = fa[B(m)]; x["n"] += 1
         for n in (1, 6, 12):
             r = ret(C, m, n)
             if r is not None: x[f"r{n}"].append(r)
-        if _add(m, 12) in C: x["dy"].append(sum(divs.get(_add(m, k), 0) for k in range(1, 13)) / C[m] * 100)
     out["faixa"] = [{"b": x["b"], "n": x["n"], "r1": _avg(x["r1"]), "r6": _avg(x["r6"]), "r12": _avg(x["r12"]), "n12": len(x["r12"]),
-                     "up12": sum(1 for r in x["r12"] if r > 0), "dy": _avg(x["dy"]) if divs else None, "ndy": len(x["dy"])} for x in fa]  # sem proventos no histórico: sem DY
-    # 4. mínimas e máximas de 12 meses: em que faixa estava o índice
+                     "up12": sum(1 for r in x["r12"] if r > 0)} for x in fa]
+    # mínimas e máximas de 12 meses: em que faixa estava o índice
     lo, hi = [0] * len(fx), [0] * len(fx)
     for m in ms:
         w = [C[_add(m, -k)] for k in range(12) if _add(m, -k) in C]
@@ -76,7 +107,7 @@ def analyze(t, di, df):
         if C[m] <= min(w): lo[B(m)] += 1
         if C[m] >= max(w): hi[B(m)] += 1
     out["fundos"], out["topos"] = lo, hi
-    # 5. depois de entrar em Medo extremo, quantos meses até voltar ao preço do mês anterior
+    # depois de entrar em Medo extremo, quantos meses até voltar ao preço do mês anterior
     rec, aberto = [], 0
     for m in ms:
         p = _add(m, -1)
@@ -85,7 +116,7 @@ def analyze(t, di, df):
             if j is None: aberto += 1
             else: rec.append(j)
     out["recup"] = {"n": len(rec) + aberto, "media": _avg(rec), "pior": max(rec) if rec else None, "aberto": aberto}
-    # 6. defensiva ou de ciclo: variação média no mês em Medo (faixas 0–1) e em Ganância (3–4), ação × Ibovespa
+    # defensiva ou de ciclo: variação média no mês em Medo (faixas 0–1) e em Ganância (3–4), ação × Ibovespa
     def dfs(sel):
         a, i = [], []
         for m in ms:
@@ -94,12 +125,10 @@ def analyze(t, di, df):
                 if ra is not None and ri is not None: a.append(ra); i.append(ri)
         return {"acao": _avg(a), "ibov": _avg(i), "n": len(a)}
     out["defe"] = {"medo": dfs({0, 1}), "gan": dfs({len(fx) - 2, len(fx) - 1})}
-    # 8. situação de hoje: outras vezes na mesma faixa -> 3 meses seguintes
-    hb = _band(now, fx) if now is not None else None
+    # situação de hoje: outras vezes na mesma faixa (meses do período) -> 3 meses seguintes
+    hb = _band(FV[-1], fx)
     r3 = [ret(C, m, 3) for m in ms if B(m) == hb]; r3 = [r for r in r3 if r is not None]
-    out["hoje"] = {"v": now, "d": now_d, "b": hb, "n": len(r3), "up": sum(1 for r in r3 if r > 0), "dn": sum(1 for r in r3 if r <= 0), "r3": _avg(r3)}
-    # 9. gráfico: preço e índice no fim de cada mês
-    out["serie"] = {"m": ms, "c": [C[m] for m in ms], "fg": [fim[m] for m in ms]}
+    out["hoje"] = {"v": FV[-1], "d": FD[-1], "b": hb, "n": len(r3), "up": sum(1 for r in r3 if r > 0), "dn": sum(1 for r in r3 if r <= 0), "r3": _avg(r3)}
     _C[key] = out
     while len(_C) > 300: _C.popitem(last=False)
     return out
