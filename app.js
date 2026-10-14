@@ -205,7 +205,7 @@ function clearFilters() { prefs.values = {}; changed(); renderFilterUI(); }
 // Opções: Alta do dia, indicadores com posição em Ordenar (campo sort do servidor) e De A a Z
 function buildSortOptions() {
   const sel = $('#sortKey');
-  const opts = [{ key: 'var', label: 'Alta do dia (%)' }, ...state.data.fields.filter(f => f.sort).sort((a, b) => a.sort - b.sort), { key: 'nome', label: 'De A a Z' }];
+  const opts = [{ key: 'var', label: 'Alta do dia (%)' }, { key: 'fair', label: 'Barato/Caro (%)' }, ...state.data.fields.filter(f => f.sort).sort((a, b) => a.sort - b.sort), { key: 'nome', label: 'De A a Z' }];
   sel.innerHTML = opts.map(o => `<option value="${o.key}">${esc(o.label)}</option>`).join('');
   if (!opts.some(o => o.key === state.sortKey)) { state.sortKey = 'var'; state.sortDir = -1; updateSortDir(); }
   sel.value = state.sortKey;
@@ -228,20 +228,20 @@ function updateSortDir() {  // no celular só o ícone (o nome fica no aria-labe
   $('#sortDir').innerHTML = `<svg class="sd-ic" viewBox="0 0 16 18" width="16" height="18" aria-hidden="true"><path class="${up ? 'on' : ''}" d="M4 7 8 3l4 4"/><path class="${up ? '' : 'on'}" d="M4 11l4 4 4-4"/></svg>`;  // só as setas; o sentido fica no título/aria-label
   $('#sortDir').setAttribute('aria-label', t); $('#sortDir').title = t + ' (toque para inverter)';
 }
-// Confiança do consenso: N = fontes com dados da empresa; A = fontes que nunca ficaram fora da maioria
-// em nenhum indicador com maioria (âmbar). Indicadores sem maioria (vermelho) e de bancos não contam.
+// Confiança do consenso: N = fontes com dados da empresa; A = fontes que concordam com a maioria em todos os indicadores.
+// Fica de fora quem diverge da maioria (âmbar) ou tem valor num indicador sem maioria (vermelho: as fontes discordam). Bancos não contam.
 function conf(r) {
   if (r._cf) return r._cf;
   const S = r.S || {}, ids = Object.keys(S), bad = new Set(), bk = new Set(r.bk || []);
   for (const [k, st] of Object.entries(r.st || {})) {
-    if (st !== 'amb' || bk.has(k)) continue;
-    const ag = (r.ag || {})[k] || [], xv = (r.xv || {})[k] || [];
+    if ((st !== 'amb' && st !== 'red') || bk.has(k)) continue;
+    const ag = st === 'red' ? [] : (r.ag || {})[k] || [], xv = (r.xv || {})[k] || [];
     for (const id of ids) if (S[id] && S[id][k] != null && !ag.includes(id) && !xv.includes(id)) bad.add(id);
   }
   return (r._cf = { A: ids.length - bad.size, N: ids.length });
 }
-const confTxt = (r) => { const c = conf(r); return c.N < 2 ? `${c.N} fonte` : c.A === c.N ? `${c.N}/${c.N} fontes` : `${c.A}/${c.N} com divergência`; };
-const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : k === 'var' ? r.var : k === 'conf' ? (c => c.N ? c.A / c.N + c.N / 1000 : null)(conf(r)) : val(r, k);
+const confTxt = (r) => { const c = conf(r); return c.N < 2 ? `${c.N} fonte` : `${c.A}/${c.N} concordam`; };
+const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : k === 'var' ? r.var : k === 'conf' ? (c => c.N ? c.A / c.N + c.N / 1000 : null)(conf(r)) : k === 'fair' ? (f => f.why ? null : f.pct)(fairOf(r)) : val(r, k);
 
 // Ordem das buscas: 0 ticker começa com · 1 ticker contém · 2 nome · 3 setor · 4 descrição/atividade · 9 sem relação
 function searchRank(r, q) { return ((typeof FAVS !== 'undefined' && FAVS.has(r.ticker)) ? 0 : 100) + searchRank0(r, q); }
@@ -386,7 +386,7 @@ function blockHtml(r) {
                  (nRes ? `<span class="hb hb-res" title="${nRes} indicador(es) com maioria, mas alguma fonte discorda">maioria ${nRes}</span>` : '') +
                  (nBank ? `<span class="hb hb-bank" title="${nBank} indicador(es) baseados em EBIT/receita não comparáveis (banco/seguradora)">banco ${nBank}</span>` : '') +
                  (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) em que CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado">aj ${nAdj}</span>` : '');
-  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag ${conf(r).A === conf(r).N ? 'ctag-ok' : 'ctag-dv'}" title="Fontes que concordam com a maioria em todos os indicadores / fontes com dados">${confTxt(r)}</span>` : '');
+  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag ${conf(r).A === conf(r).N ? 'ctag-ok' : 'ctag-dv'}" title="Fontes que concordam com a maioria em todos os indicadores / fontes com dados (indicador sem maioria = fontes discordam)">${confTxt(r)}</span>` : '');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
@@ -396,7 +396,7 @@ function blockHtml(r) {
       ${tags || r.macro || r.ix ? `<div class="flex flex-wrap items-center gap-1 mt-1">${tags}${r.macro && r.macro !== 'Outros' ? `<span class="ctag ctag-sec">${esc(r.macro)}</span>` : ''}${ixTags(r)}</div>` : ''}
       <div class="flex items-center gap-3 mt-1">
         <div class="min-w-0 flex-1">
-          <div class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</div>
+          <div class="flex items-center gap-1 min-w-0"><span class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</span><button type="button" class="gl-i" data-co="${r.ticker}" aria-label="Sobre ${esc(r.nome || r.ticker)}">ⓘ</button></div>
           <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
         </div>
         ${fairHtml(r)}<button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
@@ -423,6 +423,8 @@ function setBlockOpen(art, open) {
   btn.firstElementChild.textContent = open ? '−' : '+';
 }
 document.addEventListener('click', (e) => {
+  const co = e.target.closest('[data-co]');  // ⓘ da empresa
+  if (co) { const r = state.rowMap[co.dataset.co]; if (r) uiAlert('', { title: `${esc(r.ticker)} · ${esc(r.nome || '')}`, html: aboutHtml(r) }); return; }
   const head = e.target.closest('.blk-head'); if (!head || e.target.closest('.gsel') || e.target.closest('[data-gl]')) return;
   if (window.getSelection && String(window.getSelection()).length) return;
   const art = head.closest('.blk'); setBlockOpen(art, !art.classList.contains('open'));
@@ -547,10 +549,31 @@ $('#sourceMenu').addEventListener('click', (e) => {
 // ---------- Universo: marcas do servidor (regra em scripts/universe.py): il = ilíquida sem bons resultados, k1 = 1 ticker por empresa ----------
 const tradable = (rows) => rows.filter(r => !r.il);
 const universe = (rows) => rows.filter(r => r.k1);
-let PROFILES = null;
+let PROFILES = null, EMPRESAS = {};
 async function loadProfiles(rows) {
-  if (!PROFILES) { try { const j = await (await fetch('/api/profiles')).json(); PROFILES = j.profiles || {}; } catch (e) { PROFILES = {}; } }
+  if (!PROFILES) { try { const j = await (await fetch('/api/profiles')).json(); PROFILES = j.profiles || {}; EMPRESAS = j.empresas || {}; } catch (e) { PROFILES = {}; } }
   for (const r of rows) { const p = PROFILES[r.ticker]; if (p) { r.desc = p.d; r.psetor = p.s; r.pind = p.i; } }
+}
+// ⓘ ao lado do nome: o que é a empresa (conhecimento.json → empresas; sem ele, início do perfil), ramo e pontos fortes.
+// Pontos fortes = indicadores do card entre os 25% melhores do mesmo setor (mín. 5 empresas com o dado) e preço abaixo do valor justo.
+const STRONG = ['roe', 'roic', 'mliq', 'dy', 'dlpl', 'liqcorr', 'cresc5a', 'lucro5a'];
+function strengths(r) {
+  const peers = universe(state.data.rows).filter(x => x.macro === r.macro), out = [];
+  for (const k of STRONG) {
+    const f = state.fieldMap[k], v = val(r, k); if (!f || v == null) continue;
+    const vs = peers.map(x => val(x, k)).filter(x => x != null); if (vs.length < 5) continue;
+    const low = f.dir === 'low', better = vs.filter(x => low ? x < v : x > v).length / vs.length;
+    if (better <= .25 && (low ? v >= 0 : v > 0)) out.push([better, `${f.label} ${fmt(v, f.unit, k, r.cur)} (entre os 25% ${low ? 'menores' : 'maiores'} do setor)`]);
+  }
+  const fv = fairOf(r); if (!fv.why && fv.pct >= 20) out.push([0, `Preço abaixo do valor justo de Graham (Barato +${F0.format(fv.pct)}%)`]);
+  return out.sort((a, b) => a[0] - b[0]).slice(0, 3).map(x => x[1]);
+}
+function aboutHtml(r) {
+  const e = EMPRESAS[r.ticker.slice(0, 4)], d = e ? e.slice(e.indexOf(':') + 1).trim() : (r.desc || '').split(/(?<=\.)\s/).reduce((a, x) => a.length < 160 ? a + (a ? ' ' : '') + x : a, '').slice(0, 320);
+  const pf = strengths(r);
+  return `<p class="pvd-note">${esc(d ? d.charAt(0).toUpperCase() + d.slice(1) : 'Sem descrição desta empresa.')}</p>
+    <p class="pvd-note"><b>Ramo:</b> ${esc([r.macro, r.subsetor || r.setor].filter(Boolean).join(' · ') || '—')}</p>
+    <p class="pvd-note"><b>Pontos fortes:</b></p><ul class="pvd-note list-disc pl-5">${pf.length ? pf.map(x => `<li>${esc(x)}</li>`).join('') : '<li>Nenhum indicador entre os 25% melhores do setor.</li>'}</ul>`;
 }
 // ---------- Setor (macro) e classificação ----------
 const SECTORS = ['Financeiro', 'Utilidade Pública', 'Materiais Básicos & Commodities', 'Petróleo, Gás e Biocombustíveis', 'Consumo Cíclico', 'Consumo Não Cíclico', 'Agronegócio', 'Saúde', 'Tecnologia & Comunicações', 'Outros'];
