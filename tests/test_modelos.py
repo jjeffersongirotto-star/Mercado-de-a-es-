@@ -105,6 +105,15 @@ def test_comparar_media_e_empresas_sem_preco():
     assert [out["res"][k]["media"] for k in out["ord_media"]] == sorted((r["media"] for r in out["res"]), reverse=True)
 
 
+def test_lucro_no_balanco_bloqueia_so_algoritmo_3_meses_e_tendencia():
+    sn = snap({"AAA3": {"c": 10.0, "m2": 10, "p1": 600, "p3": 600}})
+    sn["a"]["AAA3"]["lp"] = [0] * NW  # prejuízo no último balanço em todas as semanas
+    D = modelos.build(sn, cdi())
+    me = months(D, "2020-09", "2021-06"); ap = [1000.0] + [0.0] * (len(me) - 1); w = [0.0] * len(me)
+    c = {m: modelos.simulate(D, m, [0], me, ap, w)["c"][0] for m in ("alg1", "alg3", "tendencia", "media200")}
+    assert c["alg3"] == 0 and c["tendencia"] == 0 and c["alg1"] == 1 and c["media200"] == 1, c
+
+
 def test_run_todos_ordena_grupos_primeiro():
     D = modelos.build(snap({"AAA3": {"c": [10.0 + k * .1 for k in range(NW)]}, "BBB3": {"c": 10.0}}), cdi())
     out = modelos.run(D, {"di": "2020-09", "df": "2021-12", "ap": [1000] + [100] * 15, "ticker": "*", "modelo": "*", "universo": ["AAA3", "BBB3"],

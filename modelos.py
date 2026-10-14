@@ -15,8 +15,8 @@ MODELOS = [
     {"id": "medo_acao", "n": "Aporta com medo da ação", "vende": False},
     {"id": "media200", "n": "Aporta acima da média de 200 dias", "vende": False},
     {"id": "alg1", "n": "Algoritmo 1 mês", "vende": True, "p": "p1", "min": 12},
-    {"id": "alg3", "n": "Algoritmo 3 meses", "vende": True, "p": "p3", "min": 12},
-    {"id": "tendencia", "n": "Tendência", "vende": True, "min": 4},
+    {"id": "alg3", "n": "Algoritmo 3 meses", "vende": True, "p": "p3", "min": 12, "lucro": True},
+    {"id": "tendencia", "n": "Tendência", "vende": True, "min": 4, "lucro": True},
     {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
 ]
 MOD = {m["id"]: m for m in MODELOS}
@@ -34,6 +34,7 @@ HIB = ("hold", "alg1", "alg3", "media200")
 HIB_SEM, HIB_ETA = 52, 5  # janela do acerto recente (semanas) e o quanto o melhor recebe mais peso
 HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
 FORTE_R12 = 100   # Tendência: entrada no rodízio só com alta de pelo menos 10% em 12 meses (×1000)
+# "lucro": só compra se o último balanço anual publicado teve lucro (fund.json); no teste 2006–2026 ajudou só estes dois modelos
 MARGEM = {"alg1": 20, "alg3": 20, "tendencia": 100}  # rodízio: vantagem mínima para trocar (chance ×1000; alta 12 m ×1000)
 
 _D = {"at": 0, "key": None, "d": None}
@@ -46,12 +47,15 @@ def build(snap, cdi):
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda: np.full((N, T), np.nan)
     C, DV, SI, M2, R12, P1, P3 = (arr() for _ in range(7))
+    LP = np.ones((N, T), bool)
     for k, t in enumerate(tick):
         a = snap["a"][t]; i0 = a["i0"]
         for M, key in ((C, "c"), (SI, "si"), (M2, "m2"), (R12, "r12"), (P1, "p1"), (P3, "p3")):
             v = a.get(key) or []
             M[k, i0:i0 + len(v)] = [np.nan if x is None else x for x in v]
         DV[k, i0:] = 0
+        lp = a.get("lp")
+        if lp: LP[k, i0:i0 + len(lp)] = [x != 0 for x in lp]  # 0 = prejuízo no último balanço; sem balanço = liberado
         for j, v in (a.get("dv") or {}).items(): DV[k, i0 + int(j)] = v
     import pandas as pd
     fav, MED = {}, {}
@@ -78,7 +82,7 @@ def build(snap, cdi):
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb,
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb,
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at")}
 
@@ -120,6 +124,11 @@ def _span(D, di, df):
 
 def _signals(D, mid, idx, i):
     """(fica comprado?, pode aplicar?) de cada ação em idx com os dados da semana i (sinal sem estado)."""
+    s = _signal(D, mid, idx, i)
+    return s & D["LP"][idx, i] if MOD[mid].get("lucro") else s
+
+
+def _signal(D, mid, idx, i):
     n = len(idx)
     if mid == "hold": return np.ones(n, bool)
     if mid == "medo_mercado": return np.full(n, bool(D["MI"][i] < MEDO))
@@ -238,9 +247,10 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
     meset = {w: j for j, w in enumerate(me)}; A.cash += ap[0]; mg = {}  # resultado das vendas do mês por empresa (para dividir o IR)
     pct = lambda x: f"{x / 10:.1f}%".replace(".", ",")
 
-    def score(g, i):
-        if alg: return D["P"][mod["p"]][g, i], bool(D["FAV"][mod["p"]][g, i])
-        return D["R12"][g, i], bool(D["M2"][g, i] > 0)
+    def score(g, i):  # (força do sinal, favorável?); modelos com "lucro": só com lucro no último balanço publicado
+        ok = bool(D["LP"][g, i]) or not mod.get("lucro")
+        if alg: return D["P"][mod["p"]][g, i], bool(D["FAV"][mod["p"]][g, i]) and ok
+        return D["R12"][g, i], bool(D["M2"][g, i] > 0) and ok
 
     def strong(g, i):  # bom momento para comprar: chance bem acima da mediana do ano (algoritmos) ou alta forte em 12 meses (Tendência)
         if alg: return D["P"][mod["p"]][g, i] - D["MED"][mod["p"]][g, i] >= MARGEM[mid]
