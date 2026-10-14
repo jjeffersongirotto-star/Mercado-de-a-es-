@@ -15,7 +15,7 @@ PY="${PYTHON:-}"
 if [ -z "$PY" ]; then
   if [ -x /workspace/b3-api/.venv/bin/python ]; then PY=/workspace/b3-api/.venv/bin/python; else PY=python3; fi
 fi
-STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics fg modelos kb}"
+STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics fg fund modelos kb}"
 TMP="$(mktemp -d)"
 git clone -q --depth 1 --branch data "$REPO_URL" "$TMP" 2>/dev/null || { git -C "$TMP" init -q -b data; git -C "$TMP" remote add origin "$REPO_URL"; }
 mkdir -p "$TMP/data"
@@ -41,6 +41,7 @@ for s in $STEPS; do
     metrics)        run "Métricas Grupos" "$PY" "$HERE/scripts/build_metrics.py" "$TMP/data" ;;
     dadosdemercado) run "Dados de Mercado" "$PY" "$HERE/scripts/fetch_dadosdemercado.py" "$TMP/data" ;;
     fg)             run "Medo e Ganância" "$PY" "$HERE/scripts/build_fg.py" "$TMP/data" ;;
+    fund)           run "Fundamentos anuais CVM" "$PY" "$HERE/scripts/build_fund.py" "$TMP/data" "${CVM_CACHE:-/tmp/cvmraw}" ;;
     modelos)        run "Modelos da Previsão" "$PY" "$HERE/scripts/build_modelos.py" "$TMP/data" ;;
     kb)             run "Base do chat" "$PY" "$HERE/scripts/build_kb.py" "$TMP/data" ;;
   esac

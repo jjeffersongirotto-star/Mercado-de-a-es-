@@ -87,6 +87,13 @@ def pivot(df, flt):
     d = df[flt]
     return {(c, k): v for c, k, v in zip(d["CNPJ_CIA"], d["CD_CONTA"], d["v"])}
 
+def tickers(fca, year):
+    """Ticker negociado hoje -> CNPJ da companhia (cadastro FCA da CVM). Usado também por build_fund.py."""
+    vm = read(fca, f"fca_cia_aberta_valor_mobiliario_{year}.csv")
+    vm = vm[vm["Codigo_Negociacao"].notna() & vm["Data_Fim_Negociacao"].isna()]
+    return {str(t).strip().upper(): c for t, c in zip(vm["Codigo_Negociacao"], vm["CNPJ_Companhia"]) if 4 < len(str(t).strip()) <= 7}
+
+
 def main(outdir, cache):
     os.makedirs(cache, exist_ok=True)
     today = date.today()
@@ -132,9 +139,7 @@ def main(outdir, cache):
             tot = pd.to_numeric(r.get("QT_ACAO_TOTAL_CAP_INTEGR"), errors="coerce")
             tes = pd.to_numeric(r.get("QT_ACAO_TOTAL_TESOURO"), errors="coerce")
             if tot and tot > 0: shares[r["CNPJ_CIA"]] = float(tot - (tes if tes == tes else 0))
-    vm = read(fca, f"fca_cia_aberta_valor_mobiliario_{today.year}.csv")
-    vm = vm[vm["Codigo_Negociacao"].notna() & vm["Data_Fim_Negociacao"].isna()]
-    tick2cnpj = {str(t).strip().upper(): c for t, c in zip(vm["Codigo_Negociacao"], vm["CNPJ_Companhia"]) if 4 < len(str(t).strip()) <= 7}
+    tick2cnpj = tickers(fca, today.year)
 
     def acc(cnpj):
         """Valores TTM e balanço mais recente para a empresa."""
