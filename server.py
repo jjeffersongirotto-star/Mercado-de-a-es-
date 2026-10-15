@@ -285,7 +285,7 @@ def build():
         p, desc = snapshots.load(name)
         snaps[sid] = (p or {}).get("rows") or {}
         status[name] = f"{desc} ({len(snaps[sid])} papéis)" if p else desc
-    fund = ((snapshots.load("fund")[0]) or {}).get("a") or {}  # lucro anual (scripts/build_fund.py) -> lpa3
+    fda = ((snapshots.load("fund")[0]) or {}).get("a") or {}  # lucro anual (scripts/build_fund.py) -> lpa3
 
     rows, n_red = [], 0
     for t, f in fund.items():
@@ -327,7 +327,7 @@ def build():
         var = names.get(t, {}).get("var")
         if var is None and t in tv: var = tv[t]["m"].get("var")
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
-                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, "lpa3": lpa_medio(fund.get(t), sh)})
+                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, "lpa3": lpa_medio(fda.get(t), sh)})
     rows.sort(key=lambda r: -((r["S"].get("tv") or {}).get("liq2m") or 0))
     now = datetime.now(timezone.utc)
     return {
