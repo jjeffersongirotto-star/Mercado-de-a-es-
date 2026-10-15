@@ -63,7 +63,7 @@
     $c('#cmpFg').classList.toggle('hidden', !fgm); $c('#cmpMod').classList.toggle('hidden', !mod);
     root.querySelectorAll('[data-ct]').forEach(b => b.classList.toggle('on', b.dataset.ct === S.ct));
     root.querySelectorAll('[data-vm]').forEach(b => b.classList.toggle('on', b.dataset.vm === S.vm));
-    $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br' || fgm || mod);  // "Comparar tudo" usa o histórico da B3: só no Brasil
+    $c('#cmpAll').classList.toggle('hidden', S.ct !== 'br' || fgm);  // "Comparar tudo" usa o histórico da B3: só no Brasil (em Modelos = Empresas Todas)
     $c('#cmpPrin').innerHTML = ref ? `<span class="cmp-chip ref" style="--cc:${COLORS[0]}">${esc(label(ref))}<b class="cmp-pv ${vals[ref] > 0 ? 'up' : vals[ref] < 0 ? 'dn' : ''}">${vals[ref] != null ? (ind ? F2.format(vals[ref]) : pc(vals[ref])) : ''}</b><button type="button" data-rm="${esc(ref)}" aria-label="Remover principal">✕</button></span>${S.items.length > 1 ? '<button type="button" id="cmpSwap" class="cmp-swap" title="Trocar principal" aria-label="Trocar principal">⇅</button>' : ''}` : '';
     $c('#cmpP').closest('.cmp-srch').classList.toggle('hidden', !!ref);
     $c('#cmpChips').innerHTML = S.items.slice(1).map((id, j) => `<span class="cmp-chip${ind && isIdx(id) ? ' off' : ''}" style="--cc:${COLORS[(j + 1) % COLORS.length]}">${esc(label(id))}<button type="button" data-rm="${esc(id)}" aria-label="Remover ${esc(label(id))}">✕</button></span>`).join('');
@@ -270,37 +270,43 @@
   window.modTables = (d, mv, nm, only) => {
     const N = (i) => esc(nm[d.m[i]] || d.m[i]), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
     const posOf = (ord) => { const o = {}; ord.forEach((i, p) => { o[i] = p; }); return o; };
-    const tab = (h, body) => `<div class="pv-scroll"><table class="gtab cmp-mt" data-srt><thead><tr>${h.map(([l, k]) => thSort(l, k)).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+    // CDB e Ouro (modelos.REF): referência fixa no topo, fora das colocações
+    const ref = (cells) => (d.ref || []).length ? `<tbody class="ref">${d.ref.map(r => `<tr class="pvd-ref tap" data-mo="|${r.m}"><td><b>${esc(r.t)}</b><span class="pvd-m">referência</span></td>${cells(r).map(h => `<td>${h}</td>`).join('')}</tr>`).join('')}</tbody>` : '';
+    const tab = (h, body, rc) => `<div class="pv-scroll"><table class="gtab cmp-mt" data-srt><thead><tr>${h.map(([l, k]) => thSort(l, k)).join('')}</tr></thead>${rc ? ref(rc) : ''}<tbody>${body}</tbody></table></div>`;
     const td = (v, html, cls = '') => `<td data-v="${v ?? ''}" class="${cls}">${html}</td>`;
+    const rp = (r) => `<span class="${cl(r.pct)}">${pp(r.pct)}</span>`, rv = (r) => r.v == null ? '—' : brl.format(r.v);
     if (mv === 'media') {
       const ps = posOf(d.ord_media);
-      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, brl.format(R[i].vmedio))}</tr>`).join(''));
+      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, brl.format(R[i].vmedio))}</tr>`).join(''), r => [rp(r), rv(r)]);
     }
     if (mv === 'emp') {
       const cols = d.ord_pos.filter(i => !only || d.m[i] === only);
-      return tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
+      const rl = (d.ref || []).map(r => `<button type="button" class="pv-lnk" data-mo="|${r.m}">${esc(r.t)}</button> ${rp(r)}`).join(' · ');
+      return (rl ? `<p class="pvd-note">Referências (iguais para todas as empresas): ${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
     }
     if (mv === 'pos') {  // pontos por colocação: 1º = 14, 2º = 12 … 8º = 0 (modelos.ranking)
       const ps = posOf(d.ord_pts);
       return tab([['Modelo', 'm']].concat(d.m.map((_, p) => [`${RK(p)}${p + 1}º`, 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
-        d.ord_pts.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''));
+        d.ord_pts.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''), r => d.m.map(() => '—').concat(['—', '—', rp(r)]));
     }
     const ord = R.map((_, i) => i).sort((a, b) => R[b].mediana - R[a].mediana), ps = posOf(ord);
-    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior, RK(R[i].pior - 1) + R[i].pior + 'º')}</tr>`).join(''));
+    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior, RK(R[i].pior - 1) + R[i].pior + 'º')}</tr>`).join(''), r => [rp(r), '—', '—']);
   };
+  window.modRefNote = (d) => (d.ref || []).map(r => `${esc(r.t)}: ${esc(r.nota)}.`).join(' ');
   window.modRK = (p) => RK(p);
   // ---------- Modelos: todos os modelos da Previsão nas empresas escolhidas (simulação do servidor: modelos.compare) ----------
   let MD = null, MN = {};
   const MV = [['media', 'Média'], ['emp', 'Por empresa'], ['pos', 'Colocações'], ['con', 'Consistência']];
   async function modRun(my) {
     const box = $c('#cmpMod'), t = S.items.filter(x => !isIdx(x) && cOf(x) === 'br').map(tOf);
-    if (S.mu === 'sel' && !t.length) { box.innerHTML = '<p class="gt-help">Escolha uma ou mais ações da B3 (ou Todas / 5 maiores de cada setor em Empresas) e toque em Pesquisar.</p>'; return; }
+    const u = S.all ? 'all' : S.mu;  // Comparar tudo: todas as empresas; Voltar: volta às Empresas escolhidas
+    if (u === 'sel' && !t.length) { box.innerHTML = '<p class="gt-help">Escolha uma ou mais ações da B3 (ou Todas / 5 maiores de cada setor em Empresas) e toque em Pesquisar.</p>'; return; }
     box.innerHTML = loaderHTML('Simulando os modelos…');
     if (!Object.keys(MN).length) { try { const m = await (await fetch('/api/modelos')).json(); (m.modelos || []).forEach(x => { MN[x.id] = x.n; }); } catch (e) { } }
     let d = null;
     for (let k = 0; k < 20 && my === seq; k++) {
       try {
-        const r = await fetch('/api/modelos/comparar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ u: S.mu, t, di: S.di, df: S.df, ini: S.ini, ap: S.ap }) });
+        const r = await fetch('/api/modelos/comparar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ u, t, di: S.di, df: S.df, ini: S.ini, ap: S.ap }) });
         if (r.status === 202) { await new Promise(z => setTimeout(z, 3000)); continue; }
         d = await r.json(); break;
       } catch (e) { await new Promise(z => setTimeout(z, 3000)); }
@@ -312,7 +318,7 @@
   function modHtml() {
     const d = MD, emp = S.mv === 'emp';
     return `<div class="gt-tabs" role="tablist">${MV.map(([k, l]) => `<button type="button" data-mv="${k}" class="${S.mv === k ? 'on' : ''}">${l}</button>`).join('')}</div>${modTables(d, S.mv, MN)}
-      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · ${d.t.length} de ${d.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(d.apT)} por empresa · lucro = (valor final − aportado) ÷ aportado.${emp ? ' Toque num valor para ver o mês a mês na Previsão.' : ''}</p>`;
+      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · ${d.t.length} de ${d.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(d.apT)} por empresa · lucro = (valor final − aportado) ÷ aportado. ${modRefNote(d)}${emp ? ' Toque num valor para ver o mês a mês na Previsão.' : ''}</p>`;
   }
   let LAST = null;
   const draw = () => LAST && gcRender(...LAST, undefined, { mode: S.vm, cross: true });
@@ -337,7 +343,11 @@
       if (e.target.closest('#cmpGo')) { S.all = false; all(); return; }
       const mv = e.target.closest('[data-mv]'); if (mv && MD) { S.mv = mv.dataset.mv; save(); $c('#cmpMod').innerHTML = modHtml(); return; }
       const mo = e.target.closest('[data-mo]');
-      if (mo && MD) { const [t, m] = mo.dataset.mo.split('|'); if (window.pvOpen) pvOpen({ t, m, di: MD.ini, df: MD.fim, ini: S.ini, ap: S.ap }); return; }  // Pesquisar: volta do "Comparar tudo" e compara só os escolhidos
+      if (mo && MD) {  // mês a mês na Previsão; "‹ Voltar ao Comparar" volta para esta mesma tela, sem pesquisar de novo
+        const [t, m] = mo.dataset.mo.split('|'), y = window.scrollY;
+        if (window.pvOpen) pvOpen({ t, m, di: MD.ini, df: MD.fim, ini: S.ini, ap: S.ap, back: () => { keep = true; showTab('comparar'); requestAnimationFrame(() => window.scrollTo(0, y)); } });
+        return;
+      }  // Pesquisar: volta do "Comparar tudo" e compara só os escolhidos
       const vm = e.target.closest('[data-vm]'); if (vm) { S.vm = vm.dataset.vm; chips(); save(); draw(); return; }
       const fl = e.target.closest('[data-ct]');
       if (fl) {  // país escolhido: só ações dele (e seus índices); 🌐 mantém tudo
@@ -371,6 +381,7 @@
     root.addEventListener('input', (e) => { const k = e.target.dataset.q; if (k) { S[k] = e.target.value; cols(); } });
     all();
   }
-  document.addEventListener('tabshow', (e) => { if (e.detail === 'comparar') { if (!built) build(); else if (S.items.length) compute(); } });
+  let keep = false;  // volta da Previsão (‹ Voltar ao Comparar): mantém o resultado na tela
+  document.addEventListener('tabshow', (e) => { if (e.detail === 'comparar') { if (!built) build(); else if (keep) keep = false; else if (S.items.length) compute(); } });
   if (!document.querySelector('[data-tabpane="comparar"]').classList.contains('hidden')) build();
 })();

@@ -88,7 +88,7 @@ if (typeof document !== 'undefined') {
   bind('pvRm', v => { st.rm = v; st.ra = m2a(v); }, 'pvRa', ['ra', 2]); bind('pvRa', v => { st.ra = v; st.rm = a2m(v); }, 'pvRm', ['rm', 3]);
   // 1º toque seleciona tudo (digitar substitui); toque seguinte posiciona o cursor normalmente
   document.querySelector('[data-tabpane="previsao"]').addEventListener('focusin', (e) => {
-    const t = e.target; if (!t.matches('input.pv-in:not([type=month])')) return;
+    const t = e.target; if (!t.matches('input.pv-in:not(.ud-in)')) return;  // datas: calendário do site (ui.js)
     try { t.select(); } catch (er) { } t.dataset.fsel = '1';
     setTimeout(() => { if (t.dataset.fsel) { try { t.select(); } catch (er) { } } }, 0);
   });
@@ -275,7 +275,7 @@ if (typeof document !== 'undefined') {
   function applyMode() {
     const P = !!st.proj, T = !!st.ticker && !P;
     el('pvMode').textContent = P ? 'Projeção com médias de ' + st.proj : T ? 'Simulação histórica com ' + (multi() ? MULTI[st.ticker].toLowerCase() : st.ticker) : 'Projeção futura';
-    ['pvDm', 'pvDa', 'pvRm', 'pvRa'].forEach(id => el(id).disabled = P || T);
+    ['pvDm', 'pvDa', 'pvRm', 'pvRa'].forEach(id => el(id).disabled = P || T || !!st.mod);  // empresa ou modelo: dividendos e rentabilidade vêm do histórico
     el('pvTicker').disabled = P; el('pvClearT').disabled = P; el('pvProj').disabled = T; el('pvClearP').disabled = T;
     el('pvRetBox').classList.remove('pv-off');
     el('pvRetBox').querySelectorAll('input,button,select').forEach(x => x.disabled = false);
@@ -301,6 +301,7 @@ if (typeof document !== 'undefined') {
     return { ap, w };
   }
   function compute() {
+    if (peek) { peek.dirty = true; return; }  // mês a mês aberto: recalcula ao tocar em Voltar
     rows = []; modRows = false;
     if (st.mod && st.ticker && !st.proj) { runModels(); return; }
     showTabs(false);
@@ -374,25 +375,36 @@ if (typeof document !== 'undefined') {
     el('pvMod').innerHTML = o.map(([v, l]) => `<option value="${v}"${v === st.mod ? ' selected' : ''}>${esc(l)}</option>`).join('');
     el('pvModInfo').textContent = MM ? `Dados de ${dataBR(MM.ini)} a ${dataBR(MM.fim)}.` : '';
   }
-  el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; st.pvt = multi() || st.mod === '*' ? 'des' : 'tab'; save(); compute(); });
+  el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; peek = null; st.pvt = multi() || st.mod === '*' ? 'des' : 'tab'; save(); applyMode(); compute(); });
   el('pvModI').addEventListener('click', () => infoSection('Modelos da Previsão'));
   // Comparar → Modelos: tocar numa empresa abre aqui a simulação mês a mês (mesmo valor inicial, aporte e período)
+  // abre com os valores do Comparar sem mudar o card Modelos nem a empresa da Previsão; "‹ Voltar ao Comparar" chama o.back
   window.pvOpen = (o) => {
-    Object.assign(st, { ticker: o.t, mod: o.m, di: o.di, df: o.df, ini: o.ini, ap: o.ap, proj: '', pvt: 'tab', mes: '' }); sel = { t: o.t, m: o.m }; save();
-    const was = inited; showTab('previsao'); document.querySelector('[data-pvsub="rent"]')?.click();
-    if (was) { fill(); loadHist(); }
-    setTimeout(() => el('pvTabs').scrollIntoView({ block: 'start' }), 600);
+    const n = Math.max(2, months(o.di, o.df).length);
+    peek = { t: o.t, m: o.m, body: { di: o.di, df: o.df, ap: [o.ini].concat(Array(n - 1).fill(o.ap)), w: [], tx: null }, back: { fn: o.back } };
+    showTab('previsao'); document.querySelector('[data-pvsub="rent"]')?.click(); showTabs(true); loadTab(true);
   };
+  // mês a mês aberto por um toque (Desempenho, Por empresa, Comparar): não muda o card Modelos nem a empresa; "‹ Voltar" restaura a tela anterior
+  let peek = null;
+  function openPeek(t, m) { peek = { t, m, back: { pvt: st.pvt, y: window.scrollY } }; showTabs(true); loadTab(true); }
+  el('pvBack').addEventListener('click', () => {
+    const p = peek; if (!p) return; peek = null;
+    if (p.dirty) compute(); else { showTabs(true); applyMode(); if (!isAll()) loadTab(); }
+    if (p.back.fn) { p.back.fn(); return; }
+    st.pvt = p.back.pvt; showTabs(true); requestAnimationFrame(() => window.scrollTo(0, p.back.y));
+  });
   const isAll = () => st.mod === '*';  // card Modelos em Todos: Tabela = comparação dos modelos (sem mês a mês)
   function showTabs(on) {
-    el('pvTabs').classList.toggle('hidden', !on);
-    const d = on && st.pvt === 'des', c = on && !d && isAll();
+    const pk = on && !!peek;
+    el('pvTabs').classList.toggle('hidden', !on || pk); el('pvBack').classList.toggle('hidden', !pk);
+    if (pk) el('pvBack').textContent = peek.back.fn ? '‹ Voltar ao Comparar' : '‹ Voltar';
+    const d = on && !pk && st.pvt === 'des', c = on && !pk && !d && isAll();
     el('pvTabs').querySelectorAll('[data-pvt]').forEach(b => b.classList.toggle('on', b.dataset.pvt === (on ? st.pvt : 'tab')));
     el('pvDes').classList.toggle('hidden', !d); el('pvCmp').classList.toggle('hidden', !c);
     ['pvSumScroll', 'pvMainScroll'].forEach(id => el(id).classList.toggle('hidden', d || c));
     el('pvCount').parentNode.classList.toggle('hidden', d || c);
     el('pvModF').classList.toggle('hidden', !(on && isAll()));
-    if (!on || c) el('pvTabMsg').classList.add('hidden');
+    if (!on || c || pk) el('pvTabMsg').classList.add('hidden');
   }
   el('pvTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-pvt]'); if (!b) return; st.pvt = b.dataset.pvt; save(); showTabs(true); });
   const months = (a, b) => { const out = []; let [y, m] = a.split('-').map(Number); const [y2, m2] = b.split('-').map(Number);
@@ -444,7 +456,9 @@ if (typeof document !== 'undefined') {
       CM = d; drawCmp(); drawDes();
     } catch (e) { if (my === seq) el('pvCmp').innerHTML = el('pvDes').innerHTML = `<p class="pvd-note">Não foi possível simular: ${esc(e.message)}</p>`; }
   }
-  const note = () => `<p class="pvd-note">${dataBR(CM.ini)} a ${dataBR(CM.fim)} (${CM.meses} meses) · ${CM.t.length} de ${CM.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(CM.apT)} por empresa · rendimento = (valor final − aportado) ÷ aportado.</p>`;
+  const note = () => `<p class="pvd-note">${dataBR(CM.ini)} a ${dataBR(CM.fim)} (${CM.meses} meses) · ${CM.t.length} de ${CM.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(CM.apT)} por empresa · rendimento = (valor final − aportado) ÷ aportado. ${modRefNote(CM)}</p>`;
+  const isRef = (id) => !!((MM && MM.modelos.find(m => m.id === id)) || {}).ref;
+  const refRows = (L) => L.map(r => `<tr class="tap pvd-ref" data-pvsel="|${r.m}"><td><b>${esc(r.t)}</b></td><td>referência</td><td>${pcl(r.pct)}</td><td>${r.v == null ? '—' : brl.format(r.v)}</td><td>—</td><td>—</td></tr>`).join('');
   function drawCmp() {
     if (!CM) return;
     const nm = NM(), g = (CM.g || []).filter(x => !st.mf || x.m === st.mf);
@@ -457,33 +471,36 @@ if (typeof document !== 'undefined') {
   function drawDes() {  // Desempenho: cada empresa uma vez por modelo, ordenável, em páginas
     if (!CM) return;
     const nm = NM(), L = [];
+    const refs = (CM.ref || []).filter(r => !isRef(st.mf) || r.m === st.mf);  // CDB e Ouro: uma vez, fixos no topo
     CM.m.forEach((m, i) => { if (st.mf && st.mf !== m) return; CM.t.forEach((t, j) => L.push({ t, m, n: nm[m] || m, pct: CM.p[i][j], v: CM.v[i][j], ir: CM.ir[i][j], c: CM.c[i][j], s: CM.s[i][j] })); });
     L.sort((a, b) => (typeof a[dsk] === 'string' ? a[dsk].localeCompare(b[dsk], 'pt-BR') : a[dsk] - b[dsk]) * dsd);
     const np = Math.max(1, Math.ceil(L.length / st.pgs)); pg = Math.min(pg, np - 1);
     const rows = L.slice(pg * st.pgs, (pg + 1) * st.pgs);
+    // paginação numa linha só, no fim da tabela
     const pager = `<div class="pv-pg"><span class="pv-pgi">Linhas por página <select class="sel" data-pgs>${[240, 500, 1000, 2000, 5000].map(n => `<option${n === st.pgs ? ' selected' : ''}>${n}</option>`).join('')}</select></span>
-      <span class="pv-pgi"><button type="button" class="gbtn" data-pg="-1"${pg ? '' : ' disabled'} aria-label="Página anterior">‹</button><span>Página ${pg + 1} de ${np} · ${F0.format(L.length)} linhas</span><button type="button" class="gbtn" data-pg="1"${pg < np - 1 ? '' : ' disabled'} aria-label="Próxima página">›</button></span></div>`;
-    el('pvDes').innerHTML = `${pager}<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['Imposto pago', 'ir'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
-      <tbody>${rows.map(r => `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${np > 1 ? pager : ''}${note()}
-      <p class="pvd-note">Toque numa linha para ver o mês a mês daquela empresa e modelo.</p>`;
+      <span class="pv-pgi"><button type="button" class="gbtn" data-pg="-1"${pg ? '' : ' disabled'} aria-label="Página anterior">‹</button><span>${pg + 1} de ${np}</span><button type="button" class="gbtn" data-pg="1"${pg < np - 1 ? '' : ' disabled'} aria-label="Próxima página">›</button></span></div>`;
+    el('pvDes').innerHTML = `<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['Imposto pago', 'ir'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
+      ${refs.length ? `<tbody class="ref">${refRows(refs)}</tbody>` : ''}<tbody>${rows.map(r => `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${pager}${note()}
+      <p class="pvd-note">${F0.format(L.length)} linhas · toque numa linha para ver o mês a mês daquela empresa e modelo.</p>`;
   }
   // abre uma empresa com um modelo (mês a mês na aba Tabela)
-  const openOne = (t, m) => { Object.assign(st, { ticker: t, mod: m, pvt: 'tab', mes: '' }); sel = { t, m }; save(); fill(); fillMod(); loadHist(); };
+  const openOne = (t, m) => openPeek(t, m);
   el('pvCmp').addEventListener('click', (e) => {
     const v = e.target.closest('[data-cv]'); if (v) { st.cv = v.dataset.cv; save(); drawCmp(); return; }
     const g = e.target.closest('[data-pvg2]'); if (g && CM) { const r = CM.g[+g.dataset.pvg2]; uiAlert('', { title: `${esc(r.n)} · ${esc(modName(r.m))}`, html: groupHtml(r) }); return; }
-    const mo = e.target.closest('[data-mo]'); if (mo) { const [t, m] = mo.dataset.mo.split('|'); openOne(t, m); }
+    const mo = e.target.closest('[data-mo]'); if (mo) { const [t, m] = mo.dataset.mo.split('|'); openOne(t, m); }  // células e referências (CDB, Ouro)
   });
   const pcl = (v) => v == null ? '—' : `<span class="${v < 0 ? 'dn' : 'up'}">${pc(v)}</span>`;
   function desHtml(d) {
     const tr = d.rows.map((r, i) => {
+      if (r.k === 'r') return refRows([r]);
       const g = r.k === 'g', on = !g && sel && sel.t === r.t && sel.m === r.m;
       const nm = g ? `<div class="pvd-a"><span><b>${esc(r.n)}</b><span class="pvd-m">${esc(modName(r.m))} · rodízio</span></span><button type="button" class="pv-i" data-pvg="${i}" aria-label="Histórico de movimentação">ⓘ</button></div>`
         : `<b>${esc(r.t)}</b><span class="pvd-m">${esc(modName(r.m))}</span>`;
       return `<tr class="${g ? 'pvd-g' : 'tap'}${on ? ' sel' : ''}" ${g ? '' : `data-pvsel="${esc(r.t)}|${esc(r.m)}"`}><td>${nm}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`;
     }).join('');
     return `<div class="pv-scroll"><table class="gtab"><thead><tr><th>Ativo</th><th>Rendimento</th><th>Valor final</th><th>Imposto pago</th><th>Compras / vendas</th></tr></thead><tbody>${tr}</tbody></table></div>
-      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · aporte total ${brl.format(d.apT)} · rendimento = (valor final − aporte total) ÷ aporte total.${multi() ? ' Toque numa empresa para ver o mês a mês em Tabela.' : ''}</p>`;
+      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · aporte total ${brl.format(d.apT)} · rendimento = (valor final − aporte total) ÷ aporte total. ${modRefNote(d)} Toque numa linha para ver o mês a mês.</p>`;
   }
   el('pvDes').addEventListener('change', (e) => { if (e.target.matches('[data-pgs]')) { st.pgs = +e.target.value; pg = 0; save(); drawDes(); } });
   el('pvDes').addEventListener('click', (e) => {
@@ -495,9 +512,9 @@ if (typeof document !== 'undefined') {
     const gi = e.target.closest('[data-pvg]');
     if (gi && des) { const r = des.rows[+gi.dataset.pvg]; uiAlert('', { title: `${esc(r.n)} · ${esc(modName(r.m))}`, html: groupHtml(r) }); return; }
     const t = e.target.closest('[data-pvsel]'); if (!t) return;
-    const [tk, m] = t.dataset.pvsel.split('|'); sel = { t: tk, m }; resetMes();
-    el('pvDes').querySelectorAll('tr.sel').forEach(x => x.classList.remove('sel')); t.classList.add('sel');
-    st.pvt = 'tab'; save(); showTabs(true); loadTab();
+    const [tk, m] = t.dataset.pvsel.split('|'); resetMes();
+    if (tk) { sel = { t: tk, m }; el('pvDes').querySelectorAll('tr.sel').forEach(x => x.classList.remove('sel')); t.classList.add('sel'); }
+    openPeek(tk, m);
   });
   function groupHtml(r) {
     const h = r.hist, sem = (x) => `${F0.format(x)} sem. (~${F0.format(x / 4.35)} meses)`;
@@ -510,23 +527,24 @@ if (typeof document !== 'undefined') {
       <p class="pvd-note">Rendimento ${pc(r.pct)} · valor final ${brl.format(r.v)} · ${r.c} compras e ${r.s} vendas · ${h.trocas} trocas diretas entre empresas · ${F2.format(h.cdb)}% do tempo no CDB · maior queda ${F2.format(h.dd)}% · imposto ${brl.format(r.ir)}</p>
       <table class="gtab"><thead><tr><th>Data</th><th>Saiu</th><th>Entrou</th><th>Motivo</th><th>Valor</th></tr></thead><tbody>${mv}</tbody></table>`;
   }
-  async function loadTab() {
-    const my = seq;
-    if (!sel || !sel.m) { rows = []; modRows = false; renderAll(); el('pvTabMsg').textContent = 'Toque numa empresa em Desempenho para ver o mês a mês.'; el('pvTabMsg').classList.toggle('hidden', st.pvt !== 'tab'); return; }
+  async function loadTab(top) {
+    const my = seq, S0 = peek || sel;
+    if (!S0 || !S0.m) { rows = []; modRows = false; renderAll(); el('pvTabMsg').textContent = 'Toque numa empresa em Desempenho para ver o mês a mês.'; el('pvTabMsg').classList.toggle('hidden', st.pvt !== 'tab'); return; }
     el('pvTabMsg').classList.add('hidden');
     try {
-      const b = modBody(), d = await post(Object.assign({ tab: sel }, b)); if (my !== seq) return;
+      await modMeta(); const b = (peek && peek.body) || modBody(), d = await post(Object.assign({ tab: { t: S0.t, m: S0.m } }, b)); if ((!peek && my !== seq) || (peek || sel) !== S0) return;
       let apT = 0, ps = 0, pd = 0, pt = 0, pc0 = 0, pv0 = 0;
       rows = d.tab.map((x, q) => {
         const ap = b.ap[q] || 0, w = b.w[q] || 0; apT += ap;
         const ops = [x.c > pc0 && 'compra', x.s > pv0 && 'venda'].filter(Boolean).join(' e ');
         const o = { m: q + 1, ym: x.ym, ap, apT, w, rent: q ? x.sem - ps - ap + w : 0, div: x.div - pd, tax: x.tax - pt, divT: x.div, sem: x.sem, com: x.com,
-          pos: (sel.m !== '' ? x.pos : '') + (ops ? ' · ' + ops : '') };
+          pos: (S0.m !== '' ? x.pos : '') + (ops ? ' · ' + ops : '') };
         ps = x.sem; pd = x.div; pt = x.tax; pc0 = x.c; pv0 = x.s; return o;
       });
-      modRows = true; el('pvMode').textContent = `Simulação histórica com ${sel.t} · ${modName(sel.m)}`;
+      modRows = true; el('pvMode').textContent = `Simulação histórica com ${S0.t ? S0.t + ' · ' : ''}${modName(S0.m)}${peek && peek.body ? ' (valores do Comparar)' : ''}`;
     } catch (e) { rows = []; modRows = false; el('pvTabMsg').textContent = 'Tabela indisponível: ' + e.message; el('pvTabMsg').classList.remove('hidden'); }
     shownRows = PAGE_ROWS; renderAll();
+    if (top && peek === S0) requestAnimationFrame(() => el('pvBack').scrollIntoView({ block: 'start' }));
   }
 
   el('pvMoreBtn').addEventListener('click', () => { shownRows += PAGE_ROWS; renderAll(); });
