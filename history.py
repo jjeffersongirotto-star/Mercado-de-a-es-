@@ -3,6 +3,7 @@ Ordem de fontes para ações/Ibovespa: Yahoo chart API -> brapi.dev -> snapshot 
 (data/history/{TICKER}.json, gerado na máquina da rotina diária por scripts/fetch_history.py).
 Formato: {"t": [epoch s], "c": [fechamento], "div": [[epoch s, valor/ação], ...], "source": str}"""
 import gzip, json, logging, os, time
+from functools import partial
 from datetime import datetime, timedelta
 import requests
 
@@ -71,14 +72,19 @@ def brapi(t, kind, rng=None):
             pass
     return {"t": [p[0] for p in pts], "c": [p[1] for p in pts], "div": sorted(divs), "source": "brapi.dev"}
 
-def snapshot(t, kind, rng=None):
+def snapshot(t, kind, rng=None, folder="history3"):
+    """Cópia da branch data (scripts/fetch_history.py): history3 = Ibovespa; history5 = ações e índices de fora."""
     if kind == "i":
         raise RuntimeError("snapshot sem intradiário")
-    r = requests.get(f"{RAW}/history3/{t.upper()}.json.gz", timeout=(6, 30))
+    r = requests.get(f"{RAW}/{folder}/{t.upper()}.json.gz", timeout=(6, 30))
     r.raise_for_status()
     d = json.loads(gzip.decompress(r.content))[kind]
-    d["source"] = "cópia diária (Yahoo, " + d.get("at", "?") + ")"
+    d["source"] = "cópia salva (Yahoo, " + d.get("at", "?") + ")"
     return d
+
+def fname(sym):
+    """Nome do arquivo do símbolo do Yahoo na branch data (history5): ^GSPC -> _GSPC."""
+    return sym.upper().replace("^", "_")
 
 DISK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache", "hist")
 os.makedirs(DISK, exist_ok=True)
@@ -223,7 +229,11 @@ def get(t, kind):
         t = "IBOV"
     if kind not in KINDS or not t.replace("^", "").isalnum() or len(t) > 12:
         raise ValueError("parâmetros inválidos")
-    key, name = (t, kind), f"{t}_{kind}v4"
+    return _hist((t, kind), kind, [partial(yahoo, t), partial(brapi, t)], partial(snapshot, t), f"{t}_{kind}v4")
+
+def _hist(key, kind, live, snap, name):
+    """Histórico com cache (memória e disco): frio = cópia da branch data primeiro (rápida); depois só os dias novos ao vivo.
+    live: fontes ao vivo em ordem; snap: cópia salva. Fontes fora: devolve o que já tinha."""
     c = _mem.get(key)
     if c and time.time() - c[0] < KINDS[kind][2]:
         return c[1]
@@ -232,12 +242,12 @@ def get(t, kind):
         _mem[key] = (base["_at"], base); return base
     errs = []
     # frio (sem base): cópia diária do data branch primeiro (rápida); Yahoo/brapi só para os dias novos
-    for f in (yahoo, brapi) if base else (snapshot, yahoo, brapi):
+    for f in live if base else [snap] + live:
         try:
             if base and base.get("t"):
-                d = _merge(base, f(t, kind, INC[kind]))   # incremental: só os últimos dias/meses
+                d = _merge(base, f(kind, INC[kind]))   # incremental: só os últimos dias/meses
             else:
-                d = f(t, kind)
+                d = f(kind)
             d["_at"] = time.time()
             if len(_mem) > 600:
                 _mem.clear()
@@ -246,20 +256,34 @@ def get(t, kind):
                 _dsave(name, d)
             return d
         except Exception as e:
-            errs.append(f"{f.__name__}: {str(e)[:80]}")
-    log.warning("histórico %s/%s falhou: %s", t, kind, errs)
+            errs.append(f"{getattr(f, 'func', f).__name__}: {str(e)[:80]}")
+    log.warning("histórico %s falhou: %s", name, errs)
     if base:
         _mem[key] = (time.time() - KINDS[kind][2] + 1800, base)  # fontes fora: não tenta de novo por 30 min
         return base
     raise RuntimeError("; ".join(errs))
 
+FORA = {"us": 300, "jp": 300, "gb": 200, "de": 150, "pt": None}  # cópia salva: as maiores de cada país por valor de mercado (None = todas)
+
+def copy_update(old, sym, now=None):
+    """Cópia salva de um símbolo de fora ({m, d, ts}): sem cópia ou com mais de 25 dias, baixa tudo; senão só junta o último mês/ano.
+    Diário guarda 10 anos (igual ao gráfico); mensal, desde o início. -> nova cópia, ou a antiga se ainda tem menos de 6 dias."""
+    now = now or time.time()
+    if old and now - old.get("ts", 0) < 6 * 86400: return old
+    at = time.strftime("%d/%m/%Y", time.gmtime(now)); out = {"ts": int(now)}
+    for k in ("m", "d"):
+        inc = old and now - old.get("ts", 0) < 25 * 86400 and old.get(k, {}).get("t")
+        x = _merge(old[k], yahoo(sym, k, INC[k], sym=sym)) if inc else yahoo(sym, k, sym=sym)
+        if k == "d":  # 10 anos no diário
+            i0 = next((i for i, t in enumerate(x["t"]) if t >= now - 3653 * 86400), 0)
+            x = dict(x, t=x["t"][i0:], c=x["c"][i0:], div=[v for v in x.get("div", []) if v[0] >= now - 3653 * 86400])
+        x.pop("_at", None); x["at"] = at; out[k] = x
+    return out
+
 def yget(sym, kind):
-    """Ação/índice de fora do Brasil direto do Yahoo (símbolo já com sufixo), com cache em memória."""
-    key = ("y", sym, kind); c = _mem.get(key)
-    if c and time.time() - c[0] < KINDS[kind][2]:
-        return c[1]
-    d = yahoo(sym, kind, sym=sym); _mem[key] = (time.time(), d)
-    return d
+    """Ação/índice de fora do Brasil (símbolo do Yahoo já com sufixo): cópia semanal da branch data (history5) + dias novos do Yahoo.
+    Quem não está na cópia (fora das maiores de cada país) vem só do Yahoo; intradiário sempre ao vivo."""
+    return _hist(("y", sym, kind), kind, [partial(yahoo, sym, sym=sym)], partial(snapshot, fname(sym), folder="history5"), f"y_{fname(sym)}_{kind}v1")
 
 def ysym(t, country):
     suf = tradingview.YAHOO[country][0]
