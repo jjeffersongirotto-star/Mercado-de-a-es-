@@ -306,7 +306,7 @@
     let d = null;
     for (let k = 0; k < 20 && my === seq; k++) {
       try {
-        const r = await fetch('/api/modelos/comparar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ u, t, di: S.di, df: S.df, ini: S.ini, ap: S.ap }) });
+        const r = await fetch('/api/modelos/comparar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ u, t, di: S.di, df: S.df, ini: S.ini, ap: S.ap, fav: [...FAVS] }) });
         if (r.status === 202) { await new Promise(z => setTimeout(z, 3000)); continue; }
         d = await r.json(); break;
       } catch (e) { await new Promise(z => setTimeout(z, 3000)); }

@@ -880,7 +880,7 @@ def api_modelos_sim(body: dict):
     body["universo"] = [r["ticker"] for r in rows]
     if body.get("ticker") == "top5": body["ticker"], body["universo"] = "*", modelos.top_sector(rows)  # 5 maiores de cada setor
     user = [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (body.get("grupos") or [])[:9]]
-    history.pin([t for g in user for t in g["t"]])  # grupos do usuário: histórico fica em memória
+    history.pin([t for g in user for t in g["t"]] + [str(t) for t in (body.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
     body["grupos"] = modelos.ready_groups(rows) + user
     try:
         D = modelos.data(); modelos.set_setores(D, rows)  # setores BESST (Método Barsi)
@@ -906,7 +906,7 @@ def api_modelos_comparar(body: dict):
         grupos = None
         if b.get("rod"):  # rodízio: grupos prontos + grupos do usuário
             grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
-            history.pin([t for g in grupos for t in g["t"]])  # grupos do usuário: histórico fica em memória
+        history.pin([t for g in (grupos or []) for t in g["t"]] + [str(t) for t in (b.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
         D = modelos.data(); modelos.set_setores(D, rows)
         out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
     except Exception:

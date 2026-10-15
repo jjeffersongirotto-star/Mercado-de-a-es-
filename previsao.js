@@ -431,7 +431,7 @@ if (typeof document !== 'undefined') {
     el('pvDes').innerHTML = loaderHTML('Simulando os modelos…');
     const b = modBody(); const G = typeof userGroups === 'function' ? userGroups() : [];
     try {
-      const d = await post(Object.assign({ ticker: st.ticker, modelo: st.mod, grupos: G }, b)); if (my !== seq) return;
+      const d = await post(Object.assign({ ticker: st.ticker, modelo: st.mod, grupos: G, fav: [...FAVS] }, b)); if (my !== seq) return;
       des = d; const emp = d.rows.filter(r => r.k === 'a');
       if (!multi()) sel = sel && emp.some(r => r.t === sel.t && r.m === sel.m) ? sel : { t: st.ticker, m: st.mod === '*' ? emp[0]?.m : st.mod };
       else if (sel && !emp.some(r => r.t === sel.t && r.m === sel.m)) sel = null;
@@ -452,7 +452,7 @@ if (typeof document !== 'undefined') {
     el('pvCmp').innerHTML = el('pvDes').innerHTML = loaderHTML('Simulando os modelos…');
     const b = modBody(), u = st.ticker === '*' ? 'all' : st.ticker === 'top5' ? 'top5' : 'sel';
     try {
-      const d = await post(Object.assign({ u, t: u === 'sel' ? [st.ticker] : [], rod: true, grupos: typeof userGroups === 'function' ? userGroups() : [] }, b), '/api/modelos/comparar');
+      const d = await post(Object.assign({ u, t: u === 'sel' ? [st.ticker] : [], rod: true, grupos: typeof userGroups === 'function' ? userGroups() : [], fav: [...FAVS] }, b), '/api/modelos/comparar');
       if (my !== seq) return;
       CM = d; drawCmp(); drawDes();
     } catch (e) { if (my === seq) el('pvCmp').innerHTML = el('pvDes').innerHTML = `<p class="pvd-note">Não foi possível simular: ${esc(e.message)}</p>`; }

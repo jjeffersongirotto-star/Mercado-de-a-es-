@@ -16,17 +16,19 @@ KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("10y", "1d", 3 * 3600), "i": ("1d"
 from collections import OrderedDict
 _mem = OrderedDict()  # histórico em memória: no máximo MEM_MAX itens (sai o usado há mais tempo); PIN nunca sai
 MEM_MAX = 150
-PIN = set()  # tickers dos grupos (prontos do rodízio e os enviados pelo usuário): server.py -> pin()
+PIN = set()  # grupos prontos do rodízio (trocados a cada atualização dos dados): server.py -> pin(keep=...)
+PIN_USER = OrderedDict()  # grupos e Favoritos enviados pelo usuário: ficam entre atualizações; no máximo PIN_USER_MAX (sai o mais antigo)
+PIN_USER_MAX = 200
 
 def pin(tickers, keep=None):
-    """Grupos: tickers que ficam sempre em memória. keep = conjunto fixo (grupos prontos); os demais somam-se até 300."""
+    """Tickers que ficam sempre em memória. keep = grupos prontos (substitui); tickers = do usuário (somam, com limite)."""
     if keep is not None: PIN.clear(); PIN.update(keep)
-    for t in tickers or []:
-        if len(PIN) >= 300: break
-        PIN.add(str(t).upper())
+    for t in list(tickers or [])[:PIN_USER_MAX]:
+        t = str(t).upper()[:12]; PIN_USER[t] = 1; PIN_USER.move_to_end(t)
+    while len(PIN_USER) > PIN_USER_MAX: PIN_USER.popitem(last=False)
 
 def _pinned(key):
-    return any(str(k).upper() in PIN for k in key[:-1]) if isinstance(key, tuple) else False
+    return any(str(k).upper() in PIN or str(k).upper() in PIN_USER for k in key[:-1]) if isinstance(key, tuple) else False
 
 _memlk = threading.Lock()
 
@@ -506,7 +508,7 @@ def _all_closes(tickers):
             for t, v in ex.map(_load_both, miss):
                 _allc["d"][t] = v
         for t in fresh:  # gráfico dessas ações volta a ler do disco (b3hist -> _dload) quando alguém abrir
-            if t.upper() not in PIN: _h4.pop(t, None)
+            if t.upper() not in PIN and t.upper() not in PIN_USER: _h4.pop(t, None)
     return _allc["d"]
 
 def period_return(h, start_ts, end_ts, live=None):
