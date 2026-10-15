@@ -5,7 +5,7 @@
 #   Status Invest (CSV)  · Yahoo (desempate)   · TradingView (todos os países, fallback)
 #   Investidor10 (~1 req/s, ~1000 páginas)     · Dados de Mercado (~1 req/2,5 s, ~300 páginas)
 #   CVM dados abertos (DFP/ITR, pré-processado: data/cvm.json compacto)
-#   Histórico (Yahoo 20a mensal/5a diário + Ibovespa + BCB) e perfis (brapi) do universo exibido
+#   Histórico (Yahoo 20a mensal/5a diário + Ibovespa + BCB; maiores ações de fora em history5, 1×/semana) e perfis (brapi) do universo exibido
 #   Índice de Medo e Ganância (B3: COTAHIST, fluxo, CDI) · Sinais dos modelos da Previsão · Base do chat (resumos da Wikipedia dos itens do conhecimento.json; renova uma vez por semana)
 # ONLY="cvm tradingview" limita as etapas; PYTHON = interpretador com pandas/lxml/yfinance/requests.
 set -e

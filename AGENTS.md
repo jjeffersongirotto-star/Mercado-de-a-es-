@@ -51,6 +51,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Campos com Período e posição em Ordenar | `server.py` → `FIELD_EXTRA` (`grp`, `per`, `sub`, `sort`) | filtros, cards e Ordenar (`app.js`) |
 | Universo exibido (ilíquidas, 1 ticker por empresa) | `scripts/universe.py` (`mark` grava `il` e `k1` em cada linha de `/api/data`) | site (`tradable`, `universe` em `app.js`), Grupos, `/api/returns`, scripts de snapshot |
 | Nomes dos índices (Ibovespa, Dólar, CDB, IPCA, Poupança, Ouro) | `history.py` → `INDICES` (o site recebe em `window.INDICES`) | gráficos (`grafico.js`), Comparar, chat (`IDXN`) |
+| Histórico de preços e proventos das ações de fora (maiores de cada país: `history.FORA`; mensal desde o início, diário 10 anos) | branch `data` → `history5/` (`scripts/fetch_history.py` → `history.copy_update`, renova 1×/semana) + dias novos do Yahoo (`history.yget`) | gráficos e Comparar de ações estrangeiras |
 | Índice de cada país e símbolo no Yahoo | `tradingview.py` → `YAHOO` | `/api/countries` (`index`), gráficos e Comparar de ações estrangeiras, chat (empresa ligada) |
 | Bolsa principal de cada país (B3, NYSE/Nasdaq, Bolsa de Tóquio…) | `tradingview.py` → `BOLSA` | chat (empresa ligada: "país · bolsa · índice") |
 | Registro de erros | `server.py` → `ERRS` (`/api/errors`) e log do Render | quem mantém o site |

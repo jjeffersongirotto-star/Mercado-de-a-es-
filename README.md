@@ -56,6 +56,7 @@ que não dispara deploy.
 | Investidor10, Dados de Mercado, CVM (DFP/ITR) | snapshot diário | BR |
 | Yahoo (yfinance) | snapshot diário (desempate de divergências) | BR |
 | B3 (COTAHIST, proventos, índices, cadastro, aluguel, fluxo) | snapshots diários | BR |
+| Yahoo (histórico das ações de fora) | snapshot `history5/` das maiores de cada país (renova 1×/semana, etapa `history`) + dias novos ao vivo; as demais só ao vivo | EUA, Reino Unido, Alemanha, Portugal, Japão |
 
 Rotina diária (19:05): `scripts/push_snapshot_from_here.sh` atualiza os snapshots em sequência numa máquina cujo IP não é bloqueado
 (`ONLY="cvm tradingview"` limita as etapas). No GitHub, `.github/workflows/data.yml` roda o mesmo script em dias úteis às 19:45
@@ -76,7 +77,7 @@ Registro de perguntas: `/api/chat/log` (`?only=sem_resposta` ou `?only=reclamaca
 
 ## Testes
 ```bash
-python tests/test_consensus.py && python tests/test_chat.py && python tests/test_medo.py && python tests/test_modelos.py
+python tests/test_consensus.py && python tests/test_chat.py && python tests/test_medo.py && python tests/test_modelos.py && python tests/test_history.py
 for f in tests/*.js; do node "$f"; done
 node tests/ui_smoke.cjs http://127.0.0.1:8000   # telas (precisa do Playwright e do servidor rodando)
 ```
