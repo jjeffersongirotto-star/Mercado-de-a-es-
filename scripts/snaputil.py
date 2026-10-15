@@ -32,7 +32,7 @@ def app_api_data(wait=600):
 
 def _fund_direct(only_liquid):
     import pandas as pd
-    r = requests.get("https://www.fundamentus.com.br/resultado.php", headers=UA, timeout=60)
+    r = requests.get("https://fundamentus.com.br/resultado.php", headers=UA, timeout=60)
     r.raise_for_status()
     df = pd.read_html(io.StringIO(r.content.decode("latin-1")), decimal=",", thousands=".")[0]
     df["liq"] = pd.to_numeric(df["Liq.2meses"], errors="coerce").fillna(0)

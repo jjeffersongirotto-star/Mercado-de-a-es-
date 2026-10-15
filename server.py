@@ -144,7 +144,7 @@ def num(x):
 
 
 def fetch_fundamentus():
-    r = http_get("https://www.fundamentus.com.br/resultado.php")
+    r = http_get("https://fundamentus.com.br/resultado.php")
     html = r.content.decode("latin-1")
     df = pd.read_html(io.StringIO(html), decimal=",", thousands=".")[0]
     out = {}

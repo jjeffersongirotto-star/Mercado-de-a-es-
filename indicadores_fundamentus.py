@@ -4,7 +4,7 @@ Uso: python indicadores_fundamentus.py [--so-liquidas]"""
 import io, sys, time, argparse
 import requests, pandas as pd
 
-URL = "https://www.fundamentus.com.br/resultado.php"  # http:// deu timeout nos testes; usar https
+URL = "https://fundamentus.com.br/resultado.php"  # http:// deu timeout nos testes; usar https
 OUT = "/workspace/b3-api/indicadores_b3.csv"
 HDRS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"}
 
