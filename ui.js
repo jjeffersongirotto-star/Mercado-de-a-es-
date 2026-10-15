@@ -196,7 +196,9 @@ window.getRetry = async function (u, tries = 3, ms = 15000) {
 window.glossOf = function (term) {
   const li = [...document.querySelectorAll('#infoModal details')].find(d => (d.querySelector('summary') || {}).textContent === 'Glossário');
   const it = li && [...li.querySelectorAll('li')].find(x => (x.querySelector('b') || {}).textContent === term);
-  return it ? it.textContent.trim() : null;
+  if (!it) return null;
+  const c = it.cloneNode(true); c.querySelectorAll('.chat-only').forEach(x => x.remove());  // detalhe escondido: só o chat lê
+  return c.textContent.trim();
 };
 window.glossBtn = (term) => glossOf(term) ? `<button type="button" class="gl-i" data-gl="${esc(term)}" aria-label="O que é ${esc(term)}">ⓘ</button>` : '';
 // Ícone de arquivo (down = exportar, senão importar) e download de .json — Exportar/Importar de Grupos e Carteira.

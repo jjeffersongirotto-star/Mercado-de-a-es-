@@ -91,7 +91,7 @@ Informação nova sem lugar nesta tabela → escolha a fonte, acrescente a linha
 
 ### 1.4 Chat e Gemini
 O chat e o Gemini **não têm conteúdo próprio**: respondem com `/api/data`, `metrics`, `period_returns`, o painel ⓘ e os nomes da interface.
-Para o chat explicar algo novo, escreva no painel ⓘ (o usuário também passa a ver). O vocabulário (sinônimos, gírias,
+Para o chat explicar algo novo, escreva no painel ⓘ (o usuário também passa a ver). Texto longo demais para o usuário: deixe no ⓘ só o resumo e guarde o detalhe no mesmo item em `<span class="chat-only" hidden>` (o chat lê; a tela e o ⓘ do card não mostram). O vocabulário (sinônimos, gírias,
 apelidos, frases) fica no `vocabulario.json`; em `chat.py` só fica o roteamento (palavras → indicador/filtro/seção do painel); `tests/test_chat.py` falha se uma seção citada não existir no painel.
 
 ---
