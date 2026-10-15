@@ -965,10 +965,12 @@ def suggestions(P, D):
 
 
 # Métodos de investimento: texto no painel ⓘ (seção do método) + ações do site que passam em critérios aproximados do método
-# setores perenes do Barsi: energia elétrica/saneamento (Utilities), bancos, seguros, papel e celulose
-PERENE = (lambda r: r.get("setor") == "Utilities" or bool(re.search(r"banco|segur|papel|celulose|saneamento|energia", norm(f"{r.get('subsetor') or ''} {r.get('pind') or ''}"))),
-          "setores perenes (energia, saneamento, bancos, seguros, papel e celulose)")
-METHODS = [(r"\bbarsi\b", "Método Barsi", [("dy", ">=", 6), ("roe", ">=", 10)], "dy", "desc", None, PERENE),
+# setores BESST do Barsi (Bancos, Energia elétrica, Saneamento, Seguros, Telecomunicações): fonte única em modelos.BESST_RX
+def _besst(r):
+    import modelos
+    return modelos.besst(r)
+PERENE = (_besst, "setores BESST (bancos, energia elétrica, saneamento, seguros e telecomunicações)")
+METHODS = [(r"\bbarsi\b", "Método Barsi", [("dy", ">=", 6), ("roe", ">=", 10), ("dlebit", "<=", 3)], "dy", "desc", None, PERENE),
            (r"\bbazin\b", "Método Bazin", [("dy", ">=", 6), ("dlpl", "<=", 0.5), ("pl", ">", 0)], "dy", "desc", None, None),
            (r"\bgraham\b", "Método Graham", [("pl", ">", 0), ("pl", "<=", 15), ("pvp", ">", 0), ("pvp", "<=", 1.5)], "pvp", "asc", None, None),
            (r"\bbuff?ett?\b", "Método Buffett", [("roe", ">=", 15), ("mliq", ">=", 10), ("dlebit", "<=", 2)], "roe", "desc", None, None),

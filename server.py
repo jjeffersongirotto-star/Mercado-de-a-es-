@@ -883,7 +883,8 @@ def api_modelos_sim(body: dict):
     user = [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (body.get("grupos") or [])[:9]]
     body["grupos"] = modelos.ready_groups(rows) + user
     try:
-        out = modelos.run(modelos.data(), body)
+        D = modelos.data(); modelos.set_setores(D, rows)  # setores BESST (Método Barsi)
+        out = modelos.run(D, body)
     except Exception:
         log.exception("modelos: simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -905,7 +906,8 @@ def api_modelos_comparar(body: dict):
         grupos = None
         if b.get("rod"):  # rodízio: grupos prontos + grupos do usuário
             grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
-        out = modelos.compare(modelos.data(), tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
+        D = modelos.data(); modelos.set_setores(D, rows)
+        out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
