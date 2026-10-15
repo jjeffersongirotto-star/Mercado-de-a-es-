@@ -103,7 +103,7 @@
     const head = `<div class="flex flex-wrap items-center gap-2">
         <button type="button" class="gbtn fbtn" data-k="export" title="Exportar carteira" aria-label="Exportar carteira">${fileIc(1)}<span class="max-sm:hidden">Exportar</span></button>
         <button type="button" class="gbtn fbtn" data-k="import" title="Importar carteira" aria-label="Importar carteira">${fileIc(0)}<span class="max-sm:hidden">Importar</span></button>
-        <input id="ktFile" type="file" accept=".json,application/json,text/plain,*/*" class="hidden"></div>`;
+        <input id="ktFile" type="file" accept=".json,application/json,text/plain,*/*" class="hidden"></div>${mov.length ? '<p class="kt-warn">Seus lançamentos ficam só neste aparelho e somem se o navegador for limpo. Use Exportar para guardar uma cópia.</p>' : ''}`;
     root.innerHTML = `<section class="space-y-2">${head}<div class="kt-box">${form()}</div><div id="ktBody">${mov.length ? loaderHTML('Calculando…') : '<p class="text-slate-400 text-sm text-center">Nenhuma movimentação. Preencha ticker, operação, quantidade, preço e data e toque em ＋ Adicionar.</p>'}</div></section>`;
     $k('#ktFile').addEventListener('change', importK);
     if (mov.length) body();

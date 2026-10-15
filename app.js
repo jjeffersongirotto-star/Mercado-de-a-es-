@@ -357,12 +357,16 @@ const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.p
 // Barato/Caro: preço do card × valor justo de Graham √(22,5 × LPA × VPA) (explicação no Glossário do painel ⓘ).
 // pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
 // Sem cálculo -> { why: motivo curto } (o card mostra "—" e o motivo no lugar da barra).
+// Valor justo de Graham. Brasil: LPA médio dos últimos 3 anos (balanços da CVM, servidor → lpa3), como Graham fazia: lucro pontual não infla o valor.
+// Exterior: LPA de 12 meses (TradingView). Fontes divergindo no VPA -> sem número; acima de +100% -> aviso (painel ⓘ → Glossário → Barato/Caro).
 function fairOf(r) {
-  const p = priceOf(r), l = val(r, 'lpa'), b = val(r, 'vpa');
+  const br = state.country === 'br', p = priceOf(r), l = br ? r.lpa3 : val(r, 'lpa'), b = val(r, 'vpa');
   if (!(p > 0)) return { why: 'Sem preço' };
+  if (br && l == null) return { why: 'Sem lucro de 3 anos na CVM' };
+  if (state.source === 'all' && (r.st || {}).vpa === 'red') return { why: 'Dados divergentes entre as fontes' };
   if (l == null || b == null) return { why: state.source === 'all' ? 'Sem LPA/VPA nas fontes' : 'Sem LPA/VPA nesta fonte' };
   if (l <= 0 && b <= 0) return { why: 'Prejuízo e patrimônio negativo' };
-  if (l <= 0) return { why: 'Prejuízo nos últimos 12 meses' };
+  if (l <= 0) return { why: br ? 'Prejuízo médio nos últimos 3 anos' : 'Prejuízo nos últimos 12 meses' };
   if (b <= 0) return { why: 'Patrimônio negativo' };
   const j = Math.sqrt(22.5 * l * b);
   return { j, pct: (j / p - 1) * 100, pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) };
@@ -371,8 +375,8 @@ window.fairOf = fairOf;
 function fairHtml(r) {
   const f = fairOf(r);
   if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span><div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
-  const cheap = f.pct >= 0;
-  return `<div class="fv"><span class="fv-t ${cheap ? 'text-emerald-400' : 'text-rose-400'}">${cheap ? 'Barato +' : 'Caro '}${F0.format(f.pct)}%</span>` +
+  const cheap = f.pct >= 0, odd = f.pct > 100;  // mais que o dobro do preço: quase sempre lucro ou patrimônio fora do normal
+  return `<div class="fv"><span class="fv-t ${odd ? 'text-amber-300' : cheap ? 'text-emerald-400' : 'text-rose-400'}"${odd ? ` title="Valor justo ${F0.format(f.pct)}% acima do preço"` : ''}>${odd ? 'Muito barato? Confira' : cheap ? 'Barato +' + F0.format(f.pct) + '%' : 'Caro ' + F0.format(f.pct) + '%'}</span>` +
     `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
 }
 function blockHtml(r) {
@@ -386,7 +390,7 @@ function blockHtml(r) {
                  (nRes ? `<span class="hb hb-res" title="${nRes} indicador(es) com maioria, mas alguma fonte discorda">maioria ${nRes}</span>` : '') +
                  (nBank ? `<span class="hb hb-bank" title="${nBank} indicador(es) baseados em EBIT/receita não comparáveis (banco/seguradora)">banco ${nBank}</span>` : '') +
                  (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) em que CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado">aj ${nAdj}</span>` : '');
-  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag ${conf(r).A === conf(r).N ? 'ctag-ok' : 'ctag-dv'}" title="Fontes que concordam com a maioria em todos os indicadores / fontes com dados (indicador sem maioria = fontes discordam)">${confTxt(r)}</span>` : '');
+  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag tap ${conf(r).A === conf(r).N ? 'ctag-ok' : 'ctag-dv'}" data-cores role="button" title="Fontes que concordam com a maioria em todos os indicadores / fontes com dados (indicador sem maioria = fontes discordam)">${confTxt(r)}</span>` : '');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
@@ -423,6 +427,7 @@ function setBlockOpen(art, open) {
   btn.firstElementChild.textContent = open ? '−' : '+';
 }
 document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-cores]')) { e.stopPropagation(); infoSection('Cores'); return; }  // selo "A/N concordam": legenda das cores
   const co = e.target.closest('[data-co]');  // ⓘ da empresa
   if (co) { const r = state.rowMap[co.dataset.co]; if (r) uiAlert('', { title: `${esc(r.ticker)} · ${esc(r.nome || '')}`, html: aboutHtml(r) }); return; }
   const head = e.target.closest('.blk-head'); if (!head || e.target.closest('.gsel') || e.target.closest('[data-gl]')) return;
@@ -691,7 +696,11 @@ $('#btnCsv').addEventListener('click', exportCsv);
 const infoOpen = (o) => { $('#infoModal').classList.toggle('hidden', !o); document.body.style.overflow = o ? 'hidden' : ''; };
 $('#btnInfo').addEventListener('click', () => infoOpen(true));
 // abre o painel ⓘ já na seção com este título (ex.: ⓘ do card Modelos da Previsão)
-window.infoSection = (title) => { infoOpen(true); const d = [...document.querySelectorAll('#infoModal details')].find(x => (x.querySelector('summary') || {}).textContent === title); if (d) { d.open = true; setTimeout(() => d.scrollIntoView({ block: 'start' }), 30); } };
+window.infoSection = (title) => {  // abre a seção do painel ⓘ pelo título (summary) ou por um subtítulo h3 dentro dela
+  infoOpen(true); const M = '#infoModal ';
+  const d = [...document.querySelectorAll(M + 'details')].find(x => (x.querySelector('summary') || {}).textContent === title), h = d ? null : [...document.querySelectorAll(M + 'h3')].find(x => x.textContent === title);
+  const box = d || (h && h.closest('details')); if (box) { box.open = true; setTimeout(() => (h || box).scrollIntoView({ block: 'start' }), 30); }
+};
 $('#infoModal').addEventListener('click', (e) => { if (e.target.id === 'infoModal' || e.target.closest('[data-close]')) infoOpen(false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#infoModal').classList.contains('hidden')) infoOpen(false); });
 $('#btnExpandAll').addEventListener('click', () => expandAll(true));
