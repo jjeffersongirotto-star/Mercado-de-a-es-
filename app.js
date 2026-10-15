@@ -364,6 +364,7 @@ const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.p
 function fairOf(r) {
   const br = state.country === 'br', p = priceOf(r), b = val(r, 'vpa'), l = br ? (r.ln3 != null && b != null ? r.ln3 * b : null) : val(r, 'lpa');
   if (!(p > 0)) return { why: 'Sem preço' };
+  if (br && b != null && b <= 0) return { why: 'Patrimônio negativo' };
   if (br && r.ln3 == null) return { why: 'Sem lucro de 3 anos na CVM' };
   if (state.source === 'all' && (r.st || {}).vpa === 'red') return { why: 'Dados divergentes entre as fontes' };
   if (l == null || b == null) return { why: state.source === 'all' ? 'Sem LPA/VPA nas fontes' : 'Sem LPA/VPA nesta fonte' };
