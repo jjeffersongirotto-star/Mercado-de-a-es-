@@ -698,7 +698,7 @@ def fg_answer():
 
 def fair(D, r):
     """Valor justo de Graham √(22,5 × LPA × VPA) com os valores de consenso — a mesma conta de app.js → fairOf (barra Barato/Caro)."""
-    p, l, b = val(D, r, "preco"), val(D, r, "lpa"), val(D, r, "vpa")
+    p, l, b = val(D, r, "preco"), (r.get("lpa3") if "lpa3" in r else val(D, r, "lpa")), val(D, r, "vpa")  # Brasil: lucro médio de 3 anos
     if not (p and l and b and p > 0 and l > 0 and b > 0): return None
     j = (22.5 * l * b) ** 0.5
     return j, (j / p - 1) * 100, p

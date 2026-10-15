@@ -114,7 +114,7 @@ if (typeof document !== 'undefined') (function () {
     const b = e.target.closest('[data-a],[data-xdel]'); if (!b) return;
     const k = b.closest('[data-k]'), a = b.dataset.a;
     if (a === 'more') { shown += 240; tables(); return; }
-    if (a === 'new') st.draft = { t: '', q: 100, add: 0, rate: null, prazo: 1, nl: 0, idx: -1 };
+    if (a === 'new') st.draft = { t: '', q: 100, add: 0, rate: null, prazo: 1, nl: 15, idx: -1 };  // % não alugado: padrão 15% (painel ⓘ → Previsão aluguel)
     else if (a === 'cancel') st.draft = null;
     else if (a === 'edit') { const i = +k.dataset.k; st.draft = { ...st.items[i], idx: i }; }
     else if (a === 'exnew') { const t = (st.items[0] || {}).t; if (!t) { uiToast('Confirme uma ação primeiro'); return; } st.ex.push({ m: 12, t, q: 100 }); }

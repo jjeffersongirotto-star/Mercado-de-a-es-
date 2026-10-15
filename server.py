@@ -237,7 +237,7 @@ def load_tv(country):
 
 def cvm_values(c, price, fund_pvp):
     """Indicadores da CVM para um ticker; múltiplos de preço com cotação × total de ações (como o Fundamentus)."""
-    if not c: return {}, {}
+    if not c: return {}, {}, None
     v = {k: c[k] for k in ("roe", "roa", "mbruta", "mebit", "mliq", "liqcorr", "dlpl", "dlebit", "roic", *GROWTH_KEYS, "lpa", "vpa") if k in c}
     a = {k: c[k] for k in ("mebit_adj", "roic_adj") if k in c}
     sh = c.get("_shares")
@@ -257,7 +257,13 @@ def cvm_values(c, price, fund_pvp):
                   "pebit": q(mc, c.get("_ebit")), "evebit": q(mc + nd, c.get("_ebit")) if nd is not None else None})
         a.update({"pebit_adj": q(mc, c.get("_ebit_adj")),
                   "evebit_adj": q(mc + nd, c.get("_ebit_adj")) if nd is not None else None})
-    return {k: x for k, x in v.items() if x is not None}, {k: x for k, x in a.items() if x is not None}
+    return {k: x for k, x in v.items() if x is not None}, {k: x for k, x in a.items() if x is not None}, sh
+
+def lpa_medio(fd, sh, n=3):
+    """LPA médio dos últimos n exercícios anuais (DFP da CVM, snapshot fund) ÷ ações atuais: base do valor justo de Graham
+    (Barato/Caro, app.js → fairOf). Lucro médio, como Graham fazia: um lucro pontual (venda de ativo, reestruturação) não infla o valor."""
+    ni = [x for x in ((fd or {}).get("ni") or [])[-n:] if x]  # 0 = conta não encontrada no balanço (sem dado), não lucro zero
+    return round(sum(ni) / n / sh, 4) if sh and len(ni) == n else None
 
 def build():
     t0 = time.time()
@@ -279,6 +285,7 @@ def build():
         p, desc = snapshots.load(name)
         snaps[sid] = (p or {}).get("rows") or {}
         status[name] = f"{desc} ({len(snaps[sid])} papéis)" if p else desc
+    fund = ((snapshots.load("fund")[0]) or {}).get("a") or {}  # lucro anual (scripts/build_fund.py) -> lpa3
 
     rows, n_red = [], 0
     for t, f in fund.items():
@@ -308,7 +315,7 @@ def build():
         if dd:
             S["ddm"] = {k: x for k, x in dd.items() if not k.endswith("_adj") and not k.startswith("_")}
             A["ddm"] = {k: x for k, x in dd.items() if k.endswith("_adj")}
-        cv, ca = cvm_values(snaps["cvm"].get(t), price, f.get("P/VP"))
+        cv, ca, sh = cvm_values(snaps["cvm"].get(t), price, f.get("P/VP"))
         if cv: S["cvm"] = cv
         if ca: A["cvm"] = ca
         S = {k: x for k, x in S.items() if x}
@@ -320,7 +327,7 @@ def build():
         var = names.get(t, {}).get("var")
         if var is None and t in tv: var = tv[t]["m"].get("var")
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
-                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div})
+                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, "lpa3": lpa_medio(fund.get(t), sh)})
     rows.sort(key=lambda r: -((r["S"].get("tv") or {}).get("liq2m") or 0))
     now = datetime.now(timezone.utc)
     return {
@@ -366,6 +373,7 @@ def finalize(base, yf_store=None):
         if not isbr and r.get("ipo"): nr["ipo"] = r["ipo"]  # data de listagem no exterior (TradingView); no Brasil vem da B3 (metrics.ftd)
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
+        if r.get("lpa3") is not None: nr["lpa3"] = r["lpa3"]
         if r["ticker"] in FIN: nr["fin"] = True
         ixs = IXC.get(r["ticker"][:4])
         if ixs:  # índices da empresa (qualquer classe; mostra a classe quando diferente da exibida)
