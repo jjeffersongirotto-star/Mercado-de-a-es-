@@ -284,7 +284,7 @@
       const rl = (d.ref || []).map(r => `<button type="button" class="pv-lnk" data-mo="|${r.m}">${esc(r.t)}</button> ${rp(r)}`).join(' · ');
       return (rl ? `<p class="pvd-note">Referências (iguais para todas as empresas): ${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
     }
-    if (mv === 'pos') {  // pontos por colocação: 1º = 14, 2º = 12 … 8º = 0 (modelos.ranking)
+    if (mv === 'pos') {  // pontos por colocação: 1º = 2 × (modelos − 1) … último = 0 (modelos.ranking)
       const ps = posOf(d.ord_pts);
       return tab([['Modelo', 'm']].concat(d.m.map((_, p) => [`${RK(p)}${p + 1}º`, 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
         d.ord_pts.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''), r => d.m.map(() => '—').concat(['—', '—', rp(r)]));

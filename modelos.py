@@ -4,7 +4,7 @@ Cada semana usa o sinal da semana anterior (decide com o fechamento de sexta e o
 Aportes e retiradas entram no último pregão de cada mês (mês 1 = valor inicial), como na tabela da Previsão.
 Imposto: 15% do lucro líquido das vendas do mês quando as vendas passam de R$ 20 mil; prejuízo compensa os meses seguintes.
 Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de R$ 50 mil, ou o % escolhido)."""
-import threading, time
+import threading, time, warnings
 from collections import OrderedDict
 import numpy as np
 
@@ -18,6 +18,7 @@ MODELOS = [
     {"id": "alg3", "n": "Algoritmo 3 meses", "vende": True, "p": "p3", "min": 12, "lucro": True},
     {"id": "tendencia", "n": "Tendência", "vende": True, "min": 4, "lucro": True},
     {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
+    {"id": "barsi", "n": "Método Barsi", "vende": False, "lucro": True},
 ]
 # referências fora das empresas (não entram nas colocações): mesmo dinheiro, mesmos aportes e retiradas
 REF = [
@@ -26,6 +27,22 @@ REF = [
     {"id": "ouro", "n": "Ouro", "vende": False, "ref": True, "nota": "ouro em reais, custo de 0,3% em cada compra; nunca vende"},
 ]
 MOD = {m["id"]: m for m in MODELOS + REF}
+# Método Barsi: setores BESST (Bancos, Energia elétrica, Saneamento, Seguros, Telecomunicações) — fonte única (chat lê daqui)
+BESST_RX = r"^(Bancos|Energia Elétrica|Água e Saneamento|Seguradoras|Resseguradoras|Corretoras de Seguros|Telecomunicações)"
+BARSI_DY, BARSI_ANOS, BARSI_MARGEM = .06, 5, (.10, .25)  # yield mínimo; anos da mediana dos proventos; margem BESST / demais
+
+
+def besst(r):
+    """A empresa (linha de /api/data) é de setor BESST?"""
+    import re
+    sub = r.get("subsetor") or ""
+    return bool(re.search(BESST_RX, sub)) or (r.get("setor") == "Utilities" and not sub)
+
+
+def set_setores(D, rows):
+    """Marca as empresas BESST nas matrizes (margem de segurança menor no Método Barsi)."""
+    bs = {r["ticker"] for r in rows if besst(r)}
+    if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -89,10 +106,22 @@ def build(snap, cdi, gold=None):
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
         G = gs.reindex(gs.index.union(wk)).ffill(limit=10).reindex(wk).to_numpy()
+    # Método Barsi: preço teto = mediana dos proventos por ação dos últimos 5 anos completos ÷ 6% (só com proventos em 4 dos 5 anos:
+    # pagamento regular; a mediana impede que um dividendo extraordinário infle o teto)
+    Y = wk.year.to_numpy(); yrs = sorted(set(Y)); DVn = np.nan_to_num(DV); DPA = np.full((N, len(yrs)), np.nan)
+    for j, y in enumerate(yrs):
+        m = Y == y; DPA[:, j] = np.where((~np.isnan(C[:, m])).mean(axis=1) > .95, DVn[:, m].sum(axis=1), np.nan)
+    TETO = np.full((N, T), np.nan); yi = {y: j for j, y in enumerate(yrs)}
+    for y in yrs:
+        j = yi[y]; a = DPA[:, max(0, j - BARSI_ANOS):j]
+        ok5 = ((~np.isnan(a)).sum(axis=1) >= 4) & ((np.nan_to_num(a) > 0).sum(axis=1) >= 4)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore"); med = np.nanmedian(a, axis=1) if a.shape[1] else np.full(N, np.nan)
+        TETO[:, Y == y] = np.where(ok5, med / BARSI_DY, np.nan)[:, None]
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G,
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at")}
 
@@ -147,6 +176,9 @@ def _signal(D, mid, idx, i):
     if mid == "medo_acao": return D["SI"][idx, i] < MEDO
     if mid in ("media200", "tendencia"): return D["M2"][idx, i] > 0
     if mid == "hibrido": return D["HX"][idx, i] > 0  # (só para o 1º sinal; a simulação usa a exposição HX)
+    if mid == "barsi":  # compra só abaixo do teto com margem de segurança; acima, o dinheiro espera no CDB (nunca vende)
+        mg = np.where(D["BS"][idx], *BARSI_MARGEM)
+        with np.errstate(invalid="ignore"): return D["Cf"][idx, i] <= D["TETO"][idx, i] * (1 - mg)
     return D["FAV"][MOD[mid]["p"]][idx, i]
 
 

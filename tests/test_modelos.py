@@ -145,6 +145,20 @@ def test_referencias_cdb_e_ouro():
     assert sem["v"] != sem["v"]  # sem ouro: sem dado
 
 
+def test_metodo_barsi_compra_so_abaixo_do_teto():
+    # 7 anos semanais; proventos de R$ 0,60 por ano -> teto = 0,60 ÷ 6% = R$ 10,00 a partir do 5º ano completo
+    Wl = [(date(2015, 1, 2) + timedelta(weeks=k)).isoformat() for k in range(52 * 7 + 10)]; n = len(Wl)
+    dv = {str(k): 0.6 for k in range(n) if k % 52 == 26}
+    mk = lambda c: {"w": Wl, "mi": [50] * n, "a": {"AAA3": {"i0": 0, "c": [c] * n, "dv": dv, "si": [50] * n, "m2": [10] * n, "r12": [0] * n, "p1": [500] * n, "p3": [500] * n}}}
+    d0 = date(2014, 12, 1); cd = {"d": [(d0 + timedelta(days=k)).isoformat() for k in range(n * 7 + 40)], "v": [0.0] * (n * 7 + 40)}
+    for preco, besst, compra in ((8.5, True, True), (8.5, False, False), (7.0, False, True), (12.0, True, False)):
+        D = modelos.build(mk(preco), cd)
+        modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Bancos" if besst else "Varejo"}])
+        me = modelos._span(D, "2020-06", "2021-12"); ap = [1000.0] + [0.0] * (len(me) - 1)
+        r = modelos.simulate(D, "barsi", [0], me, ap, [0.0] * len(me))
+        assert (r["c"][0] == 1) == compra and r["s"][0] == 0, (preco, besst, r)  # margem 10% (BESST) / 25% (demais); nunca vende
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
