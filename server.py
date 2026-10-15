@@ -13,6 +13,7 @@ import requests
 import statusinvest
 import tiebreak
 import tradingview
+import fundamentus
 import snapshots
 from snapshots import br_num
 import consensus
@@ -144,21 +145,14 @@ def num(x):
 
 
 def fetch_fundamentus():
-    r = http_get("https://fundamentus.com.br/resultado.php")
-    html = r.content.decode("latin-1")
-    df = pd.read_html(io.StringIO(html), decimal=",", thousands=".")[0]
-    out = {}
-    for _, row in df.iterrows():
-        t = str(row["Papel"]).strip().upper()
-        rec = {}
-        for c in df.columns:
-            if c == "Papel": continue
-            v = row[c]
-            if isinstance(v, str):
-                v = br_num(v) if "%" in v else num(v.replace(",", ".")) if v.count(".") <= 1 else br_num(v)
-            rec[c] = num(v)
-        out[t] = rec
-    return out
+    """-> (dados, descrição). Ao vivo; se falhar, a cópia diária da branch data (snapshot `fundamentus`)."""
+    try:
+        return fundamentus.parse(http_get(fundamentus.URL).content), "ao vivo"
+    except Exception as e:
+        p, desc = snapshots.load("fundamentus")
+        if not (p and p.get("rows")): raise RuntimeError(f"Fundamentus ao vivo: {e}; cópia: {desc}")
+        log.warning("Fundamentus ao vivo falhou (%s); usando %s", e, desc)
+        return p["rows"], desc
 
 SI_FALLBACK_URL = os.environ.get("SI_FALLBACK_URL", f"{snapshots.RAW}/statusinvest.csv")
 SI_LOCAL_FILE = os.path.join(BASE, "data", "statusinvest.csv")
@@ -268,8 +262,8 @@ def lpa_medio(fd, sh, n=3):
 def build():
     t0 = time.time()
     status = {}
-    fund = fetch_fundamentus()  # obrigatório
-    status["fundamentus"] = f"ok ({len(fund)} papéis) — ao vivo"
+    fund, fsrc = fetch_fundamentus()  # obrigatório (ao vivo ou cópia diária)
+    status["fundamentus"] = f"ok ({len(fund)} papéis) — {fsrc}"
     try:
         si, si_src = fetch_statusinvest(); status["statusinvest"] = f"ok ({len(si)} papéis) — {si_src}"
     except Exception as e:
@@ -496,6 +490,11 @@ class Cache:
             log.exception("consenso falhou"); return
         d["status"] = dict(d.get("status") or {}); d["status"]["yfinance"] = self.yf.status
         self.data = d
+        try:  # grupos prontos do rodízio: histórico sempre em memória (history.PIN)
+            import modelos
+            history.pin([], keep={t for g in modelos.ready_groups(universe.universe(d.get("rows") or [])) for t in g["t"]})
+        except Exception as e:
+            log.warning("grupos fixos do histórico: %s", e)
 
     def refresh(self):
         with self.lock:
@@ -881,6 +880,7 @@ def api_modelos_sim(body: dict):
     body["universo"] = [r["ticker"] for r in rows]
     if body.get("ticker") == "top5": body["ticker"], body["universo"] = "*", modelos.top_sector(rows)  # 5 maiores de cada setor
     user = [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (body.get("grupos") or [])[:9]]
+    history.pin([t for g in user for t in g["t"]])  # grupos do usuário: histórico fica em memória
     body["grupos"] = modelos.ready_groups(rows) + user
     try:
         D = modelos.data(); modelos.set_setores(D, rows)  # setores BESST (Método Barsi)
@@ -906,6 +906,7 @@ def api_modelos_comparar(body: dict):
         grupos = None
         if b.get("rod"):  # rodízio: grupos prontos + grupos do usuário
             grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
+            history.pin([t for g in grupos for t in g["t"]])  # grupos do usuário: histórico fica em memória
         D = modelos.data(); modelos.set_setores(D, rows)
         out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
     except Exception:

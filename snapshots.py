@@ -12,6 +12,8 @@ RAW = os.environ.get("SNAPSHOT_RAW_BASE",
 APP_URL = os.environ.get("APP_URL") or os.environ.get("APP_API", "https://mercado-de-acoes.onrender.com").replace("/api/data", "")
 TZ = ZoneInfo("America/Sao_Paulo")
 _mem = {}  # nome -> (instante, payload, origem)
+import threading
+HEAVY = threading.RLock()  # cargas grandes (histórico de todas as ações, tabelas dos modelos): uma de cada vez (pico de memória)
 
 def when_sp(iso):
     try:
@@ -53,6 +55,10 @@ def load(name, max_mem_age=1800):
     desc = f"{origin} de {when_sp(payload.get('fetched_at', ''))}"
     _mem[name] = (time.time(), payload, desc)
     return payload, desc
+
+def drop(name):
+    """Esquece um snapshot da memória (quem usa já guardou o que precisa, ex.: modelos.data)."""
+    _mem.pop(name, None)
 
 def invalidate():
     _mem.clear()

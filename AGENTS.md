@@ -41,6 +41,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Informação | Fonte única | Quem lê dela |
 |---|---|---|
 | Dados das empresas (nome, setor, preço, variação, indicadores de consenso) | `/api/data` → `rows` (montado em `server.build`/`finalize`) | todas as abas (`state.data.rows`), CSV, chat e Gemini (`chat.build`) |
+| Tabela do Fundamentus (endereço e leitura) | `fundamentus.py` (`URL`, `parse`); ao vivo e, se falhar, a cópia diária da branch `data` (`fundamentus.json`, `scripts/fetch_fundamentus.py`) | `server.fetch_fundamentus`, `indicadores_fundamentus.py`, `scripts/snaputil.py` |
 | Indicadores (chave, rótulo, unidade, direção, colunas das fontes, limiar) | `server.py` → `FIELDS` | `/api/data` → `fields` → filtros, cards, ordenação, CSV; chat |
 | Fontes de dados (id, nome, logo, países) | `server.py` → `SOURCES` | seletor de fonte, contagens, status |
 | Países e moedas | `tradingview.py` → `COUNTRIES` | `/api/countries`, seletor de país |

@@ -2,9 +2,10 @@
 Ordem de fontes para ações/Ibovespa: Yahoo chart API -> brapi.dev -> snapshot da branch `data`
 (data/history/{TICKER}.json, gerado na máquina da rotina diária por scripts/fetch_history.py).
 Formato: {"t": [epoch s], "c": [fechamento], "div": [[epoch s, valor/ação], ...], "source": str}"""
-import gzip, json, logging, os, time
+import gzip, json, logging, os, threading, time
 from functools import partial
 from datetime import datetime, timedelta
+import numpy as np
 import requests
 
 log = logging.getLogger("screener.hist")
@@ -12,7 +13,28 @@ UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/1
 from snapshots import RAW
 import tradingview
 KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("10y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
-_mem = {}
+from collections import OrderedDict
+_mem = OrderedDict()  # histórico em memória: no máximo MEM_MAX itens (sai o usado há mais tempo); PIN nunca sai
+MEM_MAX = 150
+PIN = set()  # tickers dos grupos (prontos do rodízio e os enviados pelo usuário): server.py -> pin()
+
+def pin(tickers, keep=None):
+    """Grupos: tickers que ficam sempre em memória. keep = conjunto fixo (grupos prontos); os demais somam-se até 300."""
+    if keep is not None: PIN.clear(); PIN.update(keep)
+    for t in tickers or []:
+        if len(PIN) >= 300: break
+        PIN.add(str(t).upper())
+
+def _pinned(key):
+    return any(str(k).upper() in PIN for k in key[:-1]) if isinstance(key, tuple) else False
+
+_memlk = threading.Lock()
+
+def _put(key, val):
+    with _memlk:
+        _mem[key] = val; _mem.move_to_end(key)
+        free = [k for k in _mem if not _pinned(k)]
+        for k in free[:max(0, len(free) - MEM_MAX)]: del _mem[k]
 
 def _ysym(t):
     t = t.upper()
@@ -237,11 +259,14 @@ def _hist(key, kind, live, snap, name):
     """Histórico com cache (memória e disco): frio = cópia da branch data primeiro (rápida); depois só os dias novos ao vivo.
     live: fontes ao vivo em ordem; snap: cópia salva. Fontes fora: devolve o que já tinha."""
     c = _mem.get(key)
+    if c:
+        with _memlk:
+            if key in _mem: _mem.move_to_end(key)
     if c and time.time() - c[0] < KINDS[kind][2]:
         return c[1]
     base = c[1] if c else (_dload(name) if kind != "i" else None)
     if base and kind != "i" and time.time() - base.get("_at", 0) < KINDS[kind][2]:
-        _mem[key] = (base["_at"], base); return base
+        _put(key, (base["_at"], base)); return base
     errs = []
     # frio (sem base): cópia diária do data branch primeiro (rápida); Yahoo/brapi só para os dias novos
     for f in live if base else [snap] + live:
@@ -251,9 +276,7 @@ def _hist(key, kind, live, snap, name):
             else:
                 d = f(kind)
             d["_at"] = time.time()
-            if len(_mem) > 600:
-                _mem.clear()
-            _mem[key] = (time.time(), d)
+            _put(key, (time.time(), d))
             if kind != "i":
                 _dsave(name, d)
             return d
@@ -261,7 +284,7 @@ def _hist(key, kind, live, snap, name):
             errs.append(f"{getattr(f, 'func', f).__name__}: {str(e)[:80]}")
     log.warning("histórico %s falhou: %s", name, errs)
     if base:
-        _mem[key] = (time.time() - KINDS[kind][2] + 1800, base)  # fontes fora: não tenta de novo por 30 min
+        _put(key, (time.time() - KINDS[kind][2] + 1800, base))  # fontes fora: não tenta de novo por 30 min
         return base
     raise RuntimeError("; ".join(errs))
 
@@ -442,39 +465,70 @@ def bcb(name):
     return res
 
 # ---------- Retornos de todas as ações (aba Comparar → "Comparar com tudo") ----------
-_allc = {"at": 0, "d": {}}
+_allc = {"at": 0, "d": {}}  # ticker -> {"d"|"m": (t int64, c float64)}: compacto (numpy), ~5× menos memória que listas
+
+def _pack(x):
+    """{t: [...], c: [...]} -> (t, c) numpy; fechamento vazio vira NaN"""
+    return (np.asarray(x["t"], dtype=np.int64), np.array([np.nan if v is None else v for v in x["c"]], dtype=np.float64))
 
 def _load_both(t):
     try:
         p = b3hist(t)
-        return t, {k: {"t": p[k]["t"], "c": p[k]["c"]} for k in ("d", "m")}
+        return t, {k: _pack(p[k]) for k in ("d", "m")}
     except Exception:
         return t, None
 
 def all_closes(tickers):
+    import snapshots
+    with snapshots.HEAVY:  # não carrega junto com as tabelas dos modelos (modelos.data): pico de memória menor
+        return _all_closes(tickers)
+
+def _all_closes(tickers):
     from concurrent.futures import ThreadPoolExecutor
     if time.time() - _allc["at"] > 6 * 3600:
         _allc["d"] = {}; _allc["at"] = time.time()
     miss = [t for t in tickers if t not in _allc["d"]]
+    fresh = set()  # carregados aqui só para os retornos: saem do cache de gráficos depois (ficam no disco)
     if len(miss) > 20 and not _allc.get("bundle"):
         try:  # arquivo único com o histórico de todas as ações (um download em vez de ~360)
             r = requests.get(f"{RAW}/history4_all.json.gz", timeout=(6, 60)); r.raise_for_status()
-            B = json.loads(gzip.decompress(r.content)); _allc["bundle"] = True
+            B = json.loads(gzip.decompress(r.content)); del r; _allc["bundle"] = True
             old = time.time() - 3 * 3600 - 1  # força só a atualização incremental (arquivos diários) depois
+            want = set(miss)
             for t, h in B.items():
-                if t not in _h4: _h4[t] = (old, h)
+                if t in want and t not in _h4: _h4[t] = (old, h); fresh.add(t)
+            del B
         except Exception as e:
             log.warning("bundle de histórico: %s", e)
     if miss:
+        fresh |= {t for t in miss if t not in _h4}
         with ThreadPoolExecutor(16) as ex:
             for t, v in ex.map(_load_both, miss):
                 _allc["d"][t] = v
+        for t in fresh:  # gráfico dessas ações volta a ler do disco (b3hist -> _dload) quando alguém abrir
+            if t.upper() not in PIN: _h4.pop(t, None)
     return _allc["d"]
 
 def period_return(h, start_ts, end_ts, live=None):
-    """Base = último fechamento até start_ts; fim = último fechamento até end_ts (ou preço atual)."""
+    """Base = último fechamento até start_ts; fim = último fechamento até end_ts (ou preço atual). h = all_closes()[ticker]."""
     if not h:
         return None
+    for k in ("d", "m"):
+        x = h.get(k)
+        if x is None or not len(x[0]) or x[0][0] > start_ts:
+            continue
+        ts, cs = x; ok = ~np.isnan(cs)
+        ib = np.nonzero(ok & (ts <= start_ts))[0]; ie = np.nonzero(ok & (ts <= end_ts))[0]
+        b = float(cs[ib[-1]]) if len(ib) else None; e = float(cs[ie[-1]]) if len(ie) else None
+        last = int(ts[-1])
+        stale = min(end_ts, time.time()) - last > 12 * 86400
+        if stale and end_ts > last + 12 * 86400:
+            return None  # série parada (ex.: troca de ISIN sem histórico novo): não mistura com o preço atual
+        if live and end_ts >= last:
+            e = live
+        if b and e:
+            return round((e / b - 1) * 100, 4)
+    return None
     for k in ("d", "m"):
         x = h.get(k)
         if not x or not x["t"] or x["t"][0] > start_ts:

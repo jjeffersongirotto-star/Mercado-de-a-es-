@@ -1560,6 +1560,7 @@ def ground(q, ctx, hist, deadline):
 
 # ============================================================ orquestração
 _QA = {}  # mesma pergunta no mesmo dia (sem histórico)
+QA_MAX = 500
 
 
 def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None):
@@ -1629,7 +1630,11 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
         out["sug"] = suggestions(P, D)
     elif out["mode"] in ("regras", "ia+dados") and (P["tickers"] or P["metrics"] or P["sector"]):
         out["sug"] = suggestions(P, D)[:3]
-    if (out["mode"] in ("gemini", "ia+dados") or loc) and not hist: _QA[key] = out
+    if (out["mode"] in ("gemini", "ia+dados") or loc) and not hist:
+        day = key[:10]
+        for k in [k for k in _QA if not k.startswith(day)]: del _QA[k]  # só o dia de hoje
+        while len(_QA) >= QA_MAX: del _QA[next(iter(_QA))]  # no máximo QA_MAX (sai a mais antiga)
+        _QA[key] = out
     if len(_QA) > 2000: _QA.clear()
     _log(q, out, P, t0)
     return out

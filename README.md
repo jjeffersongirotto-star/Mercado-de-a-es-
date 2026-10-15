@@ -50,7 +50,7 @@ que não dispara deploy.
 
 | Fonte | Como chega ao Render | Países |
 |---|---|---|
-| Fundamentus | ao vivo | BR |
+| Fundamentus | ao vivo (se falhar: cópia diária da branch data, `fundamentus.json`) | BR |
 | Status Invest | ao vivo → snapshot se bloquear (HTTP 403) | BR |
 | TradingView (scanner) | ao vivo em lote → snapshot `tradingview_<país>.json` se bloquear | BR, EUA, Reino Unido, Alemanha, Portugal, Japão |
 | Investidor10, Dados de Mercado, CVM (DFP/ITR) | snapshot diário | BR |

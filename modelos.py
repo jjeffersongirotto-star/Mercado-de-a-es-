@@ -4,7 +4,7 @@ Cada semana usa o sinal da semana anterior (decide com o fechamento de sexta e o
 Aportes e retiradas entram no último pregão de cada mês (mês 1 = valor inicial), como na tabela da Previsão.
 Imposto: 15% do lucro líquido das vendas do mês quando as vendas passam de R$ 20 mil; prejuízo compensa os meses seguintes.
 Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de R$ 50 mil, ou o % escolhido)."""
-import threading, time, warnings
+import gc, threading, time, warnings
 from collections import OrderedDict
 import numpy as np
 
@@ -68,8 +68,10 @@ _C = OrderedDict()
 def build(snap, cdi, gold=None):
     """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
-    arr = lambda: np.full((N, T), np.nan)
-    C, DV, SI, M2, R12, P1, P3 = (arr() for _ in range(7))
+    arr = lambda dt=np.float64: np.full((N, T), np.nan, dtype=dt)
+    # preço e proventos em float64 (dinheiro); sinais em float32 (só comparações): metade da memória
+    C, DV = arr(), arr()
+    SI, M2, R12, P1, P3 = (arr(np.float32) for _ in range(5))
     LP = np.ones((N, T), bool)
     for k, t in enumerate(tick):
         a = snap["a"][t]; i0 = a["i0"]
@@ -83,7 +85,7 @@ def build(snap, cdi, gold=None):
     import pandas as pd
     fav, MED = {}, {}
     for key, P in (("p1", P1), ("p3", P3)):
-        med = pd.DataFrame(P.T).rolling(MED_SEM, min_periods=MED_SEM // 2).median().to_numpy().T
+        med = pd.DataFrame(P.T).rolling(MED_SEM, min_periods=MED_SEM // 2).median().to_numpy(dtype=np.float32).T
         fav[key] = (P >= med) & ~np.isnan(P); MED[key] = med
     # CDB (100% do CDI): fator de cada semana = produto das taxas diárias desde a semana anterior
     cs = pd.Series(np.cumprod(1 + np.array(cdi["v"], dtype=float) / 100), index=pd.to_datetime(cdi["d"]))
@@ -102,6 +104,7 @@ def build(snap, cdi, gold=None):
     wt = np.exp(HIB_ETA * (perf - perf.max(axis=0, keepdims=True))); wt /= wt.sum(axis=0, keepdims=True)
     HX = np.round((wt * X).sum(axis=0) * 4) / 4
     HW = np.round(wt * 100).astype(np.int16)  # peso de cada especialista (%): a tabela mostra quem o híbrido está seguindo
+    del X, lr, cs, perf, wt, rs  # temporários grandes (4 × ações × semanas): libera antes de seguir
     G = np.full(T, np.nan)  # ouro (R$) no último dia com preço de cada semana
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
@@ -136,7 +139,10 @@ def data():
         if _D["key"] != snap.get("fetched_at") or _D["d"] is None:
             try: gold = history.gold()
             except Exception: gold = None  # sem ouro: a referência Ouro mostra "—"
-            _D["d"] = build(snap, history.bcb("cdi"), gold); _D["key"] = snap.get("fetched_at"); _C.clear()
+            with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
+                _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
+                _D["d"] = build(snap, history.bcb("cdi"), gold); _D["key"] = snap.get("fetched_at")
+        snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
 

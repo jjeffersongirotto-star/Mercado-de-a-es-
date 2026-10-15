@@ -2,7 +2,7 @@
 # Atualiza TODOS os snapshots da branch `data` a partir de uma máquina cujo IP NÃO é bloqueado
 # (rotina diária 19:05). Roda em sequência, com taxa baixa (~1 req/s nos sites por ticker).
 # Requer git com permissão de push. Não dispara deploy no Render (branch data).
-#   Status Invest (CSV)  · Yahoo (desempate)   · TradingView (todos os países, fallback)
+#   Fundamentus (cópia para quando o site falhar) · Status Invest (CSV)  · Yahoo (desempate)   · TradingView (todos os países, fallback)
 #   Investidor10 (~1 req/s, ~1000 páginas)     · Dados de Mercado (~1 req/2,5 s, ~300 páginas)
 #   CVM dados abertos (DFP/ITR, pré-processado: data/cvm.json compacto)
 #   Histórico (Yahoo 20a mensal/5a diário + Ibovespa + BCB; maiores ações de fora em history5, 1×/semana) e perfis (brapi) do universo exibido
@@ -15,7 +15,7 @@ PY="${PYTHON:-}"
 if [ -z "$PY" ]; then
   if [ -x /workspace/b3-api/.venv/bin/python ]; then PY=/workspace/b3-api/.venv/bin/python; else PY=python3; fi
 fi
-STEPS="${ONLY:-statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics fg fund modelos kb}"
+STEPS="${ONLY:-fundamentus statusinvest yfinance tradingview cvm investidor10 dadosdemercado b3indices b3cad b3btb vol30 cotahist history metrics fg fund modelos kb}"
 TMP="$(mktemp -d)"
 git clone -q --depth 1 --branch data "$REPO_URL" "$TMP" 2>/dev/null || { git -C "$TMP" init -q -b data; git -C "$TMP" remote add origin "$REPO_URL"; }
 mkdir -p "$TMP/data"
@@ -27,6 +27,7 @@ run() {  # nome, comando...
 }
 for s in $STEPS; do
   case "$s" in
+    fundamentus)    run "Fundamentus"      "$PY" "$HERE/scripts/fetch_fundamentus.py" "$TMP/data" ;;
     statusinvest)   run "Status Invest"    python3 "$HERE/scripts/fetch_statusinvest.py" "$TMP/data" ;;
     yfinance)       run "yfinance"         "$PY" "$HERE/scripts/fetch_yfinance.py" "$TMP/data" ;;
     tradingview)    run "TradingView"      "$PY" "$HERE/scripts/fetch_tradingview.py" "$TMP/data" ;;
