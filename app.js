@@ -359,12 +359,12 @@ const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.p
 // Barato/Caro: preço do card × valor justo de Graham √(22,5 × LPA × VPA) (explicação no Glossário do painel ⓘ).
 // pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
 // Sem cálculo -> { why: motivo curto } (o card mostra "—" e o motivo no lugar da barra).
-// Valor justo de Graham. Brasil: LPA médio dos últimos 3 anos (balanços da CVM, servidor → lpa3), como Graham fazia: lucro pontual não infla o valor.
+// Valor justo de Graham. Brasil: LPA médio dos últimos 3 anos = ln3 (lucro médio ÷ patrimônio, CVM, servidor → lucro_pl) × VPA do card.
 // Exterior: LPA de 12 meses (TradingView). Fontes divergindo no VPA -> sem número; acima de +100% -> aviso (painel ⓘ → Glossário → Barato/Caro).
 function fairOf(r) {
-  const br = state.country === 'br', p = priceOf(r), l = br ? r.lpa3 : val(r, 'lpa'), b = val(r, 'vpa');
+  const br = state.country === 'br', p = priceOf(r), b = val(r, 'vpa'), l = br ? (r.ln3 != null && b != null ? r.ln3 * b : null) : val(r, 'lpa');
   if (!(p > 0)) return { why: 'Sem preço' };
-  if (br && l == null) return { why: 'Sem lucro de 3 anos na CVM' };
+  if (br && r.ln3 == null) return { why: 'Sem lucro de 3 anos na CVM' };
   if (state.source === 'all' && (r.st || {}).vpa === 'red') return { why: 'Dados divergentes entre as fontes' };
   if (l == null || b == null) return { why: state.source === 'all' ? 'Sem LPA/VPA nas fontes' : 'Sem LPA/VPA nesta fonte' };
   if (l <= 0 && b <= 0) return { why: 'Prejuízo e patrimônio negativo' };
@@ -377,8 +377,8 @@ window.fairOf = fairOf;
 function fairHtml(r) {
   const f = fairOf(r);
   if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span><div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
-  const cheap = f.pct >= 0, odd = f.pct > 100;  // mais que o dobro do preço: quase sempre lucro ou patrimônio fora do normal
-  return `<div class="fv"><span class="fv-t ${odd ? 'text-amber-300' : cheap ? 'text-emerald-400' : 'text-rose-400'}"${odd ? ` title="Valor justo ${F0.format(f.pct)}% acima do preço"` : ''}>${odd ? 'Muito barato? Confira' : cheap ? 'Barato +' + F0.format(f.pct) + '%' : 'Caro ' + F0.format(f.pct) + '%'}</span>` +
+  const up = f.pct >= 0;  // + verde: o preço precisa subir até o valor justo · − vermelho: precisa cair
+  return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo de Graham: R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>` +
     `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
 }
 function blockHtml(r) {
@@ -572,7 +572,7 @@ function strengths(r) {
     const low = f.dir === 'low', better = vs.filter(x => low ? x < v : x > v).length / vs.length;
     if (better <= .25 && (low ? v >= 0 : v > 0)) out.push([better, `${f.label} ${fmt(v, f.unit, k, r.cur)} (entre os 25% ${low ? 'menores' : 'maiores'} do setor)`]);
   }
-  const fv = fairOf(r); if (!fv.why && fv.pct >= 20) out.push([0, `Preço abaixo do valor justo de Graham (Barato +${F0.format(fv.pct)}%)`]);
+  const fv = fairOf(r); if (!fv.why && fv.pct >= 20) out.push([0, `Preço abaixo do valor justo de Graham (+${F0.format(fv.pct)}% até o valor justo)`]);
   return out.sort((a, b) => a[0] - b[0]).slice(0, 3).map(x => x[1]);
 }
 function aboutHtml(r) {
