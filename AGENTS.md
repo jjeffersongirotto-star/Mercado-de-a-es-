@@ -65,14 +65,14 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Vocabulário do chat: sinônimos e gírias → indicador, qualificadores (barato, pouca dívida, boa pagadora, queda), abreviações, apelidos de empresas, palavras → termo do Glossário, variações de frases, nomes que não viram personagem | `vocabulario.json` | `chat.py` (`SYN`, `QUALS`, `ABBR`, `ALIAS`, `GLOSS_SYN`, `frase`) |
 | Barato/Caro (valor justo de Graham √(22,5 × LPA × VPA)) | `app.js` → `fairOf` (preço e indicadores do card, respeita o seletor de fonte); o chat faz a mesma conta com o consenso (`chat.fair`) | barra do card (Ações e Grupos), chat |
 | Índice de Medo e Ganância da B3 (0–100, diário desde 1997; faixas e partes) | snapshot `fg` (`scripts/build_fg.py`: COTAHIST, fluxo B3, CDI; rotina diária) → `/api/fg` | velocímetro (`medo.js` → `fgLoad`, `fgBand`), Comparar, chat (`chat.fg_answer`) |
-| Modelos da Previsão (regras, custos, IR, grupos prontos do rodízio) | `modelos.py` → `MODELOS`, `GRUPOS`, `HIB` (híbrido; explicação no painel ⓘ → **Modelos da Previsão**) | `/api/modelos` → card Modelos, abas Tabela/Desempenho (`previsao.js`); `/api/modelos/comparar` (`modelos.compare`, `ranking`, `top_sector`) → Comparar → Modelos (`comparar.js` → `modRun`, `modHtml`); chat |
+| Modelos da Previsão (regras, custos, IR, grupos prontos do rodízio, referências CDB e Ouro) | `modelos.py` → `MODELOS`, `REF`, `GRUPOS`, `HIB` (híbrido; explicação no painel ⓘ → **Modelos da Previsão**) | `/api/modelos` → card Modelos, abas Tabela/Desempenho (`previsao.js`); `/api/modelos/comparar` (`modelos.compare`, `ranking`, `top_sector`) → Comparar → Modelos (`comparar.js` → `modRun`, `modHtml`); chat |
 | Sinais semanais dos modelos (índice da ação, média de 200 dias, alta em 12 meses, chance do algoritmo 1 e 3 meses, lucro no último balanço publicado) | snapshot `modelos` (`scripts/build_modelos.py`; lucro de `fund.json` ← `scripts/build_fund.py`, DFP da CVM; "mercado" de `build_fg.market`, índice da ação de `medo.stock_index`; CDB de `history.bcb`) | `modelos.py` |
 | Aporte e retirada de cada mês da Previsão | `previsao.js` → `flows` | tabela da Previsão e simulação dos modelos |
 | Comparar → Medo e Ganância de uma ação (índice da ação: `medo.stock_index`, mesma nota 0–100 de `medo.rank` usada pelo índice do mercado; altas/quedas semanais, demais mensais) | `medo.py` → `analyze` (histórico diário completo `history.b3full`, snapshot `fg`, Ibovespa) → `/api/fgcmp` | aba Comparar (`comparar.js` → `fgRun`, `fgHtml`) |
 | Métodos de investimento (Barsi, Bazin, Graham, Buffett, Fórmula Mágica…) | painel ⓘ → seção **Métodos de investimento** | usuário; chat (`chat.method`, critérios em `METHODS`) |
 | Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
 | Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
-| Diálogos, toast, carregamento, Reorganizar (arrastar ⠿) | `ui.js` → `uiConfirm`, `uiAlert`, `uiPrompt`, `uiChoose`, `uiToast`, `uiReorder`, `loaderHTML` | todas as abas |
+| Diálogos, toast, carregamento, Reorganizar (arrastar ⠿), calendário | `ui.js` → `uiConfirm`, `uiAlert`, `uiPrompt`, `uiChoose`, `uiToast`, `uiReorder`, `loaderHTML`, `uiCalendar` (todo `input type=date/month` vira `uiDateField` sozinho) | todas as abas |
 | Formatação de indicadores (`fmt`, `fmtPrice`, `fmtBig`, `fmtMoneyBig`) e preço exibido (`priceOf`) | `app.js` | aba Ações, Comparar, Carteira |
 | Rendimento dos índices entre duas datas (Ibovespa, CDB…) | `server._idx_returns` | Comparar e chat (`/api/returns`), Carteira (`/api/idxret`) |
 | Lista de scripts JS | tags `<script src="/static/…">` do `index.html` | servidor (`JS_FILES` é lido delas) |
@@ -132,7 +132,7 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
   conteúdo de cards ficam no meio da altura (`align-items: center`; `td, th` no design system). Exceção: texto corrido longo (chat, painel ⓘ) começa no topo.
 - **Alinhamento em dúvida** (não se encaixa nas regras acima): pergunte ao dono do site antes de escolher.
 - **Botões**: `.gbtn` (secundário), `.gbtn.pri` (ação principal), `.gbtn.dan` (perigo). Campos: `.pv-in`. Abas: `.tabs`. Selos: `.hb-*`.
-- **Nunca** use `alert`, `confirm` ou `prompt` do navegador: use `uiAlert`, `uiConfirm`, `uiPrompt`, `uiChoose`, `uiToast`.
+- **Nunca** use `alert`, `confirm` ou `prompt` do navegador: use `uiAlert`, `uiConfirm`, `uiPrompt`, `uiChoose`, `uiToast`. Datas: `input type="date"`/`"month"` abrem o calendário do site (`uiCalendar`), não o do navegador.
   Carregando: `loaderHTML('texto')`.
 - **Números** no formato brasileiro (`1.234,56`; `8,5%`; `R$ 1,2 bi`) com os utilitários do `ui.js`/`app.js`. Datas com `dataBR` (`dd/mm/aaaa`), horário de Brasília.
 - **Textos**: curtos, no imperativo para botões ("Salvar", "Criar grupo"), mesmo nome do botão em todo o site.

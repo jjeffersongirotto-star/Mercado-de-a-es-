@@ -18,8 +18,9 @@ if (typeof document !== 'undefined') document.addEventListener('click', (e) => {
   const tb = th.closest('table'), i = [...th.parentNode.children].indexOf(th), dir = th.dataset.dir === '-1' ? 1 : -1;
   tb.querySelectorAll('th[data-sc]').forEach(x => { x.dataset.dir = x === th ? dir : ''; x.querySelector('.sd-ic').outerHTML = sortIc(x === th ? dir : 0); });
   const val = (tr) => { const v = tr.children[i]?.dataset.v ?? ''; const n = parseFloat(v); return isNaN(n) ? v : n; };
-  const rows = [...tb.tBodies[0].rows].sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR')) * dir; });
-  tb.tBodies[0].append(...rows);
+  const body = tb.querySelector('tbody:not(.ref)');  // referências (tbody.ref) ficam fixas no topo
+  const rows = [...body.rows].sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR')) * dir; });
+  body.append(...rows);
 });
 
 // Diálogos do site (substituem confirm/alert/prompt), toast e animação de carregamento
@@ -97,6 +98,74 @@ window.uiReorder = (title, items) => new Promise((res) => {
     res(ids);
   });
 });
+// Calendário do site (substitui o do navegador, igual em todo aparelho): uiCalendar abre o diálogo; uiDateField liga um campo a ele.
+// kind 'date' -> AAAA-MM-DD (grade de dias) · 'month' -> AAAA-MM (grade de meses). Tocar no mês/ano do título abre a lista de anos.
+const UI_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+window.uiCalendar = (value, { min = '', max = '', kind = 'date', title = '' } = {}) => new Promise((res) => {
+  const pad = (n) => String(n).padStart(2, '0'), iso = (y, m, d) => kind === 'month' ? `${y}-${pad(m + 1)}` : `${y}-${pad(m + 1)}-${pad(d)}`;
+  const now = new Date(), clamp = (v) => (min && v < min.slice(0, v.length) ? min.slice(0, v.length) : max && v > max.slice(0, v.length) ? max.slice(0, v.length) : v);
+  let sel = value || '', base = sel || clamp(iso(now.getFullYear(), now.getMonth(), now.getDate()));
+  let vy = +base.slice(0, 4), vm = +base.slice(5, 7) - 1, years = false;
+  const out = (v) => (min && v < min.slice(0, v.length)) || (max && v > max.slice(0, v.length));
+  const w = document.createElement('div'); w.className = 'umod';
+  w.innerHTML = `<div class="umod-box ucal" role="dialog" aria-modal="true" aria-label="${title || 'Calendário'}">${title ? `<h3>${title}</h3>` : ''}<div class="ucal-hd"></div><div class="ucal-g"></div>
+    <div class="umod-btns"><button type="button" class="umod-c">Cancelar</button><button type="button" class="ucal-today">Hoje</button><button type="button" class="umod-ok">OK</button></div></div>`;
+  const hd = w.querySelector('.ucal-hd'), g = w.querySelector('.ucal-g');
+  function draw() {
+    const lbl = years ? `${vy - (vy % 12)}–${vy - (vy % 12) + 11}` : kind === 'month' ? vy : `${UI_MESES[vm][0].toUpperCase() + UI_MESES[vm].slice(1)} de ${vy}`;
+    hd.innerHTML = `<button type="button" data-nav="-1" aria-label="Anterior">‹</button><button type="button" class="ucal-t" data-yrs aria-label="Escolher o ano">${lbl} ▾</button><button type="button" data-nav="1" aria-label="Próximo">›</button>`;
+    g.className = 'ucal-g' + (years || kind === 'month' ? ' ucal-g3' : '');
+    if (years) {  // lista de anos (12 por página)
+      const y0 = vy - (vy % 12);
+      g.innerHTML = Array.from({ length: 12 }, (_, k) => y0 + k).map(y => `<button type="button" data-y="${y}" class="${y === +sel.slice(0, 4) ? 'on' : ''}"${out(String(y)) ? ' disabled' : ''}>${y}</button>`).join('');
+    } else if (kind === 'month') {
+      g.innerHTML = UI_MESES.map((n, m) => { const v = iso(vy, m); return `<button type="button" data-v="${v}" class="${v === sel ? 'on' : ''}"${out(v) ? ' disabled' : ''}>${n.slice(0, 3)}</button>`; }).join('');
+    } else {
+      const f = new Date(vy, vm, 1).getDay(), nd = new Date(vy, vm + 1, 0).getDate(), td = iso(now.getFullYear(), now.getMonth(), now.getDate());
+      g.innerHTML = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => `<span class="ucal-w">${d}</span>`).join('') + '<span></span>'.repeat(f) +
+        Array.from({ length: nd }, (_, k) => { const v = iso(vy, vm, k + 1); return `<button type="button" data-v="${v}" class="${v === sel ? 'on' : ''}${v === td ? ' td' : ''}"${out(v) ? ' disabled' : ''}>${k + 1}</button>`; }).join('');
+    }
+  }
+  const done = (v) => { w.remove(); document.removeEventListener('keydown', key); res(v); };
+  const key = (e) => { if (e.key === 'Escape') done(null); };
+  w.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (e.target === w) return done(null); if (!b || b.disabled) return;
+    if (b.dataset.nav) { const k = +b.dataset.nav; if (years) vy += 12 * k; else if (kind === 'month') vy += k; else { vm += k; if (vm < 0) { vm = 11; vy--; } if (vm > 11) { vm = 0; vy++; } } }
+    else if (b.hasAttribute('data-yrs')) years = !years;
+    else if (b.dataset.y) { vy = +b.dataset.y; years = false; }
+    else if (b.dataset.v) sel = b.dataset.v;
+    else if (b.classList.contains('ucal-today')) { sel = clamp(iso(now.getFullYear(), now.getMonth(), now.getDate())); vy = +sel.slice(0, 4); vm = +sel.slice(5, 7) - 1; years = false; }
+    else if (b.classList.contains('umod-c')) return done(null);
+    else if (b.classList.contains('umod-ok')) return done(sel || null);
+    draw();
+  });
+  document.addEventListener('keydown', key); document.body.appendChild(w); draw();
+  setTimeout(() => w.querySelector('.umod-ok').focus({ preventScroll: true }), 30);
+});
+// Campo de data com o calendário do site: .value continua AAAA-MM-DD (ou AAAA-MM), min/max limitam; mostra dd/mm/aaaa e avisa com 'change'
+window.uiDateField = (inp, kind = 'date') => {
+  if (!inp || inp._ud) return; inp._ud = true;
+  const P = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  let v = P.get.call(inp) || inp.getAttribute('value') || '';
+  inp.type = 'text'; inp.readOnly = true; inp.setAttribute('inputmode', 'none'); inp.classList.add('ud-in');
+  const show = () => P.set.call(inp, v ? dataBR(v) : '');
+  Object.defineProperty(inp, 'value', { configurable: true, get: () => v, set: (x) => { v = x || ''; show(); } });
+  show();
+  const lbl = () => (inp.closest('label')?.querySelector('span')?.textContent || inp.closest('label')?.firstChild?.textContent || '').trim();
+  const open = async () => {
+    if (inp.disabled) return;
+    const x = await uiCalendar(v, { min: inp.getAttribute('min') || '', max: inp.getAttribute('max') || '', kind, title: lbl() });
+    if (x != null && x !== v) { inp.value = x; inp.dispatchEvent(new Event('change', { bubbles: true })); }
+  };
+  inp.addEventListener('click', open);
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+};
+// todo campo de data/mês do site (Comparar, gráfico, Carteira, Previsão) usa o calendário do site, inclusive os criados depois
+if (typeof document !== 'undefined' && typeof MutationObserver !== 'undefined') {
+  const Q = 'input[type=date],input[type=month]', up = (n) => { if (n.matches && n.matches(Q)) uiDateField(n, n.type); else if (n.querySelectorAll) n.querySelectorAll(Q).forEach(i => uiDateField(i, i.type)); };
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && up(n)))).observe(document.documentElement, { childList: true, subtree: true });
+  up(document); document.addEventListener('DOMContentLoaded', () => up(document));
+}
 window.uiChoose = (msg, options) => new Promise((res) => {
   const w = document.createElement('div'); w.className = 'umod';
   w.innerHTML = `<div class="umod-box" role="dialog" aria-modal="true"><p></p><div class="umod-list">${options.map((o, i) => `<button type="button" data-i="${i}">${o.label}</button>`).join('')}</div><div class="umod-btns"><button type="button" class="umod-c">Cancelar</button></div></div>`;

@@ -119,9 +119,30 @@ def test_run_todos_ordena_grupos_primeiro():
     out = modelos.run(D, {"di": "2020-09", "df": "2021-12", "ap": [1000] + [100] * 15, "ticker": "*", "modelo": "*", "universo": ["AAA3", "BBB3"],
                           "grupos": [{"n": "G", "t": ["AAA3", "BBB3"]}]})
     ks = [x["k"] for x in out["rows"]]
-    assert ks == sorted(ks, key=lambda k: k != "g") and ks.count("g") == 3  # um rodízio por modelo que troca de empresa (Algoritmos e Tendência)
+    assert ks == sorted(ks, key="rga".index) and ks.count("g") == 3 and ks.count("r") == len(modelos.REF)  # CDB e Ouro uma vez, no topo  # um rodízio por modelo que troca de empresa (Algoritmos e Tendência)
     emp = [x for x in out["rows"] if x["k"] == "a"]
     assert all(a["pct"] >= b["pct"] for a, b in zip(emp, emp[1:])) and len(emp) == 2 * len(modelos.MODELOS)
+
+
+def test_referencias_cdb_e_ouro():
+    gold = {"d": [w for w in W], "v": [100.0 * 1.01 ** k for k in range(NW)]}  # ouro sobe 1% por semana
+    D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(0.01), gold)
+    me = months(D, "2020-02", "2020-12"); ap = [1000.0] + [100.0] * (len(me) - 1); w = [0.0] * len(me)
+    c = modelos.simulate_ref(D, "cdb", me, ap, w, rec=True)
+    v = 0.0  # CDB: aporte no fim de cada mês, rende o CDI entre as semanas
+    for i in range(me[0], me[-1] + 1):
+        if i > me[0]: v *= D["cdb"][i]
+        if i in me: v += ap[me.index(i)]
+    assert abs(c["v"] - v) < 1e-6 and len(c["rows"]) == len(me) and c["rows"][-1]["tax"] == 0
+    o = modelos.simulate_ref(D, "ouro", me, ap, w)
+    q = sum(a * (1 - modelos.CUSTO) / gold["v"][i] for a, i in zip(ap, me))
+    assert abs(o["v"] - q * gold["v"][me[-1]]) < 1e-6
+    out = modelos.compare(D, ["AAA3"], "2020-02", "2020-12", ap)
+    assert [r["m"] for r in out["ref"]] == ["cdb", "ouro"] and len(out["res"]) == len(modelos.MODELOS)  # fora das colocações
+    t = modelos.run(D, {"di": "2020-02", "df": "2020-12", "ap": ap, "tab": {"t": "", "m": "ouro"}})["tab"]
+    assert abs(t[-1]["com"] - o["v"]) < 1e-6
+    sem = modelos.simulate_ref(modelos.build(snap({"AAA3": {"c": 10.0}}), cdi()), "ouro", me, ap, w)
+    assert sem["v"] != sem["v"]  # sem ouro: sem dado
 
 
 if __name__ == "__main__":

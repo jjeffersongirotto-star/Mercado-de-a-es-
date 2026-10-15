@@ -19,7 +19,13 @@ MODELOS = [
     {"id": "tendencia", "n": "Tendência", "vende": True, "min": 4, "lucro": True},
     {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
 ]
-MOD = {m["id"]: m for m in MODELOS}
+# referências fora das empresas (não entram nas colocações): mesmo dinheiro, mesmos aportes e retiradas
+REF = [
+    {"id": "cdb", "n": "CDB 100% do CDI", "vende": False, "ref": True,
+     "nota": "sem resgate no período: no resgate paga IR de 15% sobre o rendimento (aplicação acima de 2 anos)"},
+    {"id": "ouro", "n": "Ouro", "vende": False, "ref": True, "nota": "ouro em reais, custo de 0,3% em cada compra; nunca vende"},
+]
+MOD = {m["id"]: m for m in MODELOS + REF}
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -42,8 +48,8 @@ _lock = threading.Lock()
 _C = OrderedDict()
 
 
-def build(snap, cdi):
-    """snapshot `modelos` + CDI diário {d, v (% ao dia)} -> matrizes ações × semanas (numpy)."""
+def build(snap, cdi, gold=None):
+    """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda: np.full((N, T), np.nan)
     C, DV, SI, M2, R12, P1, P3 = (arr() for _ in range(7))
@@ -79,10 +85,14 @@ def build(snap, cdi):
     wt = np.exp(HIB_ETA * (perf - perf.max(axis=0, keepdims=True))); wt /= wt.sum(axis=0, keepdims=True)
     HX = np.round((wt * X).sum(axis=0) * 4) / 4
     HW = np.round(wt * 100).astype(np.int16)  # peso de cada especialista (%): a tabela mostra quem o híbrido está seguindo
+    G = np.full(T, np.nan)  # ouro (R$) no último dia com preço de cada semana
+    if gold and gold.get("d"):
+        gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
+        G = gs.reindex(gs.index.union(wk)).ffill(limit=10).reindex(wk).to_numpy()
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb,
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G,
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at")}
 
@@ -95,7 +105,9 @@ def data():
         snap = snapshots.load("modelos", max_mem_age=6 * 3600)[0]
         if not snap or not snap.get("a"): raise RuntimeError("sinais dos modelos ainda não calculados")
         if _D["key"] != snap.get("fetched_at") or _D["d"] is None:
-            _D["d"] = build(snap, history.bcb("cdi")); _D["key"] = snap.get("fetched_at"); _C.clear()
+            try: gold = history.gold()
+            except Exception: gold = None  # sem ouro: a referência Ouro mostra "—"
+            _D["d"] = build(snap, history.bcb("cdi"), gold); _D["key"] = snap.get("fetched_at"); _C.clear()
         _D["at"] = time.time()
         return _D["d"]
 
@@ -112,7 +124,7 @@ def ready_groups(rows):
 
 
 def meta(D):
-    return {"modelos": [{"id": m["id"], "n": m["n"], "vende": m["vende"]} for m in MODELOS], "ini": D["ini"], "fim": D["fim"], "at": D["at"], "tick": D["tick"]}
+    return {"modelos": [{"id": m["id"], "n": m["n"], "vende": m["vende"], **({"ref": True, "nota": m["nota"]} if m.get("ref") else {})} for m in MODELOS + REF], "ini": D["ini"], "fim": D["fim"], "at": D["at"], "tick": D["tick"]}
 
 
 def _span(D, di, df):
@@ -235,6 +247,37 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     return {"v": v, "ir": A.ir + A.dtax, "c": A.compras, "s": A.vendas, "rows": rows}
 
 
+def simulate_ref(D, rid, me, ap, wd, rec=False):
+    """Referência (CDB ou Ouro) com os mesmos aportes e retiradas dos modelos. -> valor final (nan sem dado) e as linhas mensais."""
+    s, e = me[0], me[-1]; meset = {w: j for j, w in enumerate(me)}; G = D["G"]
+    if rid == "ouro" and np.isnan(G[s]): return {"v": float("nan"), "rows": [] if rec else None}
+    cash, q, c, n, rows, lastg = 0.0, 0.0, 0, 0, [], G[s]
+    for i in range(s, e + 1):
+        if rid == "cdb" and i > s: cash *= D["cdb"][i]
+        if not np.isnan(G[i]): lastg = G[i]
+        j = meset.get(i)
+        if j is None: continue
+        a, w = (ap[j] if j < len(ap) else 0), (wd[j] if j < len(wd) else 0)
+        if rid == "cdb": cash = max(0.0, cash - w) + a
+        else:
+            if w > 0 and q > 0: sv = min(q, w / (lastg * (1 - CUSTO))); q -= sv; n += 1
+            if a > 0: q += a * (1 - CUSTO) / lastg; c += 1
+        v = cash if rid == "cdb" else q * lastg
+        if rec: rows.append({"ym": D["ym"][i], "v": float(v), "div": 0.0, "tax": 0.0, "pos": MOD[rid]["n"], "c": c, "s": n})
+    return {"v": float(cash if rid == "cdb" else q * lastg), "rows": rows if rec else None}
+
+
+def _refs(D, me, ap, wd, apT):
+    """Linhas das referências (uma vez, fora das empresas)."""
+    out = []
+    for m in REF:
+        v = simulate_ref(D, m["id"], me, ap, wd)["v"]
+        ok = v == v
+        out.append({"k": "r", "m": m["id"], "t": m["n"], "v": round(v, 2) if ok else None,
+                    "pct": round((v - apT) / apT * 100, 2) if ok and apT > 0 else None, "ir": 0.0, "c": None, "s": None, "nota": m["nota"]})
+    return out
+
+
 def rotate(D, mid, gidx, me, ap, wd, tx=None):
     """Rodízio: um modelo que vende, uma empresa do grupo por vez (a de melhor sinal), CDB quando nenhuma está favorável.
     -> valor final, IR e o histórico (por empresa e cada troca com o motivo)."""
@@ -337,6 +380,12 @@ def run(D, req):
     ok = lambda k: not np.isnan(D["C"][k, me[0]])
     if req.get("tab"):  # tabela mês a mês de uma empresa com um modelo (com e sem proventos)
         t, mid = req["tab"].get("t"), req["tab"].get("m")
+        if mid in MOD and MOD[mid].get("ref"):  # CDB / Ouro: não depende da empresa
+            r = simulate_ref(D, mid, me, ap, wd, rec=True)["rows"]
+            if not r: return {"error": f"{MOD[mid]['n']} sem dados em {D['ym'][me[0]]}."}
+            out = dict(ini, tab=[dict(x, sem=x["v"], com=x.pop("v")) for x in r])
+            _C[key] = out
+            return out
         if t not in D["ix"] or mid not in MOD: return {"error": "Empresa ou modelo sem dados."}
         k = D["ix"][t]
         if not ok(k): return {"error": f"{t} ainda não negociava em {D['ym'][me[0]]}."}
@@ -346,7 +395,8 @@ def run(D, req):
     else:
         mids = [m["id"] for m in MODELOS] if req.get("modelo") == "*" else [req.get("modelo")]
         if any(m not in MOD for m in mids): return {"error": "Modelo desconhecido."}
-        rows = []
+        rows = _refs(D, me, ap, wd, apT)  # CDB e Ouro: uma vez, no topo
+        mids = [m for m in mids if not MOD[m].get("ref")] or ["hold"]
         pc = lambda v: round((v - apT) / apT * 100, 2) if apT > 0 else None
         if req.get("ticker") == "*":
             uni = [D["ix"][t] for t in (req.get("universo") or []) if t in D["ix"]]
@@ -374,7 +424,7 @@ def run(D, req):
                 r = simulate(D, mid, [k], me, ap, wd, tx)
                 rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ir": round(float(r["ir"][0]), 2),
                              "c": int(r["c"][0]), "s": int(r["s"][0])})
-        rows.sort(key=lambda x: (x["k"] != "g", -(x["pct"] if x["pct"] is not None else -1e9)))
+        rows.sort(key=lambda x: ("rga".index(x["k"]), -(x["pct"] if x["pct"] is not None else -1e9)))
         out = dict(ini, rows=rows)
     _C[key] = out
     while len(_C) > 60: _C.popitem(last=False)
@@ -427,7 +477,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
            "v": np.round(V, 2).tolist(), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(),
            "c": np.array([r["c"] for r in R]).astype(int).tolist(), "s": np.array([r["s"] for r in R]).astype(int).tolist(),
            "res": res, "ord_media": sorted(range(len(MODELOS)), key=lambda i: -P[i].mean()), "ord_pos": order,
-           "ord_pts": sorted(range(len(MODELOS)), key=lambda i: (-pts[i], order.index(i)))}
+           "ord_pts": sorted(range(len(MODELOS)), key=lambda i: (-pts[i], order.index(i))), "ref": _refs(D, me, aps, wd, apT)}
     if grupos is not None:  # rodízio nos grupos (Previsão com o card Modelos em Todos)
         pc = lambda v: round((v - apT) / apT * 100, 2) if apT > 0 else None
         out["g"] = []
