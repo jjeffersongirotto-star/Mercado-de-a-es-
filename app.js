@@ -124,6 +124,7 @@ function itemHtml(id, inFolder) {
       <span class="drag-handle cursor-grab select-none text-slate-500 text-sm leading-none px-0.5" title="Arraste para reordenar ou para 'Filtros ocultos'">⠿</span>
       <span class="truncate flex-1">${esc(label)}${f.unit === '%' ? ' (%)' : f.scale ? ` (${curSym()} mi)` : ''}</span>${glossBtn(f.gl || f.label)}
       ${sym}
+      <button type="button" class="fhide text-sm leading-none text-slate-500 hover:text-slate-300" data-key="${k}" title="Ocultar (vai para 'Filtros ocultos')" aria-label="Ocultar filtro">👁</button>
       <button type="button" class="fav text-base leading-none ${prefs.fav[k] ? 'text-amber-400' : 'text-slate-600 hover:text-slate-300'}" data-key="${k}" title="${prefs.fav[k] ? 'Remover dos favoritos' : 'Favoritar (vai para o topo)'}">${prefs.fav[k] ? '★' : '☆'}</button>
     </div>${sel}
     <input data-key="${k}" type="number" step="any" inputmode="decimal" placeholder="${h.sym} …${f.scale ? ' mi' : ''}" value="${esc(val)}"
@@ -184,6 +185,7 @@ function buildFilters() {
     else { prefs.fav[k] = true; prefs.order = [k, ...prefs.order.filter(x => x !== k)]; }
     savePrefs(); renderFilterUI();
   });
+  panel.addEventListener('click', (e) => { const h = e.target.closest('.fhide'); if (h) { e.stopPropagation(); prefs.hidden[h.dataset.key] = true; changed(); renderFilterUI(); } });  // ocultar com um toque (celular)
   folder.addEventListener('click', (e) => { const r = e.target.closest('.restore'); if (r) { e.stopPropagation(); restoreFilter(r.dataset.key); } });
   $('#folderHead').addEventListener('click', () => { prefs.folderOpen = !prefs.folderOpen; savePrefs(); renderFilterUI(); });
   $('#indBox').addEventListener('toggle', () => { if ($('#indBox').open !== prefs.open) setIndOpen($('#indBox').open); });

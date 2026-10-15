@@ -227,8 +227,8 @@ if (typeof document !== 'undefined') {
       const d = await r.json(); if (!r.ok || !d.t || d.t.length < 2) throw new Error(d.error || 'sem histórico');
       hist = d; histT = t;
       const ym = (s) => { const x = new Date(s * 1000); return x.getUTCFullYear() + '-' + String(x.getUTCMonth() + 1).padStart(2, '0'); };
-      hist.ym = d.t.map(ym); hist.divm = {};
-      for (const [ts, v] of d.div || []) { const k = ym(ts); hist.divm[k] = (hist.divm[k] || 0) + v; }
+      hist.ym = d.t.map(ym); hist.divm = {}; hist.jcpm = {};  // JCP identificado pela B3 (últimos ~12 meses): 15% retido na fonte
+      for (const [ts, v, lb] of d.div || []) { const k = ym(ts); hist.divm[k] = (hist.divm[k] || 0) + v; if (/JRS|JUROS|JCP/i.test(lb || '')) hist.jcpm[k] = (hist.jcpm[k] || 0) + v; }
       const lo = hist.ym[0], hi = hist.ym[hist.ym.length - 1];
       for (const id of ['pvDi', 'pvDf']) { el(id).min = lo; el(id).max = hi; }
       if (!st.di || st.di < lo || st.di > hi) st.di = lo;
@@ -311,7 +311,7 @@ if (typeof document !== 'undefined') {
     if (!st.proj && st.ticker && hist) {
       const i0 = Math.max(0, hist.ym.indexOf(st.di)), i1e = hist.ym.indexOf(st.df), i1 = i1e < 0 ? hist.ym.length - 1 : i1e;
       steps = [];
-      for (let i = i0 + 1; i <= i1; i++) steps.push({ r: hist.c[i] / hist.c[i - 1] - 1, d: (hist.divm[hist.ym[i]] || 0) / hist.c[i - 1], ym: hist.ym[i] });
+      for (let i = i0 + 1; i <= i1; i++) { const dv = hist.divm[hist.ym[i]] || 0; steps.push({ r: hist.c[i] / hist.c[i - 1] - 1, d: dv / hist.c[i - 1], j: dv ? (hist.jcpm[hist.ym[i]] || 0) / dv : 0, ym: hist.ym[i] }); }
       steps.unshift({ ym: hist.ym[i0] });
     } else if (!st.proj && st.ticker) { renderAll(); return; }
     const n = steps ? steps.length : MAXM;
@@ -322,7 +322,8 @@ if (typeof document !== 'undefined') {
     for (let m = 2; m <= n; m++) {
       const r = steps ? steps[m - 1].r : r0, d = steps ? steps[m - 1].d : d0;
       const ap = FL.ap[m - 1], w = FL.w[m - 1]; // mês com retirada: aporte 0 (inclusive extraordinários) e sai a retirada inteira
-      const rent = sem * r, div = com * d, rentC = com * r, tax = st.txc ? div * (st.tx || 0) / 100 : (div > 50000 ? div * 0.10 : 0); // reinveste o dividendo líquido do imposto
+      const jf = steps ? steps[m - 1].j || 0 : 0;  // parte JCP do provento do mês: 15% sempre (automático); dividendo: 10% só acima de R$ 50 mil
+      const rent = sem * r, div = com * d, rentC = com * r, tax = st.txc ? div * (st.tx || 0) / 100 : div * jf * 0.15 + (div * (1 - jf) > 50000 ? div * (1 - jf) * 0.10 : 0); // reinveste o líquido do imposto
       sem = Math.max(0, sem + rent + ap - w);
       com = Math.max(0, com + rentC + div - tax + ap - w);
       apT += ap; divT += div - tax;

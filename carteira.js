@@ -117,7 +117,7 @@
     const det = (k, x) => open.has(k) ? `<tr class="kt-det"><td colspan="6">${cards(x)}${hist(x.L, k === '*')}</td></tr>` : '';
     const num = (v) => v == null ? '—' : F2.format(v);  // na tabela sem "R$" (cabe no celular); nos cards com "R$"
     const gcell = (x) => x.unreal != null ? `<span class="${cls(x.unreal)}">${num(x.unreal)}</span><small>${pct(x.cost ? x.unreal / x.cost * 100 : null)}</small>` : '—';
-    const row = (x) => `<tr class="kt-row${open.has(x.t) ? ' on' : ''}" data-k="open" data-t="${esc(x.t)}"><td><b>${esc(x.t)}</b></td>
+    const row = (x) => `<tr class="kt-row${open.has(x.t) ? ' on' : ''}" data-k="open" data-t="${esc(x.t)}"><td><b class="${x.neg ? 'text-rose-400' : ''}"${x.neg ? ` title="Venda de ${dataBR(x.neg.d)} maior que a quantidade: lance a compra anterior"` : ''}>${esc(x.t)}${x.neg ? ' ⚠' : ''}</b></td>
         <td>${F0.format(x.q)}</td><td>${x.pm != null ? F2.format(x.pm) : '—'}</td>
         <td>${x.price != null ? F2.format(x.price) : '—'}</td>
         <td>${gcell(x)}</td><td>${num(x.div)}</td></tr>${det(x.t, x)}`;
@@ -136,8 +136,8 @@
     const m = { t, op, q, p, d: d > today ? today : d };
     const next = mov.slice(); if (editing >= 0) next[editing] = m; else next.push(m);
     for (const tk of new Set([t, editing >= 0 ? mov[editing].t : t])) {
-      const bad = position(next.filter(x => x.t === tk)).neg;
-      if (bad) return uiAlert(`Venda de ${F0.format(bad.q)} ${tk} em ${dataBR(bad.d)} é maior que a quantidade que você tinha nessa data.`);
+      const bad = position(next.filter(x => x.t === tk)).neg;  // conferido com tudo em ordem de data: aceita e marca até a compra ser lançada
+      if (bad && !(await uiConfirm(`A venda de ${F0.format(bad.q)} ${tk} em ${dataBR(bad.d)} fica maior que a quantidade que você tinha nessa data. Salvar mesmo assim? A ação fica marcada em vermelho até você lançar a compra anterior.`, { ok: 'Salvar' }))) return;
     }
     mov = next; editing = -1; save(); render();
   }
@@ -166,7 +166,7 @@
     else if (k === 'del') {
       const m = mov[i]; if (!m || !(await uiConfirm(`Excluir a ${m.op === 'c' ? 'compra' : 'venda'} de ${F0.format(m.q)} ${m.t} em ${dataBR(m.d)}?`, { ok: 'Excluir', danger: true }))) return;
       const next = mov.filter((_, j) => j !== i), bad = position(next.filter(x => x.t === m.t)).neg;
-      if (bad) return uiAlert(`Sem essa compra, a venda de ${dataBR(bad.d)} fica maior que a quantidade que você tinha. Exclua ou ajuste a venda antes.`);
+      if (bad && !(await uiConfirm(`Sem essa compra, a venda de ${dataBR(bad.d)} fica maior que a quantidade que você tinha. Excluir mesmo assim? A ação fica marcada em vermelho.`, { ok: 'Excluir', danger: true }))) return;
       mov = next; editing = -1; save(); render();
     }
     else if (k === 'br') { const c = document.querySelector('#countryMenu [data-country="br"]'); if (c) c.click(); }
