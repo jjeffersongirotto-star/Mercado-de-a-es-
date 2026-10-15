@@ -870,6 +870,12 @@ def api_modelos():
         log.warning("modelos: %s", e)  # sem snapshot ainda: estado normal (card mostra "indisponível"), não erro do servidor
         return JSONResponse({"error": "Modelos indisponíveis agora."}, headers={"Cache-Control": "no-store"})
 
+@app.post("/api/pin")
+def api_pin(body: dict):
+    """Favoritos e grupos do usuário (app.js -> sendPins): o histórico dessas ações fica em memória (history.pin, limitado)."""
+    history.pin([str(t) for t in ((body or {}).get("t") or [])[:200]])
+    return Response(status_code=204)
+
 @app.post("/api/modelos")
 def api_modelos_sim(body: dict):
     """Simulação dos modelos (Desempenho) ou a tabela mês a mês de uma empresa (tab). Grupos prontos + grupos do usuário."""

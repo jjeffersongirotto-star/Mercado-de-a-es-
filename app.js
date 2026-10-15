@@ -652,6 +652,15 @@ function toggleFav(t) {
   document.dispatchEvent(new CustomEvent('favs'));
   clearTimeout(toggleFav._h); toggleFav._h = setTimeout(() => { if (state.data) apply(); }, 600);
 }
+// Favoritos e grupos do usuário -> servidor (/api/pin): histórico dessas ações fica em memória. Leve, sem esperar resposta.
+function sendPins() {
+  clearTimeout(sendPins._h);
+  sendPins._h = setTimeout(() => {
+    const t = [...FAVS].concat(typeof userGroups === 'function' ? userGroups().flatMap(g => g.t || []) : []);
+    if (t.length) fetch('/api/pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: [...new Set(t)].slice(0, 200) }), keepalive: true }).catch(() => { });
+  }, 1500);
+}
+document.addEventListener('favs', sendPins);
 document.addEventListener('click', (e) => { const b = e.target.closest('.star[data-fav]'); if (b) { e.stopPropagation(); toggleFav(b.dataset.fav); } }, true);
 $('#btnFilt').addEventListener('click', () => { const p = $('#moreFilt'), open = p.classList.toggle('hidden') === false; $('#btnFilt').setAttribute('aria-expanded', String(open)); });
 
@@ -668,6 +677,7 @@ async function load() {
     if (country === 'br') { d.rowsK = universe(d.rows); d.rows = tradable(d.rows); await loadProfiles(d.rows); } // todas as classes negociadas; grupos prontos usam rowsK (1 por empresa)
     d.rows.forEach(prepRow); d.hasLiq = d.rows.some(x => x.v.liq2m != null);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
+    sendPins();
     $('#updated').innerHTML = `<span class="max-sm:hidden">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp.replace(/^(\d\d\/\d\d\/)\d\d(\d\d) (.*)$/, '$1$2 <span class="upd-t whitespace-nowrap">$3</span>')}</b> <span class="max-sm:hidden">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };
