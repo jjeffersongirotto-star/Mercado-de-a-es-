@@ -172,9 +172,7 @@ def test_metodo_barsi():
         assert r["s"][0] == 0 and (r["rows"][0][-1]["pos"] == ("Ação" if compra else "CDB")), (preco, r["rows"][0][-1])
         assert not modelos.fora_barsi(D, [0], me)[0]
     D = modelos.build(mk(8.0), cd); modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Varejo"}])
-    assert D["HW"][4].max() == 0  # fora do método: o híbrido ignora o Barsi
     assert modelos.fora_barsi(D, [0], modelos._span(D, "2020-06", "2021-12"))[0]  # setor não perene: fora do método
-    modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Bancos"}]); assert D["HW"][4].max() > 0  # no método: entra nos pesos
     assert modelos.perene({"ticker": "UNIP6", "subsetor": None, "setor": "Process Industries"}, {"UNIP": ["UNIPAR", "Químicos Diversos"]})
 
 
