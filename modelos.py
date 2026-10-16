@@ -4,7 +4,7 @@ Cada semana usa o sinal da semana anterior (decide com o fechamento de sexta e o
 Aportes e retiradas entram no último pregão de cada mês (mês 1 = valor inicial), como na tabela da Previsão.
 Imposto: 15% do lucro líquido das vendas do mês quando as vendas passam de R$ 20 mil; prejuízo compensa os meses seguintes.
 Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de R$ 50 mil, ou o % escolhido)."""
-import gc, threading, time, warnings
+import gc, hashlib, threading, time, warnings
 from collections import OrderedDict
 import numpy as np
 
@@ -134,7 +134,8 @@ def build(snap, cdi, gold=None):
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV, "SI": SI, "M2": M2, "R12": R12,
             "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
-            "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at")}
+            "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
+            "fp": hashlib.sha1(repr(snap.get("fetched_at")).encode() + cdb.tobytes() + np.nan_to_num(G, nan=-1.0).tobytes()).hexdigest()[:16]}
 
 
 def data():
@@ -499,6 +500,25 @@ def _nmean(x):
     return float(x.mean()) if len(x) else float("-inf")
 
 
+# ---------------------------------------------------------------------------
+# Pré-cálculo (rotina diária -> snapshot modelos_pre): Comparar → Modelos com os valores padrão, Todas e 5 maiores de cada setor,
+# 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
+PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
+_PRE = {"at": None, "e": {}}
+
+
+def pre_key(D, tickers, idx, me, aps):
+    h = hashlib.sha1(repr((D["fp"], tuple(dict.fromkeys(tickers)), tuple(idx), tuple(np.flatnonzero(D["BS"][idx]).tolist()),
+                           me[0], me[-1], [round(x, 2) for x in aps])).encode())
+    return h.hexdigest()[:24]
+
+
+def set_pre(snap):
+    """Carrega o snapshot modelos_pre (chave -> resposta pronta do compare)."""
+    at = (snap or {}).get("fetched_at")
+    if at != _PRE["at"]: _PRE["at"] = at; _PRE["e"] = dict((snap or {}).get("e") or {})
+
+
 def ranking(V, nref=0):
     """V: (modelos + nref referências no fim) × empresas (valor final; nan = fora, ex.: Método Barsi fora do método).
     -> posição pelo rendimento (0 = 1º; -1 = fora), contagem por posição, ordem das Colocações (mais 1º lugares; empate -> mais 2º…;
@@ -585,6 +605,12 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     apT = sum(aps)
     idx = [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
     if not idx: return {"error": f"Nenhuma das empresas tinha preço em {D['ym'][me[0]]}."}
+    if not any(wd) and tx is None and grupos is None:  # casos mais comuns já calculados na rotina diária (modelos_pre)
+        hit = _PRE["e"].get(pre_key(D, tickers, idx, me, aps))
+        if hit is not None:
+            _C[key] = hit
+            while len(_C) > 60: _C.popitem(last=False)
+            return hit
     R = [simulate(D, m["id"], idx, me, aps, wd, tx) for m in MODELOS]
     fora = fora_barsi(D, idx, me) if len(idx) > 1 else np.zeros(len(idx), bool)  # uma empresa só: calcula mesmo fora do método
     ib = [m["id"] for m in MODELOS].index("barsi"); R[ib]["v"] = np.where(fora, np.nan, R[ib]["v"])

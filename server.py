@@ -927,6 +927,15 @@ def _cad():
     """Cadastro oficial da B3 {raiz: [nome, segmento]} (snapshot b3_cad)."""
     return ((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}
 
+_PRE_T = [0.0]
+def _pre():
+    """Comparar → Modelos já calculados na rotina diária (snapshot modelos_pre); confere de novo a cada 30 min."""
+    import modelos
+    if time.time() - _PRE_T[0] < 1800: return
+    _PRE_T[0] = time.time()
+    try: modelos.set_pre(snapshots.load("modelos_pre", max_mem_age=60)[0]); snapshots.drop("modelos_pre")
+    except Exception as e: log.warning("modelos_pre: %s", e)
+
 @app.post("/api/modelos/comparar")
 def api_modelos_comparar(body: dict):
     """Comparar → Modelos: empresas escolhidas, todas (1 ticker por empresa) ou as 5 maiores de cada setor."""
@@ -945,7 +954,7 @@ def api_modelos_comparar(body: dict):
         if b.get("rod"):  # rodízio: grupos prontos + grupos do usuário
             grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
         history.pin([t for g in (grupos or []) for t in g["t"]] + [str(t) for t in (b.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
-        D = modelos.data(); modelos.set_setores(D, rows, _cad())
+        D = modelos.data(); modelos.set_setores(D, rows, _cad()); _pre()
         out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)

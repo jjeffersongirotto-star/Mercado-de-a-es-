@@ -1,3 +1,4 @@
+import json
 """Testes dos modelos da Previsão (modelos.py): custos, IR com isenção e prejuízo a compensar, CDB e rodízio.
 Rodar: python tests/test_modelos.py"""
 import os, sys
@@ -183,6 +184,22 @@ def test_modo_grupo():
     assert abs(v - sum(ap) * (1 - modelos.CUSTO)) < 1e-6 and ns == 0 and nb == 2 * len(me)  # divide cada aporte entre as duas
     out = modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", ap)
     c = {x["m"]: x for x in out["cart"]}; assert abs(c["hold"]["v"] - v) < 0.01 and c["cdb"].get("ref")
+
+
+
+def test_pre_calculado():
+    """Resposta pronta (modelos_pre) só vale quando a entrada inteira bate; resultado igual ao cálculo ao vivo."""
+    D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 20.0}}), cdi())
+    me = months(D, "2020-02", "2020-12"); ap = [1000.0] + [100.0] * (len(me) - 1)
+    modelos._C.clear(); modelos.set_pre(None); live = modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", ap)
+    k = modelos.pre_key(D, ["AAA3", "BBB3"], [0, 1], me, ap)
+    modelos._C.clear(); modelos.set_pre({"fetched_at": "x", "e": {k: json.loads(json.dumps(live))}})
+    assert modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", ap) == json.loads(json.dumps(live))
+    modelos._C.clear(); modelos.set_pre({"fetched_at": "y", "e": {k: {"pre": 1}}})
+    assert modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", ap) == {"pre": 1}
+    modelos._C.clear(); assert "pre" not in modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", [999.0] + ap[1:])  # outro aporte: ao vivo
+    modelos._C.clear(); assert "pre" not in modelos.compare(D, ["BBB3", "AAA3"], "2020-02", "2020-12", ap)  # outra lista: ao vivo
+    modelos.set_pre(None); modelos._C.clear()
 
 
 if __name__ == "__main__":
