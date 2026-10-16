@@ -31,9 +31,9 @@ MOD = {m["id"]: m for m in MODELOS + REF}
 # Método Barsi: só setores perenes (fonte única; o chat e o painel ⓘ leem daqui): subsetor do site ou segmento oficial da B3
 PERENE_RX = r"^(Bancos|Energia Elétrica|Água e Saneamento|Seguradoras|Resseguradoras|Corretoras de Seguros|Telecomunicações|Papel e Celulose|Químicos)"
 PERENE_TXT = "bancos, energia elétrica, saneamento, seguros, telecomunicações, papel e celulose e químicos"
-# teto = média dos proventos por ação dos 5 anos completos anteriores ÷ 6% (pagou em pelo menos 4 deles); aporte do mês e proventos
-# entram na ação até 20% acima do teto, guardando 10% no CDB; a reserva entra quando o preço está no teto ou abaixo; acima de 20%, espera
-BARSI_DY, BARSI_ANOS, BARSI_ACIMA, BARSI_RES = .06, 5, 1.20, .10
+# teto = média dos proventos por ação dos 5 anos completos anteriores ÷ 6% (pagou em pelo menos 4 deles); compra com todo o caixa
+# só com o preço no teto ou abaixo; acima, aporte e proventos esperam no CDB
+BARSI_DY, BARSI_ANOS = .06, 5
 
 
 def perene(r, cad=None):
@@ -190,8 +190,8 @@ def _signal(D, mid, idx, i):
     if mid == "medo_acao": return D["SI"][idx, i] < MEDO
     if mid in ("media200", "tendencia"): return D["M2"][idx, i] > 0
     if mid == "hibrido": return D["HX"][idx, i] > 0  # (só para o 1º sinal; a simulação usa a exposição HX)
-    if mid == "barsi":  # pode aplicar até 20% acima do teto (a simulação guarda a reserva); sem teto: espera no CDB (nunca vende)
-        with np.errstate(invalid="ignore"): return D["Cf"][idx, i] <= D["TETO"][idx, i] * BARSI_ACIMA
+    if mid == "barsi":  # compra só no teto ou abaixo; acima ou sem teto: espera no CDB (nunca vende)
+        with np.errstate(invalid="ignore"): return D["Cf"][idx, i] <= D["TETO"][idx, i]
     return D["FAV"][MOD[mid]["p"]][idx, i]
 
 
@@ -277,10 +277,6 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         if mod.get("frac"):
             V = A.sh * P + A.cash; falta = e * V - A.sh * P
             A.buy(ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P, falta)  # só compra quando a diferença para o alvo é relevante
-        elif mid == "barsi":  # no teto ou abaixo: todo o caixa; até 20% acima: guarda 10% do total no CDB
-            with np.errstate(invalid="ignore"): baixo = D["Cf"][idx, i - 1 if i > 0 else i] <= D["TETO"][idx, i - 1 if i > 0 else i]
-            V = A.sh * P + A.cash
-            A.buy(buy & ok, P, np.where(baixo, A.cash, np.maximum(0, A.cash - BARSI_RES * V)))
         else:
             A.buy(buy & ok, P)
         if rec and j is not None:

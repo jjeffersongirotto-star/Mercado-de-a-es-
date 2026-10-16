@@ -164,17 +164,12 @@ def test_metodo_barsi():
     dv = {str(k): 0.6 for k in range(n) if k % 52 == 26}
     mk = lambda c: {"w": Wl, "mi": [50] * n, "a": {"AAA3": {"i0": 0, "c": [c] * n, "dv": dv, "si": [50] * n, "m2": [10] * n, "r12": [0] * n, "p1": [500] * n, "p3": [500] * n}}}
     d0 = date(2014, 12, 1); cd = {"d": [(d0 + timedelta(days=k)).isoformat() for k in range(n * 7 + 40)], "v": [0.0] * (n * 7 + 40)}
-    for preco, cash_max, _ in ((10.0, 0, 0), (11.5, .02, .12), (12.5, 1, 1)):  # no teto: tudo; até 20% acima: reserva 10%; acima: espera
+    for preco, compra in ((10.0, True), (9.0, True), (10.5, False)):  # compra só no teto (R$ 10) ou abaixo; acima espera no CDB
         D = modelos.build(mk(preco), cd)
         modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Bancos"}])
         me = modelos._span(D, "2020-06", "2021-12"); ap = [1000.0] + [100.0] * (len(me) - 1)
         r = modelos.simulate(D, "barsi", [0], me, ap, [0.0] * len(me), rec=True)
-        v = r["rows"][0][-1]
-        assert r["s"][0] == 0, r  # nunca vende
-        pos = v["pos"]
-        if cash_max == 0: assert pos == "Ação", pos
-        elif cash_max == 1: assert pos == "CDB" and r["c"][0] == 0, pos
-        else: assert pos == "Ação + CDB", pos
+        assert r["s"][0] == 0 and (r["rows"][0][-1]["pos"] == ("Ação" if compra else "CDB")), (preco, r["rows"][0][-1])
         assert not modelos.fora_barsi(D, [0], me)[0]
     D = modelos.build(mk(8.0), cd); modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Varejo"}])
     assert modelos.fora_barsi(D, [0], modelos._span(D, "2020-06", "2021-12"))[0]  # setor não perene: fora do método
