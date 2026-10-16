@@ -507,7 +507,8 @@ document.addEventListener('click', (e) => {
   const gl = e.target.closest('[data-gl]');  // ⓘ do indicador: explicação do Glossário
   const gm = e.target.closest('[data-glmore]');  // "+ informações": painel ⓘ no termo do Glossário
   if (gm) { e.preventDefault(); tt.classList.add('hidden'); const t = gm.dataset.glmore; infoSection('Glossário'); setTimeout(() => { const li = [...document.querySelectorAll('#infoModal details li')].find(x => (x.querySelector('b') || {}).textContent === t); if (li) li.scrollIntoView({ block: 'start' }); }, 60); return; }
-  if (gl) { e.preventDefault(); const t = gl.dataset.gl; showTip(e, esc(glossOf(t) || '') + (glossMore(t) ? ` <a href="#" data-glmore="${esc(t)}">+ informações</a>` : '')); clearTimeout(tt._h); tt._h = setTimeout(() => tt.classList.add('hidden'), 10000); return; }
+  if (gl) { e.preventDefault(); const t = gl.dataset.gl; const pc = ((gl.closest('.fv') || {}).querySelector?.('.fv-t')?.textContent.match(/\d[\d.,]*/) || [])[0];  // Barato/Caro do card: X = % desta ação
+    showTip(e, esc((glossOf(t) || '').replace(/X%/g, pc ? pc + '%' : 'X%')) + (glossMore(t) ? ` <a href="#" data-glmore="${esc(t)}">+ informações</a>` : '')); clearTimeout(tt._h); tt._h = setTimeout(() => tt.classList.add('hidden'), 10000); return; }
   const card = e.target.closest('.card.tip');
   if (card) {
     const open = card.classList.toggle('open');
