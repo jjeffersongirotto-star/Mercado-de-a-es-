@@ -275,7 +275,7 @@ if (typeof document !== 'undefined') {
   function applyMode() {
     const P = !!st.proj, T = !!st.ticker && !P;
     el('pvMode').textContent = P ? 'Projeção com médias de ' + st.proj : T ? 'Simulação histórica com ' + (multi() ? MULTI[st.ticker].toLowerCase() : st.ticker) : 'Projeção futura';
-    ['pvDm', 'pvDa', 'pvRm', 'pvRa'].forEach(id => el(id).disabled = P || T || !!st.mod);  // empresa ou modelo: dividendos e rentabilidade vêm do histórico
+    ['pvDm', 'pvDa', 'pvRm', 'pvRa'].forEach(id => el(id).disabled = P || T);  // só com empresa (Projeções ou E se eu tivesse investido?) vêm do histórico; sem empresa, editáveis
     el('pvTicker').disabled = P; el('pvClearT').disabled = P; el('pvProj').disabled = T; el('pvClearP').disabled = T;
     el('pvRetBox').classList.remove('pv-off');
     el('pvRetBox').querySelectorAll('input,button,select').forEach(x => x.disabled = false);
