@@ -176,6 +176,15 @@ def test_metodo_barsi():
     assert modelos.perene({"ticker": "UNIP6", "subsetor": None, "setor": "Process Industries"}, {"UNIP": ["UNIPAR", "Químicos Diversos"]})
 
 
+def test_modo_grupo():
+    D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 20.0}}), cdi())
+    me = months(D, "2020-02", "2020-12"); ap = [1000.0] + [100.0] * (len(me) - 1)
+    v, ir, nb, ns = modelos.grupo(D, "hold", [0, 1], me, ap)
+    assert abs(v - sum(ap) * (1 - modelos.CUSTO)) < 1e-6 and ns == 0 and nb == 2 * len(me)  # divide cada aporte entre as duas
+    out = modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", ap)
+    c = {x["m"]: x for x in out["cart"]}; assert abs(c["hold"]["v"] - v) < 0.01 and c["cdb"].get("ref")
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

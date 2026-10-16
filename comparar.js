@@ -7,8 +7,8 @@
   const today = new Date().toISOString().slice(0, 10), yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();
   S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.ct = S.ct || 'br'; S.vm = S.vm || 'pct'; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
-  S.ini = S.ini >= 0 ? S.ini : 20000; S.ap = S.ap >= 0 ? S.ap : 500; S.mu = S.mu || 'sel'; S.mv = S.mv || 'media';  // Modelos: valores, empresas e tabela
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct, vm: S.vm, fgOrd: S.fgOrd, ini: S.ini, ap: S.ap, mu: S.mu, mv: S.mv })); } catch (e) { } };
+  S.ini = S.ini >= 0 ? S.ini : 20000; S.ap = S.ap >= 0 ? S.ap : 500; S.mu = S.mu || 'sel'; S.mv = S.mv || 'media'; S.mg = S.mg === 'grp' ? 'grp' : 'ind';  // Modelos: valores, empresas e tabela
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct, vm: S.vm, fgOrd: S.fgOrd, ini: S.ini, ap: S.ap, mu: S.mu, mv: S.mv, mg: S.mg })); } catch (e) { } };
   // País da comparação (bandeiras): 'br' (padrão), outro país ou 'all' (🌐). Ação de fora = "us:AAPL"; índice do país = "@ix:us".
   // Linhas de cada país = mesmo /api/data das abas (carregadas uma vez); Brasil reaproveita state.data quando a aba Ações está no Brasil.
   const RC = {};
@@ -43,7 +43,7 @@
       <div class="cmp-row frm"><label><span>Critério</span><select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option><option value="fg">Medo e Ganância</option><option value="mod">Modelos</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
         <label><span>Início</span><input id="cmpDi" type="date" class="sel"></label><label><span>Fim</span><input id="cmpDf" type="date" class="sel"></label>
         <label class="cmp-mod"><span>Valor inicial</span><input id="cmpIni" inputmode="decimal" class="sel"></label><label class="cmp-mod"><span>Aporte mensal</span><input id="cmpAp" inputmode="decimal" class="sel"></label>
-        <label class="cmp-mod"><span>Empresas</span><select id="cmpMu" class="sel"></select></label></div>
+        <label class="cmp-mod"><span>Empresas</span><select id="cmpMu" class="sel"></select></label><div class="cmp-mod gt-tabs cmp-mg" role="group" aria-label="Individual ou Grupo"><button type="button" data-mg="ind">Individual</button><button type="button" data-mg="grp">Grupo</button>${glossBtn('Modo Grupo')}</div></div>
       <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpGo" class="gbtn pri w-full">Pesquisar</button><button type="button" id="cmpAll" class="cmp-allb"></button><button type="button" id="cmpClr" class="gbtn w-full cmp-clr">Limpar tudo</button></section>
       <div class="cmp-bar"><div class="cmp-vm" role="group" aria-label="Mostrar no gráfico"><button type="button" data-vm="pct">%</button><button type="button" data-vm="val">Valor</button></div><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
@@ -51,7 +51,7 @@
         <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>
       <section id="cmpFg" class="fgx-w hidden"></section><section id="cmpMod" class="fgx-w hidden"></section>`;
     $c('#cmpCrit').value = S.crit; $c('#cmpDi').value = S.di; $c('#cmpDf').value = S.df;
-    $c('#cmpIni').value = F2.format(S.ini); $c('#cmpAp').value = F2.format(S.ap); muFill();
+    $c('#cmpIni').value = F2.format(S.ini); $c('#cmpAp').value = F2.format(S.ap); muFill(); mgOn();
   }
   function chips() {
     const mod = S.crit === 'mod', fgm = S.crit === 'fg', ind = S.crit !== 'preco' && !fgm && !mod, ref = S.items[0];
@@ -280,7 +280,8 @@
     const rp = (r) => `<span class="${cl(r.pct)}">${pp(r.pct)}</span>`, rv = (r) => r.v == null ? '—' : brl.format(r.v);
     if (mv === 'media') {
       const ps = posOf(d.ord_media);
-      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, R[i].vmedio == null ? '—' : brl.format(R[i].vmedio))}</tr>`).join(''));
+      const CT = Object.fromEntries((d.cart || []).map(c => [c.m, c.pct]));  // Média da carteira: modo Grupo (uma carteira por modelo)
+      return tab([['Modelo', 'm'], ['Média por empresa', 'l'], ['Média da carteira', 'k'], ['Valor final médio', 'v']], d.ord_media.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(CT[d.m[i]], pp(CT[d.m[i]]), cl(CT[d.m[i]]))}${td(R[i].vmedio, R[i].vmedio == null ? '—' : brl.format(R[i].vmedio))}</tr>`).join(''));
     }
     if (mv === 'emp') {
       const cols = d.ord_pos.filter(i => !R[i].ref && (!only || d.m[i] === only));
@@ -299,6 +300,12 @@
   window.refInfo = (m) => glossBtn(m === 'cdb' ? 'CDB nos modelos' : 'Ouro nos modelos');
   window.modRefNote = (d) => (d.ref || []).filter(r => /cotação do ouro só desde/.test(r.nota || '')).map(r => `Ouro: ${esc(r.nota.split('; ').slice(1).join('; '))}.`).join(' ') + (d.fora ? ` Método Barsi: ${d.fora} de ${d.t.length} empresas fora do método (setor não perene ou sem dividendos regulares) aparecem como — e não entram nas colocações dele.` : '');
   window.modRK = (p) => RK(p);
+  // modo Grupo: cada modelo cuida de UMA carteira com as empresas escolhidas (modelos.grupo); CDB e Ouro com o mesmo dinheiro
+  window.modGrupo = (d, nm) => {
+    const L = (d.cart || []).slice().sort((a, b) => (b.pct ?? -1e9) - (a.pct ?? -1e9)), cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up';
+    const td = (v, h, c = '') => `<td data-v="${v ?? ''}" class="${c}">${h}</td>`;
+    return `<div class="pv-scroll"><table class="gtab cmp-mt" data-srt><thead><tr>${[['Modelo', 'm'], ['Rendimento da carteira', 'p'], ['Valor final', 'v'], ['Imposto pago', 'i'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k)).join('')}</tr></thead><tbody>${L.map((c, p) => `<tr${c.ref ? ' class="pvd-ref"' : ''}>${td(esc(nm[c.m] || c.m), RK(p) + esc(nm[c.m] || c.m) + (c.ref ? refInfo(c.m) : ''))}${td(c.pct, c.pct == null ? '—' : pc(c.pct), cl(c.pct))}${td(c.v, c.v == null ? '—' : brl.format(c.v))}${td(c.ir, c.ref ? '—' : brl.format(c.ir))}${td(c.c ?? -1, c.ref ? '—' : `${c.c} / ${c.s}`)}</tr>`).join('')}</tbody></table></div>`;
+  };
   // rodapé dos resultados dos modelos: tópicos curtos em colunas (Período · Empresas · Aportado · Rendimento · Observações)
   window.modInfo = (d, o = {}) => {
     const it = [['Período', `${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses)`],
@@ -312,6 +319,7 @@
   let MD = null, MN = {};
   const MV = [['media', 'Média'], ['emp', 'Por empresa'], ['pos', 'Colocações'], ['con', 'Consistência']];
   // Empresas (Modelos): as escolhidas acima, 5 maiores de cada setor ou uma empresa da aba Ações (todas: botão Comparar tudo)
+  const mgOn = () => root.querySelectorAll('[data-mg]').forEach(b => b.classList.toggle('on', b.dataset.mg === S.mg));
   function muFill() {
     const rows = ((state.data && state.data.rows) || []).filter(r => /\d$/.test(r.ticker)).map(r => r.ticker).sort();
     if (S.mu === 'all') S.mu = 'sel';
@@ -337,7 +345,8 @@
     box.innerHTML = MD ? modHtml() : `<p class="gt-help">${esc((d && d.error) || 'Não foi possível comparar agora.')}</p>`;
   }
   function modHtml() {
-    const d = MD, emp = S.mv === 'emp';
+    const d = MD, emp = S.mv === 'emp' && S.mg !== 'grp';
+    if (S.mg === 'grp') return `${modGrupo(d, MN)}${modInfo(d, { extra: `Grupo: uma carteira por modelo com as ${d.t.length} empresas, mesmo aporte de uma empresa ${glossBtn('Modo Grupo')}` })}`;
     return `<div class="gt-tabs" role="tablist">${MV.map(([k, l]) => `<button type="button" data-mv="${k}" class="${S.mv === k ? 'on' : ''}">${l}</button>`).join('')}</div>${modTables(d, S.mv, MN)}
       ${modInfo(d, { extra: emp ? 'toque num valor para ver o mês a mês na Previsão' : '' })}`;
   }
@@ -362,6 +371,7 @@
         return;
       }
       if (e.target.closest('#cmpGo')) { S.all = false; all(); return; }
+      const mg = e.target.closest('[data-mg]'); if (mg) { S.mg = mg.dataset.mg; mgOn(); save(); if (MD) $c('#cmpMod').innerHTML = modHtml(); return; }
       const mv = e.target.closest('[data-mv]'); if (mv && MD) { S.mv = mv.dataset.mv; save(); $c('#cmpMod').innerHTML = modHtml(); return; }
       const mo = !e.target.closest('[data-gl]') && e.target.closest('[data-mo]');
       if (mo && MD) {  // mês a mês na Previsão; "‹ Voltar ao Comparar" volta para esta mesma tela, sem pesquisar de novo

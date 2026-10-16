@@ -517,6 +517,55 @@ def ranking(V, nref=0):
     return rk, cnt, order, pts
 
 
+# ---------- Modo Grupo (Comparar → Modelos → Grupo): uma carteira por modelo ----------
+# Nunca vendem: dividem aporte e proventos entre as empresas que o sinal permite (Barsi: no teto ou abaixo, mais peso para o maior
+# rendimento; Híbrido: pela exposição alvo); sem sinal, esperam no CDB. Algoritmos e Tendência: até GRUPO_K empresas de melhor sinal,
+# vendem quando o sinal fica desfavorável (respeitando o tempo mínimo). Custos e IR da carteira (isenção de R$ 20 mil no mês).
+GRUPO_K = 5  # modelos que vendem: até K empresas ao mesmo tempo (as de melhor sinal)
+def _gtargets(D, mid, idx, i):
+    """pesos alvo (soma 1, ou 0 = espera no CDB) e 'quer manter' de cada empresa, com dados da semana i."""
+    n=len(idx); ok=~np.isnan(D['C'][idx,i])
+    if mid=='hold': w=ok.astype(float)
+    elif mid=='hibrido': w=np.nan_to_num(D['HX'][idx,i])*ok
+    elif mid=='barsi':
+        T=D['TETO'][idx,i]; P=D['Cf'][idx,i]
+        with np.errstate(invalid='ignore'): z=ok&D['BS'][idx]&(P<=T)&D['LP'][idx,i]
+        w=np.where(z,np.nan_to_num(T/P),0)  # mais peso para o maior rendimento de dividendos
+    elif mid in('alg1','alg3','tendencia'):
+        sig=_signals(D,mid,idx,i)&ok
+        sc=(D['P'][MOD[mid]['p']][idx,i] if mid!='tendencia' else D['R12'][idx,i]).astype(float)
+        sc=np.where(sig,np.nan_to_num(sc,nan=-1e9),-np.inf)
+        top=np.argsort(-sc)[:GRUPO_K]; w=np.zeros(n); w[top[np.isfinite(sc[top])]]=1
+    else: w=(_signals(D,mid,idx,i)&ok).astype(float)
+    s=w.sum(); return (w/s if s>0 else w)
+def grupo(D, mid, idx, me, ap):
+    """Modo Grupo (Comparar): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
+    -> valor final, IR, compras, vendas."""
+    idx=np.asarray(idx);n=len(idx);s,e=me[0],me[-1];mod=MOD[mid];sell=mod['vende'] and not mod.get('frac')
+    sh=np.zeros(n);basis=np.zeros(n);cash=ap[0];age=np.zeros(n);carry=0;msales=0;mgain=0;mdiv=0;ir=0;nb=0;ns=0
+    lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV']
+    for i in range(s,e+1):
+        p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
+        if i>s:
+            cash*=D['cdb'][i];d=(sh*np.nan_to_num(DV[idx,i])).sum();cash+=d;mdiv+=d
+        w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1
+        if sell and i>s:
+            out=(sh>0)&(w==0)&ok&(age>=mod['min'])
+            v=sh*P*(1-CUSTO);g=np.where(out,v-basis,0);cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
+            sh=np.where(out,0,sh);basis=np.where(out,0,basis)
+        j=meset.get(i)
+        if j is not None and i>s:
+            tax=max(0,mgain-carry)*IR if msales>ISENTO else 0
+            carry=carry-mgain if mgain<0 else (max(0,carry-max(0,mgain)) if msales>ISENTO else carry)
+            dt=mdiv*.10 if mdiv>50000 else 0
+            cash-=tax+dt;ir+=tax+dt;msales=mgain=mdiv=0;cash+=ap[j] if j<len(ap) else 0
+        if cash>1 and w.sum()>0:
+            a=cash*w;m=(a>0.005)&ok
+            new=m&(sh<=0);age=np.where(new,0,age)
+            sh+=np.where(m,a*(1-CUSTO)/np.where(P>0,P,1),0);basis+=np.where(m,a,0);cash-=a[m].sum();nb+=m.sum()
+    return float((sh*np.nan_to_num(lastp)).sum()+cash), float(ir), int(nb), int(ns)
+
+
 def fora_barsi(D, idx, me):
     """Empresas fora do Método Barsi no período: setor não perene ou sem proventos regulares (sem preço teto em nenhum mês)."""
     T = D["TETO"][np.asarray(idx)][:, me[0]:me[-1] + 1]
@@ -553,13 +602,16 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
         return {"m": m["id"], "media": round(float(P[i][ok].mean()), 2), "vmedio": round(float(V[i][ok].mean()), 2), "mediana": round(float(np.median(P[i][ok])), 2),
                 "ganha": None if m["id"] == "hold" else round(float((V[i][ok] > hold[ok]).mean() * 100), 1), "pior": int(rk[i].max()) + 1, "pos": cnt[i].tolist(),
                 "pts": int(pts[i]), "ptsm": round(float(pts[i]) / k, 2), "n": k, **({"ref": True} if m.get("ref") else {})}
+    G = [grupo(D, m["id"], idx, me, aps) for m in MODELOS]  # modo Grupo: uma carteira por modelo (mesmo aporte de uma empresa)
+    cart = [{"m": m["id"], "v": round(g[0], 2), "pct": round((g[0] / apT - 1) * 100, 2) if apT > 0 else None, "ir": round(g[1], 2), "c": g[2], "s": g[3]}
+            for m, g in zip(MODELOS, G)] + [{"m": r["m"], "v": r["v"], "pct": r["pct"], "ir": 0.0, "c": None, "s": None, "ref": True} for r in refs]
     big = lambda i: -_nmean(P[i])  # ord_pts: pela média de pontos (o Método Barsi só conta nas empresas do método)
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)),
            "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in M], "p": J(P), "rk": rk.tolist(),
            "v": J(V), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(), "irv": np.round(np.array([r["irv"] for r in R]), 2).tolist(),
            "c": np.array([r["c"] for r in R]).astype(int).tolist(), "s": np.array([r["s"] for r in R]).astype(int).tolist(),
            "res": [res(i, m) for i, m in enumerate(M)], "ord_media": sorted(range(nm), key=big), "ord_pos": order,
-           "ord_pts": sorted(range(nm), key=lambda i: (-(pts[i] / max(1, (~np.isnan(V[i])).sum())), -pts[i], order.index(i))), "ref": refs, "fora": int(fora.sum()), "pontos": list(PONTOS)}
+           "ord_pts": sorted(range(nm), key=lambda i: (-(pts[i] / max(1, (~np.isnan(V[i])).sum())), -pts[i], order.index(i))), "ref": refs, "fora": int(fora.sum()), "pontos": list(PONTOS), "cart": cart}
     if grupos is not None:  # rodízio nos grupos (Previsão com o card Modelos em Todos)
         pc = lambda v: round((v - apT) / apT * 100, 2) if apT > 0 else None
         out["g"] = []
