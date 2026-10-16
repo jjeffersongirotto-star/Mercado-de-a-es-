@@ -114,7 +114,8 @@
   const preOk = (p) => state.country === 'br' || !p.m;
   const UKEY = 'screenerB3.gruposUI.v1';
   const ui = (() => { try { return JSON.parse(localStorage.getItem(UKEY) || '{}') || {}; } catch (e) { return {}; } })();
-  ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tab: 'all', sort: 'preco' }; ui.fav.avg = ui.fav.avg || 9;
+  ui.per = ui.per || {}; ui.order = ui.order || []; ui.gstar = ui.gstar || []; ui.fav = ui.fav || { tab: 'all', sort: 'ordem' }; ui.fav.avg = ui.fav.avg || 9;
+  if (!ui.fav.ov) { ui.fav.ov = 1; if (ui.fav.sort === 'preco') ui.fav.sort = 'ordem'; }  // Minha ordem (⋮⋮) passou a ser o padrão
   // abas criadas pelo usuário nos Favoritos foram removidas: apaga as que ficaram salvas no aparelho
   if (ui.fav.tabs || ui.fav.assign) { delete ui.fav.tabs; delete ui.fav.assign; if (ui.fav.tab !== 'prov') ui.fav.tab = 'all'; try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } }
   const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } };
@@ -133,7 +134,9 @@
     for (const g of groups) { const n = [...new Set(g.tickers.map(m))]; if (n.join() !== g.tickers.join()) { g.tickers = n; ch = true; } }
     if (ch) { save(); saveUI(); }
   };
-  const favList = () => rowsAll().filter(r => FAVS.has(r.ticker));
+  let favReord = false, favSort = null, favTmp = null, favDrag = 0;  // ⋮⋮ ligado: linhas com alça; favTmp = ordem arrastada (guardada ao desligar)
+  const favList = () => { const L = rowsAll().filter(r => FAVS.has(r.ticker)), rk = favTmp ? new Map(favTmp.map((t, i) => [t, i])) : null;
+    return L.sort((a, b) => rk ? (rk.get(a.ticker) ?? 1e9) - (rk.get(b.ticker) ?? 1e9) : favRank(a.ticker) - favRank(b.ticker)); };  // ordem dos Favoritos (⋮⋮)
   // Preço médio: média dos fechamentos DIÁRIOS dos últimos n meses (histórico diário atualizado do servidor)
   const DAILY = {}, pend = new Set(); let rt = null;
   const avgP = (r, n) => {
@@ -185,10 +188,10 @@
   document.addEventListener('dataload', alrCheck);
   if (state.data) alrCheck();
   function favRows() {
-    const f = ui.fav, s = f.sort || 'preco';
+    const f = ui.fav, s = favReord ? 'ordem' : (f.sort || 'ordem');
     const L = favList();
     const key = (r) => s === 'preco' ? (r.v.preco ?? -1e9) : (MX(r.ticker)['ret' + s.slice(1)] ?? -1e9);
-    return L.sort((a, b) => key(b) - key(a)).map(r => { const a = avgP(r, f.avg); return [r, a != null ? F2.format(a) : '—']; });
+    return (s === 'ordem' ? L : L.sort((a, b) => key(b) - key(a))).map(r => { const a = avgP(r, f.avg); return [r, a != null ? F2.format(a) : '—']; });
   }
   function tileIds() {
     const ids = ['fav'].concat(PRE.filter(preOk).map(p => 'pre:' + p.id), state.country === 'br' ? groups.map(g => 'user:' + g.name) : []);
@@ -199,16 +202,16 @@
   const priceCell = (r) => { const v = r.var; return `<td class="gc3">${r.v.preco != null ? F2.format(r.v.preco) : '—'}${v != null ? ` <span class="${v > 0 ? 'up' : v < 0 ? 'dn' : ''}">${v > 0 ? '+' : ''}${F2.format(v)}%</span>` : ''}</td>`; };
   // alr = colunas 🔔 Abaixo de / 🔔 Acima de (só nos Favoritos)
   const alrIn = (t, k) => { const v = (ALR[t] || {})[k]; return `<td class="galr"><input class="pv-in" inputmode="decimal" data-alr="${esc(t)}:${k}" value="${v != null ? F2.format(v) : ''}" aria-label="Avisar ${k === 'lo' ? 'abaixo' : 'acima'} de"></td>`; };
-  const tbl = (rows, h, full, alr) => `<table class="gtab"><thead><tr><th>Ativo</th>${alr ? `<th class="galr">${esc(h).replace(' ', '<br>')}</th>` : `<th>${esc(h)}</th>`}${alr ? '<th class="galr galr-h">Abaixo🔔</th><th class="galr galr-h">Acima🔔</th>' : ''}<th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}" class="${full ? 'tap' : ''}${alr && alrPast(r) ? ' galr-on' : ''}"><td><b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${alr ? alrIn(r.ticker, 'lo') + alrIn(r.ticker, 'hi') : ''}${priceCell(r)}</tr>`).join('')}</tbody></table>`;
+  const tbl = (rows, h, full, alr) => `<table class="gtab"><thead><tr><th>Ativo</th>${alr ? `<th class="galr">${esc(h).replace(' ', '<br>')}</th>` : `<th>${esc(h)}</th>`}${alr ? '<th class="galr galr-h">Abaixo🔔</th><th class="galr galr-h">Acima🔔</th>' : ''}<th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}" class="${full && !(alr && favReord) ? 'tap' : ''}${alr && alrPast(r) ? ' galr-on' : ''}"><td>${alr && favReord ? '<span class="gdrag" aria-hidden="true">⠿</span>' : ''}<b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${alr ? alrIn(r.ticker, 'lo') + alrIn(r.ticker, 'hi') : ''}${priceCell(r)}</tr>`).join('')}</tbody></table>`;
   const preTitle = (p) => p.name + ' (' + (p.per ? ((ui.per[p.id] || 1) + ' ano' + ((ui.per[p.id] || 1) > 1 ? 's' : '')) : p.t) + ')';
   const perSel = (p) => p.per ? `<select class="gper" data-per="${p.id}" aria-label="Período">${[1, 2, 3, 4, 5].map(k => `<option value="${k}"${k === (ui.per[p.id] || 1) ? ' selected' : ''}>${k} ano${k > 1 ? 's' : ''}</option>`).join('')}</select>` : '';
   function favControls() {
     const f = ui.fav, tabs = [['all', 'Todos'], ['prov', 'Proventos no ano']];
     const two = (l) => { const w = String(l).split(' '); return w.length < 2 ? esc(l) : esc(w[0]) + '<br>' + esc(w.slice(1).join(' ')); };
-    const avgL = (n) => `Média ${n} ${n > 1 ? 'meses' : 'mês'}`, sortL = (v) => v === 'preco' ? 'Preço da ação' : `Maiores valorizações ${v.slice(1)} ano${+v.slice(1) > 1 ? 's' : ''}`;
+    const avgL = (n) => `Média ${n} ${n > 1 ? 'meses' : 'mês'}`, sortL = (v) => v === 'ordem' ? 'Minha ordem' : v === 'preco' ? 'Preço da ação' : `Maiores valorizações ${v.slice(1)} ano${+v.slice(1) > 1 ? 's' : ''}`;
     const twoS = (l) => { const m = l.match(/^(.*?) (\d.*)$/); return m ? esc(m[1]) + '<br>' + esc(m[2]) : two(l); };
     return `<div class="gt-tabs gfav-row">${tabs.map(([k, l]) => `<button type="button" class="${f.tab === k ? 'on' : ''}" data-ftab="${k}">${two(l)}</button>`).join('')}
-      ${f.tab !== 'prov' ? `<label class="g2sel"><span>${twoS(avgL(f.avg || 1))}</span><select data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>${avgL(n)}</option>`).join('')}</select></label><label class="g2sel"><span>${twoS(sortL(f.sort || 'preco'))}</span><select data-fsort aria-label="Ordenar favoritos">${['preco', 'v1', 'v2', 'v3', 'v4', 'v5'].map(v => `<option value="${v}"${(f.sort || 'preco') === v ? ' selected' : ''}>${sortL(v)}</option>`).join('')}</select></label>` : ''}</div>`;
+      ${f.tab !== 'prov' ? `<label class="g2sel"><span>${twoS(avgL(f.avg || 1))}</span><select data-favg aria-label="Preço médio">${[1, 2, 3, 6, 9].map(n => `<option value="${n}"${f.avg === n ? ' selected' : ''}>${avgL(n)}</option>`).join('')}</select></label><label class="g2sel"><span>${twoS(sortL(f.sort || 'ordem'))}</span><select data-fsort aria-label="Ordenar favoritos">${['ordem', 'preco', 'v1', 'v2', 'v3', 'v4', 'v5'].map(v => `<option value="${v}"${(f.sort || 'ordem') === v ? ' selected' : ''}>${sortL(v)}</option>`).join('')}</select></label>` : ''}</div>`;
   }
   function provCols(list0, empty) {
       const parse = (s) => { const [d, m, y] = s.split('/'); return (y || '') + m + d; };
@@ -244,7 +247,7 @@
   const starB = (id) => id === 'fav' ? '' : `<button type="button" class="gstar${ui.gstar.includes(id) ? ' on' : ''}" data-gstar="${esc(id)}" aria-label="Destacar grupo">${ui.gstar.includes(id) ? '★' : '☆'}</button>`;
   function tileHtml(id) {
     const d = groupData(id); if (!d) return '';
-    if (id === 'fav') return `<div class="gt gt-fav" data-id="fav"${ui.favH ? ` style="height:${ui.favH}px;max-height:none"` : ''}><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}<div class="gt-grip" data-favgrip role="separator" aria-orientation="horizontal" aria-label="Arraste para aumentar ou diminuir os Favoritos" title="Arraste para aumentar ou diminuir"></div></div>`;
+    if (id === 'fav') return `<div class="gt gt-fav${favReord ? ' reord' : ''}" data-id="fav"${ui.favH ? ` style="height:${ui.favH}px;max-height:none"` : ''}><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span><button type="button" class="gbtn gford${favReord ? ' on' : ''}" data-favord aria-pressed="${favReord}" aria-label="Reorganizar favoritos" title="Reorganizar favoritos">⋮⋮</button></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}<div class="gt-grip" data-favgrip role="separator" aria-orientation="horizontal" aria-label="Arraste para aumentar ou diminuir os Favoritos" title="Arraste para aumentar ou diminuir"></div></div>`;
     return `<div class="gt" data-id="${esc(id)}"><div class="gt-head" data-open="${esc(id)}">${starB(id)}<span class="gt-name">${esc(d.title)}</span></div>
       ${d.p ? ctlRow(d.p) : ''}
       <div class="gt-list">${grpBody(d, false)}</div><div class="gt-foot">${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}${d.p ? '' : `<button type="button" class="gt-act" data-g="edit" data-n="${esc(d.g.name)}">Editar</button><button type="button" class="gt-act dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button>`}</div></div>`;
@@ -281,6 +284,7 @@
     return `<section class="gfull"><div class="gfull-head"><b>${esc(d.title)}</b><button type="button" class="gx" data-gclose aria-label="Fechar grupo">✕</button></div>${body}</section>`;
   }
   async function list() {
+    if (favDrag) { favDrag = 2; return; }  // arrastando um favorito: redesenha ao soltar
     const r = $g('#gruposRoot');
     if (!METRICS) { r.innerHTML = loaderHTML('Carregando grupos…'); await loadMetrics(); }
     if (!state.data) { r.innerHTML = loaderHTML('Carregando dados…'); setTimeout(list, 1500); return; }
@@ -295,6 +299,11 @@
       <div id="gGrid" class="ggrid${reorg ? ' reorg' : ''}">${tileIds().map(id => tileHtml(id) + (id === 'fav' && !reorg ? flowHtml() : '')).join('')}</div></section>`;
     $g('#gFile').addEventListener('change', importG);
     if (sortable) { sortable.destroy(); sortable = null; }
+    if (favSort) { favSort.destroy(); favSort = null; }
+    const fb = favReord && $g('.gt-fav tbody');
+    if (fb && window.Sortable) favSort = Sortable.create(fb, { handle: '.gdrag', animation: 150, forceFallback: true, fallbackTolerance: 3, touchStartThreshold: 3,
+      onStart: () => { favDrag = 1; },
+      onEnd: () => { favTmp = [...fb.querySelectorAll('tr[data-row]')].map(x => x.dataset.row); const again = favDrag === 2; favDrag = 0; if (again) list(); } });
     if (reorg && window.Sortable) sortable = Sortable.create($g('#gGrid'), { animation: 150, filter: '.gt-fav', preventOnFilter: false, onMove: (e) => !e.related.classList.contains('gt-fav'),
       onEnd: () => { ui.order = [...$g('#gGrid').children].map(x => x.dataset.id).filter(x => x !== 'fav'); saveUI(); } });
   }
@@ -328,6 +337,12 @@
       state.expanded.add(r.ticker); tr.classList.add('sel');
       tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="9">${blockHtml(r)}</td></tr>`); return;
     }
+    if (e.target.closest('[data-favord]')) {  // ⋮⋮: liga/desliga arrastar; ao desligar guarda a ordem (FAV_KEY)
+      if (favReord && favTmp) setFavOrder(favTmp);
+      favTmp = null; favReord = !favReord; if (favReord && ui.fav.sort !== 'ordem') { ui.fav.sort = 'ordem'; saveUI(); }
+      list(); return;
+    }
+    if (favReord && e.target.closest('.gt-fav')) return;  // reorganizando: toque não destaca nem abre o quadro
     const h = e.target.closest('[data-open]');
     if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { lastY = window.scrollY; fullId = h.dataset.open; list(); window.scrollTo(0, 0); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
     const fp = e.target.closest('[data-flowp]'); if (fp) { ui.flowP = fp.dataset.flowp; saveUI(); list(); return; }

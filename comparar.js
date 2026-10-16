@@ -169,7 +169,7 @@
       (rv != null && it.d < 0 ? L : M).push(it);
     }
     const fav = (id) => typeof FAVS !== 'undefined' && FAVS.has(id);
-    const sorter = (a, b) => (fav(b.id) - fav(a.id)) || Math.abs(b.d) - Math.abs(a.d);
+    const sorter = (a, b) => (fav(b.id) - fav(a.id)) || (fav(a.id) ? favRank(a.id) - favRank(b.id) : 0) || Math.abs(b.d) - Math.abs(a.d);  // favoritos primeiro, na ordem dos Favoritos
     const html = (arr, q, cls) => arr.filter(x => !q || norm(label(x.id)).includes(norm(q))).sort(sorter).map(x => `<div class="cmp-it"><b>${fav(x.id) ? '★ ' : ''}${esc(label(x.id))}</b><span class="${cls}">${fmt(x.v)}</span><small>${rv != null ? (x.d > 0 ? '+' : '') + F2.format(x.d) + (ind ? '' : ' p.p.') + ' vs ref.' : ''}</small></div>`).join('') || '<p class="text-xs text-slate-500 py-2">—</p>';
     $c('#cmpLess').innerHTML = (rv != null ? `<p class="cmp-ref">Principal ${esc(label(ref))}: ${fmt(rv)}</p>` : '') + html(L, S.qa, 'dn');
     if (S._miss) $c('#cmpLess').insertAdjacentHTML('afterbegin', '<p class="gt-help">Alguns dados não carregaram agora; mostrando o que veio.</p>');

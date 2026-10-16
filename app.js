@@ -283,7 +283,7 @@ function apply() {
     return (typeof va === 'string' ? va.localeCompare(vb, 'pt-BR') : va - vb) * d;
   });
   if (state.groupRank && state.group) state.filtered.sort((x, y) => (state.groupRank.get(x.ticker) ?? 1e9) - (state.groupRank.get(y.ticker) ?? 1e9));
-  else if (FAVS.size) state.filtered = state.filtered.filter(r => FAVS.has(r.ticker)).concat(state.filtered.filter(r => !FAVS.has(r.ticker)));
+  else if (FAVS.size) state.filtered = state.filtered.filter(r => FAVS.has(r.ticker)).sort((a, b) => favRank(a.ticker) - favRank(b.ticker)).concat(state.filtered.filter(r => !FAVS.has(r.ticker)));
   { const q = norm($('#q').value.trim()); if (q) { const rk = new Map(state.filtered.map(r => [r, searchRank(r, q)])); state.filtered.sort((x, y) => rk.get(x) - rk.get(y)); } }
   $('#count').textContent = F0.format(state.filtered.length);
   if (!state.data || !(state.data.rows || []).length) return;
@@ -666,6 +666,15 @@ function migrateTickers(all, kept) { // favorito/grupo com classe que deixou de 
 }
 const FAV_KEY = 'screenerB3.favs.v1';
 const FAVS = new Set((() => { try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) { return []; } })());
+// Ordem dos Favoritos = ordem guardada em FAV_KEY (Grupos → Favoritos → ⋮⋮ reorganiza): padrão em toda lista que mostra favoritos primeiro
+const favRank = (t) => { const k = [...FAVS].join(); if (favRank._k !== k) { favRank._k = k; favRank._m = new Map([...FAVS].map((x, i) => [x, i])); } return favRank._m.get(t) ?? 1e9; };
+function setFavOrder(order) {
+  const keep = order.filter(t => FAVS.has(t)), all = keep.concat([...FAVS].filter(t => !keep.includes(t)));
+  FAVS.clear(); all.forEach(t => FAVS.add(t));
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(all)); } catch (e) { }
+  document.dispatchEvent(new CustomEvent('favs'));
+  if (state.data) apply();
+}
 function toggleFav(t) {
   if (FAVS.has(t)) FAVS.delete(t); else FAVS.add(t);
   try { localStorage.setItem(FAV_KEY, JSON.stringify([...FAVS])); } catch (e) { }
