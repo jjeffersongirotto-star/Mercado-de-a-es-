@@ -398,6 +398,7 @@ if (typeof document !== 'undefined') {
   function showTabs(on) {
     const pk = on && !!peek;
     el('pvTabs').classList.toggle('hidden', !on || pk); el('pvBack').classList.toggle('hidden', !pk);
+    el('pvPer').classList.toggle('hidden', !on || pk);
     if (pk) el('pvBack').textContent = peek.back.fn ? '‹ Voltar ao Comparar' : '‹ Voltar';
     const d = on && !pk && st.pvt === 'des', c = on && !pk && !d && isAll();
     el('pvTabs').querySelectorAll('[data-pvt]').forEach(b => b.classList.toggle('on', b.dataset.pvt === (on ? st.pvt : 'tab')));
@@ -410,8 +411,17 @@ if (typeof document !== 'undefined') {
   el('pvTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-pvt]'); if (!b) return; st.pvt = b.dataset.pvt; save(); showTabs(true); });
   const months = (a, b) => { const out = []; let [y, m] = a.split('-').map(Number); const [y2, m2] = b.split('-').map(Number);
     while (y < y2 || (y === y2 && m <= m2)) { out.push(`${y}-${String(m).padStart(2, '0')}`); if (++m > 12) { m = 1; y++; } } return out; };
+  // Período dos modelos (faixa acima de Tabela/Desempenho): últimos N anos até o Fim, limitado aos dados; 0 = todo o período
+  const PER = [5, 10, 15, 20, 25, 30, 0];
+  if (!PER.includes(st.mper)) st.mper = 10;
+  const perDi = (df) => { if (!st.mper) return MM.ini; const [y, m] = df.split('-').map(Number); const d = `${y - st.mper}-${String(m).padStart(2, '0')}`; return d > MM.ini ? d : MM.ini; };
+  function perHtml(d) {
+    const info = d ? `<span class="pv-per-i">${dataBR(d.ini)} a ${dataBR(d.fim)} · aportado ${brl.format(d.apT)}${isAll() ? ' por empresa' : ''}</span>` : '';
+    el('pvPer').innerHTML = `<span class="pv-per-l">Período</span>${PER.map(n => `<button type="button" data-mper="${n}" class="${n === st.mper ? 'on' : ''}">${n ? n + ' anos' : 'Todo período'}</button>`).join('')}${info}`;
+  }
+  el('pvPer').addEventListener('click', (e) => { const b = e.target.closest('[data-mper]'); if (!b) return; st.mper = +b.dataset.mper; save(); perHtml(null); runModels(); });
   function modBody() {
-    const di = st.di && st.di > MM.ini ? st.di : MM.ini, df = st.df && st.df < MM.fim ? st.df : MM.fim;
+    const df = st.df && st.df < MM.fim ? st.df : MM.fim, di = perDi(df);
     const f = flows(Math.max(2, months(di, df).length));
     return { di, df, ap: f.ap, w: f.w, tx: st.txc ? st.tx : null };
   }
@@ -424,7 +434,7 @@ if (typeof document !== 'undefined') {
     throw new Error('servidor carregando os dados; tente de novo');
   }
   async function runModels() {
-    const my = ++seq; showTabs(true); el('pvStatus').textContent = '';
+    const my = ++seq; showTabs(true); el('pvStatus').textContent = ''; perHtml(null);
     if (!(await modMeta())) { el('pvDes').innerHTML = '<p class="pvd-note">Modelos indisponíveis agora.</p>'; return; }
     if (my !== seq) return;
     if (isAll()) { runAll(my); return; }
@@ -432,7 +442,7 @@ if (typeof document !== 'undefined') {
     const b = modBody(); const G = typeof userGroups === 'function' ? userGroups() : [];
     try {
       const d = await post(Object.assign({ ticker: st.ticker, modelo: st.mod, grupos: G, fav: [...FAVS] }, b)); if (my !== seq) return;
-      des = d; const emp = d.rows.filter(r => r.k === 'a');
+      des = d; perHtml(d); const emp = d.rows.filter(r => r.k === 'a');
       if (!multi()) sel = sel && emp.some(r => r.t === sel.t && r.m === sel.m) ? sel : { t: st.ticker, m: st.mod === '*' ? emp[0]?.m : st.mod };
       else if (sel && !emp.some(r => r.t === sel.t && r.m === sel.m)) sel = null;
       el('pvDes').innerHTML = desHtml(d); loadTab();
@@ -454,7 +464,7 @@ if (typeof document !== 'undefined') {
     try {
       const d = await post(Object.assign({ u, t: u === 'sel' ? [st.ticker] : [], rod: true, grupos: typeof userGroups === 'function' ? userGroups() : [], fav: [...FAVS] }, b), '/api/modelos/comparar');
       if (my !== seq) return;
-      CM = d; drawCmp(); drawDes();
+      CM = d; perHtml(d); drawCmp(); drawDes();
     } catch (e) { if (my === seq) el('pvCmp').innerHTML = el('pvDes').innerHTML = `<p class="pvd-note">Não foi possível simular: ${esc(e.message)}</p>`; }
   }
   const note = () => `<p class="pvd-note">${dataBR(CM.ini)} a ${dataBR(CM.fim)} (${CM.meses} meses) · ${CM.t.length} de ${CM.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(CM.apT)} por empresa · rendimento = (valor final − aportado) ÷ aportado. ${modRefNote(CM)}</p>`;
@@ -482,7 +492,7 @@ if (typeof document !== 'undefined') {
       <span class="pv-pgi"><button type="button" class="gbtn" data-pg="-1"${pg ? '' : ' disabled'} aria-label="Página anterior">‹</button><span>${pg + 1} de ${np}</span><button type="button" class="gbtn" data-pg="1"${pg < np - 1 ? '' : ' disabled'} aria-label="Próxima página">›</button></span></div>`;
     el('pvDes').innerHTML = `<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['Imposto pago', 'ir'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
       ${refs.length ? `<tbody class="ref">${refRows(refs)}</tbody>` : ''}<tbody>${rows.map(r => `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${pager}${note()}
-      <p class="pvd-note">${F0.format(L.length)} linhas · toque numa linha para ver o mês a mês daquela empresa e modelo.</p>`;
+      <p class="pvd-note">${F0.format(L.length)} linhas · toque numa linha para ver o mês a mês daquela empresa e modelo. ${glossBtn('Desempenho (melhores casos)')}</p>`;
   }
   // abre uma empresa com um modelo (mês a mês na aba Tabela)
   const openOne = (t, m) => openPeek(t, m);

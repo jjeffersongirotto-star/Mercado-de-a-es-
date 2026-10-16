@@ -288,31 +288,37 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
 def simulate_ref(D, rid, me, ap, wd, rec=False):
     """Referência (CDB ou Ouro) com os mesmos aportes e retiradas dos modelos. -> valor final (nan sem dado) e as linhas mensais."""
     s, e = me[0], me[-1]; meset = {w: j for j, w in enumerate(me)}; G = D["G"]
-    if rid == "ouro" and np.isnan(G[s]): return {"v": float("nan"), "rows": [] if rec else None}
-    cash, q, c, n, rows, lastg = 0.0, 0.0, 0, 0, [], G[s]
+    g0 = next((i for i in range(s, e + 1) if not np.isnan(G[i])), None) if rid == "ouro" else s
+    if g0 is None: return {"v": float("nan"), "rows": [] if rec else None}
+    # ouro sem cotação no início do período: os aportes esperam (sem rendimento) e compram na 1ª semana com preço (nota em _refs)
+    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if rid == "ouro" else G[s], 0.0
     for i in range(s, e + 1):
         if rid == "cdb" and i > s: cash *= D["cdb"][i]
         if not np.isnan(G[i]): lastg = G[i]
+        if rid == "ouro" and i == g0 and pend > 0: q += pend * (1 - CUSTO) / lastg; c += 1; pend = 0.0
         j = meset.get(i)
         if j is None: continue
         a, w = (ap[j] if j < len(ap) else 0), (wd[j] if j < len(wd) else 0)
         if rid == "cdb": cash = max(0.0, cash - w) + a
+        elif i < g0: pend = max(0.0, pend - w) + a
         else:
             if w > 0 and q > 0: sv = min(q, w / (lastg * (1 - CUSTO))); q -= sv; n += 1
             if a > 0: q += a * (1 - CUSTO) / lastg; c += 1
-        v = cash if rid == "cdb" else q * lastg
+        v = cash if rid == "cdb" else q * lastg + pend
         if rec: rows.append({"ym": D["ym"][i], "v": float(v), "div": 0.0, "tax": 0.0, "pos": MOD[rid]["n"], "c": c, "s": n})
-    return {"v": float(cash if rid == "cdb" else q * lastg), "rows": rows if rec else None}
+    return {"v": float(cash if rid == "cdb" else q * lastg + pend), "rows": rows if rec else None, "g0": g0}
 
 
 def _refs(D, me, ap, wd, apT):
     """Linhas das referências (uma vez, fora das empresas)."""
     out = []
     for m in REF:
-        v = simulate_ref(D, m["id"], me, ap, wd)["v"]
+        r = simulate_ref(D, m["id"], me, ap, wd); v = r["v"]
         ok = v == v
+        nota = m["nota"] + (f"; cotação do ouro só desde {D['ym'][r['g0']][5:7]}/{D['ym'][r['g0']][:4]}: os aportes anteriores compram no primeiro preço"
+                            if m["id"] == "ouro" and ok and r.get("g0", me[0]) > me[0] else "")
         out.append({"k": "r", "m": m["id"], "t": m["n"], "v": round(v, 2) if ok else None,
-                    "pct": round((v - apT) / apT * 100, 2) if ok and apT > 0 else None, "ir": 0.0, "c": None, "s": None, "nota": m["nota"]})
+                    "pct": round((v - apT) / apT * 100, 2) if ok and apT > 0 else None, "ir": 0.0, "c": None, "s": None, "nota": nota})
     return out
 
 
