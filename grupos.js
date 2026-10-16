@@ -202,7 +202,7 @@
   const priceCell = (r) => { const v = r.var; return `<td class="gc3">${r.v.preco != null ? F2.format(r.v.preco) : '—'}${v != null ? ` <span class="${v > 0 ? 'up' : v < 0 ? 'dn' : ''}">${v > 0 ? '+' : ''}${F2.format(v)}%</span>` : ''}</td>`; };
   // alr = colunas 🔔 Abaixo de / 🔔 Acima de (só nos Favoritos)
   const alrIn = (t, k) => { const v = (ALR[t] || {})[k]; return `<td class="galr"><input class="pv-in" inputmode="decimal" data-alr="${esc(t)}:${k}" value="${v != null ? F2.format(v) : ''}" aria-label="Avisar ${k === 'lo' ? 'abaixo' : 'acima'} de"></td>`; };
-  const tbl = (rows, h, full, alr) => `<table class="gtab"><thead><tr><th>Ativo</th>${alr ? `<th class="galr">${esc(h).replace(' ', '<br>')}</th>` : `<th>${esc(h)}</th>`}${alr ? '<th class="galr galr-h">Abaixo🔔</th><th class="galr galr-h">Acima🔔</th>' : ''}<th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}" class="${full && !(alr && favReord) ? 'tap' : ''}${alr && alrPast(r) ? ' galr-on' : ''}"><td>${alr && favReord ? '<span class="gdrag" aria-hidden="true">⠿</span>' : ''}<b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${alr ? alrIn(r.ticker, 'lo') + alrIn(r.ticker, 'hi') : ''}${priceCell(r)}</tr>`).join('')}</tbody></table>`;
+  const tbl = (rows, h, full, alr) => `<table class="gtab"><thead><tr><th>Ativo</th>${alr ? `<th class="galr">${esc(h).replace(' ', '<br>')}</th>` : `<th>${esc(h)}</th>`}${alr ? '<th class="galr galr-h">Abaixo🔔</th><th class="galr galr-h">Acima🔔</th>' : ''}<th>Preço · dia</th></tr></thead><tbody>${rows.map(([r, v]) => `<tr data-row="${esc(r.ticker)}" class="${(full || alr) && !(alr && favReord) ? 'tap' : ''}${alr && alrPast(r) ? ' galr-on' : ''}"><td>${alr && favReord ? '<span class="gdrag" aria-hidden="true">⠿</span>' : ''}<b>${esc(r.ticker)}</b>${isNova(r) ? '<span class="nova">NOVA</span>' : ''}</td><td class="gc2">${esc(v)}</td>${alr ? alrIn(r.ticker, 'lo') + alrIn(r.ticker, 'hi') : ''}${priceCell(r)}</tr>`).join('')}</tbody></table>`;
   const preTitle = (p) => p.name + ' (' + (p.per ? ((ui.per[p.id] || 1) + ' ano' + ((ui.per[p.id] || 1) > 1 ? 's' : '')) : p.t) + ')';
   const perSel = (p) => p.per ? `<select class="gper" data-per="${p.id}" aria-label="Período">${[1, 2, 3, 4, 5].map(k => `<option value="${k}"${k === (ui.per[p.id] || 1) ? ' selected' : ''}>${k} ano${k > 1 ? 's' : ''}</option>`).join('')}</select>` : '';
   function favControls() {
@@ -329,6 +329,7 @@
     if (st) { e.stopPropagation(); const id = st.dataset.gstar; ui.gstar = ui.gstar.includes(id) ? ui.gstar.filter(x => x !== id) : ui.gstar.concat(id); saveUI(); list(); return; }
     if (e.target.closest('[data-gclose]')) { const id = fullId, y = lastY; fullId = null; list(); requestAnimationFrame(() => { window.scrollTo(0, y); const t = document.querySelector(`.gt[data-id="${CSS.escape(id || '')}"]`); if (t) t.classList.add('hl'); }); return; }
     if (e.target.closest('[data-alr]')) return;
+    if (favReord && e.target.closest('.gt-fav') && !e.target.closest('[data-favord]')) return;  // reorganizando: toque não abre card nem destaca
     const tr = e.target.closest('tr.tap[data-row]');
     if (tr) {
       const nx = tr.nextElementSibling; if (nx && nx.classList.contains('gdet')) { nx.remove(); tr.classList.remove('sel'); return; }
@@ -342,7 +343,6 @@
       favTmp = null; favReord = !favReord; if (favReord && ui.fav.sort !== 'ordem') { ui.fav.sort = 'ordem'; saveUI(); }
       list(); return;
     }
-    if (favReord && e.target.closest('.gt-fav')) return;  // reorganizando: toque não destaca nem abre o quadro
     const h = e.target.closest('[data-open]');
     if (h && !reorg) { const t = h.closest('.gt'); if (t.classList.contains('hl')) { lastY = window.scrollY; fullId = h.dataset.open; list(); window.scrollTo(0, 0); } else { document.querySelectorAll('.gt.hl').forEach(x => x.classList.remove('hl')); t.classList.add('hl'); } return; }
     const fp = e.target.closest('[data-flowp]'); if (fp) { ui.flowP = fp.dataset.flowp; saveUI(); list(); return; }
