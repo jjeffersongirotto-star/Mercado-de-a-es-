@@ -283,12 +283,20 @@
     const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? ctlRow(d.p) : '') + grpBody(d, true);
     return `<section class="gfull"><div class="gfull-head"><b>${esc(d.title)}</b><button type="button" class="gx" data-gclose aria-label="Fechar grupo">✕</button></div>${body}</section>`;
   }
+  function openDet(tr) {  // abre o card completo abaixo da linha (um por vez); mesmo código para todos os grupos e Favoritos
+    const r = rowsAll().find(x => x.ticker === tr.dataset.row); if (!r) return;
+    $g('#gruposRoot').querySelectorAll('tr.gdet').forEach(d => { const p = d.previousElementSibling; if (p) { p.classList.remove('sel'); state.expanded.delete(p.dataset.row); } d.remove(); });
+    state.expanded.add(r.ticker); tr.classList.add('sel');
+    tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="9">${blockHtml(r)}</td></tr>`);
+  }
   async function list() {
     if (favDrag) { favDrag = 2; return; }  // arrastando um favorito: redesenha ao soltar
     const r = $g('#gruposRoot');
     if (!METRICS) { r.innerHTML = loaderHTML('Carregando grupos…'); await loadMetrics(); }
     if (!state.data) { r.innerHTML = loaderHTML('Carregando dados…'); setTimeout(list, 1500); return; }
-    if (fullId) { r.innerHTML = fullHtml(fullId); if (fullId) return; }
+    const keep = (() => { const p = r.querySelector('tr.gdet')?.previousElementSibling, t = p && p.closest('[data-id]'); return p ? [t ? t.dataset.id : '', p.dataset.row] : null; })();
+    const back = () => { if (!keep) return; const t = keep[0] ? r.querySelector(`[data-id="${CSS.escape(keep[0])}"]`) : r; const tr = t && t.querySelector(`tr.tap[data-row="${CSS.escape(keep[1])}"]`); if (tr) openDet(tr); };  // redesenho (dados novos) mantém o card aberto
+    if (fullId) { r.innerHTML = fullHtml(fullId); if (fullId) { back(); return; } }
     r.innerHTML = `<section class="space-y-2">
       <div class="flex flex-wrap items-center gap-2">
         ${state.country === 'br' ? '<button type="button" class="gbtn pri" data-g="new">＋ Criar</button>' : ''}
@@ -304,6 +312,7 @@
     if (fb && window.Sortable) favSort = Sortable.create(fb, { handle: '.gdrag', animation: 150, forceFallback: true, fallbackTolerance: 3, touchStartThreshold: 3,
       onStart: () => { favDrag = 1; },
       onEnd: () => { favTmp = [...fb.querySelectorAll('tr[data-row]')].map(x => x.dataset.row); const again = favDrag === 2; favDrag = 0; if (again) list(); } });
+    back();
     if (reorg && window.Sortable) sortable = Sortable.create($g('#gGrid'), { animation: 150, filter: '.gt-fav', preventOnFilter: false, onMove: (e) => !e.related.classList.contains('gt-fav'),
       onEnd: () => { ui.order = [...$g('#gGrid').children].map(x => x.dataset.id).filter(x => x !== 'fav'); saveUI(); } });
   }
@@ -333,10 +342,7 @@
     const tr = e.target.closest('tr.tap[data-row]');
     if (tr) {
       const nx = tr.nextElementSibling; if (nx && nx.classList.contains('gdet')) { nx.remove(); tr.classList.remove('sel'); return; }
-      const r = rowsAll().find(x => x.ticker === tr.dataset.row); if (!r) return;
-      $g('#gruposRoot').querySelectorAll('tr.gdet').forEach(d => { const p = d.previousElementSibling; if (p) { p.classList.remove('sel'); state.expanded.delete(p.dataset.row); } d.remove(); });
-      state.expanded.add(r.ticker); tr.classList.add('sel');
-      tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="9">${blockHtml(r)}</td></tr>`); return;
+      openDet(tr); return;
     }
     if (e.target.closest('[data-favord]')) {  // ⋮⋮: liga/desliga arrastar; ao desligar guarda a ordem (FAV_KEY)
       if (favReord && favTmp) setFavOrder(favTmp);
