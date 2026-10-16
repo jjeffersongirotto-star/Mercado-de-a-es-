@@ -14,7 +14,7 @@ window.sortIc = (dir) => `<svg class="sd-ic" viewBox="0 0 16 18" width="16" heig
 window.thSort = (label, key, cur, dir) => `<th data-sc="${key}" class="th-s"><span>${label}</span>${sortIc(cur === key ? dir : 0)}</th>`;
 // Tabela ordenável no próprio navegador: <table data-srt> com títulos thSort e células com data-v (número ou texto)
 if (typeof document !== 'undefined') document.addEventListener('click', (e) => {
-  const th = e.target.closest('table[data-srt] th[data-sc]'); if (!th) return;
+  const th = e.target.closest('table[data-srt] th[data-sc]'); if (!th || e.target.closest('[data-gl]')) return;
   const tb = th.closest('table'), i = [...th.parentNode.children].indexOf(th), dir = th.dataset.dir === '-1' ? 1 : -1;
   tb.querySelectorAll('th[data-sc]').forEach(x => { x.dataset.dir = x === th ? dir : ''; x.querySelector('.sd-ic').outerHTML = sortIc(x === th ? dir : 0); });
   const val = (tr) => { const v = tr.children[i]?.dataset.v ?? ''; const n = parseFloat(v); return isNaN(n) ? v : n; };

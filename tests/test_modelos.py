@@ -202,6 +202,18 @@ def test_pre_calculado():
     modelos.set_pre(None); modelos._C.clear()
 
 
+
+def test_rend_medio_anual():
+    """Bloco de 12 meses com rendimento fixo: média anual = o rendimento do ano, com ou sem aportes; sobra < 12 meses não entra."""
+    g = 1.10 ** (1 / 12); VM = [1000 * g ** k for k in range(25)]
+    assert abs(modelos.anual(VM, [1000.0], [])[0] - 10) < 1e-9
+    ap = [1000.0] + [100.0] * 24; VM = [1000.0]
+    for k in range(1, 25): VM.append(VM[-1] * g + 100)
+    assert abs(modelos.anual(VM, ap, [])[0] - 10) < 0.2  # Dietz modificado: aproximação do rendimento com aportes
+    assert abs(modelos.anual(VM[:20], ap, [])[0] - modelos.anual(VM[:13], ap, [])[0]) < 1e-9  # 2º bloco incompleto fica fora
+    assert np.isnan(modelos.anual(VM[:12], ap, [])[0])
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

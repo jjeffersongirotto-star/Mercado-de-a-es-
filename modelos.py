@@ -242,6 +242,29 @@ class Conta:
 F0 = lambda x: f"{x:.0f}"
 
 
+def anual(VM, ap, wd):
+    """Rend. médio anual (%): média simples dos rendimentos de cada bloco de 12 meses a partir do início (Dietz modificado).
+    VM: valor no fim de cada mês (meses × empresas), mês 1 = aporte inicial. Bloco k: do fim do mês 12k ao fim do mês 12k+12;
+    rendimento = (valor final − valor inicial − aportes líquidos) ÷ (valor inicial + aportes líquidos × fração do bloco em que ficaram aplicados).
+    1º bloco começa com o aporte inicial (custo da primeira compra conta como perda). Sobra final menor que 12 meses não entra;
+    menos de 12 meses no período: sem valor (nan)."""
+    VM = np.asarray(VM, dtype=float)
+    if VM.ndim == 1: VM = VM[:, None]
+    M = VM.shape[0]; nb = (M - 1) // 12
+    if nb < 1: return np.full(VM.shape[1], np.nan)
+    f = np.array([(ap[j] if j < len(ap) else 0) - (wd[j] if j < len(wd) else 0) for j in range(M)], dtype=float)
+    out = []
+    for k in range(nb):
+        a, b = 12 * k, 12 * k + 12
+        B = np.full(VM.shape[1], f[0]) if k == 0 else VM[a]
+        F = f[a + 1:b + 1]; w = (b - np.arange(a + 1, b + 1)) / 12.0
+        den = B + (w * F).sum()
+        with np.errstate(divide="ignore", invalid="ignore"):
+            out.append(np.where(den > 0, (VM[b] - B - F.sum()) / den * 100, np.nan))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore"); return np.nanmean(np.array(out), axis=0)
+
+
 def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     """Um modelo em várias ações ao mesmo tempo (cada uma sozinha). me: semanas de fim de mês; ap/wd: aporte/retirada de cada mês.
     -> dict de vetores (valor final, aportado, IR, compras, vendas) e, com rec, as linhas mensais de cada ação."""
@@ -249,7 +272,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     A = Conta(n); C, DV = D["C"], D["DV"]; mod = MOD[mid]
     sig0 = _signals(D, mid, idx, s - 1) if s > 0 else np.zeros(n, bool)
     st, k = np.nan_to_num(sig0, nan=0).astype(bool), np.full(n, 10 ** 6)
-    lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None
+    lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None; vm = []
     meset = {w: j for j, w in enumerate(me)}
     A.cash += ap[0]
     for i in range(s, e + 1):
@@ -280,6 +303,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             A.buy(ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P, falta)  # só compra quando a diferença para o alvo é relevante
         else:
             A.buy(buy & ok, P)
+        if j is not None: vm.append(A.sh * P + A.cash)
         if rec and j is not None:
             v = A.sh * P + A.cash
             for q in range(n):
@@ -290,7 +314,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
                                 "c": int(A.compras[q]), "s": int(A.vendas[q])})
         mi += 1
     v = A.sh * lastp + A.cash
-    return {"v": v, "ir": A.ir + A.dtax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows}
+    return {"v": v, "ir": A.ir + A.dtax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows, "ra": anual(vm, ap, wd)}
 
 
 def simulate_ref(D, rid, me, ap, wd, rec=False):
@@ -299,7 +323,7 @@ def simulate_ref(D, rid, me, ap, wd, rec=False):
     g0 = next((i for i in range(s, e + 1) if not np.isnan(G[i])), None) if rid == "ouro" else s
     if g0 is None: return {"v": float("nan"), "rows": [] if rec else None}
     # ouro sem cotação no início do período: os aportes esperam (sem rendimento) e compram na 1ª semana com preço (nota em _refs)
-    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if rid == "ouro" else G[s], 0.0
+    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if rid == "ouro" else G[s], 0.0; vm = []
     for i in range(s, e + 1):
         if rid == "cdb" and i > s: cash *= D["cdb"][i]
         if not np.isnan(G[i]): lastg = G[i]
@@ -312,9 +336,9 @@ def simulate_ref(D, rid, me, ap, wd, rec=False):
         else:
             if w > 0 and q > 0: sv = min(q, w / (lastg * (1 - CUSTO))); q -= sv; n += 1
             if a > 0: q += a * (1 - CUSTO) / lastg; c += 1
-        v = cash if rid == "cdb" else q * lastg + pend
+        v = cash if rid == "cdb" else q * lastg + pend; vm.append(v)
         if rec: rows.append({"ym": D["ym"][i], "v": float(v), "div": 0.0, "tax": 0.0, "pos": MOD[rid]["n"], "c": c, "s": n})
-    return {"v": float(cash if rid == "cdb" else q * lastg + pend), "rows": rows if rec else None, "g0": g0}
+    return {"v": float(cash if rid == "cdb" else q * lastg + pend), "rows": rows if rec else None, "g0": g0, "ra": float(anual(vm, ap, wd)[0])}
 
 
 def _refs(D, me, ap, wd, apT):
@@ -325,7 +349,8 @@ def _refs(D, me, ap, wd, apT):
         ok = v == v
         nota = m["nota"] + (f"; cotação do ouro só desde {D['ym'][r['g0']][5:7]}/{D['ym'][r['g0']][:4]}: os aportes anteriores compram no primeiro preço"
                             if m["id"] == "ouro" and ok and r.get("g0", me[0]) > me[0] else "")
-        out.append({"k": "r", "m": m["id"], "t": m["n"], "v": round(v, 2) if ok else None,
+        ra = r.get("ra", float("nan"))
+        out.append({"k": "r", "m": m["id"], "t": m["n"], "v": round(v, 2) if ok else None, "ra": round(ra, 2) if ok and ra == ra else None,
                     "pct": round((v - apT) / apT * 100, 2) if ok and apT > 0 else None, "ir": 0.0, "c": None, "s": None, "nota": nota})
     return out
 
@@ -338,7 +363,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
     alg = mid != "tendencia"
     A = Conta(1); cur, k, pdiv, pend = -1, 0, 0.0, None; lastp = {g: C[g, s] for g in gidx}
     per = {g: {"t": nm[g], "c": 0, "sem": 0, "n": 0, "res": 0.0, "ir": 0.0} for g in gidx}
-    moves, cdbw, tot = [], 0, 0; nav, navpk, dd, vprev = 1.0, 1.0, 0.0, None
+    moves, cdbw, tot, vm = [], 0, 0, []; nav, navpk, dd, vprev = 1.0, 1.0, 0.0, None
     meset = {w: j for j, w in enumerate(me)}; A.cash += ap[0]; mg = {}  # resultado das vendas do mês por empresa (para dividir o IR)
     pct = lambda x: f"{x / 10:.1f}%".replace(".", ",")
 
@@ -406,12 +431,13 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         v = A.sh[0] * P + A.cash[0]
         if vprev: nav *= (v - flow) / vprev if vprev > 0 else 1
         vprev = v; navpk = max(navpk, nav); dd = min(dd, nav / navpk - 1)
+        if j is not None: vm.append(v)
     v = A.sh[0] * (lastp[cur] if cur >= 0 else 0) + A.cash[0]
     if cur >= 0:
         per[cur]["res"] += A.sh[0] * lastp[cur] - A.basis[0]; per[cur]["n"] += 1
     emp = [dict(x, sem=round(x["sem"] / max(1, x["n"]), 1), res=round(x["res"], 2), ir=round(x["ir"], 2)) for x in per.values() if x["c"]]
     emp.sort(key=lambda x: -x["res"])
-    return {"v": float(v), "ir": float(A.ir[0] + A.dtax[0]), "irv": float(A.ir[0]), "c": int(A.compras[0]), "s": int(A.vendas[0]),
+    return {"v": float(v), "ir": float(A.ir[0] + A.dtax[0]), "irv": float(A.ir[0]), "c": int(A.compras[0]), "s": int(A.vendas[0]), "ra": float(anual(vm, ap, wd)[0]),
             "hist": {"emp": emp, "trocas": sum(1 for m in moves if m["de"] and m["para"]), "cdb": round(cdbw / max(1, tot) * 100, 1),
                      "dd": round(dd * 100, 1), "mov": moves[-200:]}}
 
@@ -460,12 +486,12 @@ def run(D, req):
                         if len(gi) < 2: continue  # empresa listada depois do início entra no rodízio quando passa a ter preço
                         r = rotate(D, mid, gi, me, ap, wd, tx)
                         rows.append({"k": "g", "m": mid, "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2),
-                                     "pct": pc(r["v"]), "ir": round(r["ir"], 2), "irv": round(r["irv"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
+                                     "pct": pc(r["v"]), "ra": None if r["ra"] != r["ra"] else round(r["ra"], 2), "ir": round(r["ir"], 2), "irv": round(r["irv"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
                 if not uni: continue
                 r = simulate(D, mid, uni, me, ap, wd, tx)
                 fo = fora_barsi(D, uni, me) if mid == "barsi" else np.zeros(len(uni), bool)
                 best = sorted((q for q in range(len(uni)) if not fo[q]), key=lambda q: -r["v"][q])[:10]
-                rows += [{"k": "a", "m": mid, "t": D["tick"][uni[q]], "v": round(float(r["v"][q]), 2), "pct": pc(r["v"][q]),
+                rows += [{"k": "a", "m": mid, "t": D["tick"][uni[q]], "v": round(float(r["v"][q]), 2), "pct": pc(r["v"][q]), "ra": None if np.isnan(r["ra"][q]) else round(float(r["ra"][q]), 2),
                           "ir": round(float(r["ir"][q]), 2), "irv": round(float(r["irv"][q]), 2), "c": int(r["c"][q]), "s": int(r["s"][q])} for q in best]
         else:
             t = req.get("ticker")
@@ -475,7 +501,7 @@ def run(D, req):
             if len(mids) == 1 and mids[0] != "hold": mids = mids + ["hold"]  # referência: comprar e segurar
             for mid in mids:
                 r = simulate(D, mid, [k], me, ap, wd, tx)
-                rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ir": round(float(r["ir"][0]), 2), "irv": round(float(r["irv"][0]), 2),
+                rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ra": None if np.isnan(r["ra"][0]) else round(float(r["ra"][0]), 2), "ir": round(float(r["ir"][0]), 2), "irv": round(float(r["irv"][0]), 2),
                              "c": int(r["c"][0]), "s": int(r["s"][0]), **({"fora": True} if mid == "barsi" and fora_barsi(D, [k], me)[0] else {})})
         rows.sort(key=lambda x: (x["k"] != "g", -(x["pct"] if x["pct"] is not None else -1e9)))  # grupos; depois modelos e CDB/Ouro pelo rendimento
         out = dict(ini, rows=rows)
@@ -505,10 +531,11 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
+PRE_VER = 2  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
-    h = hashlib.sha1(repr((D["fp"], tuple(dict.fromkeys(tickers)), tuple(idx), tuple(np.flatnonzero(D["BS"][idx]).tolist()),
+    h = hashlib.sha1(repr((PRE_VER, D["fp"], tuple(dict.fromkeys(tickers)), tuple(idx), tuple(np.flatnonzero(D["BS"][idx]).tolist()),
                            me[0], me[-1], [round(x, 2) for x in aps])).encode())
     return h.hexdigest()[:24]
 
@@ -613,9 +640,9 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
             return hit
     R = [simulate(D, m["id"], idx, me, aps, wd, tx) for m in MODELOS]
     fora = fora_barsi(D, idx, me) if len(idx) > 1 else np.zeros(len(idx), bool)  # uma empresa só: calcula mesmo fora do método
-    ib = [m["id"] for m in MODELOS].index("barsi"); R[ib]["v"] = np.where(fora, np.nan, R[ib]["v"])
+    ib = [m["id"] for m in MODELOS].index("barsi"); R[ib]["v"] = np.where(fora, np.nan, R[ib]["v"]); R[ib]["ra"] = np.where(fora, np.nan, R[ib]["ra"])
     refs = _refs(D, me, aps, wd, apT); z = np.zeros(len(idx))
-    R += [{"v": np.full(len(idx), np.nan if r["v"] is None else r["v"]), "ir": z, "irv": z, "c": z, "s": z} for r in refs]
+    R += [{"v": np.full(len(idx), np.nan if r["v"] is None else r["v"]), "ra": np.full(len(idx), np.nan if r["ra"] is None else r["ra"]), "ir": z, "irv": z, "c": z, "s": z} for r in refs]
     M = MODELOS + REF; nm = len(M)
     V = np.array([r["v"] for r in R])
     P = (V / apT - 1) * 100 if apT > 0 else np.zeros_like(V)
@@ -634,7 +661,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     big = lambda i: -_nmean(P[i])  # ord_pts: pela média de pontos (o Método Barsi só conta nas empresas do método)
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)),
            "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in M], "p": J(P), "rk": rk.tolist(),
-           "v": J(V), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(), "irv": np.round(np.array([r["irv"] for r in R]), 2).tolist(),
+           "v": J(V), "ra": J(np.array([r["ra"] for r in R], dtype=float)), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(), "irv": np.round(np.array([r["irv"] for r in R]), 2).tolist(),
            "c": np.array([r["c"] for r in R]).astype(int).tolist(), "s": np.array([r["s"] for r in R]).astype(int).tolist(),
            "res": [res(i, m) for i, m in enumerate(M)], "ord_media": sorted(range(nm), key=big), "ord_pos": order,
            "ord_pts": sorted(range(nm), key=lambda i: (-(pts[i] / max(1, (~np.isnan(V[i])).sum())), -pts[i], order.index(i))), "ref": refs, "fora": int(fora.sum()), "pontos": list(PONTOS), "cart": cart}
@@ -647,7 +674,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
                 gi = [D["ix"][t] for t in (g.get("t") or [])[:30] if t in D["ix"]]
                 if len(gi) < 2: continue
                 r = rotate(D, m["id"], gi, me, aps, wd, tx)
-                out["g"].append({"m": m["id"], "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2), "pct": pc(r["v"]),
+                out["g"].append({"m": m["id"], "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2), "pct": pc(r["v"]), "ra": None if r["ra"] != r["ra"] else round(r["ra"], 2), 
                                  "ir": round(r["ir"], 2), "irv": round(r["irv"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
         out["g"].sort(key=lambda x: -(x["pct"] or -1e9))
     _C[key] = out

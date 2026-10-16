@@ -470,7 +470,7 @@ if (typeof document !== 'undefined') {
   const note = (extra) => modInfo(CM, { extra });
   const isRef = (id) => !!((MM && MM.modelos.find(m => m.id === id)) || {}).ref;
   // CDB e Ouro: só o nome com ⓘ (explicação no Glossário); six = tabela com coluna Modelo (Desempenho em Todos)
-  const refRows = (L, six) => L.map(r => `<tr class="tap pvd-ref" data-pvsel="|${r.m}"><td><b>${esc(r.t)}</b>${refInfo(r.m)}</td>${six ? '<td></td>' : ''}<td>${pcl(r.pct)}</td><td>${r.v == null ? '—' : brl.format(r.v)}</td><td>—</td><td>—</td><td>—</td></tr>`).join('');
+  const refRows = (L, six) => L.map(r => `<tr class="tap pvd-ref" data-pvsel="|${r.m}"><td><b>${esc(r.t)}</b>${refInfo(r.m)}</td>${six ? '<td></td>' : ''}<td data-v="${r.ra ?? -1e9}">${pcl(r.ra)}</td><td data-v="${r.pct ?? -1e9}">${pcl(r.pct)}</td><td data-v="${r.v ?? -1e9}">${r.v == null ? '—' : brl.format(r.v)}</td><td data-v="0">—</td><td data-v="0">—</td><td data-v="-1">—</td></tr>`).join('');
   function drawCmp() {
     if (!CM) return;
     const nm = NM(), g = (CM.g || []).filter(x => !st.mf || x.m === st.mf);
@@ -484,16 +484,16 @@ if (typeof document !== 'undefined') {
     if (!CM) return;
     const nm = NM(), L = [];
     // CDB e Ouro: uma linha cada (não dependem da empresa), ordenadas junto com os modelos; Barsi fora do método (null) não entra
-    (CM.ref || []).forEach(r => { if (r.pct != null && (!isRef(st.mf) || r.m === st.mf)) L.push({ t: r.t, m: r.m, n: '', pct: r.pct, v: r.v, irv: 0, ird: 0, c: -1, s: -1, ref: 1 }); });
-    CM.m.forEach((m, i) => { if (isRef(m) || (st.mf && st.mf !== m)) return; CM.t.forEach((t, j) => { if (CM.p[i][j] != null) L.push({ t, m, n: nm[m] || m, pct: CM.p[i][j], v: CM.v[i][j], irv: CM.irv[i][j], ird: CM.ir[i][j] - CM.irv[i][j], c: CM.c[i][j], s: CM.s[i][j] }); }); });
-    L.sort((a, b) => (typeof a[dsk] === 'string' ? a[dsk].localeCompare(b[dsk], 'pt-BR') : a[dsk] - b[dsk]) * dsd);
+    (CM.ref || []).forEach(r => { if (r.pct != null && (!isRef(st.mf) || r.m === st.mf)) L.push({ t: r.t, m: r.m, n: '', ra: r.ra, pct: r.pct, v: r.v, irv: 0, ird: 0, c: -1, s: -1, ref: 1 }); });
+    CM.m.forEach((m, i) => { if (isRef(m) || (st.mf && st.mf !== m)) return; CM.t.forEach((t, j) => { if (CM.p[i][j] != null) L.push({ t, m, n: nm[m] || m, ra: CM.ra ? CM.ra[i][j] : null, pct: CM.p[i][j], v: CM.v[i][j], irv: CM.irv[i][j], ird: CM.ir[i][j] - CM.irv[i][j], c: CM.c[i][j], s: CM.s[i][j] }); }); });
+    L.sort((a, b) => (typeof a[dsk] === 'string' ? a[dsk].localeCompare(b[dsk], 'pt-BR') : (a[dsk] ?? -1e9) - (b[dsk] ?? -1e9)) * dsd);
     const np = Math.max(1, Math.ceil(L.length / st.pgs)); pg = Math.min(pg, np - 1);
     const rows = L.slice(pg * st.pgs, (pg + 1) * st.pgs);
     // paginação numa linha só, no fim da tabela
     const pager = `<div class="pv-pg"><span class="pv-pgi">Linhas por página <select class="sel" data-pgs>${[240, 500, 1000, 2000, 5000].map(n => `<option${n === st.pgs ? ' selected' : ''}>${n}</option>`).join('')}</select></span>
       <span class="pv-pgi"><button type="button" class="gbtn" data-pg="-1"${pg ? '' : ' disabled'} aria-label="Página anterior">‹</button><span>${pg + 1} de ${np}</span><button type="button" class="gbtn" data-pg="1"${pg < np - 1 ? '' : ' disabled'} aria-label="Próxima página">›</button></span></div>`;
-    el('pvDes').innerHTML = `<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['IR vendas', 'irv'], ['IR proventos', 'ird'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
-      <tbody>${rows.map(r => r.ref ? refRows([r], 1) : `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.irv)}</td><td>${brl.format(r.ird)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${pager}${note(`${F0.format(L.length)} linhas; toque numa linha para ver o mês a mês ${glossBtn('Desempenho (melhores casos)')}`)}`;
+    el('pvDes').innerHTML = `<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], [`Rend. médio anual ${glossBtn('Rend. médio anual')}`, 'ra'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['IR vendas', 'irv'], ['IR proventos', 'ird'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
+      <tbody>${rows.map(r => r.ref ? refRows([r], 1) : `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.ra)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.irv)}</td><td>${brl.format(r.ird)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${pager}${note(`${F0.format(L.length)} linhas; toque numa linha para ver o mês a mês ${glossBtn('Desempenho (melhores casos)')}`)}`;
   }
   // abre uma empresa com um modelo (mês a mês na aba Tabela)
   const openOne = (t, m) => openPeek(t, m);
@@ -510,16 +510,16 @@ if (typeof document !== 'undefined') {
       const g = r.k === 'g', on = !g && sel && sel.t === r.t && sel.m === r.m;
       const nm = g ? `<div class="pvd-a"><span><b>${esc(r.n)}</b><span class="pvd-m">${esc(modName(r.m))} · rodízio</span></span><button type="button" class="pv-i" data-pvg="${i}" aria-label="Histórico de movimentação">ⓘ</button></div>`
         : `<b>${esc(r.t)}</b><span class="pvd-m">${esc(modName(r.m))}${r.fora ? ' · fora do método (setor não perene ou sem dividendos regulares)' : ''}</span>`;
-      return `<tr class="${g ? 'pvd-g' : 'tap'}${on ? ' sel' : ''}" ${g ? '' : `data-pvsel="${esc(r.t)}|${esc(r.m)}"`}><td>${nm}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.irv ?? 0)}</td><td>${brl.format(r.ir - (r.irv ?? 0))}</td><td>${r.c} / ${r.s}</td></tr>`;
+      return `<tr class="${g ? 'pvd-g' : 'tap'}${on ? ' sel' : ''}" ${g ? '' : `data-pvsel="${esc(r.t)}|${esc(r.m)}"`}><td data-v="${esc(r.n || r.t)}">${nm}</td><td data-v="${r.ra ?? -1e9}">${pcl(r.ra)}</td><td data-v="${r.pct ?? -1e9}">${pcl(r.pct)}</td><td data-v="${r.v}">${brl.format(r.v)}</td><td data-v="${r.irv ?? 0}">${brl.format(r.irv ?? 0)}</td><td data-v="${r.ir - (r.irv ?? 0)}">${brl.format(r.ir - (r.irv ?? 0))}</td><td data-v="${r.c}">${r.c} / ${r.s}</td></tr>`;
     }).join('');
-    return `<div class="pv-scroll"><table class="gtab"><thead><tr><th>Ativo</th><th>Rendimento</th><th>Valor final</th><th>IR vendas</th><th>IR proventos</th><th>Compras / vendas</th></tr></thead><tbody>${tr}</tbody></table></div>
+    return `<div class="pv-scroll"><table class="gtab" data-srt><thead><tr>${thSort('Ativo', 'a')}${thSort(`Rend. médio anual ${glossBtn('Rend. médio anual')}`, 'ra')}${thSort('Rendimento', 'p')}${thSort('Valor final', 'v')}${thSort('IR vendas', 'i')}${thSort('IR proventos', 'j')}${thSort('Compras / vendas', 'c')}</tr></thead><tbody>${tr}</tbody></table></div>
       ${modInfo(d, { extra: 'toque numa linha para ver o mês a mês' })}`;
   }
   el('pvDes').addEventListener('change', (e) => { if (e.target.matches('[data-pgs]')) { st.pgs = +e.target.value; pg = 0; save(); drawDes(); } });
   el('pvDes').addEventListener('click', (e) => {
     if (e.target.closest('[data-gl]')) return;  // ⓘ (Glossário) não abre a linha
     if (isAll() && CM) {
-      const th = e.target.closest('th[data-sc]'); if (th) { const k = th.dataset.sc; dsd = dsk === k ? -dsd : (k === 't' || k === 'n' ? 1 : -1); dsk = k; drawDes(); return; }
+      const th = e.target.closest('th[data-sc]'); if (th && !th.closest('table[data-srt]')) { const k = th.dataset.sc; dsd = dsk === k ? -dsd : (k === 't' || k === 'n' ? 1 : -1); dsk = k; drawDes(); return; }
       const pb = e.target.closest('[data-pg]'); if (pb) { pg += +pb.dataset.pg; drawDes(); el('pvDes').scrollIntoView({ block: 'start' }); return; }
       const tr = e.target.closest('[data-pvsel]'); if (tr) { const [t, m] = tr.dataset.pvsel.split('|'); openOne(t, m); return; }
     }
