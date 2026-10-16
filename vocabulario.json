@@ -249,6 +249,11 @@
   "riachuelo": "GUAR"
  },
  "glossario": {
+    "alerta do barato": "alertas",
+    "alerta do card": "alertas",
+    "⚠️": "alertas",
+    "triangulo amarelo": "alertas",
+    "preco teto": "barato/caro",
   "pl": "p/l",
   "preco/lucro": "p/l",
   "preco lucro": "p/l",

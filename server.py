@@ -286,6 +286,8 @@ def build():
         snaps[sid] = (p or {}).get("rows") or {}
         status[name] = f"{desc} ({len(snaps[sid])} papéis)" if p else desc
     fda = ((snapshots.load("fund")[0]) or {}).get("a") or {}  # lucro e patrimônio anuais (scripts/build_fund.py) -> ln3
+    pv_ = (snapshots.load("b3_proventos")[0]) or {}  # dividendo por ação por ano (B3) -> dpsm (Barsi)
+    prov, pv_y1 = pv_.get("a") or {}, (pv_.get("anos") or [0, 0])[1]
 
     rows, n_red = [], 0
     for t, f in fund.items():
@@ -319,6 +321,12 @@ def build():
         if cv: S["cvm"] = cv
         if ca: A["cvm"] = ca
         S = {k: x for k, x in S.items() if x}
+        ex = {}  # Barato/Caro: dividendo médio por ação (B3) e dados dos alertas (CVM)
+        dm = valor_justo.dps_medio(prov.get(t), pv_y1)
+        if dm is not None: ex["dpsm"] = dm
+        c_ = snaps["cvm"].get(t) or {}
+        al = {k: c_[k] for k in ("dlebitda", "payout") if c_.get(k) is not None}
+        if al: ex["al"] = al
         nm = names.get(t) or names.get(t[:4] + "3") or names.get(t[:4] + "4") or {}
         if not nm.get("nome") and (s.get("NOME") or s.get("SETOR")):
             nm = {"nome": s.get("NOME"), "setor": s.get("SETOR")}
@@ -327,7 +335,7 @@ def build():
         var = names.get(t, {}).get("var")
         if var is None and t in tv: var = tv[t]["m"].get("var")
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
-                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, **lucro_pl(fda.get(t))})
+                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, **lucro_pl(fda.get(t)), **ex})
     rows.sort(key=lambda r: -((r["S"].get("tv") or {}).get("liq2m") or 0))
     now = datetime.now(timezone.utc)
     return {
@@ -373,7 +381,7 @@ def finalize(base, yf_store=None):
         if not isbr and r.get("ipo"): nr["ipo"] = r["ipo"]  # data de listagem no exterior (TradingView); no Brasil vem da B3 (metrics.ftd)
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
-        for k in ("ln3", "roe3"):
+        for k in ("ln3", "roe3", "dpsm", "al"):
             if r.get(k) is not None: nr[k] = r[k]
         if r["ticker"] in FIN: nr["fin"] = True
         ixs = IXC.get(r["ticker"][:4])
@@ -386,6 +394,7 @@ def finalize(base, yf_store=None):
             for k in VOL_PER: (nr.get("src") or {}).pop(k, None)
         if isbr:  # cadastro oficial da B3 completa nome/setor; sem nome ou sem nenhum fundamento, o papel sai
             cd = CAD.get(r["ticker"][:4])
+            if cd and cd[1] in valor_justo.FAIR["barsi_seg"]: nr["seg"] = cd[1]  # Barato/Caro: Barsi pelo segmento oficial da B3
             if cd and not nr.get("nome"): nr["nome"] = cd[0]
             if cd and not nr.get("setor") and cd[1] and cd[1] != "Não Classificados": nr["setor"] = cd[1]
             vv = nr.get("v") or {}

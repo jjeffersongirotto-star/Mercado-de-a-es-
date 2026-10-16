@@ -712,6 +712,10 @@ def fair_answer(P, D):
             out.append(f"{t}: sem Barato/Caro (preço {v('preco')}, LPA {v('lpa')}, VPA {v('vpa')})."); continue
         j, pct, p, m = f
         out.append(f"{t}: {'+' if pct >= 0 else '−'}{br(abs(pct), 0)}% {'até o' if pct >= 0 else 'acima do'} valor justo (valor justo ({m}) R$ {br(j)}; preço R$ {br(p)})")
+        al = __import__("valor_justo").alertas(D["by"][t], val(D, D["by"][t], "dy"))  # ⚠️ do card (Glossário: Alertas)
+        if al:
+            nm = {"divida": lambda x: f"dívida líquida {br(x)}× o EBITDA", "dy": lambda x: f"DY de {br(x)}%", "payout": lambda x: f"payout de {br(x, 0)}%"}
+            out[-1] += " ⚠️ " + "; ".join(nm[k](x) for k, x in al)
     g = glossary().get("barato/caro", "")
     return "\n".join(out) + (f"\n\n{g}" if g else "")
 

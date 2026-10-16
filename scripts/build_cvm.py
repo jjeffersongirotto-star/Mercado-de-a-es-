@@ -83,15 +83,79 @@ def normalize(df, stmt):
     df["CD_CONTA"] = new
     return df
 
+DA_RE = r"(?i)deprecia|amortiza|exaust"
+
+def da_flows(z, kind, year):
+    """Depreciação, amortização e exaustão (DFC método indireto, contas 6.01.01.xx) -> {(cnpj, DT_INI_EXERC, ORDEM): valor}.
+    Consolidado com fallback individual por empresa; versão mais recente."""
+    cols = ["CNPJ_CIA", "DT_REFER", "VERSAO", "ESCALA_MOEDA", "ORDEM_EXERC", "DT_INI_EXERC", "CD_CONTA", "DS_CONTA", "VL_CONTA"]
+    out, got = {}, set()
+    for ci in ("con", "ind"):
+        df = read(z, f"{kind}_cia_aberta_DFC_MI_{ci}_{year}.csv", None, cols)
+        if df.empty: continue
+        df = df[df["CD_CONTA"].str.startswith("6.01.01.") & df["DS_CONTA"].fillna("").str.contains(DA_RE) & ~df["CNPJ_CIA"].isin(got)]
+        df = df[~df["DS_CONTA"].str.contains(r"(?i)des[aá]gio|ágio|custo de capta|juros|arrendamento financeiro|direito de uso.*juros")]
+        df["VERSAO"] = pd.to_numeric(df["VERSAO"], errors="coerce")
+        df = df[df["VERSAO"] == df.groupby(["CNPJ_CIA", "DT_REFER"])["VERSAO"].transform("max")]
+        last = df.groupby("CNPJ_CIA")["DT_REFER"].transform("max")
+        df = df[df["DT_REFER"] == last]
+        v = pd.to_numeric(df["VL_CONTA"], errors="coerce") * df["ESCALA_MOEDA"].map({"MIL": 1000.0}).fillna(1.0)
+        for c, ini, o, x in zip(df["CNPJ_CIA"], df["DT_INI_EXERC"], df["ORDEM_EXERC"], v):
+            if x == x: out[(c, ini, o)] = out.get((c, ini, o), 0.0) + abs(x)
+        got |= set(df["CNPJ_CIA"])
+    return out
+
+def dividends_declared(z, year):
+    """Dividendos + JCP declarados no exercício (DMPL: contas 5.04.xx de dividendos/JCP, sem prescritos; coluna do patrimônio da controladora)."""
+    out = {}
+    for ci in ("con", "ind"):
+        df = read(z, f"dfp_cia_aberta_DMPL_{ci}_{year}.csv")
+        if df.empty: continue
+        df = df[(df["ORDEM_EXERC"] == "ÚLTIMO") & (df["COLUNA_DF"] == "Patrimônio Líquido") & df["CD_CONTA"].str.match(r"^5\.04\.\d+$")
+                & df["DS_CONTA"].fillna("").str.contains(r"(?i)dividend|juros sobre (?:o )?capital|jcp")
+                & ~df["DS_CONTA"].fillna("").str.contains(r"(?i)prescri|revers|IRRF")
+                & ~df["CNPJ_CIA"].isin(set(out))]
+        df["VERSAO"] = pd.to_numeric(df["VERSAO"], errors="coerce")
+        df = df[df["VERSAO"] == df.groupby("CNPJ_CIA")["VERSAO"].transform("max")]
+        v = pd.to_numeric(df["VL_CONTA"], errors="coerce") * df["ESCALA_MOEDA"].map({"MIL": 1000.0}).fillna(1.0)
+        acc, fix = {}, {}
+        for c, k, x in zip(df["CNPJ_CIA"], df["CD_CONTA"], v):
+            if x != x: continue
+            acc[c] = acc.get(c, 0.0) - x  # deduções vêm negativas
+            if k in ("5.04.06", "5.04.07"): fix[c] = fix.get(c, 0.0) - x
+        acc = {c: (fix[c] if fix.get(c) else x) for c, x in acc.items()}  # contas padrão (dividendos, JCP); outras só sem elas
+        out.update(acc)
+    return out
+
 def pivot(df, flt):
     d = df[flt]
     return {(c, k): v for c, k, v in zip(d["CNPJ_CIA"], d["CD_CONTA"], d["v"])}
 
-def tickers(fca, year):
-    """Ticker negociado hoje -> CNPJ da companhia (cadastro FCA da CVM). Usado também por build_fund.py."""
-    vm = read(fca, f"fca_cia_aberta_valor_mobiliario_{year}.csv")
-    vm = vm[vm["Codigo_Negociacao"].notna() & vm["Data_Fim_Negociacao"].isna()]
-    return {str(t).strip().upper(): c for t, c in zip(vm["Codigo_Negociacao"], vm["CNPJ_Companhia"]) if 4 < len(str(t).strip()) <= 7}
+FCA_ANOS = 5  # o FCA é entregue só quando muda: junta os últimos anos (a entrega mais recente de cada empresa vale)
+
+def tickers(cache, year):
+    """Ticker negociado hoje -> CNPJ da companhia. Fonte única: cadastro FCA da CVM (valor mobiliário).
+    Usado também por build_fund.py."""
+    out, seen = {}, set()
+    for y in range(year, year - FCA_ANOS, -1):  # do mais novo ao mais velho
+        z = get_zip(cache, "FCA", y)
+        if not z: continue
+        vm = read(z, f"fca_cia_aberta_valor_mobiliario_{y}.csv")
+        if vm.empty: continue
+        vm = vm[~vm["CNPJ_Companhia"].isin(seen)]  # empresa já coberta por entrega mais nova
+        vm = vm[vm["Versao"].astype(int) == vm.groupby("CNPJ_Companhia")["Versao"].transform(lambda v: v.astype(int).max())]
+        for t, c, fim in zip(vm["Codigo_Negociacao"], vm["CNPJ_Companhia"], vm["Data_Fim_Negociacao"]):
+            t = str(t).strip().upper()
+            if t != "NAN" and 4 < len(t) <= 7 and fim != fim and t not in out: out[t] = c
+        seen |= set(vm["CNPJ_Companhia"])
+    # algumas empresas informam só parte dos códigos (ex.: só a unit): as outras classes da mesma raiz (4 letras)
+    # são da mesma companhia quando a raiz aponta para um único CNPJ no FCA
+    raiz = {}
+    for t, c in out.items(): raiz.setdefault(t[:4], set()).add(c)
+    for r, cs in raiz.items():
+        if len(cs) == 1:
+            for n in ("3", "4", "5", "6", "7", "8", "11"): out.setdefault(r + n, next(iter(cs)))
+    return out
 
 
 def main(outdir, cache):
@@ -103,7 +167,6 @@ def main(outdir, cache):
         fy -= 1; dfp = get_zip(cache, "DFP", fy)
     dfpn = {n: get_zip(cache, "DFP", fy - n) for n in range(1, 6)}  # exercícios anteriores (crescimento 1 a 5 anos)
     itr = get_zip(cache, "ITR", fy + 1)
-    fca = get_zip(cache, "FCA", today.year)
     print(f"DFP {fy} / {fy-5}..{fy-1}, ITR {fy+1}", flush=True)
 
     # --- DFP (exercício fy e fy-5)
@@ -116,8 +179,10 @@ def main(outdir, cache):
         FYN[n] = pivot(dre_n, dre_n["ORDEM_EXERC"] == "ÚLTIMO") if len(dre_n) else {}
     bal_f = pd.concat([stmts(dfp, "dfp", fy, "BPA", BPA_C), stmts(dfp, "dfp", fy, "BPP", BPP_C)])
     BALF = pivot(bal_f, bal_f["ORDEM_EXERC"] == "ÚLTIMO")
+    DA_F = {c: v for (c, ini, o), v in da_flows(dfp, "dfp", fy).items() if o == "ÚLTIMO"}
+    DIV_F = dividends_declared(dfp, fy)
     # --- ITR do ano corrente
-    YTD, YTDP, BALI, refI = {}, {}, {}, {}
+    YTD, YTDP, BALI, refI, DA_Y, DA_YP = {}, {}, {}, {}, {}, {}
     if itr:
         dre_i = stmts(itr, "itr", fy + 1, "DRE", DRE_C)
         last = dre_i.groupby("CNPJ_CIA")["DT_REFER"].max()
@@ -125,6 +190,9 @@ def main(outdir, cache):
         YTD = pivot(dre_i, (dre_i["ORDEM_EXERC"] == "ÚLTIMO") & (dre_i["DT_INI_EXERC"] == f"{fy+1}-01-01"))
         YTDP = pivot(dre_i, (dre_i["ORDEM_EXERC"] == "PENÚLTIMO") & (dre_i["DT_INI_EXERC"] == f"{fy}-01-01"))
         refI = last.to_dict()
+        da_i = da_flows(itr, "itr", fy + 1)
+        DA_Y = {c: v for (c, ini, o), v in da_i.items() if o == "ÚLTIMO" and ini == f"{fy+1}-01-01"}
+        DA_YP = {c: v for (c, ini, o), v in da_i.items() if o == "PENÚLTIMO" and ini == f"{fy}-01-01"}
         bal_i = pd.concat([stmts(itr, "itr", fy + 1, "BPA", BPA_C), stmts(itr, "itr", fy + 1, "BPP", BPP_C)])
         bal_i = bal_i[bal_i["DT_REFER"] == bal_i["CNPJ_CIA"].map(last)]
         BALI = pivot(bal_i, bal_i["ORDEM_EXERC"] == "ÚLTIMO")
@@ -139,7 +207,12 @@ def main(outdir, cache):
             tot = pd.to_numeric(r.get("QT_ACAO_TOTAL_CAP_INTEGR"), errors="coerce")
             tes = pd.to_numeric(r.get("QT_ACAO_TOTAL_TESOURO"), errors="coerce")
             if tot and tot > 0: shares[r["CNPJ_CIA"]] = float(tot - (tes if tes == tes else 0))
-    tick2cnpj = tickers(fca, today.year)
+    tick2cnpj = tickers(cache, today.year)
+    try:  # só papéis negociados (lista da B3 do snapshot anterior): as classes deduzidas pela raiz que não existem saem
+        listed = set(json.load(open(os.path.join(outdir, "b3_listed.json")))["tickers"])
+        if len(listed) > 200: tick2cnpj = {t: c for t, c in tick2cnpj.items() if t in listed}
+    except Exception:
+        pass
 
     def acc(cnpj):
         """Valores TTM e balanço mais recente para a empresa."""
@@ -156,15 +229,19 @@ def main(outdir, cache):
         B = BALI if (has_itr and (cnpj, "1") in BALI) else BALF
         bal = {k: B.get((cnpj, k)) for k in BPA_C + BPP_C}
         ref = refI.get(cnpj) if has_itr else f"{fy}-12-31"
+        a = DA_F.get(cnpj)
+        if has_itr and a is not None and cnpj in DA_Y and cnpj in DA_YP: a = a + DA_Y[cnpj] - DA_YP[cnpj]
+        flow["da"] = a
         return flow, bal, ref
 
+    g0 = lambda D, c, k: D.get((c, k)) not in (None, 0)  # 3.11.01 = 0: empresa sem a linha da controladora preenchida
     rows, cache_co = {}, {}
     for t, cnpj in tick2cnpj.items():
         if (cnpj, "3.01") not in FY: continue
         if cnpj not in cache_co: cache_co[cnpj] = acc(cnpj)
         flow, bal, ref = cache_co[cnpj]
         fin = "Financeiro" not in (ds305.get(cnpj) or "")
-        rev, gross, ebit, ni = flow["3.01"], flow["3.03"], flow["3.05"], flow["3.11.01"] if flow.get("3.11.01") is not None else flow["3.11"]
+        rev, gross, ebit, ni = flow["3.01"], flow["3.03"], flow["3.05"], flow["3.11.01"] if g0(FY, cnpj, "3.11.01") else flow["3.11"]
         ebit_adj = (gross + (flow["3.04.01"] or 0) + (flow["3.04.02"] or 0)) if gross is not None and not fin else None
         assets, eq = bal["1"], bal["2.03"]
         cash = (bal["1.01.01"] or 0) + (bal["1.01.02"] or 0)
@@ -182,11 +259,17 @@ def main(outdir, cache):
                        "mliq": div(ni, rev, 100), "liqcorr": div(bal["1.01"], bal["2.01"]),
                        "dlpl": div(debt - cash, eq) if eq and eq > 0 else None, "dlebit": div(debt - cash, ebit) if ebit and ebit > 0 else None,
                        "roic": div(ebit, inv, 100) if inv > 0 else None, "roic_adj": div(ebit_adj, inv, 100) if inv > 0 else None})
+             # EBITDA = EBIT (3.05, 12 meses) + depreciação/amortização (DFC, 12 meses); Dív. líq./EBITDA só com EBITDA positivo
+             ebitda = ebit + flow["da"] if ebit is not None and flow.get("da") is not None else None
+             r.update({"_ebitda": ebitda, "dlebitda": div(debt - cash, ebitda) if ebitda and ebitda > 0 else None})
+        # payout do último exercício (DFP): dividendos + JCP declarados ÷ lucro da controladora
+        dv, nfy = DIV_F.get(cnpj), FY.get((cnpj, "3.11.01")) if g0(FY, cnpj, "3.11.01") else FY.get((cnpj, "3.11"))
+        if dv and dv > 0 and nfy and nfy > 0: r["payout"] = round(dv / nfy * 100, 2)
         # crescimento médio por ano (CAGR) em n anos: exercício fy vs fy-n (receita de banco/seguradora não é comparável)
         for n, FN in FYN.items():
             for key, k in (("cresc", "3.01"), ("lucro", "3.11.01")):
                 a, b = FY.get((cnpj, k)), FN.get((cnpj, k))
-                if k == "3.11.01" and (a is None or b is None): a, b = FY.get((cnpj, "3.11")), FN.get((cnpj, "3.11"))
+                if k == "3.11.01" and not (a and b): a, b = FY.get((cnpj, "3.11")), FN.get((cnpj, "3.11"))
                 if a and b and a > 0 and b > 0 and not (fin and key == "cresc"): r[f"{key}{n}a"] = round(((a / b) ** (1 / n) - 1) * 100, 2)
         rows[t] = {k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items() if v is not None}
     save(os.path.join(outdir, "cvm.json"), "cvm", rows, {"fy": fy, "itr_year": fy + 1})

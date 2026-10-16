@@ -360,7 +360,8 @@ const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.p
 // pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
 // Sem cálculo -> { why: motivo curto } (o card mostra "—" e o motivo no lugar da barra).
 // Barato/Caro: mesma conta de valor_justo.fair (servidor; configuração em /api/data → fair). Brasil: bancos e seguradoras = Gordon
-// VPA × (ROE − g) ÷ (Ke − g); holdings e imobiliárias = VPA × P/VP mediano do subsetor; demais = Graham √(22,5 × LPA × VPA) com
+// VPA × (ROE − g) ÷ (Ke − g); holdings e imobiliárias = VPA × P/VP mediano do subsetor; elétricas, saneamento, gás e rodovias
+// (segmento B3) = Barsi: dividendo médio por ação (B3, 3–5 anos) ÷ taxa; demais = Graham √(22,5 × LPA × VPA) com
 // LPA médio de 3 anos = ln3 (lucro médio com teto ÷ patrimônio, CVM) × VPA do card. Exterior: Graham com o LPA de 12 meses.
 const _pvMed = { k: null, m: {} };
 function sectorPvp(sub) {  // P/VP mediano do subsetor com os valores exibidos (respeita o seletor de fonte)
@@ -389,17 +390,28 @@ function fairOf(r) {
     const s = sectorPvp(r.subsetor);
     return s.n >= FC.pvp_min ? out(b * s.med, 'P/VP do setor') : { why: 'Poucas empresas no setor' };
   }
+  if (br && (FC.barsi_seg || []).includes(r.seg) && r.dpsm) return out(r.dpsm / (FC.barsi_taxa / 100), 'Barsi');  // sem proventos: Graham
   const l = br ? (r.ln3 != null ? r.ln3 * b : null) : lpa;
   if (l == null) return { why: br ? 'Sem lucro de 3 anos na CVM' : (state.source === 'all' ? 'Sem LPA nas fontes' : 'Sem LPA nesta fonte') };
   if (l <= 0) return { why: br ? 'Prejuízo médio nos últimos 3 anos' : 'Prejuízo nos últimos 12 meses' };
   return out(Math.sqrt(22.5 * l * b), 'Graham');
 }
 window.fairOf = fairOf;
+// Alertas do Barato/Caro (mesma regra de valor_justo.alertas; limites em /api/data → fair): não mudam o percentual.
+function alertsOf(r) {
+  const FC = (state.data && state.data.fair) || {}, a = r.al || {}, dy = val(r, 'dy'), out = [];
+  if (state.country !== 'br') return out;
+  if (a.dlebitda != null && a.dlebitda > FC.al_dlebitda) out.push(`Dívida alta: a dívida líquida é ${F2.format(a.dlebitda)}× o EBITDA (acima de ${F2.format(FC.al_dlebitda)}×); mais risco se o lucro cair ou os juros subirem.`);
+  if (dy != null && dy > FC.al_dy) out.push(`Dividend yield de ${F2.format(dy)}% (acima de ${F0.format(FC.al_dy)}%): costuma vir de um pagamento extraordinário ou de queda forte do preço, e pode não se repetir.`);
+  if (a.payout != null && a.payout > FC.al_payout) out.push(`Payout de ${F0.format(a.payout)}% no último ano: distribuiu mais do que lucrou (usou reservas ou lucro não recorrente), o que não se sustenta.`);
+  return out;
+}
+window.alertsOf = alertsOf;
 function fairHtml(r) {
-  const f = fairOf(r);
-  if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span><div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
+  const f = fairOf(r), al = alertsOf(r).length ? `<button type="button" class="fv-al" data-fval="${r.ticker}" aria-label="Alertas de ${r.ticker}">⚠️</button>` : '';
+  if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span>${al}<div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
   const up = f.pct >= 0;  // + verde: o preço precisa subir até o valor justo · − vermelho: precisa cair
-  return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>` +
+  return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>${al}` +
     `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
 }
 function blockHtml(r) {
@@ -504,6 +516,9 @@ document.addEventListener('mousemove', (e) => {
   showTip(e, nl2br(ruleText()));
 });
 document.addEventListener('click', (e) => {
+  const fa = e.target.closest('[data-fval]');  // ⚠️ do Barato/Caro: motivos com os números desta ação
+  if (fa) { e.preventDefault(); e.stopPropagation(); const r = state.data && state.data.rows.find(x => x.ticker === fa.dataset.fval);
+    showTip(e, (r ? alertsOf(r) : []).map(esc).join('<br>') + ` <a href="#" data-glmore="Alertas (⚠️)">+ informações</a>`); clearTimeout(tt._h); tt._h = setTimeout(() => tt.classList.add('hidden'), 12000); return; }
   const gl = e.target.closest('[data-gl]');  // ⓘ do indicador: explicação do Glossário
   const gm = e.target.closest('[data-glmore]');  // "+ informações": painel ⓘ no termo do Glossário
   if (gm) { e.preventDefault(); tt.classList.add('hidden'); const t = gm.dataset.glmore; infoSection('Glossário'); setTimeout(() => { const li = [...document.querySelectorAll('#infoModal details li')].find(x => (x.querySelector('b') || {}).textContent === t); if (li) li.scrollIntoView({ block: 'start' }); }, 60); return; }

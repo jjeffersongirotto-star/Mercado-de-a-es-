@@ -23,8 +23,12 @@ def main(out, cache):
     except Exception:
         pass
     today = date.today()
-    fca = get_zip(cache, "FCA", today.year)
-    t2c = tickers(fca, today.year) if fca else {}
+    t2c = tickers(cache, today.year)
+    try:  # só papéis negociados (lista da B3): as classes deduzidas pela raiz que não existem saem
+        listed = set(json.load(open(os.path.join(out, "b3_listed.json")))["tickers"])
+        if len(listed) > 200: t2c = {t: c for t, c in t2c.items() if t in listed}
+    except Exception:
+        pass
     data = {}  # cnpj -> {ano: {rev, ni, eq}}
     for y in range(ANO0, today.year):
         z = get_zip(cache, "DFP", y)
@@ -35,7 +39,7 @@ def main(out, cache):
         for (c, k), v in F.items():
             d = data.setdefault(c, {}).setdefault(y, {})
             if k == "3.01": d["rev"] = v
-            elif k == "3.11.01" or (k == "3.11" and "ni" not in d): d["ni"] = v
+            elif (k == "3.11.01" and v) or (k == "3.11" and "ni" not in d): d["ni"] = v  # 3.11.01 = 0: linha não preenchida
         for (c, k), v in B.items(): data.setdefault(c, {}).setdefault(y, {})["eq"] = v; n += 1
         print(f"  DFP {y}: {n} empresas", flush=True)
         z.close()
