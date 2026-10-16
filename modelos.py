@@ -272,13 +272,13 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     A = Conta(n); C, DV = D["C"], D["DV"]; mod = MOD[mid]
     sig0 = _signals(D, mid, idx, s - 1) if s > 0 else np.zeros(n, bool)
     st, k = np.nan_to_num(sig0, nan=0).astype(bool), np.full(n, 10 ** 6)
-    lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None; vm = []
+    lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None; vm = []; cj = np.zeros(n)  # cj: rendimento do CDB no mês
     meset = {w: j for j, w in enumerate(me)}
     A.cash += ap[0]
     for i in range(s, e + 1):
         p = C[idx, i]; ok = ~np.isnan(p); lastp = np.where(ok, p, lastp); P = lastp
         if i > s:
-            A.cash *= D["cdb"][i]
+            cj += A.cash * (D["cdb"][i] - 1); A.cash *= D["cdb"][i]
             if divs:
                 d = A.sh * np.nan_to_num(DV[idx, i]); A.cash += d; A.mdiv += d; A.divT += d
         sig = _signals(D, mid, idx, i - 1) if i > s else sig0
@@ -311,7 +311,8 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
                                 "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {MOD[HIB[int(np.argmax(D['HW'][:, idx[q], i - 1]))]]['n']}"
                                         if mod.get("frac") and v[q] > 0 else
                                         "Ação" if A.sh[q] > 0 and A.cash[q] < 1 else "CDB" if A.sh[q] <= 0 else "Ação + CDB"),
-                                "c": int(A.compras[q]), "s": int(A.vendas[q])})
+                                "c": int(A.compras[q]), "s": int(A.vendas[q]), "cdb": float(A.cash[q]), "cj": float(cj[q])})
+            cj = np.zeros(n)
         mi += 1
     v = A.sh * lastp + A.cash
     return {"v": v, "ir": A.ir + A.dtax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows, "ra": anual(vm, ap, wd)}
@@ -323,9 +324,9 @@ def simulate_ref(D, rid, me, ap, wd, rec=False):
     g0 = next((i for i in range(s, e + 1) if not np.isnan(G[i])), None) if rid == "ouro" else s
     if g0 is None: return {"v": float("nan"), "rows": [] if rec else None}
     # ouro sem cotação no início do período: os aportes esperam (sem rendimento) e compram na 1ª semana com preço (nota em _refs)
-    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if rid == "ouro" else G[s], 0.0; vm = []
+    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if rid == "ouro" else G[s], 0.0; vm = []; cj = 0.0
     for i in range(s, e + 1):
-        if rid == "cdb" and i > s: cash *= D["cdb"][i]
+        if rid == "cdb" and i > s: cj += cash * (D["cdb"][i] - 1); cash *= D["cdb"][i]
         if not np.isnan(G[i]): lastg = G[i]
         if rid == "ouro" and i == g0 and pend > 0: q += pend * (1 - CUSTO) / lastg; c += 1; pend = 0.0
         j = meset.get(i)
@@ -337,7 +338,8 @@ def simulate_ref(D, rid, me, ap, wd, rec=False):
             if w > 0 and q > 0: sv = min(q, w / (lastg * (1 - CUSTO))); q -= sv; n += 1
             if a > 0: q += a * (1 - CUSTO) / lastg; c += 1
         v = cash if rid == "cdb" else q * lastg + pend; vm.append(v)
-        if rec: rows.append({"ym": D["ym"][i], "v": float(v), "div": 0.0, "tax": 0.0, "pos": MOD[rid]["n"], "c": c, "s": n})
+        if rec: rows.append({"ym": D["ym"][i], "v": float(v), "div": 0.0, "tax": 0.0, "pos": MOD[rid]["n"], "c": c, "s": n, "cdb": float(cash), "cj": float(cj)})
+        cj = 0.0
     return {"v": float(cash if rid == "cdb" else q * lastg + pend), "rows": rows if rec else None, "g0": g0, "ra": float(anual(vm, ap, wd)[0])}
 
 

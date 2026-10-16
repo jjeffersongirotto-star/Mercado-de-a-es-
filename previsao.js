@@ -336,9 +336,12 @@ if (typeof document !== 'undefined') {
     ['div', 'Dividendo mensal', 'pv-c-d'], ['tax', 'Imposto', 'pv-c-tx'], ['divT', 'Dividendos total', 'pv-c-d'], ['sem', 'Rentabilidade total', 'pv-c-r'], ['pv', 'Rentabilidade %', 'pv-c-r'],
     ['com', 'Patrimônio total<br>com dividendos', 'pv-c-d'], ['pd', '% Dividendos', 'pv-c-d']];
   const hasW = () => st.ret.some(r => r.ok && r.v > 0);
-  const cols = () => (hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS).concat(modRows ? [['pos', 'Posição', 'pv-c-m']] : []);
+  const cols = () => (hasW() ? COLS.concat([['w', 'Retirada', 'pv-c-w']]) : COLS).concat(modRows ? [['pos', 'Posição', 'pv-c-m'], ['cdb', `CDB ${glossBtn('CDB no mês a mês')}`, 'pv-c-t']] : []);
   const pcell = (r, k) => { const p = pvPcts(r.apT, r.sem, r.com)[k]; if (p == null) return ['—', '']; const cls = k === 'pa' ? (p > 1 ? 'neg' : 'pos') : (p < 0 ? 'neg' : p > 0 ? 'pos' : ''); return [F2.format(p * 100) + '%', cls]; };
-  const cell = (r, k) => ['va', 'pa', 'pv', 'pd'].includes(k) ? pcell(r, k)[0] : k === 'm' ? (r.ym ? `${r.m}<span class="pv-ym">${dataBR(r.ym)}</span>` : r.m) : (k === 'pos' ? esc(r.pos) : k === 'w' && !r.w ? '–' : brl.format(r[k]));
+  const cell = (r, k) => ['va', 'pa', 'pv', 'pd'].includes(k) ? pcell(r, k)[0] : k === 'm' ? (r.ym ? `${r.m}<span class="pv-ym">${dataBR(r.ym)}</span>` : r.m) : (k === 'pos' ? esc(r.pos) : k === 'cdb' ? cdbCell(r) : k === 'w' && !r.w ? '–' : brl.format(r[k]));
+  // CDB no mês a mês: saldo parado no CDB no fim do mês e, embaixo, a variação no mês (dica: quanto foi rendimento do CDB)
+  const cdbCell = (r) => { if (r.cdb == null) return '–'; const dv = r.dcdb || 0, s = Math.abs(dv) < 0.005 ? '' : `<span class="pv-dc ${dv < 0 ? 'neg' : 'pos'}">${dv < 0 ? '−' : '+'}${brl.format(Math.abs(dv))}</span>`;
+    return `<span title="${esc(`Rendimento do CDB no mês: ${brl.format(r.cj || 0)}. O resto da variação vem de aportes, proventos, compras, vendas, retiradas e imposto.`)}">${brl.format(r.cdb)}</span>${s}`; };
   const head = () => '<tr>' + cols().map(([k, l, c]) => `<th class="${c}">${l}</th>`).join('') + '</tr>';
   const tdc = (r, k, c) => ['va', 'pa', 'pv', 'pd'].includes(k) ? c + ' ' + pcell(r, k)[1] : c;
   const line = (r) => '<tr>' + cols().map(([k, , c]) => `<td class="${tdc(r, k, c)}">${cell(r, k)}</td>`).join('') + '</tr>';
@@ -547,13 +550,13 @@ if (typeof document !== 'undefined') {
     el('pvTabMsg').classList.add('hidden');
     try {
       await modMeta(); const b = (peek && peek.body) || modBody(), d = await post(Object.assign({ tab: { t: S0.t, m: S0.m } }, b)); if ((!peek && my !== seq) || (peek || sel) !== S0) return;
-      let apT = 0, ps = 0, pd = 0, pt = 0, pc0 = 0, pv0 = 0;
+      let apT = 0, ps = 0, pd = 0, pt = 0, pc0 = 0, pv0 = 0, pcd = 0;
       rows = d.tab.map((x, q) => {
         const ap = b.ap[q] || 0, w = b.w[q] || 0; apT += ap;
         const ops = [x.c > pc0 && 'compra', x.s > pv0 && 'venda'].filter(Boolean).join(' e ');
         const o = { m: q + 1, ym: x.ym, ap, apT, w, rent: q ? x.sem - ps - ap + w : 0, div: x.div - pd, tax: x.tax - pt, divT: x.div, sem: x.sem, com: x.com,
-          pos: (S0.m !== '' ? x.pos : '') + (ops ? ' · ' + ops : '') };
-        ps = x.sem; pd = x.div; pt = x.tax; pc0 = x.c; pv0 = x.s; return o;
+          pos: (S0.m !== '' ? x.pos : '') + (ops ? ' · ' + ops : ''), cdb: x.cdb, cj: x.cj, dcdb: x.cdb == null ? 0 : x.cdb - pcd };
+        pcd = x.cdb || 0; ps = x.sem; pd = x.div; pt = x.tax; pc0 = x.c; pv0 = x.s; return o;
       });
       modRows = true; el('pvMode').textContent = `Simulação histórica com ${S0.t ? S0.t + ' · ' : ''}${modName(S0.m)}${peek && peek.body ? ' (valores do Comparar)' : ''}`;
     } catch (e) { rows = []; modRows = false; el('pvTabMsg').textContent = 'Tabela indisponível: ' + e.message; el('pvTabMsg').classList.remove('hidden'); }
