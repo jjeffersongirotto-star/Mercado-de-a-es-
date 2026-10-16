@@ -50,7 +50,9 @@ besst = perene  # nome antigo
 def set_setores(D, rows, cad=None):
     """Marca as empresas de setor perene nas matrizes (fora delas o Método Barsi fica "fora do método")."""
     bs = {r["ticker"] for r in rows if perene(r, cad)}
-    if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
+    if D.get("_bs") != bs:
+        D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
+        D.update(_hybrid(D["FAV"], D["M2"], D["LP"], D["Cf"], D["TETO"], D["_rs"].astype(float), D["cdb"], D["BS"]))  # Barsi entra no híbrido
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -59,7 +61,7 @@ TROCA_SEM = 12     # rodízio: semanas mínimas na empresa antes de trocar por o
 # rodízio: grupos prontos (nome, subsetor, quantas maiores por valor de mercado) + os grupos do usuário (aba Grupos)
 GRUPOS = [("5 maiores bancos", r"^Bancos", 5), ("5 maiores de energia elétrica", r"^Energia Elétrica", 5), ("10 maiores da B3", None, 10)]
 # Híbrido: especialistas (exposição de cada um) e peso pelo acerto recente na própria ação (painel ⓘ → Modelos da Previsão)
-HIB = ("hold", "alg1", "alg3", "media200")
+HIB = ("hold", "alg1", "alg3", "media200", "barsi")  # Barsi: só nas empresas do método (setor perene com preço teto)
 # Ajusta a parte na ação com aportes e proventos (compra só até a exposição alvo; o resto espera no CDB) e não vende:
 # no teste com IR e custos, vender (mesmo em parte ou dentro da isenção) sempre rendeu menos que manter.
 HIB_SEM, HIB_ETA = 52, 5  # janela do acerto recente (semanas) e o quanto o melhor recebe mais peso
@@ -102,17 +104,8 @@ def build(snap, cdi, gold=None):
     cdb = np.ones(T)
     ok = ~np.isnan(acc)
     cdb[1:] = np.where(ok[1:] & ok[:-1], acc[1:] / np.where(ok[:-1], acc[:-1], 1), 1.0)
-    # híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições dos especialistas, pesadas pelo retorno de cada um nas últimas
-    # HIB_SEM semanas (ação + proventos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte)
     Cf = pd.DataFrame(C.T).ffill().to_numpy().T
     rs = np.zeros((N, T)); rs[:, 1:] = np.nan_to_num((Cf[:, 1:] + np.nan_to_num(DV[:, 1:])) / Cf[:, :-1] - 1)
-    X = np.stack([np.ones((N, T)), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0]).astype(float)
-    lr = np.zeros_like(X); lr[:, :, 1:] = np.log1p(X[:, :, :-1] * rs[None, :, 1:] + (1 - X[:, :, :-1]) * (cdb[1:] - 1)[None, None, :])
-    cs = np.cumsum(lr, axis=2); perf = cs.copy(); perf[:, :, HIB_SEM:] -= cs[:, :, :-HIB_SEM]
-    wt = np.exp(HIB_ETA * (perf - perf.max(axis=0, keepdims=True))); wt /= wt.sum(axis=0, keepdims=True)
-    HX = np.round((wt * X).sum(axis=0) * 4) / 4
-    HW = np.round(wt * 100).astype(np.int16)  # peso de cada especialista (%): a tabela mostra quem o híbrido está seguindo
-    del X, lr, cs, perf, wt, rs  # temporários grandes (4 × ações × semanas): libera antes de seguir
     G = np.full(T, np.nan)  # ouro (R$) no último dia com preço de cada semana
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
@@ -132,9 +125,27 @@ def build(snap, cdi, gold=None):
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "LP": LP, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
-            "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at")}
+            "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"), "_rs": rs.astype(np.float32)} | _hybrid(fav, M2, LP, Cf, TETO, rs.astype(np.float32).astype(float), cdb, np.zeros(N, bool))
+
+
+def _hybrid(fav, M2, LP, Cf, TETO, rs, cdb, BS):
+    """Híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições dos especialistas (HIB), pesadas pelo retorno de cada um nas
+    últimas HIB_SEM semanas (ação + proventos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte).
+    Método Barsi: dentro com o preço no teto ou abaixo (e lucro no último balanço); fora do método (setor não perene ou sem teto) não
+    entra na média (peso 0)."""
+    N, T = Cf.shape
+    with np.errstate(invalid="ignore"): bz = (Cf <= TETO) & LP
+    X = np.stack([np.ones((N, T)), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0, bz]).astype(float)
+    lr = np.zeros_like(X); lr[:, :, 1:] = np.log1p(X[:, :, :-1] * rs[None, :, 1:] + (1 - X[:, :, :-1]) * (cdb[1:] - 1)[None, None, :])
+    cs = np.cumsum(lr, axis=2); perf = cs.copy(); perf[:, :, HIB_SEM:] -= cs[:, :, :-HIB_SEM]
+    okb = BS[:, None] & ~np.isnan(TETO)  # Barsi conta só onde está no método
+    perf[4] = np.where(okb, perf[4], -np.inf)
+    wt = np.exp(HIB_ETA * (perf - perf.max(axis=0, keepdims=True))); wt /= wt.sum(axis=0, keepdims=True)
+    HX = np.round((wt * X).sum(axis=0) * 4) / 4
+    HW = np.round(wt * 100).astype(np.int16)  # peso de cada especialista (%): a tabela mostra quem o híbrido está seguindo
+    return {"HX": HX, "HW": HW}
 
 
 def data():
