@@ -441,7 +441,7 @@ def test_ai_answer_order_moves_specialized_sites():
 def test_fair_value_and_fear_greed():
     D["by"]["PETR4"]["v"].update(vpa=40.0)  # LPA 10,3 · VPA 40 · preço 56 -> justo √(22,5×10,3×40) = 96,28
     a = ask("a petr4 está barata?")[1]
-    assert a.startswith("PETR4: +72% até o valor justo") and "valor justo de Graham R$ 96,28" in a and "Graham" in a
+    assert a.startswith("PETR4: +72% até o valor justo") and "valor justo (Graham) R$ 96,28" in a and "Graham" in a
     assert ask("vale3 está cara?")[1].startswith("VALE3: sem Barato/Caro")
     old = chat.fg_data
     chat.fg_data = lambda: {"d": ["2026-10-0%d" % i for i in range(1, 9)] + ["2026-10-09"] * 22, "v": [30] * 9 + [50] * 19 + [58, 62],

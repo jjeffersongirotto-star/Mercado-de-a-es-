@@ -14,6 +14,7 @@ import statusinvest
 import tiebreak
 import tradingview
 import fundamentus
+import valor_justo
 import snapshots
 from snapshots import br_num
 import consensus
@@ -254,13 +255,15 @@ def cvm_values(c, price, fund_pvp):
     return {k: x for k, x in v.items() if x is not None}, {k: x for k, x in a.items() if x is not None}, sh
 
 def lucro_pl(fd, n=3):
-    """Lucro médio dos últimos n exercícios anuais ÷ patrimônio do último (DFP da CVM, snapshot fund) -> `ln3`.
-    O site faz LPA médio = ln3 × VPA do card (app.js → fairOf; chat.fair): lucro e patrimônio do mesmo balanço, sem depender
-    da quantidade de ações informada à CVM (às vezes em milhares ou antes de grupamento). Lucro médio, como Graham fazia."""
+    """Barato/Caro (Brasil, DFP da CVM, snapshot fund): ln3 = lucro médio de n anos com teto (valor_justo.lucro_medio) ÷ patrimônio
+    do último balanço (o site faz LPA = ln3 × VPA do card: sem depender da quantidade de ações da CVM) e roe3 = ROE médio (%)
+    dos n anos (Gordon, bancos e seguradoras)."""
     fd = fd or {}
-    ni = [x for x in (fd.get("ni") or [])[-n:] if x]  # 0 = conta não encontrada no balanço (sem dado), não lucro zero
-    eq = (fd.get("eq") or [None])[-1]
-    return round(sum(ni) / n / eq, 6) if len(ni) == n and eq and eq > 0 else None
+    m = valor_justo.lucro_medio(fd.get("ni"), n)
+    eq = [x for x in (fd.get("eq") or [])[-n:]]
+    if m is None or len(eq) != n or not eq[-1] or eq[-1] <= 0: return {}
+    ni = (fd.get("ni") or [])[-n:]
+    return {"ln3": round(m / eq[-1], 6), "roe3": round(sum(ni) / sum(eq) * 100, 2) if sum(eq) > 0 else None}
 
 def build():
     t0 = time.time()
@@ -324,7 +327,7 @@ def build():
         var = names.get(t, {}).get("var")
         if var is None and t in tv: var = tv[t]["m"].get("var")
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
-                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, "ln3": lucro_pl(fda.get(t))})
+                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, **lucro_pl(fda.get(t))})
     rows.sort(key=lambda r: -((r["S"].get("tv") or {}).get("liq2m") or 0))
     now = datetime.now(timezone.utc)
     return {
@@ -370,7 +373,8 @@ def finalize(base, yf_store=None):
         if not isbr and r.get("ipo"): nr["ipo"] = r["ipo"]  # data de listagem no exterior (TradingView); no Brasil vem da B3 (metrics.ftd)
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
-        if r.get("ln3") is not None: nr["ln3"] = r["ln3"]
+        for k in ("ln3", "roe3"):
+            if r.get(k) is not None: nr[k] = r[k]
         if r["ticker"] in FIN: nr["fin"] = True
         ixs = IXC.get(r["ticker"][:4])
         if ixs:  # índices da empresa (qualquer classe; mostra a classe quando diferente da exibida)
@@ -412,6 +416,7 @@ def finalize(base, yf_store=None):
                     for i, n, l, cs in SOURCES if country in cs and src_count.get(i)]
     keys_with_data = {k for r in rows for k, x in r["v"].items() if x is not None}
     d["fields"] = [{**f, **FIELD_EXTRA.get(f["key"], {})} for f in base["fields"] if f["key"] in keys_with_data]
+    d["fair"] = valor_justo.FAIR  # Barato/Caro: configuração (app.js → fairOf)
     return d
 
 def build_foreign(country):

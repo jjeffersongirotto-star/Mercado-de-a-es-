@@ -697,12 +697,10 @@ def fg_answer():
 
 
 def fair(D, r):
-    """Valor justo de Graham √(22,5 × LPA × VPA) com os valores de consenso — a mesma conta de app.js → fairOf (barra Barato/Caro)."""
-    p, b = val(D, r, "preco"), val(D, r, "vpa")
-    l = (r["ln3"] * b if r.get("ln3") is not None and b is not None else None) if "ln3" in r or r.get("cur") == "BRL" else val(D, r, "lpa")  # Brasil: lucro médio de 3 anos (server.lucro_pl)
-    if not (p and l and b and p > 0 and l > 0 and b > 0): return None
-    j = (22.5 * l * b) ** 0.5
-    return j, (j / p - 1) * 100, p
+    """Barato/Caro com os valores de consenso: valor_justo.fair (a mesma conta de app.js → fairOf). -> (justo, %, preço, método) ou None"""
+    import valor_justo
+    j, pct, m = valor_justo.fair(r, lambda o, k: val(D, o, k), list(D["by"].values()))
+    return (j, pct, val(D, r, "preco"), m) if j else None
 
 
 def fair_answer(P, D):
@@ -712,8 +710,8 @@ def fair_answer(P, D):
         if not f:
             v = lambda k: fmt(D, k, val(D, D["by"][t], k))
             out.append(f"{t}: sem Barato/Caro (preço {v('preco')}, LPA {v('lpa')}, VPA {v('vpa')})."); continue
-        j, pct, p = f
-        out.append(f"{t}: {'+' if pct >= 0 else '−'}{br(abs(pct), 0)}% {'até o' if pct >= 0 else 'acima do'} valor justo (valor justo de Graham R$ {br(j)}; preço R$ {br(p)})")
+        j, pct, p, m = f
+        out.append(f"{t}: {'+' if pct >= 0 else '−'}{br(abs(pct), 0)}% {'até o' if pct >= 0 else 'acima do'} valor justo (valor justo ({m}) R$ {br(j)}; preço R$ {br(p)})")
     g = glossary().get("barato/caro", "")
     return "\n".join(out) + (f"\n\n{g}" if g else "")
 

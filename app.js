@@ -359,28 +359,48 @@ const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.p
 // Barato/Caro: preço do card × valor justo de Graham √(22,5 × LPA × VPA) (explicação no Glossário do painel ⓘ).
 // pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
 // Sem cálculo -> { why: motivo curto } (o card mostra "—" e o motivo no lugar da barra).
-// Valor justo de Graham. Brasil: LPA médio dos últimos 3 anos = ln3 (lucro médio ÷ patrimônio, CVM, servidor → lucro_pl) × VPA do card.
-// Exterior: LPA de 12 meses (TradingView). Fontes divergindo no VPA -> sem número; acima de +100% -> aviso (painel ⓘ → Glossário → Barato/Caro).
+// Barato/Caro: mesma conta de valor_justo.fair (servidor; configuração em /api/data → fair). Brasil: bancos e seguradoras = Gordon
+// VPA × (ROE − g) ÷ (Ke − g); holdings e imobiliárias = VPA × P/VP mediano do subsetor; demais = Graham √(22,5 × LPA × VPA) com
+// LPA médio de 3 anos = ln3 (lucro médio com teto ÷ patrimônio, CVM) × VPA do card. Exterior: Graham com o LPA de 12 meses.
+const _pvMed = { k: null, m: {} };
+function sectorPvp(sub) {  // P/VP mediano do subsetor com os valores exibidos (respeita o seletor de fonte)
+  const k = state.data && state.data.updated_at + '|' + state.source + '|' + state.country;
+  if (_pvMed.k !== k) { _pvMed.k = k; _pvMed.m = {}; }
+  if (!(sub in _pvMed.m)) {
+    const v = (state.data ? state.data.rows : []).filter(o => o.subsetor === sub).map(o => val(o, 'pvp')).filter(x => x > 0).sort((a, b) => a - b), n = v.length;
+    _pvMed.m[sub] = { n, med: n ? (n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2) : null };
+  }
+  return _pvMed.m[sub];
+}
 function fairOf(r) {
-  const br = state.country === 'br', p = priceOf(r), b = val(r, 'vpa'), l = br ? (r.ln3 != null && b != null ? r.ln3 * b : null) : val(r, 'lpa');
+  const FC = (state.data && state.data.fair) || {}, br = state.country === 'br', p = priceOf(r), b = val(r, 'vpa'), lpa = val(r, 'lpa');
   if (!(p > 0)) return { why: 'Sem preço' };
-  if (br && b != null && b <= 0) return { why: 'Patrimônio negativo' };
-  if (br && r.ln3 == null) return { why: 'Sem lucro de 3 anos na CVM' };
   if (state.source === 'all' && (r.st || {}).vpa === 'red') return { why: 'Dados divergentes entre as fontes' };
-  if (l == null || b == null) return { why: state.source === 'all' ? 'Sem LPA/VPA nas fontes' : 'Sem LPA/VPA nesta fonte' };
-  if (l <= 0 && b <= 0) return { why: 'Prejuízo e patrimônio negativo' };
-  if (l <= 0) return { why: br ? 'Prejuízo médio nos últimos 3 anos' : 'Prejuízo nos últimos 12 meses' };
+  if (b == null) return { why: state.source === 'all' ? 'Sem VPA nas fontes' : 'Sem VPA nesta fonte' };
   if (b <= 0) return { why: 'Patrimônio negativo' };
-  const j = Math.sqrt(22.5 * l * b);
-  return { j, pct: (j / p - 1) * 100, pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) };
+  if (br && lpa != null && lpa < 0) return { why: 'Prejuízo nos últimos 12 meses' };
+  const out = (j, m) => ({ j, m, pct: (j / p - 1) * 100, pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) });
+  if (br && r.fin) {
+    if (r.roe3 == null) return { why: 'Sem ROE de 3 anos na CVM' };
+    const j = b * (r.roe3 - FC.g) / (FC.ke - FC.g);
+    return j > 0 ? out(j, 'Gordon') : { why: 'ROE abaixo do crescimento' };
+  }
+  if (br && (FC.pvp_sub || []).includes(r.subsetor)) {
+    const s = sectorPvp(r.subsetor);
+    return s.n >= FC.pvp_min ? out(b * s.med, 'P/VP do setor') : { why: 'Poucas empresas no setor' };
+  }
+  const l = br ? (r.ln3 != null ? r.ln3 * b : null) : lpa;
+  if (l == null) return { why: br ? 'Sem lucro de 3 anos na CVM' : (state.source === 'all' ? 'Sem LPA nas fontes' : 'Sem LPA nesta fonte') };
+  if (l <= 0) return { why: br ? 'Prejuízo médio nos últimos 3 anos' : 'Prejuízo nos últimos 12 meses' };
+  return out(Math.sqrt(22.5 * l * b), 'Graham');
 }
 window.fairOf = fairOf;
 function fairHtml(r) {
   const f = fairOf(r);
   if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span><div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
   const up = f.pct >= 0;  // + verde: o preço precisa subir até o valor justo · − vermelho: precisa cair
-  return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo de Graham: R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>` +
-    `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
+  return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>` +
+    `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${f.m !== 'Graham' ? `<span class="fv-m">${f.m}</span>` : ''}${glossBtn('Barato/Caro')}</div></div>`;
 }
 function blockHtml(r) {
   const price = priceOf(r);
@@ -573,7 +593,7 @@ function strengths(r) {
     const low = f.dir === 'low', better = vs.filter(x => low ? x < v : x > v).length / vs.length;
     if (better <= .25 && (low ? v >= 0 : v > 0)) out.push([better, `${f.label} ${fmt(v, f.unit, k, r.cur)} (entre os 25% ${low ? 'menores' : 'maiores'} do setor)`]);
   }
-  const fv = fairOf(r); if (!fv.why && fv.pct >= 20) out.push([0, `Preço abaixo do valor justo de Graham (+${F0.format(fv.pct)}% até o valor justo)`]);
+  const fv = fairOf(r); if (!fv.why && fv.pct >= 20) out.push([0, `Preço abaixo do valor justo de Graham (+${F0.format(fv.pct)}% até o valor justo, ${fv.m})`]);
   return out.sort((a, b) => a[0] - b[0]).slice(0, 3).map(x => x[1]);
 }
 function aboutHtml(r) {
