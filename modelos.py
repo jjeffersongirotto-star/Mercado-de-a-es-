@@ -20,28 +20,36 @@ MODELOS = [
     {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
     {"id": "barsi", "n": "Método Barsi", "vende": False, "lucro": True},
 ]
-# referências fora das empresas (não entram nas colocações): mesmo dinheiro, mesmos aportes e retiradas
+# referências fora das empresas: mesmo dinheiro, mesmos aportes e retiradas; entram nas tabelas pelo rendimento e nos Pontos ficam
+# sempre com as últimas colocações (ranking)
 REF = [
-    {"id": "cdb", "n": "CDB 100% do CDI", "vende": False, "ref": True,
+    {"id": "cdb", "n": "CDB", "vende": False, "ref": True,
      "nota": "sem resgate no período: no resgate paga IR de 15% sobre o rendimento (aplicação acima de 2 anos)"},
     {"id": "ouro", "n": "Ouro", "vende": False, "ref": True, "nota": "ouro em reais, custo de 0,3% em cada compra; nunca vende"},
 ]
 MOD = {m["id"]: m for m in MODELOS + REF}
-# Método Barsi: setores BESST (Bancos, Energia elétrica, Saneamento, Seguros, Telecomunicações) — fonte única (chat lê daqui)
-BESST_RX = r"^(Bancos|Energia Elétrica|Água e Saneamento|Seguradoras|Resseguradoras|Corretoras de Seguros|Telecomunicações)"
-BARSI_DY, BARSI_ANOS, BARSI_MARGEM = .06, 5, (.10, .25)  # yield mínimo; anos da mediana dos proventos; margem BESST / demais
+# Método Barsi: só setores perenes (fonte única; o chat e o painel ⓘ leem daqui): subsetor do site ou segmento oficial da B3
+PERENE_RX = r"^(Bancos|Energia Elétrica|Água e Saneamento|Seguradoras|Resseguradoras|Corretoras de Seguros|Telecomunicações|Papel e Celulose|Químicos)"
+PERENE_TXT = "bancos, energia elétrica, saneamento, seguros, telecomunicações, papel e celulose e químicos"
+# teto = média dos proventos por ação dos 5 anos completos anteriores ÷ 6% (pagou em pelo menos 4 deles); aporte do mês e proventos
+# entram na ação até 20% acima do teto, guardando 10% no CDB; a reserva entra quando o preço está no teto ou abaixo; acima de 20%, espera
+BARSI_DY, BARSI_ANOS, BARSI_ACIMA, BARSI_RES = .06, 5, 1.20, .10
 
 
-def besst(r):
-    """A empresa (linha de /api/data) é de setor BESST?"""
+def perene(r, cad=None):
+    """A empresa (linha de /api/data) é de setor perene do Método Barsi? cad: cadastro da B3 {raiz: [nome, segmento]}."""
     import re
-    sub = r.get("subsetor") or ""
-    return bool(re.search(BESST_RX, sub)) or (r.get("setor") == "Utilities" and not sub)
+    sub = r.get("subsetor") or ""; seg = ((cad or {}).get(r["ticker"][:4]) or [None, ""])[1] or ""
+    if any(re.search(PERENE_RX, x) for x in (sub, r.get("setor") or "", seg)): return True
+    return r.get("setor") == "Utilities" and not sub and seg in ("", "Não Classificados", "Não Classificado")
 
 
-def set_setores(D, rows):
-    """Marca as empresas BESST nas matrizes (margem de segurança menor no Método Barsi)."""
-    bs = {r["ticker"] for r in rows if besst(r)}
+besst = perene  # nome antigo
+
+
+def set_setores(D, rows, cad=None):
+    """Marca as empresas de setor perene nas matrizes (fora delas o Método Barsi fica "fora do método")."""
+    bs = {r["ticker"] for r in rows if perene(r, cad)}
     if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
@@ -109,8 +117,8 @@ def build(snap, cdi, gold=None):
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
         G = gs.reindex(gs.index.union(wk)).ffill(limit=10).reindex(wk).to_numpy()
-    # Método Barsi: preço teto = mediana dos proventos por ação dos últimos 5 anos completos ÷ 6% (só com proventos em 4 dos 5 anos:
-    # pagamento regular; a mediana impede que um dividendo extraordinário infle o teto)
+    # Método Barsi: preço teto = média dos proventos por ação dos últimos 5 anos completos ÷ 6% (só com proventos em 4 dos 5 anos:
+    # pagamento regular)
     Y = wk.year.to_numpy(); yrs = sorted(set(Y)); DVn = np.nan_to_num(DV); DPA = np.full((N, len(yrs)), np.nan)
     for j, y in enumerate(yrs):
         m = Y == y; DPA[:, j] = np.where((~np.isnan(C[:, m])).mean(axis=1) > .95, DVn[:, m].sum(axis=1), np.nan)
@@ -119,7 +127,7 @@ def build(snap, cdi, gold=None):
         j = yi[y]; a = DPA[:, max(0, j - BARSI_ANOS):j]
         ok5 = ((~np.isnan(a)).sum(axis=1) >= 4) & ((np.nan_to_num(a) > 0).sum(axis=1) >= 4)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore"); med = np.nanmedian(a, axis=1) if a.shape[1] else np.full(N, np.nan)
+            warnings.simplefilter("ignore"); med = np.nanmean(a, axis=1) if a.shape[1] else np.full(N, np.nan)
         TETO[:, Y == y] = np.where(ok5, med / BARSI_DY, np.nan)[:, None]
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
@@ -182,9 +190,8 @@ def _signal(D, mid, idx, i):
     if mid == "medo_acao": return D["SI"][idx, i] < MEDO
     if mid in ("media200", "tendencia"): return D["M2"][idx, i] > 0
     if mid == "hibrido": return D["HX"][idx, i] > 0  # (só para o 1º sinal; a simulação usa a exposição HX)
-    if mid == "barsi":  # compra só abaixo do teto com margem de segurança; acima, o dinheiro espera no CDB (nunca vende)
-        mg = np.where(D["BS"][idx], *BARSI_MARGEM)
-        with np.errstate(invalid="ignore"): return D["Cf"][idx, i] <= D["TETO"][idx, i] * (1 - mg)
+    if mid == "barsi":  # pode aplicar até 20% acima do teto (a simulação guarda a reserva); sem teto: espera no CDB (nunca vende)
+        with np.errstate(invalid="ignore"): return D["Cf"][idx, i] <= D["TETO"][idx, i] * BARSI_ACIMA
     return D["FAV"][MOD[mid]["p"]][idx, i]
 
 
@@ -270,6 +277,10 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         if mod.get("frac"):
             V = A.sh * P + A.cash; falta = e * V - A.sh * P
             A.buy(ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P, falta)  # só compra quando a diferença para o alvo é relevante
+        elif mid == "barsi":  # no teto ou abaixo: todo o caixa; até 20% acima: guarda 10% do total no CDB
+            with np.errstate(invalid="ignore"): baixo = D["Cf"][idx, i - 1 if i > 0 else i] <= D["TETO"][idx, i - 1 if i > 0 else i]
+            V = A.sh * P + A.cash
+            A.buy(buy & ok, P, np.where(baixo, A.cash, np.maximum(0, A.cash - BARSI_RES * V)))
         else:
             A.buy(buy & ok, P)
         if rec and j is not None:
@@ -439,7 +450,7 @@ def run(D, req):
     else:
         mids = [m["id"] for m in MODELOS] if req.get("modelo") == "*" else [req.get("modelo")]
         if any(m not in MOD for m in mids): return {"error": "Modelo desconhecido."}
-        rows = _refs(D, me, ap, wd, apT)  # CDB e Ouro: uma vez, no topo
+        rows = _refs(D, me, ap, wd, apT)  # CDB e Ouro: uma vez, entre os modelos pelo rendimento
         mids = [m for m in mids if not MOD[m].get("ref")] or ["hold"]
         pc = lambda v: round((v - apT) / apT * 100, 2) if apT > 0 else None
         if req.get("ticker") == "*":
@@ -455,7 +466,8 @@ def run(D, req):
                                      "pct": pc(r["v"]), "ir": round(r["ir"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
                 if not uni: continue
                 r = simulate(D, mid, uni, me, ap, wd, tx)
-                best = sorted(range(len(uni)), key=lambda q: -r["v"][q])[:10]
+                fo = fora_barsi(D, uni, me) if mid == "barsi" else np.zeros(len(uni), bool)
+                best = sorted((q for q in range(len(uni)) if not fo[q]), key=lambda q: -r["v"][q])[:10]
                 rows += [{"k": "a", "m": mid, "t": D["tick"][uni[q]], "v": round(float(r["v"][q]), 2), "pct": pc(r["v"][q]),
                           "ir": round(float(r["ir"][q]), 2), "c": int(r["c"][q]), "s": int(r["s"][q])} for q in best]
         else:
@@ -467,8 +479,8 @@ def run(D, req):
             for mid in mids:
                 r = simulate(D, mid, [k], me, ap, wd, tx)
                 rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ir": round(float(r["ir"][0]), 2),
-                             "c": int(r["c"][0]), "s": int(r["s"][0])})
-        rows.sort(key=lambda x: ("rga".index(x["k"]), -(x["pct"] if x["pct"] is not None else -1e9)))
+                             "c": int(r["c"][0]), "s": int(r["s"][0]), **({"fora": True} if mid == "barsi" and fora_barsi(D, [k], me)[0] else {})})
+        rows.sort(key=lambda x: (x["k"] != "g", -(x["pct"] if x["pct"] is not None else -1e9)))  # grupos; depois modelos e CDB/Ouro pelo rendimento
         out = dict(ini, rows=rows)
     _C[key] = out
     while len(_C) > 60: _C.popitem(last=False)
@@ -483,16 +495,36 @@ def top_sector(rows, n=5):
     return [r["ticker"] for rs in by.values() for r in sorted(rs, key=lambda r: -vm(r))[:n]]
 
 
-def ranking(V):
-    """V: modelos × empresas (valor final). -> posição (0 = 1º) de cada modelo em cada empresa, contagem por posição, pontos
-    (1º = 2 × (n − 1) … último = 0; 8 modelos: 14, 12, …, 0) e a ordem das Colocações: mais 1º lugares; empate -> mais 2º lugares,
-    e assim por diante; empate em tudo -> maior média."""
-    n = V.shape[0]
-    rk = (-V).argsort(axis=0, kind="stable").argsort(axis=0)
+PONTOS = (21, 18, 15, 12, 10, 8, 6, 4, 2, 1)  # pontos por colocação em cada empresa (1º = 21 …; do 11º em diante, 0)
+
+
+def _nmean(x):
+    x = x[~np.isnan(x)]
+    return float(x.mean()) if len(x) else float("-inf")
+
+
+def ranking(V, nref=0):
+    """V: (modelos + nref referências no fim) × empresas (valor final; nan = fora, ex.: Método Barsi fora do método).
+    -> posição pelo rendimento (0 = 1º; -1 = fora), contagem por posição, ordem das Colocações (mais 1º lugares; empate -> mais 2º…;
+    empate em tudo -> maior média) e pontos (PONTOS pela colocação; as referências ficam sempre com as últimas colocações)."""
+    n = V.shape[0]; ok = ~np.isnan(V)
+    def rank(K):
+        r = (-np.where(ok, K, -np.inf)).argsort(axis=0, kind="stable").argsort(axis=0)
+        return np.where(ok, r, -1)
+    rk = rank(V)
+    K = V.copy()
+    if nref: K[n - nref:] -= 1e15  # referências abaixo de todos os modelos (entre elas, pelo rendimento)
+    rp = rank(K); sc = np.array(PONTOS + (0,) * n)
+    pts = np.where(ok, sc[np.maximum(rp, 0)], 0).sum(axis=1)
     cnt = np.array([[int((rk[i] == p).sum()) for p in range(n)] for i in range(n)])
-    pts = (2 * (n - 1 - rk)).sum(axis=1)
-    order = sorted(range(n), key=lambda i: tuple(-cnt[i]) + (-V[i].mean(),))
+    order = sorted(range(n), key=lambda i: tuple(-cnt[i]) + (-_nmean(V[i]),))
     return rk, cnt, order, pts
+
+
+def fora_barsi(D, idx, me):
+    """Empresas fora do Método Barsi no período: setor não perene ou sem proventos regulares (sem preço teto em nenhum mês)."""
+    T = D["TETO"][np.asarray(idx)][:, me[0]:me[-1] + 1]
+    return ~D["BS"][np.asarray(idx)] | np.isnan(T).all(axis=1)
 
 
 def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
@@ -509,19 +541,29 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     idx = [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
     if not idx: return {"error": f"Nenhuma das empresas tinha preço em {D['ym'][me[0]]}."}
     R = [simulate(D, m["id"], idx, me, aps, wd, tx) for m in MODELOS]
+    fora = fora_barsi(D, idx, me) if len(idx) > 1 else np.zeros(len(idx), bool)  # uma empresa só: calcula mesmo fora do método
+    ib = [m["id"] for m in MODELOS].index("barsi"); R[ib]["v"] = np.where(fora, np.nan, R[ib]["v"])
+    refs = _refs(D, me, aps, wd, apT); z = np.zeros(len(idx))
+    R += [{"v": np.full(len(idx), np.nan if r["v"] is None else r["v"]), "ir": z, "c": z, "s": z} for r in refs]
+    M = MODELOS + REF; nm = len(M)
     V = np.array([r["v"] for r in R])
     P = (V / apT - 1) * 100 if apT > 0 else np.zeros_like(V)
-    rk, cnt, order, pts = ranking(V)
-    hold = V[[m["id"] for m in MODELOS].index("hold")]
-    res = [{"m": m["id"], "media": round(float(P[i].mean()), 2), "vmedio": round(float(V[i].mean()), 2), "mediana": round(float(np.median(P[i])), 2),
-            "ganha": None if m["id"] == "hold" else round(float((V[i] > hold).mean() * 100), 1), "pior": int(rk[i].max()) + 1, "pos": cnt[i].tolist(),
-            "pts": int(pts[i]), "ptsm": round(float(pts[i]) / len(idx), 2)} for i, m in enumerate(MODELOS)]
+    rk, cnt, order, pts = ranking(V, len(REF))
+    hold = V[[m["id"] for m in M].index("hold")]
+    J = lambda A: [[None if x != x else x for x in row] for row in np.round(A, 2).tolist()]  # nan -> null (JSON)
+    def res(i, m):
+        ok = ~np.isnan(V[i]); k = int(ok.sum())
+        if not k: return {"m": m["id"], "media": None, "vmedio": None, "mediana": None, "ganha": None, "pior": None, "pos": cnt[i].tolist(), "pts": 0, "ptsm": 0, "n": 0}
+        return {"m": m["id"], "media": round(float(P[i][ok].mean()), 2), "vmedio": round(float(V[i][ok].mean()), 2), "mediana": round(float(np.median(P[i][ok])), 2),
+                "ganha": None if m["id"] == "hold" else round(float((V[i][ok] > hold[ok]).mean() * 100), 1), "pior": int(rk[i].max()) + 1, "pos": cnt[i].tolist(),
+                "pts": int(pts[i]), "ptsm": round(float(pts[i]) / k, 2), "n": k, **({"ref": True} if m.get("ref") else {})}
+    big = lambda i: -_nmean(P[i])  # ord_pts: pela média de pontos (o Método Barsi só conta nas empresas do método)
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)),
-           "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in MODELOS], "p": np.round(P, 2).tolist(), "rk": rk.tolist(),
-           "v": np.round(V, 2).tolist(), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(),
+           "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in M], "p": J(P), "rk": rk.tolist(),
+           "v": J(V), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(),
            "c": np.array([r["c"] for r in R]).astype(int).tolist(), "s": np.array([r["s"] for r in R]).astype(int).tolist(),
-           "res": res, "ord_media": sorted(range(len(MODELOS)), key=lambda i: -P[i].mean()), "ord_pos": order,
-           "ord_pts": sorted(range(len(MODELOS)), key=lambda i: (-pts[i], order.index(i))), "ref": _refs(D, me, aps, wd, apT)}
+           "res": [res(i, m) for i, m in enumerate(M)], "ord_media": sorted(range(nm), key=big), "ord_pos": order,
+           "ord_pts": sorted(range(nm), key=lambda i: (-(pts[i] / max(1, (~np.isnan(V[i])).sum())), -pts[i], order.index(i))), "ref": refs, "fora": int(fora.sum()), "pontos": list(PONTOS)}
     if grupos is not None:  # rodízio nos grupos (Previsão com o card Modelos em Todos)
         pc = lambda v: round((v - apT) / apT * 100, 2) if apT > 0 else None
         out["g"] = []

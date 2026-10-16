@@ -4,7 +4,7 @@
 # Requer git com permissão de push. Não dispara deploy no Render (branch data).
 #   Fundamentus (cópia para quando o site falhar) · Status Invest (CSV)  · Yahoo (desempate)   · TradingView (todos os países, fallback)
 #   Investidor10 (~1 req/s, ~1000 páginas)     · Dados de Mercado (~1 req/2,5 s, ~300 páginas)
-#   CVM dados abertos (DFP/ITR, pré-processado: data/cvm.json compacto) · Proventos B3 (dividendo por ação, 1×/semana)
+#   CVM dados abertos (DFP/ITR, pré-processado: data/cvm.json compacto) · Proventos B3 (dividendo por ação, 1×/semana) · Notícias (aba Notícias)
 #   Histórico (Yahoo 20a mensal/5a diário + Ibovespa + BCB; maiores ações de fora em history5, 1×/semana) e perfis (brapi) do universo exibido
 #   Índice de Medo e Ganância (B3: COTAHIST, fluxo, CDI) · Sinais dos modelos da Previsão · Base do chat (resumos da Wikipedia dos itens do conhecimento.json; renova uma vez por semana)
 # ONLY="cvm tradingview" limita as etapas; PYTHON = interpretador com pandas/lxml/yfinance/requests.
@@ -16,7 +16,7 @@ if [ -z "$PY" ]; then
   if [ -x /workspace/b3-api/.venv/bin/python ]; then PY=/workspace/b3-api/.venv/bin/python; else PY=python3; fi
 fi
 # Grava em blocos (commit + push ao fim de cada um): se a rotina for cortada no meio, o que já ficou pronto não se perde.
-BLOCK1="fundamentus statusinvest yfinance tradingview cvm b3prov"                               # rápidos
+BLOCK1="fundamentus statusinvest yfinance tradingview cvm b3prov noticias"                         # rápidos
 BLOCK2="b3indices b3cad b3btb vol30 cotahist history metrics fg fund modelos kb"                  # B3, históricos e derivados
 BLOCK3="investidor10 dadosdemercado"                                                             # lentos (~1 h): por último
 STEPS="${ONLY:-$BLOCK1 $BLOCK2 $BLOCK3}"
@@ -56,6 +56,7 @@ step() {
     tradingview)    run "TradingView"      "$PY" "$HERE/scripts/fetch_tradingview.py" "$TMP/data" ;;
     cvm)            run "CVM"              "$PY" "$HERE/scripts/build_cvm.py" "$TMP/data" "${CVM_CACHE:-/tmp/cvmraw}" ;;
     b3prov)         run "Proventos B3"     "$PY" "$HERE/scripts/fetch_b3_proventos.py" "$TMP/data" ;;
+    noticias)       run "Notícias"         "$PY" "$HERE/scripts/fetch_noticias.py" "$TMP/data" ;;
     investidor10)   run "Investidor10"     "$PY" "$HERE/scripts/fetch_investidor10.py" "$TMP/data" ;;
     history)        run "Histórico+perfis" "$PY" "$HERE/scripts/fetch_history.py" "$TMP/data" ;;
     b3indices)      run "Índices B3" "$PY" "$HERE/scripts/fetch_b3_indices.py" "$TMP/data" ;;

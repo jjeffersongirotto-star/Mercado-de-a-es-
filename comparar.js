@@ -268,31 +268,31 @@
   // Tabelas dos modelos a partir de modelos.compare (Comparar → Modelos e Previsão com o card Modelos em Todos).
   // mv: media | emp | pos | con; nm: nomes dos modelos (/api/modelos); only: id de um modelo (filtro da Previsão)
   window.modTables = (d, mv, nm, only) => {
-    const N = (i) => esc(nm[d.m[i]] || d.m[i]), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
+    const N = (i) => esc(nm[d.m[i]] || d.m[i]) + (R[i].ref ? '<span class="pvd-m">referência</span>' : ''), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
     const posOf = (ord) => { const o = {}; ord.forEach((i, p) => { o[i] = p; }); return o; };
-    // CDB e Ouro (modelos.REF): referência fixa no topo, fora das colocações
-    const ref = (cells) => (d.ref || []).length ? `<tbody class="ref">${d.ref.map(r => `<tr class="pvd-ref tap" data-mo="|${r.m}"><td><b>${esc(r.t)}</b><span class="pvd-m">referência</span></td>${cells(r).map(h => `<td>${h}</td>`).join('')}</tr>`).join('')}</tbody>` : '';
-    const tab = (h, body, rc) => `<div class="pv-scroll"><table class="gtab cmp-mt" data-srt><thead><tr>${h.map(([l, k]) => thSort(l, k)).join('')}</tr></thead>${rc ? ref(rc) : ''}<tbody>${body}</tbody></table></div>`;
+    // CDB e Ouro (modelos.REF) entram como linhas, pelo rendimento; nos Pontos ficam sempre com as últimas colocações
+    const TR = (i) => R[i].ref ? `<tr class="pvd-ref tap" data-mo="|${d.m[i]}">` : '<tr>';
+    const tab = (h, body) => `<div class="pv-scroll"><table class="gtab cmp-mt" data-srt><thead><tr>${h.map(([l, k]) => thSort(l, k)).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
     const td = (v, html, cls = '') => `<td data-v="${v ?? ''}" class="${cls}">${html}</td>`;
     const rp = (r) => `<span class="${cl(r.pct)}">${pp(r.pct)}</span>`, rv = (r) => r.v == null ? '—' : brl.format(r.v);
     if (mv === 'media') {
       const ps = posOf(d.ord_media);
-      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, brl.format(R[i].vmedio))}</tr>`).join(''), r => [rp(r), rv(r)]);
+      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `${TR(i)}${td(N(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, R[i].vmedio == null ? '—' : brl.format(R[i].vmedio))}</tr>`).join(''));
     }
     if (mv === 'emp') {
-      const cols = d.ord_pos.filter(i => !only || d.m[i] === only);
+      const cols = d.ord_pos.filter(i => !R[i].ref && (!only || d.m[i] === only));
       const rl = (d.ref || []).map(r => `<button type="button" class="pv-lnk" data-mo="|${r.m}">${esc(r.t)}</button> ${rp(r)}`).join(' · ');
-      return (rl ? `<p class="pvd-note">Referências (iguais para todas as empresas): ${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
+      return (rl ? `<p class="pvd-note">Referências (iguais para todas as empresas): ${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => d.p[i][j] == null ? '<td data-v="" title="fora do método">—</td>' : `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
     }
-    if (mv === 'pos') {  // pontos por colocação: 1º = 2 × (modelos − 1) … último = 0 (modelos.ranking)
+    if (mv === 'pos') {  // pontos por colocação (modelos.PONTOS: 21, 18, 15…); ordem pela média de pontos (modelos.ranking)
       const ps = posOf(d.ord_pts);
       return tab([['Modelo', 'm']].concat(d.m.map((_, p) => [`${RK(p)}${p + 1}º`, 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
-        d.ord_pts.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''), r => d.m.map(() => '—').concat(['—', '—', rp(r)]));
+        d.ord_pts.map(i => `${TR(i)}${td(N(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''));
     }
-    const ord = R.map((_, i) => i).sort((a, b) => R[b].mediana - R[a].mediana), ps = posOf(ord);
-    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `<tr>${td(N(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior, RK(R[i].pior - 1) + R[i].pior + 'º')}</tr>`).join(''), r => [rp(r), '—', '—']);
+    const ord = R.map((_, i) => i).sort((a, b) => (R[b].mediana ?? -1e9) - (R[a].mediana ?? -1e9)), ps = posOf(ord);
+    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `${TR(i)}${td(N(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior ?? 99, R[i].pior == null ? '—' : RK(R[i].pior - 1) + R[i].pior + 'º')}</tr>`).join(''));
   };
-  window.modRefNote = (d) => (d.ref || []).map(r => `${esc(r.t)}: ${esc(r.nota)}.`).join(' ');
+  window.modRefNote = (d) => (d.ref || []).map(r => `${esc(r.t)}: ${esc(r.nota)}.`).join(' ') + (d.fora ? ` Método Barsi: ${d.fora} de ${d.t.length} empresas fora do método (setor não perene ou sem dividendos regulares) aparecem como — e não entram nas colocações dele.` : '');
   window.modRK = (p) => RK(p);
   // ---------- Modelos: todos os modelos da Previsão nas empresas escolhidas (simulação do servidor: modelos.compare) ----------
   let MD = null, MN = {};

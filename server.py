@@ -857,6 +857,12 @@ def api_metrics():
     d, _ = snapshots.load("metrics", max_mem_age=3 * 3600)
     return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=1800"})
 
+@app.get("/api/noticias")
+def api_noticias():
+    """Aba Notícias: repassa o snapshot noticias (scripts/fetch_noticias.py); nada é buscado por visita."""
+    d, _ = snapshots.load("noticias", max_mem_age=3 * 3600)
+    return JSONResponse(d or {"itens": []}, headers={"Cache-Control": "public, max-age=1800"})
+
 @app.get("/api/fg")
 def api_fg(full: int = 0):
     """Índice de Medo e Ganância da B3 (snapshot fg, scripts/build_fg.py). Sem full: só os últimos 30 pregões."""
@@ -906,11 +912,15 @@ def api_modelos_sim(body: dict):
     history.pin([t for g in user for t in g["t"]] + [str(t) for t in (body.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
     body["grupos"] = modelos.ready_groups(rows) + user
     try:
-        D = modelos.data(); modelos.set_setores(D, rows)  # setores BESST (Método Barsi)
+        D = modelos.data(); modelos.set_setores(D, rows, _cad())  # setores perenes (Método Barsi)
         out = modelos.run(D, body)
     except Exception:
         log.exception("modelos: simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
+
+def _cad():
+    """Cadastro oficial da B3 {raiz: [nome, segmento]} (snapshot b3_cad)."""
+    return ((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}
 
 @app.post("/api/modelos/comparar")
 def api_modelos_comparar(body: dict):
@@ -930,7 +940,7 @@ def api_modelos_comparar(body: dict):
         if b.get("rod"):  # rodízio: grupos prontos + grupos do usuário
             grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
         history.pin([t for g in (grupos or []) for t in g["t"]] + [str(t) for t in (b.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
-        D = modelos.data(); modelos.set_setores(D, rows)
+        D = modelos.data(); modelos.set_setores(D, rows, _cad())
         out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)

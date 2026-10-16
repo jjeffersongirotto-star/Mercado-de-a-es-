@@ -968,11 +968,14 @@ def suggestions(P, D):
 
 
 # Métodos de investimento: texto no painel ⓘ (seção do método) + ações do site que passam em critérios aproximados do método
-# setores BESST do Barsi (Bancos, Energia elétrica, Saneamento, Seguros, Telecomunicações): fonte única em modelos.BESST_RX
+# setores perenes do Barsi: fonte única em modelos.PERENE_RX / PERENE_TXT
 def _besst(r):
     import modelos
-    return modelos.besst(r)
-PERENE = (_besst, "setores BESST (bancos, energia elétrica, saneamento, seguros e telecomunicações)")
+    return modelos.perene(r)
+def _perene_txt():
+    import modelos
+    return "setores perenes (" + modelos.PERENE_TXT + ")"
+PERENE = (_besst, _perene_txt())
 METHODS = [(r"\bbarsi\b", "Método Barsi", [("dy", ">=", 6), ("roe", ">=", 10), ("dlebit", "<=", 3)], "dy", "desc", None, PERENE),
            (r"\bbazin\b", "Método Bazin", [("dy", ">=", 6), ("dlpl", "<=", 0.5), ("pl", ">", 0)], "dy", "desc", None, None),
            (r"\bgraham\b", "Método Graham", [("pl", ">", 0), ("pl", "<=", 15), ("pvp", ">", 0), ("pvp", "<=", 1.5)], "pvp", "asc", None, None),

@@ -482,8 +482,9 @@ if (typeof document !== 'undefined') {
   function drawDes() {  // Desempenho: cada empresa uma vez por modelo, ordenável, em páginas
     if (!CM) return;
     const nm = NM(), L = [];
-    const refs = (CM.ref || []).filter(r => !isRef(st.mf) || r.m === st.mf);  // CDB e Ouro: uma vez, fixos no topo
-    CM.m.forEach((m, i) => { if (st.mf && st.mf !== m) return; CM.t.forEach((t, j) => L.push({ t, m, n: nm[m] || m, pct: CM.p[i][j], v: CM.v[i][j], ir: CM.ir[i][j], c: CM.c[i][j], s: CM.s[i][j] })); });
+    // CDB e Ouro: uma linha cada (não dependem da empresa), ordenadas junto com os modelos; Barsi fora do método (null) não entra
+    (CM.ref || []).forEach(r => { if (r.pct != null && (!isRef(st.mf) || r.m === st.mf)) L.push({ t: r.t, m: r.m, n: 'referência', pct: r.pct, v: r.v, ir: 0, c: -1, s: -1, ref: 1 }); });
+    CM.m.forEach((m, i) => { if (isRef(m) || (st.mf && st.mf !== m)) return; CM.t.forEach((t, j) => { if (CM.p[i][j] != null) L.push({ t, m, n: nm[m] || m, pct: CM.p[i][j], v: CM.v[i][j], ir: CM.ir[i][j], c: CM.c[i][j], s: CM.s[i][j] }); }); });
     L.sort((a, b) => (typeof a[dsk] === 'string' ? a[dsk].localeCompare(b[dsk], 'pt-BR') : a[dsk] - b[dsk]) * dsd);
     const np = Math.max(1, Math.ceil(L.length / st.pgs)); pg = Math.min(pg, np - 1);
     const rows = L.slice(pg * st.pgs, (pg + 1) * st.pgs);
@@ -491,7 +492,7 @@ if (typeof document !== 'undefined') {
     const pager = `<div class="pv-pg"><span class="pv-pgi">Linhas por página <select class="sel" data-pgs>${[240, 500, 1000, 2000, 5000].map(n => `<option${n === st.pgs ? ' selected' : ''}>${n}</option>`).join('')}</select></span>
       <span class="pv-pgi"><button type="button" class="gbtn" data-pg="-1"${pg ? '' : ' disabled'} aria-label="Página anterior">‹</button><span>${pg + 1} de ${np}</span><button type="button" class="gbtn" data-pg="1"${pg < np - 1 ? '' : ' disabled'} aria-label="Próxima página">›</button></span></div>`;
     el('pvDes').innerHTML = `<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['Imposto pago', 'ir'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
-      ${refs.length ? `<tbody class="ref">${refRows(refs)}</tbody>` : ''}<tbody>${rows.map(r => `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${pager}${note()}
+      <tbody>${rows.map(r => r.ref ? refRows([r]) : `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${pager}${note()}
       <p class="pvd-note">${F0.format(L.length)} linhas · toque numa linha para ver o mês a mês daquela empresa e modelo. ${glossBtn('Desempenho (melhores casos)')}</p>`;
   }
   // abre uma empresa com um modelo (mês a mês na aba Tabela)
@@ -507,7 +508,7 @@ if (typeof document !== 'undefined') {
       if (r.k === 'r') return refRows([r]);
       const g = r.k === 'g', on = !g && sel && sel.t === r.t && sel.m === r.m;
       const nm = g ? `<div class="pvd-a"><span><b>${esc(r.n)}</b><span class="pvd-m">${esc(modName(r.m))} · rodízio</span></span><button type="button" class="pv-i" data-pvg="${i}" aria-label="Histórico de movimentação">ⓘ</button></div>`
-        : `<b>${esc(r.t)}</b><span class="pvd-m">${esc(modName(r.m))}</span>`;
+        : `<b>${esc(r.t)}</b><span class="pvd-m">${esc(modName(r.m))}${r.fora ? ' · fora do método (setor não perene ou sem dividendos regulares)' : ''}</span>`;
       return `<tr class="${g ? 'pvd-g' : 'tap'}${on ? ' sel' : ''}" ${g ? '' : `data-pvsel="${esc(r.t)}|${esc(r.m)}"`}><td>${nm}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.ir)}</td><td>${r.c} / ${r.s}</td></tr>`;
     }).join('');
     return `<div class="pv-scroll"><table class="gtab"><thead><tr><th>Ativo</th><th>Rendimento</th><th>Valor final</th><th>Imposto pago</th><th>Compras / vendas</th></tr></thead><tbody>${tr}</tbody></table></div>

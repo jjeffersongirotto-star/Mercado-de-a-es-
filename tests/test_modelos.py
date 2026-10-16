@@ -92,17 +92,26 @@ def test_colocacoes_desempate_pelo_segundo_lugar():
     V = np.array([[10, 10, 1, 1], [9, 9, 11, 11], [1, 1, 10, 10]], dtype=float)  # B: 1º nas duas últimas, 2º nas duas primeiras
     rk, cnt, order, pts = modelos.ranking(V)
     assert cnt[0].tolist() == [2, 0, 2] and cnt[1].tolist() == [2, 2, 0] and order == [1, 0, 2]
-    assert pts.tolist() == [8, 12, 4]  # 3 modelos: 1º = 4, 2º = 2, 3º = 0
+    assert pts.tolist() == [21 + 21 + 15 + 15, 18 + 18 + 21 + 21, 15 + 15 + 18 + 18]  # 1º = 21, 2º = 18, 3º = 15
+    # referência (última linha) com o maior rendimento: 1º nas colocações, mas nos Pontos fica com a última colocação
+    V2 = np.vstack([V, np.full(4, 99.0)]); rk2, cnt2, _, pts2 = modelos.ranking(V2, 1)
+    assert cnt2[3].tolist() == [4, 0, 0, 0] and pts2[3] == 4 * 12 and pts2[:3].tolist() == pts.tolist()
+    # nan = fora (Método Barsi fora do método): não pontua nem conta colocação
+    V3 = V.copy(); V3[0, 0] = np.nan; rk3, cnt3, _, pts3 = modelos.ranking(V3)
+    assert rk3[0, 0] == -1 and cnt3[0].sum() == 3 and pts3[1] == 21 + 18 + 21 + 21
 
 
 def test_comparar_media_e_empresas_sem_preco():
     D = modelos.build(snap({"AAA3": {"c": [10.0 + k * .1 for k in range(NW)]}, "BBB3": {"c": 10.0}}), cdi())
     out = modelos.compare(D, ["AAA3", "BBB3", "XXX3"], "2020-09", "2021-12", [1000.0] + [100.0] * 15, grupos=[{"n": "G", "t": ["AAA3", "BBB3"]}])
-    assert len(out["v"]) == len(modelos.MODELOS) and len(out["v"][0]) == 2 and sum(r["pts"] for r in out["res"]) == 2 * sum(range(0, 2 * len(modelos.MODELOS), 2))
+    nm = len(modelos.MODELOS) + len(modelos.REF); fo = out["fora"]  # Barsi fora do método (sem setor perene) nas 2 empresas
+    assert len(out["v"]) == nm and len(out["v"][0]) == 2 and fo == 2 and out["p"][out["m"].index("barsi")] == [None, None]
+    assert sum(r["pts"] for r in out["res"]) == 2 * sum((modelos.PONTOS + (0,) * nm)[:nm - 2])  # sem Barsi (fora) e sem Ouro (sem cotação no teste)
     assert {g["m"] for g in out["g"]} == {"alg1", "alg3", "tendencia"}
-    assert out["t"] == ["AAA3", "BBB3"] and out["pedidas"] == 3 and len(out["p"]) == len(modelos.MODELOS)
+    assert out["t"] == ["AAA3", "BBB3"] and out["pedidas"] == 3 and len(out["p"]) == nm
     i = out["m"].index("hold"); assert abs(out["res"][i]["media"] - sum(out["p"][i]) / 2) < 0.01
-    assert [out["res"][k]["media"] for k in out["ord_media"]] == sorted((r["media"] for r in out["res"]), reverse=True)
+    md = [out["res"][k]["media"] for k in out["ord_media"] if out["res"][k]["media"] is not None]
+    assert md == sorted(md, reverse=True) and out["res"][out["m"].index("cdb")]["ref"]
 
 
 def test_lucro_no_balanco_bloqueia_so_algoritmo_3_meses_e_tendencia():
@@ -119,9 +128,11 @@ def test_run_todos_ordena_grupos_primeiro():
     out = modelos.run(D, {"di": "2020-09", "df": "2021-12", "ap": [1000] + [100] * 15, "ticker": "*", "modelo": "*", "universo": ["AAA3", "BBB3"],
                           "grupos": [{"n": "G", "t": ["AAA3", "BBB3"]}]})
     ks = [x["k"] for x in out["rows"]]
-    assert ks == sorted(ks, key="rga".index) and ks.count("g") == 3 and ks.count("r") == len(modelos.REF)  # CDB e Ouro uma vez, no topo  # um rodízio por modelo que troca de empresa (Algoritmos e Tendência)
-    emp = [x for x in out["rows"] if x["k"] == "a"]
-    assert all(a["pct"] >= b["pct"] for a, b in zip(emp, emp[1:])) and len(emp) == 2 * len(modelos.MODELOS)
+    # grupos primeiro (um rodízio por modelo que troca de empresa); depois modelos e CDB/Ouro juntos, pelo rendimento
+    assert ks[:3] == ["g"] * 3 and ks.count("g") == 3 and ks.count("r") == len(modelos.REF)
+    emp = [x for x in out["rows"] if x["k"] != "g" and x["pct"] is not None]
+    assert all(a["pct"] >= b["pct"] for a, b in zip(emp, emp[1:]))
+    assert len([x for x in out["rows"] if x["k"] == "a"]) == 2 * (len(modelos.MODELOS) - 1)  # Barsi: as 2 estão fora do método
 
 
 def test_referencias_cdb_e_ouro():
@@ -138,25 +149,36 @@ def test_referencias_cdb_e_ouro():
     q = sum(a * (1 - modelos.CUSTO) / gold["v"][i] for a, i in zip(ap, me))
     assert abs(o["v"] - q * gold["v"][me[-1]]) < 1e-6
     out = modelos.compare(D, ["AAA3"], "2020-02", "2020-12", ap)
-    assert [r["m"] for r in out["ref"]] == ["cdb", "ouro"] and len(out["res"]) == len(modelos.MODELOS)  # fora das colocações
+    assert [r["m"] for r in out["ref"]] == ["cdb", "ouro"] and out["m"][-2:] == ["cdb", "ouro"] and modelos.MOD["cdb"]["n"] == "CDB"
+    pts = {out["m"][i]: out["res"][i]["pts"] for i in range(len(out["m"]))}
+    assert sorted(pts.values())[:2] == sorted([pts["cdb"], pts["ouro"]])  # nos Pontos, sempre as últimas colocações
     t = modelos.run(D, {"di": "2020-02", "df": "2020-12", "ap": ap, "tab": {"t": "", "m": "ouro"}})["tab"]
     assert abs(t[-1]["com"] - o["v"]) < 1e-6
     sem = modelos.simulate_ref(modelos.build(snap({"AAA3": {"c": 10.0}}), cdi()), "ouro", me, ap, w)
     assert sem["v"] != sem["v"]  # sem ouro: sem dado
 
 
-def test_metodo_barsi_compra_so_abaixo_do_teto():
-    # 7 anos semanais; proventos de R$ 0,60 por ano -> teto = 0,60 ÷ 6% = R$ 10,00 a partir do 5º ano completo
+def test_metodo_barsi():
+    # 7 anos semanais; proventos de R$ 0,60 por ano -> teto = média 0,60 ÷ 6% = R$ 10,00 a partir do 5º ano completo
     Wl = [(date(2015, 1, 2) + timedelta(weeks=k)).isoformat() for k in range(52 * 7 + 10)]; n = len(Wl)
     dv = {str(k): 0.6 for k in range(n) if k % 52 == 26}
     mk = lambda c: {"w": Wl, "mi": [50] * n, "a": {"AAA3": {"i0": 0, "c": [c] * n, "dv": dv, "si": [50] * n, "m2": [10] * n, "r12": [0] * n, "p1": [500] * n, "p3": [500] * n}}}
     d0 = date(2014, 12, 1); cd = {"d": [(d0 + timedelta(days=k)).isoformat() for k in range(n * 7 + 40)], "v": [0.0] * (n * 7 + 40)}
-    for preco, besst, compra in ((8.5, True, True), (8.5, False, False), (7.0, False, True), (12.0, True, False)):
+    for preco, cash_max, _ in ((10.0, 0, 0), (11.5, .02, .12), (12.5, 1, 1)):  # no teto: tudo; até 20% acima: reserva 10%; acima: espera
         D = modelos.build(mk(preco), cd)
-        modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Bancos" if besst else "Varejo"}])
-        me = modelos._span(D, "2020-06", "2021-12"); ap = [1000.0] + [0.0] * (len(me) - 1)
-        r = modelos.simulate(D, "barsi", [0], me, ap, [0.0] * len(me))
-        assert (r["c"][0] == 1) == compra and r["s"][0] == 0, (preco, besst, r)  # margem 10% (BESST) / 25% (demais); nunca vende
+        modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Bancos"}])
+        me = modelos._span(D, "2020-06", "2021-12"); ap = [1000.0] + [100.0] * (len(me) - 1)
+        r = modelos.simulate(D, "barsi", [0], me, ap, [0.0] * len(me), rec=True)
+        v = r["rows"][0][-1]
+        assert r["s"][0] == 0, r  # nunca vende
+        pos = v["pos"]
+        if cash_max == 0: assert pos == "Ação", pos
+        elif cash_max == 1: assert pos == "CDB" and r["c"][0] == 0, pos
+        else: assert pos == "Ação + CDB", pos
+        assert not modelos.fora_barsi(D, [0], me)[0]
+    D = modelos.build(mk(8.0), cd); modelos.set_setores(D, [{"ticker": "AAA3", "subsetor": "Varejo"}])
+    assert modelos.fora_barsi(D, [0], modelos._span(D, "2020-06", "2021-12"))[0]  # setor não perene: fora do método
+    assert modelos.perene({"ticker": "UNIP6", "subsetor": None, "setor": "Process Industries"}, {"UNIP": ["UNIPAR", "Químicos Diversos"]})
 
 
 if __name__ == "__main__":
