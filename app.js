@@ -400,7 +400,7 @@ function fairHtml(r) {
   if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span><div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
   const up = f.pct >= 0;  // + verde: o preço precisa subir até o valor justo · − vermelho: precisa cair
   return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>` +
-    `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${f.m !== 'Graham' ? `<span class="fv-m">${f.m}</span>` : ''}${glossBtn('Barato/Caro')}</div></div>`;
+    `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
 }
 function blockHtml(r) {
   const price = priceOf(r);
@@ -496,7 +496,7 @@ function cardTip(card) {
 }
 document.addEventListener('mousemove', (e) => {
   if (!hoverCapable) return;
-  if (e.target.closest('[data-gl]')) return;  // ⓘ: mostra só ao tocar/clicar
+  if (e.target.closest('[data-gl]') || e.target.closest('#tooltip')) return;  // ⓘ: mostra só ao tocar/clicar
   const card = e.target.closest('.card.tip');
   if (card && !card.classList.contains('open')) { showTip(e, cardTip(card)); return; }
   const el = e.target.closest('[data-tip-id]');
@@ -505,7 +505,9 @@ document.addEventListener('mousemove', (e) => {
 });
 document.addEventListener('click', (e) => {
   const gl = e.target.closest('[data-gl]');  // ⓘ do indicador: explicação do Glossário
-  if (gl) { e.preventDefault(); showTip(e, esc(glossOf(gl.dataset.gl) || '')); clearTimeout(tt._h); tt._h = setTimeout(() => tt.classList.add('hidden'), 10000); return; }
+  const gm = e.target.closest('[data-glmore]');  // "+ informações": painel ⓘ no termo do Glossário
+  if (gm) { e.preventDefault(); tt.classList.add('hidden'); const t = gm.dataset.glmore; infoSection('Glossário'); setTimeout(() => { const li = [...document.querySelectorAll('#infoModal details li')].find(x => (x.querySelector('b') || {}).textContent === t); if (li) li.scrollIntoView({ block: 'start' }); }, 60); return; }
+  if (gl) { e.preventDefault(); const t = gl.dataset.gl; showTip(e, esc(glossOf(t) || '') + (glossMore(t) ? ` <a href="#" data-glmore="${esc(t)}">+ informações</a>` : '')); clearTimeout(tt._h); tt._h = setTimeout(() => tt.classList.add('hidden'), 10000); return; }
   const card = e.target.closest('.card.tip');
   if (card) {
     const open = card.classList.toggle('open');
