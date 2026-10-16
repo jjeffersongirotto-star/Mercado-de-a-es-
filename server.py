@@ -370,6 +370,7 @@ def finalize(base, yf_store=None):
     CAD = (((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}) if isbr else {}
     V30 = (((snapshots.load("b3_vol30", max_mem_age=12 * 3600)[0] or {}).get("v")) or {}) if isbr else {}
     MXB = (((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}) if isbr else {}
+    FGA = (snapshots.load("fg_acoes", max_mem_age=6 * 3600)[0] or {}) if isbr else {}  # Medo e Ganância de cada ação (build_fg.acoes)
     for r in base["rows"]:
         if listed is not None and r["ticker"] not in listed and r["ticker"][-1:].isdigit():
             continue
@@ -383,6 +384,8 @@ def finalize(base, yf_store=None):
         if r.get("A"): nr["A"] = r["A"]
         for k in ("ln3", "roe3", "dpsm", "al"):
             if r.get(k) is not None: nr[k] = r[k]
+        fga = (FGA.get("a") or {}).get(r["ticker"])
+        if fga: nr["fg"] = fga  # [hoje, 1 pregão antes, 5 antes, 21 antes]
         if r["ticker"] in FIN: nr["fin"] = True
         ixs = IXC.get(r["ticker"][:4])
         if ixs:  # índices da empresa (qualquer classe; mostra a classe quando diferente da exibida)
@@ -426,6 +429,8 @@ def finalize(base, yf_store=None):
     keys_with_data = {k for r in rows for k, x in r["v"].items() if x is not None}
     d["fields"] = [{**f, **FIELD_EXTRA.get(f["key"], {})} for f in base["fields"] if f["key"] in keys_with_data]
     d["fair"] = valor_justo.FAIR  # Barato/Caro: configuração (app.js → fairOf)
+    fga = snapshots.load("fg_acoes", max_mem_age=6 * 3600)[0] if country == "br" else None
+    if fga: d["fga"] = {"faixas": fga.get("faixas"), "d": fga.get("d")}  # faixas e data do índice de cada ação (card)
     return d
 
 def build_foreign(country):

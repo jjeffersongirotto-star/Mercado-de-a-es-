@@ -209,14 +209,14 @@ class Conta:
         q = s.sh * f; v = q * p * (1 - CUSTO); b = s.basis * f; g = np.where(mask, v - b, 0.0)
         s.msales += np.where(mask, q * p, 0); s.mgain += g; s.cash += np.where(mask, v, 0)
         s.sh -= q; s.basis -= b
-        if frac is None: s.vendas += mask & (q > 0)
+        s.vendas += mask & (q > 0)  # cada venda conta (inclusive parcial, para retirada ou imposto)
         return g
 
     def buy(s, mask, p, amt=None):
         """Compra com todo o caixa (ou só `amt`) das ações marcadas."""
         a = s.cash if amt is None else np.minimum(s.cash, amt)
         m = mask & (a > 0.005)
-        s.compras += m & (s.sh <= 0) if amt is None else m
+        s.compras += m  # cada compra conta (aportes e proventos reinvestidos também)
         s.sh += np.where(m, a * (1 - CUSTO) / np.where(m, p, 1), 0); s.basis += np.where(m, a, 0)
         s.cash = s.cash - np.where(m, a, 0)
 
@@ -289,7 +289,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
                                 "c": int(A.compras[q]), "s": int(A.vendas[q])})
         mi += 1
     v = A.sh * lastp + A.cash
-    return {"v": v, "ir": A.ir + A.dtax, "c": A.compras, "s": A.vendas, "rows": rows}
+    return {"v": v, "ir": A.ir + A.dtax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows}
 
 
 def simulate_ref(D, rid, me, ap, wd, rec=False):
@@ -410,7 +410,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         per[cur]["res"] += A.sh[0] * lastp[cur] - A.basis[0]; per[cur]["n"] += 1
     emp = [dict(x, sem=round(x["sem"] / max(1, x["n"]), 1), res=round(x["res"], 2), ir=round(x["ir"], 2)) for x in per.values() if x["c"]]
     emp.sort(key=lambda x: -x["res"])
-    return {"v": float(v), "ir": float(A.ir[0] + A.dtax[0]), "c": int(A.compras[0]), "s": int(A.vendas[0]),
+    return {"v": float(v), "ir": float(A.ir[0] + A.dtax[0]), "irv": float(A.ir[0]), "c": int(A.compras[0]), "s": int(A.vendas[0]),
             "hist": {"emp": emp, "trocas": sum(1 for m in moves if m["de"] and m["para"]), "cdb": round(cdbw / max(1, tot) * 100, 1),
                      "dd": round(dd * 100, 1), "mov": moves[-200:]}}
 
@@ -459,13 +459,13 @@ def run(D, req):
                         if len(gi) < 2: continue  # empresa listada depois do início entra no rodízio quando passa a ter preço
                         r = rotate(D, mid, gi, me, ap, wd, tx)
                         rows.append({"k": "g", "m": mid, "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2),
-                                     "pct": pc(r["v"]), "ir": round(r["ir"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
+                                     "pct": pc(r["v"]), "ir": round(r["ir"], 2), "irv": round(r["irv"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
                 if not uni: continue
                 r = simulate(D, mid, uni, me, ap, wd, tx)
                 fo = fora_barsi(D, uni, me) if mid == "barsi" else np.zeros(len(uni), bool)
                 best = sorted((q for q in range(len(uni)) if not fo[q]), key=lambda q: -r["v"][q])[:10]
                 rows += [{"k": "a", "m": mid, "t": D["tick"][uni[q]], "v": round(float(r["v"][q]), 2), "pct": pc(r["v"][q]),
-                          "ir": round(float(r["ir"][q]), 2), "c": int(r["c"][q]), "s": int(r["s"][q])} for q in best]
+                          "ir": round(float(r["ir"][q]), 2), "irv": round(float(r["irv"][q]), 2), "c": int(r["c"][q]), "s": int(r["s"][q])} for q in best]
         else:
             t = req.get("ticker")
             if t not in D["ix"]: return {"error": f"{t} sem dados para os modelos."}
@@ -474,7 +474,7 @@ def run(D, req):
             if len(mids) == 1 and mids[0] != "hold": mids = mids + ["hold"]  # referência: comprar e segurar
             for mid in mids:
                 r = simulate(D, mid, [k], me, ap, wd, tx)
-                rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ir": round(float(r["ir"][0]), 2),
+                rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ir": round(float(r["ir"][0]), 2), "irv": round(float(r["irv"][0]), 2),
                              "c": int(r["c"][0]), "s": int(r["s"][0]), **({"fora": True} if mid == "barsi" and fora_barsi(D, [k], me)[0] else {})})
         rows.sort(key=lambda x: (x["k"] != "g", -(x["pct"] if x["pct"] is not None else -1e9)))  # grupos; depois modelos e CDB/Ouro pelo rendimento
         out = dict(ini, rows=rows)
@@ -540,7 +540,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     fora = fora_barsi(D, idx, me) if len(idx) > 1 else np.zeros(len(idx), bool)  # uma empresa só: calcula mesmo fora do método
     ib = [m["id"] for m in MODELOS].index("barsi"); R[ib]["v"] = np.where(fora, np.nan, R[ib]["v"])
     refs = _refs(D, me, aps, wd, apT); z = np.zeros(len(idx))
-    R += [{"v": np.full(len(idx), np.nan if r["v"] is None else r["v"]), "ir": z, "c": z, "s": z} for r in refs]
+    R += [{"v": np.full(len(idx), np.nan if r["v"] is None else r["v"]), "ir": z, "irv": z, "c": z, "s": z} for r in refs]
     M = MODELOS + REF; nm = len(M)
     V = np.array([r["v"] for r in R])
     P = (V / apT - 1) * 100 if apT > 0 else np.zeros_like(V)
@@ -556,7 +556,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     big = lambda i: -_nmean(P[i])  # ord_pts: pela média de pontos (o Método Barsi só conta nas empresas do método)
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)),
            "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in M], "p": J(P), "rk": rk.tolist(),
-           "v": J(V), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(),
+           "v": J(V), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(), "irv": np.round(np.array([r["irv"] for r in R]), 2).tolist(),
            "c": np.array([r["c"] for r in R]).astype(int).tolist(), "s": np.array([r["s"] for r in R]).astype(int).tolist(),
            "res": [res(i, m) for i, m in enumerate(M)], "ord_media": sorted(range(nm), key=big), "ord_pos": order,
            "ord_pts": sorted(range(nm), key=lambda i: (-(pts[i] / max(1, (~np.isnan(V[i])).sum())), -pts[i], order.index(i))), "ref": refs, "fora": int(fora.sum()), "pontos": list(PONTOS)}
@@ -570,7 +570,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
                 if len(gi) < 2: continue
                 r = rotate(D, m["id"], gi, me, aps, wd, tx)
                 out["g"].append({"m": m["id"], "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2), "pct": pc(r["v"]),
-                                 "ir": round(r["ir"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
+                                 "ir": round(r["ir"], 2), "irv": round(r["irv"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
         out["g"].sort(key=lambda x: -(x["pct"] or -1e9))
     _C[key] = out
     while len(_C) > 60: _C.popitem(last=False)

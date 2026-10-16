@@ -414,6 +414,13 @@ function fairHtml(r) {
   return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>${al}` +
     `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
 }
+// Medo e Ganância da própria ação (build_fg.acoes -> /api/data rows.fg; faixas em data.fga): no computador, no meio do card
+function fgaHtml(r) {
+  const G = state.data && state.data.fga; if (!r.fg || !G || !G.faixas || typeof fgBand !== 'function') return '';
+  const [v, d1, d5, d21] = r.fg, fx = G.faixas, b = fgBand(v, fx);
+  const cmp = [['Ontem', d1], ['1 sem.', d5], ['1 mês', d21]].filter(x => x[1] != null).map(([l, x]) => `${l} <b class="${fgCls(fgBand(x, fx).i)}">${x}</b>`).join(' · ');
+  return `<div class="fga" title="Medo e Ganância de ${r.ticker} em ${dataBR(G.d)}">${fgGauge(v, fx)}<div class="fga-t"><div class="fga-h">Medo e Ganância da ação${glossBtn('Medo e Ganância da ação')}</div><div class="fga-v ${fgCls(b.i)}"><b>${v}</b> ${esc(b.n)}</div><div class="fga-p">${cmp}</div></div></div>`;
+}
 function blockHtml(r) {
   const price = priceOf(r);
   const open = state.expanded.has(r.ticker);
@@ -427,7 +434,7 @@ function blockHtml(r) {
                  (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) em que CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado">aj ${nAdj}</span>` : '');
   const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag tap ${conf(r).A === conf(r).N ? 'ctag-ok' : 'ctag-dv'}" data-cores role="button" title="Fontes que concordam com a maioria em todos os indicadores / fontes com dados (indicador sem maioria = fontes discordam)">${confTxt(r)}</span>` : '');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
-    <div class="blk-head px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
+    <div class="blk-head relative px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
         ${state.selMode ? `<label class="gsel" title="Selecionar ${r.ticker}"><input type="checkbox" data-gsel="${r.ticker}"${state.selSet.has(r.ticker) ? ' checked' : ''}></label>` : ''}<button type="button" class="star${FAVS.has(r.ticker) ? ' on' : ''}" data-fav="${r.ticker}" aria-pressed="${FAVS.has(r.ticker)}" aria-label="Favoritar ${r.ticker}">${FAVS.has(r.ticker) ? '★' : '☆'}</button><div class="text-2xl font-black tracking-tight text-emerald-300">${r.ticker}</div>${window.isNova && isNova(r) ? '<span class="nova">NOVA</span>' : ''}
         <div class="ml-auto flex items-center gap-2 whitespace-nowrap"><span class="text-xl font-bold text-white">${fmtPrice(price, r.cur)}</span>${varTxt}</div>
@@ -439,7 +446,7 @@ function blockHtml(r) {
           <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
         </div>
         ${fairHtml(r)}<button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
-      </div>${updTxt() ? `<div class="upd">${updTxt()}</div>` : ''}
+      </div>${updTxt() ? `<div class="upd">${updTxt()}</div>` : ''}${fgaHtml(r)}
     </div>
     <div class="collapse-wrap"><div class="collapse-inner">${open ? chartSlot(r) + ibovW(r) + cardsHtml(r) : ''}</div></div>
   </article>`;

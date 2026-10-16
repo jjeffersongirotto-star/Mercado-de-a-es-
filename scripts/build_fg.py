@@ -4,7 +4,7 @@ Só dados da B3 que o site já guarda: histórico COTAHIST (history4/), fluxo po
 "Mercado" = média dos retornos diários das 50 ações mais negociadas (volume médio de 60 pregões), parecido com o Ibovespa,
 mas disponível desde 1995 (o Ibovespa diário do Yahoo só tem 5 anos). Cada parte vira uma nota de 0 a 100 pela posição do
 valor de hoje entre os valores do último ano (252 pregões); o índice é a média das partes disponíveis no dia.
-O índice de cada ação (Comparar) é calculado na hora por medo.stock_index, com a mesma regra de nota (medo.rank).
+O índice de cada ação usa medo.stock_index (mesma regra de nota, medo.rank): no Comparar, na hora; no card da aba Ações, fg_acoes.json (aqui).
 Uso: build_fg.py OUT_DIR   (lê OUT_DIR/history4, OUT_DIR/b3_flow.json, OUT_DIR/history/bcb_cdi.json)."""
 import glob, gzip, json, os, sys
 from datetime import datetime, timezone
@@ -92,6 +92,23 @@ def main(OUT):
            "partes": {k: {"n": PARTES[k][0], "v": None if np.isnan(last.get(k, np.nan)) else int(round(last[k]))} for k in PARTES}}
     json.dump(out, open(os.path.join(OUT, "fg.json"), "w"), ensure_ascii=False, separators=(",", ":"))
     print(f"fg: {out['d'][0]} a {out['d'][-1]}, hoje {out['v'][-1]}, {len(out['d'])} pregões; partes {out['partes']}")
+    acoes(OUT, C, V)
+
+
+def acoes(OUT, C, V, n=600):
+    """Índice de cada ação hoje (medo.stock_index, últimos n pregões bastam para a janela de 1 ano) -> OUT/fg_acoes.json
+    {t: [hoje, 1 pregão antes, 5 antes, 21 antes]}: card da aba Ações."""
+    C, V = C.iloc[-n:], V.iloc[-n:]; A = {}
+    for t in C.columns:
+        c = C[t]; ok = c.notna()
+        if ok.sum() < 260 or not ok.iloc[-10:].any(): continue
+        c = c[ok]; v = V[t].reindex(c.index)
+        si = medo.stock_index(c.tolist(), [None if x != x else x for x in v.tolist()])
+        pick = [si[-1 - k] if len(si) > k else None for k in (0, 1, 5, 21)]
+        if pick[0] is not None: A[t] = pick
+    json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "d": C.index[-1].strftime("%Y-%m-%d"), "faixas": FAIXAS, "a": A},
+              open(os.path.join(OUT, "fg_acoes.json"), "w"), separators=(",", ":"))
+    print(f"fg_acoes: {len(A)} ações")
 
 
 if __name__ == "__main__":

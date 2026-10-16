@@ -43,7 +43,7 @@
       <div class="cmp-row frm"><label><span>Critério</span><select id="cmpCrit" class="sel"><option value="preco">Preço da ação</option><option value="fg">Medo e Ganância</option><option value="mod">Modelos</option>${fields.map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('')}</select></label>
         <label><span>Início</span><input id="cmpDi" type="date" class="sel"></label><label><span>Fim</span><input id="cmpDf" type="date" class="sel"></label>
         <label class="cmp-mod"><span>Valor inicial</span><input id="cmpIni" inputmode="decimal" class="sel"></label><label class="cmp-mod"><span>Aporte mensal</span><input id="cmpAp" inputmode="decimal" class="sel"></label>
-        <label class="cmp-mod"><span>Empresas</span><select id="cmpMu" class="sel"><option value="sel">Escolhidas</option><option value="all">Todas</option><option value="top5">5 maiores de cada setor</option></select></label></div>
+        <label class="cmp-mod"><span>Empresas</span><select id="cmpMu" class="sel"></select></label></div>
       <div id="cmpChips" class="cmp-chips"></div><button type="button" id="cmpGo" class="gbtn pri w-full">Pesquisar</button><button type="button" id="cmpAll" class="cmp-allb"></button><button type="button" id="cmpClr" class="gbtn w-full cmp-clr">Limpar tudo</button></section>
       <div class="cmp-bar"><div class="cmp-vm" role="group" aria-label="Mostrar no gráfico"><button type="button" data-vm="pct">%</button><button type="button" data-vm="val">Valor</button></div><button type="button" id="cmpMin" class="cmp-minb"></button></div>
       <div id="cmpChart" class="gchart cmp-chart" data-m="1"><div class="gc-body"><div class="gc-plot"></div><div class="gc-leg"></div></div></div>
@@ -51,7 +51,7 @@
         <div class="cmp-col"><h3 class="up">Renderam mais</h3><input class="cmp-f" data-q="qb" type="search" placeholder="Filtrar…" autocomplete="off"><div id="cmpMore"></div></div></section>
       <section id="cmpFg" class="fgx-w hidden"></section><section id="cmpMod" class="fgx-w hidden"></section>`;
     $c('#cmpCrit').value = S.crit; $c('#cmpDi').value = S.di; $c('#cmpDf').value = S.df;
-    $c('#cmpIni').value = F2.format(S.ini); $c('#cmpAp').value = F2.format(S.ap); $c('#cmpMu').value = S.mu;
+    $c('#cmpIni').value = F2.format(S.ini); $c('#cmpAp').value = F2.format(S.ap); muFill();
   }
   function chips() {
     const mod = S.crit === 'mod', fgm = S.crit === 'fg', ind = S.crit !== 'preco' && !fgm && !mod, ref = S.items[0];
@@ -264,11 +264,14 @@
     put(box.querySelector('.fgc-pr'), FGD._y1(i), `${fmtPrice(s.c[i], 'BRL')} · ${dataBR(s.d[i])}`, '');
     put(box.querySelector('.fgc-ix'), FGD._y2(i), `${s.fg[i]} · ${FGD.faixas[b.i][1]}`, fgCls(b.i));
   }
-  const RK = (p) => `<i class="rk rk-${p}" aria-label="${p + 1}º"></i>`;  // cor fixa por colocação (seção Cores do painel ⓘ)
+  // colocação: medalhas 🥇🥈🥉 até o 3º; depois selo arredondado "4º", "5º"… na cor da colocação (seção Cores do painel ⓘ)
+  const MED = ['🥇', '🥈', '🥉'];
+  const RK = (p) => p < 0 || p == null ? '' : p < 3 ? `<span class="rkm" role="img" aria-label="${p + 1}º">${MED[p]}</span>` : `<i class="rkb rk-${p}">${p + 1}º</i>`;
+  const RKN = (p) => p < 3 ? RK(p) + `${p + 1}º` : RK(p);  // com o número (cabeçalhos e pior colocação)
   // Tabelas dos modelos a partir de modelos.compare (Comparar → Modelos e Previsão com o card Modelos em Todos).
   // mv: media | emp | pos | con; nm: nomes dos modelos (/api/modelos); only: id de um modelo (filtro da Previsão)
   window.modTables = (d, mv, nm, only) => {
-    const N = (i) => esc(nm[d.m[i]] || d.m[i]) + (R[i].ref ? '<span class="pvd-m">referência</span>' : ''), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
+    const NV = (i) => esc(nm[d.m[i]] || d.m[i]), N = (i) => NV(i) + (R[i].ref ? refInfo(d.m[i]) : ''), R = d.res, cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up', pp = (v) => v == null ? '—' : pc(v);
     const posOf = (ord) => { const o = {}; ord.forEach((i, p) => { o[i] = p; }); return o; };
     // CDB e Ouro (modelos.REF) entram como linhas, pelo rendimento; nos Pontos ficam sempre com as últimas colocações
     const TR = (i) => R[i].ref ? `<tr class="pvd-ref tap" data-mo="|${d.m[i]}">` : '<tr>';
@@ -277,30 +280,48 @@
     const rp = (r) => `<span class="${cl(r.pct)}">${pp(r.pct)}</span>`, rv = (r) => r.v == null ? '—' : brl.format(r.v);
     if (mv === 'media') {
       const ps = posOf(d.ord_media);
-      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `${TR(i)}${td(N(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, R[i].vmedio == null ? '—' : brl.format(R[i].vmedio))}</tr>`).join(''));
+      return tab([['Modelo', 'm'], ['Lucro médio', 'l'], ['Valor final médio', 'v']], d.ord_media.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${td(R[i].media, pp(R[i].media), cl(R[i].media))}${td(R[i].vmedio, R[i].vmedio == null ? '—' : brl.format(R[i].vmedio))}</tr>`).join(''));
     }
     if (mv === 'emp') {
       const cols = d.ord_pos.filter(i => !R[i].ref && (!only || d.m[i] === only));
-      const rl = (d.ref || []).map(r => `<button type="button" class="pv-lnk" data-mo="|${r.m}">${esc(r.t)}</button> ${rp(r)}`).join(' · ');
-      return (rl ? `<p class="pvd-note">Referências (iguais para todas as empresas): ${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => d.p[i][j] == null ? '<td data-v="" title="fora do método">—</td>' : `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
+      const rl = (d.ref || []).map(r => `<button type="button" class="pv-lnk" data-mo="|${r.m}">${esc(r.t)}</button>${refInfo(r.m)} ${rp(r)}`).join(' · ');
+      return (rl ? `<p class="pvd-note">${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => d.p[i][j] == null ? '<td data-v="" title="fora do método">—</td>' : `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
     }
     if (mv === 'pos') {  // pontos por colocação (modelos.PONTOS: 21, 18, 15…); ordem pela média de pontos (modelos.ranking)
       const ps = posOf(d.ord_pts);
-      return tab([['Modelo', 'm']].concat(d.m.map((_, p) => [`${RK(p)}${p + 1}º`, 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
-        d.ord_pts.map(i => `${TR(i)}${td(N(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''));
+      return tab([['Modelo', 'm']].concat(d.m.map((_, p) => [RKN(p), 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
+        d.ord_pts.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''));
     }
     const ord = R.map((_, i) => i).sort((a, b) => (R[b].mediana ?? -1e9) - (R[a].mediana ?? -1e9)), ps = posOf(ord);
-    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `${TR(i)}${td(N(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior ?? 99, R[i].pior == null ? '—' : RK(R[i].pior - 1) + R[i].pior + 'º')}</tr>`).join(''));
+    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior ?? 99, R[i].pior == null ? '—' : RKN(R[i].pior - 1))}</tr>`).join(''));
   };
-  window.modRefNote = (d) => (d.ref || []).map(r => `${esc(r.t)}: ${esc(r.nota)}.`).join(' ') + (d.fora ? ` Método Barsi: ${d.fora} de ${d.t.length} empresas fora do método (setor não perene ou sem dividendos regulares) aparecem como — e não entram nas colocações dele.` : '');
+  // CDB e Ouro: ⓘ com a explicação curta (Glossário); a nota só aparece quando o ouro começa depois do início do período
+  window.refInfo = (m) => glossBtn(m === 'cdb' ? 'CDB nos modelos' : 'Ouro nos modelos');
+  window.modRefNote = (d) => (d.ref || []).filter(r => /cotação do ouro só desde/.test(r.nota || '')).map(r => `Ouro: ${esc(r.nota.split('; ').slice(1).join('; '))}.`).join(' ') + (d.fora ? ` Método Barsi: ${d.fora} de ${d.t.length} empresas fora do método (setor não perene ou sem dividendos regulares) aparecem como — e não entram nas colocações dele.` : '');
   window.modRK = (p) => RK(p);
+  // rodapé dos resultados dos modelos: tópicos curtos em colunas (Período · Empresas · Aportado · Rendimento · Observações)
+  window.modInfo = (d, o = {}) => {
+    const it = [['Período', `${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses)`],
+      d.t ? ['Empresas', `${d.t.length} de ${d.pedidas} (com preço no início)`] : null,
+      ['Aportado', `${brl.format(d.apT)}${d.t ? ' por empresa' : ''}`],
+      ['Rendimento', '(valor final − aportado) ÷ aportado'],
+      o.extra ? ['Dica', o.extra] : null, modRefNote(d) ? ['Obs.', modRefNote(d)] : null].filter(Boolean);
+    return `<dl class="pv-info">${it.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+  };
   // ---------- Modelos: todos os modelos da Previsão nas empresas escolhidas (simulação do servidor: modelos.compare) ----------
   let MD = null, MN = {};
   const MV = [['media', 'Média'], ['emp', 'Por empresa'], ['pos', 'Colocações'], ['con', 'Consistência']];
+  // Empresas (Modelos): as escolhidas acima, 5 maiores de cada setor ou uma empresa da aba Ações (todas: botão Comparar tudo)
+  function muFill() {
+    const rows = ((state.data && state.data.rows) || []).filter(r => /\d$/.test(r.ticker)).map(r => r.ticker).sort();
+    if (S.mu === 'all') S.mu = 'sel';
+    $c('#cmpMu').innerHTML = `<option value="sel">Escolhidas acima</option><option value="top5">5 maiores de cada setor</option><optgroup label="Empresas da aba Ações">${rows.map(t => `<option value="t:${t}">${t}</option>`).join('')}</optgroup>`;
+    $c('#cmpMu').value = S.mu; if ($c('#cmpMu').value !== S.mu) { S.mu = 'sel'; $c('#cmpMu').value = 'sel'; }
+  }
   async function modRun(my) {
-    const box = $c('#cmpMod'), t = S.items.filter(x => !isIdx(x) && cOf(x) === 'br').map(tOf);
-    const u = S.all ? 'all' : S.mu;  // Comparar tudo: todas as empresas; Voltar: volta às Empresas escolhidas
-    if (u === 'sel' && !t.length) { box.innerHTML = '<p class="gt-help">Escolha uma ou mais ações da B3 (ou Todas / 5 maiores de cada setor em Empresas) e toque em Pesquisar.</p>'; return; }
+    const one = S.mu.startsWith('t:') ? [S.mu.slice(2)] : null, box = $c('#cmpMod'), t = one || S.items.filter(x => !isIdx(x) && cOf(x) === 'br').map(tOf);
+    const u = S.all ? 'all' : one ? 'sel' : S.mu;  // Comparar tudo: todas as empresas; Voltar: volta às Empresas escolhidas
+    if (u === 'sel' && !t.length) { box.innerHTML = '<p class="gt-help">Escolha uma ou mais ações da B3 (ou uma empresa / 5 maiores de cada setor em Empresas; todas: Comparar tudo) e toque em Pesquisar.</p>'; return; }
     box.innerHTML = loaderHTML('Simulando os modelos…');
     if (!Object.keys(MN).length) { try { const m = await (await fetch('/api/modelos')).json(); (m.modelos || []).forEach(x => { MN[x.id] = x.n; }); } catch (e) { } }
     let d = null;
@@ -318,7 +339,7 @@
   function modHtml() {
     const d = MD, emp = S.mv === 'emp';
     return `<div class="gt-tabs" role="tablist">${MV.map(([k, l]) => `<button type="button" data-mv="${k}" class="${S.mv === k ? 'on' : ''}">${l}</button>`).join('')}</div>${modTables(d, S.mv, MN)}
-      <p class="pvd-note">${dataBR(d.ini)} a ${dataBR(d.fim)} (${d.meses} meses) · ${d.t.length} de ${d.pedidas} empresas (só as que já tinham preço no início) · aportado ${brl.format(d.apT)} por empresa · lucro = (valor final − aportado) ÷ aportado. ${modRefNote(d)}${emp ? ' Toque num valor para ver o mês a mês na Previsão.' : ''}</p>`;
+      ${modInfo(d, { extra: emp ? 'toque num valor para ver o mês a mês na Previsão' : '' })}`;
   }
   let LAST = null;
   const draw = () => LAST && gcRender(...LAST, undefined, { mode: S.vm, cross: true });
@@ -342,7 +363,7 @@
       }
       if (e.target.closest('#cmpGo')) { S.all = false; all(); return; }
       const mv = e.target.closest('[data-mv]'); if (mv && MD) { S.mv = mv.dataset.mv; save(); $c('#cmpMod').innerHTML = modHtml(); return; }
-      const mo = e.target.closest('[data-mo]');
+      const mo = !e.target.closest('[data-gl]') && e.target.closest('[data-mo]');
       if (mo && MD) {  // mês a mês na Previsão; "‹ Voltar ao Comparar" volta para esta mesma tela, sem pesquisar de novo
         const [t, m] = mo.dataset.mo.split('|'), y = window.scrollY;
         if (window.pvOpen) pvOpen({ t, m, di: MD.ini, df: MD.fim, ini: S.ini, ap: S.ap, back: () => { keep = true; showTab('comparar'); requestAnimationFrame(() => window.scrollTo(0, y)); } });
