@@ -29,16 +29,34 @@ _END = re.compile(r"(?:[\s,&]+|^)(?:\(The\)|Inc|Incorporated|Corp|Corporation|Co
 
 _POP = None
 
-def nome_popular(ticker, n):
-    """Nome pelo qual a empresa é conhecida (nomes_populares.json, fonte única: Petrobras, Itaú, SpaceX…); chave = 4 letras da B3
-    (PETR4 -> PETR) ou o ticker de fora; sem entrada, nome_curto(n). Widget do app (/api/widget → s)."""
+def _pop():
     global _POP
     if _POP is None:
         try: _POP = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "nomes_populares.json"), encoding="utf-8"))
         except Exception: _POP = {}
-    t = (ticker or "").upper()
-    k = t[:4] if re.fullmatch(r"[A-Z0-9]{4}\d{1,2}B?", t) and not t.isdigit() else t
-    return _POP.get(k) or _POP.get(t) or nome_curto(n)
+    return _POP
+
+def _pop_entry(ticker, country=None):
+    """Entrada de nomes_populares.json: B3 (e BDR) pela raiz de 4 letras; EUA pelo ticker ("us:X" antes, para colisão com raiz da B3);
+    outros países só com o prefixo do país ("de:SAP", "jp:7203") — o mesmo ticker em outra bolsa é outra empresa."""
+    P, t = _pop(), (ticker or "").upper()
+    c = (country or "").lower()
+    if c in ("", "br") and re.fullmatch(r"[A-Z0-9]{4}\d{1,2}B?", t) and not t.isdigit(): return P.get(t[:4]) or P.get(t)
+    if c in ("", "br"): c = "us"
+    if c == "us": return P.get("us:" + t) or P.get(t)
+    return P.get(c + ":" + t)
+
+def nome_popular(ticker, n, country=None):
+    """Nome pelo qual a empresa é conhecida (nomes_populares.json, fonte única: Petrobras, Itaú, Google, SpaceX…); sem entrada,
+    nome_curto(n). Widget do app (/api/widget → s)."""
+    e = _pop_entry(ticker, country)
+    return (e if isinstance(e, str) else (e or {}).get("n")) or nome_curto(n)
+
+def nome_busca(ticker, country=None):
+    """Nome popular + aliases (texto extra da busca do site e apelidos do chat): "Meta | facebook | instagram"; "" sem entrada."""
+    e = _pop_entry(ticker, country)
+    if not e: return ""
+    return e if isinstance(e, str) else " | ".join([e.get("n") or ""] + list(e.get("aliases") or []))
 
 def nome_curto(n):
     """Nome da empresa para espaço pequeno (widget): sem S.A./S/A/Ltda/Holding/Participações; tudo maiúsculo vira

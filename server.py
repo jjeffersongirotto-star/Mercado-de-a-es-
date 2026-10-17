@@ -431,6 +431,9 @@ def finalize(base, yf_store=None):
     keys_with_data = {k for r in rows for k, x in r["v"].items() if x is not None}
     d["fields"] = [{**f, **FIELD_EXTRA.get(f["key"], {})} for f in base["fields"] if f["key"] in keys_with_data]
     d["fair"] = valor_justo.FAIR  # Barato/Caro: configuração (app.js → fairOf)
+    for r in rows:  # nome popular + aliases (nomes_populares.json) para a busca do site (app.js → prepRow → r._s)
+        pn = snapshots.nome_busca(r["ticker"], country)
+        if pn: r["pn"] = pn
     fga = snapshots.load("fg_acoes", max_mem_age=6 * 3600)[0] if country == "br" else None
     if fga: d["fga"] = {"faixas": fga.get("faixas"), "d": fga.get("d")}  # faixas e data do índice de cada ação (card)
     return d
@@ -944,11 +947,12 @@ def api_widget(t: str = "", v: int = 1):
         if not r:  # fora da B3: cotação da aba Mercado do país (TradingView, foreign_quotes); BDR que o site não mostra: só o logo
             q = fq.get(tk)
             if not q or ver < 2:  # app até 1.5 (sem v=2) mostraria o preço como R$: só logo e país
-                out.append({"t": tk, "l": (logos.get(tk) or {}).get("f"), **({"k": q["c"]} if q else {})}); continue
+                pn = snapshots.nome_popular(tk, q.get("n") if q else None, q["c"] if q else None)  # BDR (só logo): nome da empresa de fora
+                out.append({"t": tk, "l": (logos.get(tk) or {}).get("f"), **({"s": pn} if pn else {}), **({"k": q["c"]} if q else {})}); continue
             fqw[q["c"]] = time.time()
             fr = {"cur": q["cur"], "subsetor": q.get("sub")}
             j, pct, m = valor_justo.fair(fr, lambda o, k: q["v"].get(k), [])
-            out.append({"t": tk, "n": q.get("n"), "s": snapshots.nome_popular(tk, q.get("n")), "l": (logos.get(tk) or {}).get("f"),
+            out.append({"t": tk, "n": q.get("n"), "s": snapshots.nome_popular(tk, q.get("n"), q["c"]), "l": (logos.get(tk) or {}).get("f"),
                         "p": q["v"].get("preco"), "v": q.get("var"), "c": q["cur"], "k": q["c"],
                         "f": round(pct, 1) if j else None, "m": m if j else None, **vj_x(j, pct), "g": None})  # Medo e Ganância: só B3
             continue

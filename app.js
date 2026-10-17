@@ -252,7 +252,7 @@ function searchRank0(r, q) {
   const t = norm(r.ticker);
   if (t.startsWith(q)) return 0;
   if (t.includes(q)) return 1;
-  if (norm(r.nome).includes(q)) return 2;
+  if (norm(r.nome).includes(q) || (r.pn && norm(r.pn).includes(q))) return 2;  // nome oficial ou popular/aliases (nomes_populares.json → pn)
   if (norm([r.setor, r.subsetor, r.psetor, r.pind, r.macro].filter(Boolean).join(' ')).includes(q)) return 3;
   if ((r._s || '').includes(q)) return 4;
   return 9;
@@ -668,7 +668,7 @@ function classify(r) {
 }
 function prepRow(r) {
   r.macro = macroSector(r); r.tags = classify(r);
-  r._s = norm([r.ticker, r.nome, r.setor, r.subsetor, r.psetor, r.pind, r.macro, r.desc].filter(Boolean).join(' | '));
+  r._s = norm([r.ticker, r.nome, r.pn, r.setor, r.subsetor, r.psetor, r.pind, r.macro, r.desc].filter(Boolean).join(' | '));
 }
 
 function friendlyStatus(s, upd) {

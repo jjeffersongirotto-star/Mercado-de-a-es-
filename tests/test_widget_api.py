@@ -24,11 +24,11 @@ def test_short_and_dotted_tickers():
     assert r["KO"]["g"] is None and r["KO"]["m"] == "Graham" and r["KO"]["f"] is not None  # Graham com LPA e VPA do TradingView, como fairOf
     assert r["BRK.B"]["p"] == 480.0 and r["BRK.B"]["f"] is None  # prejuízo: sem valor justo (como fairOf)
     assert r["7203"]["c"] == "JPY" and r["7203"]["f"] is None  # sem VPA
-    assert r["AAPL34"] == {"t": "AAPL34", "l": "651952a76745.png"}  # BDR que o site não mostra: só o logo
+    assert r["AAPL34"] == {"t": "AAPL34", "l": "651952a76745.png", "s": "Apple"}  # BDR que o site não mostra: só o logo e o nome popular
     assert "c" not in r["PETR4"] and r["PETR4"]["p"] == 30.0
     assert server._FQ["want"].get("us")  # país pedido: passa a ser renovado ao vivo
     old = {x["t"]: x for x in widget("KO,PETR4", v=1)}  # app 1.5 (sem v=2): sem preço de fora (mostraria R$)
-    assert old["KO"] == {"t": "KO", "l": "4cd4fb315e6f.png", "k": "us"} and old["PETR4"]["p"] == 30.0
+    assert old["KO"] == {"t": "KO", "l": "4cd4fb315e6f.png", "s": "Coca-Cola", "k": "us"} and old["PETR4"]["p"] == 30.0
 
 def test_chart_foreign_uses_card_history():
     setup()
@@ -63,6 +63,13 @@ def test_widget_refresh_only_stale_in_session():
         assert r == {"started": False, "refreshing": server.cache.refreshing} and not calls and server.cache.foreign == fq  # não limpa as de fora
     finally:
         server.cache.refresh_async, server.cache.age = orig_ra, orig_age
+
+def test_popular_names_by_country():
+    import snapshots as S
+    assert S.nome_popular("GOOG", "Alphabet Inc.", "us") == "Google" and "facebook" in S.nome_busca("META", "us")
+    assert S.nome_popular("ALV", "Autoliv Inc.", "us") == "Autoliv" and S.nome_popular("ALV", "Allianz SE", "de") == "Allianz"  # mesmo ticker, outra bolsa
+    assert S.nome_popular("PETR4", "PETROLEO BRASILEIRO") == "Petrobras" and "magazine luiza" in S.nome_busca("MGLU3")
+    assert S.nome_popular("PCAR", "Paccar Inc", "us") == "Paccar" and S.nome_popular("PCAR3", "CIA BRASILEIRA DE DISTRIBUICAO") == "GPA"
 
 if __name__ == "__main__":
     n = 0

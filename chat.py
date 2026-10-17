@@ -23,6 +23,7 @@ _DOWN = {"until": 0.0}  # Gemini respondeu 503/429: pula a IA por 2 min e respon
 IDX = {"@ibov": ["ibovespa", "ibov", "indice bovespa"], "@usd": ["dolar", "usd", "cambio"], "@cdi": ["cdi", "cdb", "renda fixa"],
        "@ipca": ["ipca", "inflacao"], "@poup": ["poupanca"], "@gold": ["ouro"]}
 import history  # noqa: E402
+import snapshots  # noqa: E402  (nomes_populares.json → apelidos)
 IDXN = {"@" + k: n for k, n in history.INDICES.items()}  # nomes dos índices: fonte única em history.INDICES
 # métricas calculadas do histórico (snapshot metrics): rótulo, unidade
 MX = {"ret1": ("Valorização 1 ano", "%"), "ret2": ("Valorização 2 anos", "%"), "ret3": ("Valorização 3 anos", "%"),
@@ -75,6 +76,7 @@ SECT_WORDS = sorted(((w, s) for s, (ws, _) in SECTORS.items() for w in ws), key=
 # apelidos -> raiz de 4 letras (só valem se a raiz existir nos dados)
 ALIAS = VOC["apelidos"]
 # apelidos que também são palavras comuns: só valem com contexto de ação (ou escritos em maiúsculas)
+POP_SKIP = {"caixa", "bolsa", "porto", "light", "petro", "multi", "mateus", "vibra", "motiva", "brava"}  # nomes populares que são palavras comuns
 GUARDED = {"vale", "azul", "gol", "tim", "rumo", "porto", "vivo", "even", "positivo", "vamos", "prio", "wiz", "raia", "natura",
            "movida", "camil", "tenda", "motiva", "cury", "bb", "b3"}
 SIGN_WORDS = {"positivo", "positiva", "positivos", "positivas", "negativo", "negativa", "negativos", "negativas"}
@@ -162,6 +164,11 @@ def build(rows, fields, metrics, cad=None):
                     tok.setdefault(w, set()).add(k)
     tok = {w: next(iter(ks)) for w, ks in tok.items() if len(ks) == 1}
     alias = {norm(a): k for a, k in ALIAS.items() if k in roots}
+    # nome popular + aliases (nomes_populares.json, fonte única): "magazine luiza", "raia drogasil"…; palavras comuns ficam de fora
+    for k in roots:
+        for nm in snapshots.nome_busca(k + "3").split(" | "):
+            a = norm(nm).strip()
+            if len(a) >= 5 and a not in alias and a not in POP_SKIP and a not in STOP and a not in GENERIC and a not in METRIC_WORDS: alias[a] = k
     seg = {k: (cad.get(k) or [None, None])[1] for k in roots}
     vocab = set(tok) | set(alias) | METRIC_WORDS | {w for w, _ in SECT_WORDS} | {w for ws in IDX.values() for w in ws}
     return {"rows": rows, "F": F, "by": by, "M": M, "roots": roots, "tok": tok, "alias": alias, "seg": seg, "liq": liq,
