@@ -31,14 +31,16 @@ final class Updater {
 
     /** Última versão publicada que o app ou o widget viu (null se nenhuma). */
     static UpdateLogic.Info known(Context c) { return UpdateLogic.parse(sp(c).getString("known", "")); }
-    static boolean available(Context c) { return UpdateLogic.available(known(c), BuildConfig.VERSION_CODE); }
+    static boolean available(Context c) { return UpdateLogic.available(known(c), BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME); }
+    // conferência ao abrir e "Depois": só na memória do processo (abrir o app de novo depois de fechado oferece outra vez)
+    private static long lastTry, snoozeUntil; private static int snoozeCode;
 
     /** Uma conferência (com novas tentativas se falhar). Guarda a versão vista; só conta como feita se deu certo. Fora da thread principal. */
     static UpdateLogic.Info fetch(Context c, int timeoutMs, int tries) {
         UpdateLogic.Info i = null;
         for (int k = 0; k < Math.min(tries, UpdateLogic.RETRY_MS.length) && i == null; k++) {
             if (UpdateLogic.RETRY_MS[k] > 0) try { Thread.sleep(UpdateLogic.RETRY_MS[k]); } catch (InterruptedException e) { break; }
-            String j = get(BuildConfig.SITE + "/app/version.json", timeoutMs);
+            String j = get(UpdateLogic.url(BuildConfig.SITE, System.currentTimeMillis()), timeoutMs);
             i = j == null ? null : UpdateLogic.parse(j);
             if (i != null) sp(c).edit().putString("known", j).putLong("ok", System.currentTimeMillis()).commit();
         }
@@ -59,8 +61,8 @@ final class Updater {
         if (pending != null && canInstall()) { UpdateLogic.Info i = pending; pending = null; download(i); return; }
         maybeAsk(known(a));  // já se sabe de uma versão nova (widget ou conferência anterior): oferece na hora
         long now = System.currentTimeMillis();
-        if (busy || checking || !(force || UpdateLogic.shouldCheck(sp().getLong("ok", 0), now))) return;
-        checking = true;
+        if (busy || checking || !(force || UpdateLogic.openCheck(lastTry, now))) return;  // sem a trava de 10 min do widget
+        checking = true; lastTry = now;
         new Thread(() -> {
             boolean before = available(a);
             UpdateLogic.Info i = fetch(a, 20000, UpdateLogic.RETRY_MS.length);
@@ -76,8 +78,8 @@ final class Updater {
 
     private void maybeAsk(UpdateLogic.Info i) {
         if (i == null || !resumed || busy || a.isFinishing() || a.isDestroyed() || (dialog != null && dialog.isShowing())) return;
-        boolean ok = force ? UpdateLogic.available(i, BuildConfig.VERSION_CODE)
-                : UpdateLogic.offer(i, BuildConfig.VERSION_CODE, sp().getInt("snoozeCode", 0), sp().getLong("snoozeUntil", 0), System.currentTimeMillis());
+        boolean ok = force ? UpdateLogic.available(i, BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)
+                : UpdateLogic.offer(i, BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, snoozeCode, snoozeUntil, System.currentTimeMillis());
         if (!ok) return;
         force = false;
         ask(i);
@@ -89,8 +91,7 @@ final class Updater {
                 .setTitle("Nova versão disponível (" + i.name + ")")
                 .setMessage("Instalada: " + BuildConfig.VERSION_NAME + ".")
                 .setPositiveButton("Atualizar", (d, w) -> start(i))
-                .setNegativeButton("Depois", (d, w) -> sp().edit().putInt("snoozeCode", i.code)
-                        .putLong("snoozeUntil", System.currentTimeMillis() + UpdateLogic.SNOOZE).apply())
+                .setNegativeButton("Depois", (d, w) -> { snoozeCode = i.code; snoozeUntil = System.currentTimeMillis() + UpdateLogic.SNOOZE; })
                 .show();
     }
 
@@ -147,6 +148,7 @@ final class Updater {
             c = (HttpURLConnection) new URL(url).openConnection();
             c.setConnectTimeout(timeoutMs); c.setReadTimeout(timeoutMs);
             c.setUseCaches(false);
+            c.setRequestProperty("Cache-Control", "no-cache"); c.setRequestProperty("Pragma", "no-cache");
             if (c.getResponseCode() != 200) return null;
             try (InputStream in = c.getInputStream()) {
                 java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream(); byte[] buf = new byte[4096]; int n;

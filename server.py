@@ -1187,6 +1187,7 @@ def _hash(path):
 
 APK = os.path.join(BASE, "static", "app", "JG-Investing.apk")  # gerado pelo build do android/ (README → App Android)
 APK_VERSION = os.path.join(BASE, "static", "app", "version.json")  # gerado junto com o APK (versionCode, versionName, apk, sha256)
+APK_MIRROR = os.environ.get("APK_MIRROR", "https://github.com/jjeffersongirotto-star/Mercado-de-a-es-/raw/main/static/app/JG-Investing.apk")
 
 def apk_version():
     """Versão do APK publicado = versionName de static/app/version.json (o build grava a partir de android/app/build.gradle)."""
@@ -1197,7 +1198,11 @@ def apk_version():
 def app_version_json():
     """Versão do APK para o app oferecer a atualização (MainActivity → Updater)."""
     if not os.path.exists(APK_VERSION): return JSONResponse({"error": "não encontrado"}, status_code=404)
-    return FileResponse(APK_VERSION, media_type="application/json", headers={"Cache-Control": "no-cache"})
+    try: v = json.load(open(APK_VERSION, encoding="utf-8"))
+    except Exception: return JSONResponse({"error": "inválido"}, status_code=500)
+    # dl: o mesmo APK fora deste endereço (GitHub, mesmo commit): o site dentro do app até a 1.13 abre no navegador (app.js → appOffer)
+    v["dl"] = APK_MIRROR
+    return JSONResponse(v, headers={"Cache-Control": "no-store, max-age=0"})
 
 @app.get("/app.apk")
 def app_apk():

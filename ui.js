@@ -211,7 +211,13 @@ window.saveFile = function (text, name, type) {
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 };
 window.saveJSON = (obj, prefix) => saveFile(JSON.stringify(obj, null, 1), prefix + '-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json', 'application/json');
-if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths };
+// Nomes de versão comparados por número em cada parte ("1.10" > "1.9"; nunca como texto). Mesma regra de UpdateLogic.cmpName (app).
+window.verCmp = (a, b) => {
+  const x = String(a || '').trim().split('.'), y = String(b || '').trim().split('.'), n = (s) => parseInt((String(s).match(/\d+/) || ['0'])[0], 10);
+  for (let k = 0; k < Math.max(x.length, y.length); k++) { const p = k < x.length ? n(x[k]) : 0, q = k < y.length ? n(y[k]) : 0; if (p !== q) return p < q ? -1 : 1; }
+  return 0;
+};
+if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths, verCmp: window.verCmp };
 
 // Volta ao app: < 10 min fora não faz nada. >= 10 min: atualiza os dados em segundo plano mantendo aba, cards e rolagem;
 // só recarrega a página se saiu versão nova, e restaura aba + rolagem depois (sessionStorage).
@@ -238,6 +244,22 @@ if (typeof document !== 'undefined') (function () {
 // então o site não deixa o Chrome oferecer a instalação dele. Dentro do app (window.JGApp) as opções de instalar somem (classe in-app).
 if (typeof window !== 'undefined' && window.addEventListener) {
   if (window.JGApp) document.documentElement.classList.add('in-app');
+  // App até a 1.13 (JGInvestingApp/x no user agent): a oferta nativa podia não aparecer (trava de 10 min, "Depois" de 24 h).
+  // O site confere /app/version.json ao abrir e ao voltar e oferece baixar pelo navegador (dl: mesmo APK fora deste endereço).
+  const av = (navigator.userAgent.match(/JGInvestingApp\/([\d.]+)/) || [])[1];
+  if (av && window.verCmp(av, '1.14') < 0) {
+    let asked = '';
+    const check = async () => {
+      try {
+        const v = await (await fetch('/app/version.json?t=' + Date.now(), { cache: 'no-store' })).json();
+        if (!v || !v.versionName || !v.dl || window.verCmp(v.versionName, av) <= 0 || asked === v.versionName || document.querySelector('.umod')) return;
+        asked = v.versionName;
+        if (await uiConfirm(`Instalada: ${av}. O navegador baixa o arquivo; depois toque nele para instalar por cima (mantém seus dados).`, { title: `Nova versão do app (${v.versionName})`, ok: 'Baixar', cancel: 'Depois' }))
+          location.href = v.dl;  // outro endereço: o app abre no navegador
+      } catch (e) { }
+    };
+    setTimeout(check, 2500); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(check, 1500); });
+  }
   else if (/Android/i.test(navigator.userAgent)) window.addEventListener('beforeinstallprompt', (e) => e.preventDefault());
 }
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof window !== 'undefined' && window.addEventListener)

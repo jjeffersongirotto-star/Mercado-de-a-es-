@@ -29,8 +29,8 @@ public class UpdateLogicTest {
         assertFalse(UpdateLogic.offer(i, 5, 0, 0, now));          // instalada mais nova
         assertFalse(UpdateLogic.offer(null, 3, 0, 0, now));
         long until = now + UpdateLogic.SNOOZE;                     // "Depois" na versão 4
-        assertFalse(UpdateLogic.offer(i, 3, 4, until, now + 3600_000L));
-        assertTrue(UpdateLogic.offer(i, 3, 4, until, until));      // passou um dia
+        assertFalse(UpdateLogic.offer(i, 3, 4, until, now + 60_000L));
+        assertTrue(UpdateLogic.offer(i, 3, 4, until, until));      // passou o prazo do "Depois"
         assertTrue(UpdateLogic.offer(UpdateLogic.parse(json(5)), 3, 4, until, now));  // versão mais nova: oferece de novo
     }
 
@@ -65,6 +65,49 @@ public class UpdateLogicTest {
         assertTrue(UpdateLogic.offer(i, 3, 0, 0, 0));   // 1.2 instalada
         assertTrue(UpdateLogic.available(i, i.code - 1)); // versão anterior instalada
         assertFalse(UpdateLogic.available(i, i.code));
+    }
+
+    /** Nomes de versão comparados por número (nunca como texto: "1.10" < "1.9" seria o erro). */
+    @Test public void versionNameNumeric() {
+        assertTrue(UpdateLogic.cmpName("1.10", "1.9") > 0);
+        assertTrue(UpdateLogic.cmpName("1.13", "1.9") > 0);
+        assertTrue(UpdateLogic.cmpName("1.14", "1.13") > 0);
+        assertTrue(UpdateLogic.cmpName("1.9", "1.10") < 0);
+        assertTrue(UpdateLogic.cmpName("2.0", "1.99") > 0);
+        assertEquals(0, UpdateLogic.cmpName("1.13", "1.13"));
+        assertEquals(0, UpdateLogic.cmpName("1.13", "1.13.0"));
+        assertTrue(UpdateLogic.cmpName("1.13.1", "1.13") > 0);
+        assertTrue(UpdateLogic.cmpName("1.14-beta", "1.13") > 0);
+        assertEquals(0, UpdateLogic.cmpName(null, ""));
+        assertTrue("1.10".compareTo("1.9") < 0);  // a comparação de texto erraria
+    }
+
+    @Test public void newerUsesCodeThenName() {
+        UpdateLogic.Info i = UpdateLogic.parse("{\"versionCode\":15,\"versionName\":\"1.14\",\"apk\":\"/app.apk\",\"sha256\":\"" + SHA + "\"}");
+        assertTrue(UpdateLogic.newer(i, 14, "1.13"));
+        assertTrue(UpdateLogic.newer(i, 11, "1.10"));
+        assertFalse(UpdateLogic.newer(i, 15, "1.14"));
+        assertFalse(UpdateLogic.newer(i, 16, "1.15"));
+        assertTrue(UpdateLogic.newer(i, 15, "1.13"));   // mesmo código, nome maior (código esquecido): oferece
+        assertFalse(UpdateLogic.newer(i, 15, "1.20"));
+        assertFalse(UpdateLogic.newer(null, 1, "1.0"));
+        assertTrue(UpdateLogic.available(i, 14, "1.13") && UpdateLogic.offer(i, 14, "1.13", 0, 0, 0));
+    }
+
+    /** Caso real (17/10/2026): 1.12 em uso e widget conferindo (30 min e cada ⟳) enquanto a 1.13 era publicada; app aberto logo depois. */
+    @Test public void rootCauseTenMinuteThrottleAndSnooze() {
+        long widget = 1_792_000_000_000L, open = widget + 4 * 60_000L;  // widget conferiu (site ainda na versão antiga); app aberto 4 min depois
+        assertFalse(UpdateLogic.shouldCheck(widget, open));             // 1.13: trava de 10 min (contava a conferência do widget) -> sem oferta
+        assertTrue(UpdateLogic.openCheck(0, open));                    // 1.14: abrir (processo novo) sempre confere
+        assertTrue(UpdateLogic.openCheck(open, open + UpdateLogic.OPEN_GAP));  // voltar ao app também
+        assertFalse(UpdateLogic.openCheck(open, open + 2_000L));       // só junta aberturas seguidas
+        assertTrue(UpdateLogic.openCheck(open, open - 1));             // relógio voltou
+        assertTrue(UpdateLogic.SNOOZE <= 10 * 60_000L);                // "Depois" não segura mais um dia inteiro
+    }
+
+    @Test public void urlWithoutCache() {
+        assertEquals("https://x/app/version.json?t=5", UpdateLogic.url("https://x", 5));
+        assertTrue(!UpdateLogic.url("https://x", 5).equals(UpdateLogic.url("https://x", 6)));
     }
 
     @Test public void checkInterval() {

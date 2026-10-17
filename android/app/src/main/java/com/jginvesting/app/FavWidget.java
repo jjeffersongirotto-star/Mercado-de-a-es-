@@ -133,7 +133,7 @@ public class FavWidget extends AppWidgetProvider {
             v.setOnClickPendingIntent(R.id.w_logo, PendingIntent.getActivity(c, 0, open, flagsImm));
             v.setOnClickPendingIntent(R.id.w_brand, PendingIntent.getActivity(c, 0, open, flagsImm));
             UpdateLogic.Info nu = Updater.known(c);
-            boolean upd = UpdateLogic.available(nu, BuildConfig.VERSION_CODE);
+            boolean upd = UpdateLogic.available(nu, BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME);
             v.setViewVisibility(R.id.w_upd, upd ? View.VISIBLE : View.GONE);
             if (upd) {
                 v.setTextViewText(R.id.w_upd, c.getString(R.string.widget_update, nu.name));
