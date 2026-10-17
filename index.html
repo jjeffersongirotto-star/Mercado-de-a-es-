@@ -474,7 +474,11 @@
   body nav.tabs button .tl { font-size: 11.5px; line-height: 1.1; white-space: nowrap; }
   body nav.tabs button.on { background: none; box-shadow: none; color: rgb(110 231 183); }
   body nav.tabs button.on .ti { background: rgb(51 65 85 / .85); }
-  @media (max-width: 400px) { body nav.tabs button .tl { font-size: 10.5px; } body nav.tabs button .ti { width: 2.6rem; } }
+  /* as 7 abas sempre cabem numa linha (sem rolar nem cortar): grade de 7 colunas iguais; fonte e pílula encolhem com a largura (360–412 px) */
+  body nav.tabs { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .1rem; overflow: visible; }
+  body nav.tabs button { min-width: 0; width: auto; padding-left: 0; padding-right: 0; }
+  body nav.tabs button .ti { width: min(3.1rem, 100%); }
+  @media (max-width: 520px) { body nav.tabs { padding: .2rem; } body nav.tabs button .tl { font-size: min(11.5px, 2.6vw); letter-spacing: -.02em; } body nav.tabs button .ti { height: 1.6rem; } body nav.tabs button .ti svg { width: 20px; height: 20px; } }
   body .gc-bar button[data-per], body #sortDir { padding: 0 .7rem; background: var(--bg-sec); border: 1px solid var(--bd); color: var(--c-txt); }
   body #sortDir { min-height: var(--h); width: var(--h); padding: 0; justify-content: center; }
   body .gc-bar button[data-per].on, body .gt-tabs button.on, body .tabs button.on { background: rgb(6 78 59 / .55); border-color: var(--c-pos-bd); color: rgb(110 231 183); box-shadow: none; }
@@ -574,7 +578,7 @@
 
 <main class="mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-3">
   <nav class="tabs" role="tablist">
-    <button type="button" data-tab="acoes" role="tab"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16" stroke-width="2"/><rect x="5" y="14" width="3" height="5" rx=".6"/><rect x="10" y="11" width="3" height="8" rx=".6"/><rect x="15" y="12.5" width="3" height="6.5" rx=".6"/><path d="M4 11l5-4 4 3 6-6" fill="none" stroke-width="2.2"/><path d="M15 4h5v5z"/></svg></span><span class="tl">Mercado</span></button>
+    <button type="button" data-tab="acoes" role="tab"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" aria-hidden="true"><rect x="3" y="15" width="3.4" height="5" rx=".6"/><rect x="8" y="12" width="3.4" height="8" rx=".6"/><rect x="13" y="10.5" width="3.4" height="9.5" rx=".6"/><rect x="18" y="8.5" width="3.4" height="11.5" rx=".6"/><path d="M2.5 11.5l5.5-4.5 4 2.5 6.5-6" fill="none" stroke-width="2.2"/><path d="M15.2 2.3h5.6v5.6z"/></svg></span><span class="tl">Mercado</span></button>
     <button type="button" data-tab="carteira" role="tab"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v2.5" fill="none" stroke-width="2"/><rect x="3.5" y="7.5" width="17" height="12" rx="2.5" fill="none" stroke-width="2"/><path d="M15 12h5.5v3.5H15a1.75 1.75 0 0 1 0-3.5z"/></svg></span><span class="tl">Carteira</span></button>
     <button type="button" data-tab="grupos" role="tab"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5" fill="none" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1.5" fill="none" stroke-width="2"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></span><span class="tl">Grupos</span></button>
     <button type="button" data-tab="comparar" role="tab"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" aria-hidden="true"><path d="M12 4v16M8 20h8" fill="none" stroke-width="2"/><path d="M5 7h14" fill="none" stroke-width="2"/><path d="M5 7l-3 6h6zM19 7l-3 6h6z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><path d="M2 13a3 2 0 0 0 6 0zM16 13a3 2 0 0 0 6 0z"/></svg></span><span class="tl">Comparar</span></button>
