@@ -587,12 +587,13 @@ def _gtargets(D, mid, idx, i):
         top=np.argsort(-sc)[:GRUPO_K]; w=np.zeros(n); w[top[np.isfinite(sc[top])]]=1
     else: w=(_signals(D,mid,idx,i)&ok).astype(float)
     s=w.sum(); return (w/s if s>0 else w)
-def grupo(D, mid, idx, me, ap):
-    """Modo Grupo (Comparar): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
-    -> valor final, IR, compras, vendas."""
+def grupo(D, mid, idx, me, ap, rec=False):
+    """Modo Grupo (Comparar e Grupo simulação): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
+    -> valor final, IR, compras, vendas (rec: + movimentações e posição final, mesmas contas)."""
     idx=np.asarray(idx);n=len(idx);s,e=me[0],me[-1];mod=MOD[mid];sell=mod['vende'] and not mod.get('frac')
     sh=np.zeros(n);basis=np.zeros(n);cash=ap[0];age=np.zeros(n);carry=0;msales=0;mgain=0;mdiv=0;ir=0;nb=0;ns=0
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV']
+    mov=[];nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else 'abaixo da média de 200 dias'
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
         if i>s:
@@ -600,7 +601,10 @@ def grupo(D, mid, idx, me, ap):
         w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1
         if sell and i>s:
             out=(sh>0)&(w==0)&ok&(age>=mod['min'])
-            v=sh*P*(1-CUSTO);g=np.where(out,v-basis,0);cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
+            v=sh*P*(1-CUSTO);g=np.where(out,v-basis,0)
+            if rec:
+                for q in np.flatnonzero(out): mov.append({"d":D['w'][i],"op":"venda","t":nm[idx[q]],"q":round(float(sh[q]),4),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"m":motivo})
+            cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
             sh=np.where(out,0,sh);basis=np.where(out,0,basis)
         j=meset.get(i)
         if j is not None and i>s:
@@ -608,11 +612,48 @@ def grupo(D, mid, idx, me, ap):
             carry=carry-mgain if mgain<0 else (max(0,carry-max(0,mgain)) if msales>ISENTO else carry)
             dt=mdiv*.10 if mdiv>50000 else 0
             cash-=tax+dt;ir+=tax+dt;msales=mgain=mdiv=0;cash+=ap[j] if j<len(ap) else 0
+            if rec and tax+dt>0: mov.append({"d":D['w'][i],"op":"imposto","v":round(float(tax+dt),2)})
         if cash>1 and w.sum()>0:
             a=cash*w;m=(a>0.005)&ok
             new=m&(sh<=0);age=np.where(new,0,age)
-            sh+=np.where(m,a*(1-CUSTO)/np.where(P>0,P,1),0);basis+=np.where(m,a,0);cash-=a[m].sum();nb+=m.sum()
-    return float((sh*np.nan_to_num(lastp)).sum()+cash), float(ir), int(nb), int(ns)
+            dq=np.where(m,a*(1-CUSTO)/np.where(P>0,P,1),0)
+            if rec:  # entrada numa empresa: uma linha; reforço das que já tem (aporte, proventos, venda de outra): uma linha por semana
+                for q in np.flatnonzero(new): mov.append({"d":D['w'][i],"op":"compra","t":nm[idx[q]],"q":round(float(dq[q]),4),"p":round(float(P[q]),2),"v":round(float(a[q]),2)})
+                re_=m&~new
+                if re_.any(): mov.append({"d":D['w'][i],"op":"reforço","n":int(re_.sum()),"v":round(float(a[re_].sum()),2)})
+            sh+=dq;basis+=np.where(m,a,0);cash-=a[m].sum();nb+=m.sum()
+    v=float((sh*np.nan_to_num(lastp)).sum()+cash)
+    if not rec: return v, float(ir), int(nb), int(ns)
+    L=np.nan_to_num(lastp); pos=[{"t":nm[idx[q]],"q":round(float(sh[q]),4),"p":round(float(L[q]),2),"v":round(float(sh[q]*L[q]),2),
+         "pct":round(float(sh[q]*L[q]/basis[q]*100-100),2) if basis[q]>0 else None} for q in np.flatnonzero(sh>0)]
+    pos.sort(key=lambda x:-x["v"])
+    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(cash),2),"mov":mov}
+
+
+def simgrupo(D, tickers, di, v0):
+    """Grupo simulação (aba Grupos): uma carteira por modelo com as mesmas empresas e o mesmo valor inicial desde di até a última semana
+    dos dados (a mesma conta de grupo(), igual ao Comparar/Previsão com data final = hoje). Recalcula do início a cada versão dos dados
+    (os preços antigos são ajustados por proventos e desdobramentos) e guarda o resultado em _C."""
+    me = _span(D, di, D["fim"])
+    if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
+    v0 = max(0.0, float(v0 or 0))
+    if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
+    key = repr(("sim", D["at"], tuple(tickers), di, v0))
+    if key in _C: _C.move_to_end(key); return _C[key]
+    idx = [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
+    if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
+    aps = [v0] + [0.0] * (len(me) - 1)
+    pc = lambda v: round((v / v0 - 1) * 100, 2)
+    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "at": D["at"], "n": len(idx), "m": []}
+    for m in MODELOS:
+        v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True)
+        out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
+                         "cash": h["cash"], "pos": h["pos"][:30], "mov": h["mov"][-200:], "nmov": len(h["mov"])})
+    out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": r["pct"], "ref": True} for r in _refs(D, me, aps, [0.0] * len(me), v0)]
+    out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
+    _C[key] = out
+    while len(_C) > 60: _C.popitem(last=False)
+    return out
 
 
 def fora_barsi(D, idx, me):

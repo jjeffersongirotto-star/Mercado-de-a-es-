@@ -214,6 +214,47 @@ def test_rend_medio_anual():
     assert np.isnan(modelos.anual(VM[:12], ap, [])[0])
 
 
+def _sim_snap(nw):
+    """3 empresas com preços e sinais que mudam (compra, venda e reforço), nw semanas."""
+    import math
+    a = {}
+    for k, t in enumerate(["AAA3", "BBB3", "CCC3"]):
+        c = [10.0 * (k + 1) * (1 + .1 * math.sin(i / (5 + k))) for i in range(NW)][:nw]
+        p1 = [400 + 300 * math.sin(i / (3 + k)) for i in range(NW)][:nw]
+        m2 = [10 * math.sin(i / (7 + k)) for i in range(NW)][:nw]
+        a[t] = {"i0": 0, "c": c, "dv": {"10": .5, "60": .5}, "si": [50] * nw, "m2": m2, "r12": [0] * nw, "p1": p1, "p3": p1}
+    return {"w": W[:nw], "mi": [50] * nw, "a": a}
+
+
+def test_grupo_simulacao():
+    """Grupo simulação = Modo Grupo do Comparar com data final = hoje; rec não muda a conta; um dia/semana a mais só acrescenta."""
+    D = modelos.build(_sim_snap(NW), cdi(0.03)); tk = D["tick"]; modelos._C.clear()
+    r = modelos.simgrupo(D, tk, "2020-02", 10000)
+    cmp = modelos.compare(D, tk, "2020-02", D["fim"], [10000.0] + [0.0] * 600)
+    cart = {x["m"]: x for x in cmp["cart"]}
+    for x in r["m"]:
+        assert (x["v"] is None and cart[x["m"]]["v"] is None) or abs(x["v"] - cart[x["m"]]["v"]) < 0.01, x["m"]
+        if not x.get("ref"): assert x["c"] == cart[x["m"]]["c"] and x["s"] == cart[x["m"]]["s"]
+    me = modelos._span(D, "2020-02", D["fim"]); ap = [10000.0] + [0.0] * (len(me) - 1)
+    for m in modelos.MODELOS:
+        a, b = modelos.grupo(D, m["id"], [0, 1, 2], me, ap), modelos.grupo(D, m["id"], [0, 1, 2], me, ap, rec=True)
+        assert a == b[:4]
+        h = b[4]; assert abs(sum(p["v"] for p in h["pos"]) + h["cash"] - b[0]) < 0.05
+        assert sum(1 for x in h["mov"] if x["op"] == "venda") == b[3]
+    al = {x["m"]: x for x in r["m"]}["alg1"]; assert any(x["op"] == "venda" for x in al["mov"]) and all({"d", "t", "q", "p", "v"} <= set(x) for x in al["mov"] if x["op"] in ("compra", "venda"))
+    # dia seguinte (uma semana nova nos dados): as movimentações de ontem continuam iguais, só entram as novas (igual a recalcular)
+    for nw in (NW - 7, NW - 3):
+        D0, D1 = modelos.build(_sim_snap(nw), cdi(0.03)), modelos.build(_sim_snap(nw + 1), cdi(0.03))
+        modelos._C.clear(); r0, r1 = modelos.simgrupo(D0, tk, "2020-02", 10000), modelos.simgrupo(D1, tk, "2020-02", 10000)
+        for x0 in r0["m"]:
+            if x0.get("ref"): continue
+            x1 = next(x for x in r1["m"] if x["m"] == x0["m"])
+            trade = lambda L: [x for x in L if x["op"] in ("compra", "venda")]
+            assert trade(x1["mov"])[:len(trade(x0["mov"]))] == trade(x0["mov"]), x0["m"]
+    assert "error" in modelos.simgrupo(D, tk, "2020-02", 0)
+    modelos._C.clear()
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

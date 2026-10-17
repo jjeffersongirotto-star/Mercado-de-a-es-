@@ -1,7 +1,8 @@
 # JG Investing
 
 Filtro de ações da B3 (e de outros países, via TradingView) com indicadores fundamentalistas, consenso entre várias fontes,
-grupos prontos, comparação, previsão de rentabilidade/aluguel e um chat sobre os dados do site.
+grupos prontos, comparação, previsão de rentabilidade/aluguel (com o Grupo simulação: uma carteira por modelo desde uma data, que segue até hoje na aba Grupos —
+`POST /api/modelos/simgrupo`) e um chat sobre os dados do site.
 
 ![Screenshot](screenshot.png)
 

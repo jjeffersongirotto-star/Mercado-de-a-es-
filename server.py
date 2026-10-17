@@ -1139,6 +1139,21 @@ def api_modelos_comparar(body: dict):
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
+@app.post("/api/modelos/simgrupo")
+def api_modelos_simgrupo(body: dict):
+    """Grupo simulação (aba Grupos): todos os modelos em todas as empresas (1 ticker por empresa) desde di, mesmo valor inicial,
+    até a última semana dos dados (modelos.simgrupo). Leve: ~0,3 s por versão dos dados, guardado em memória; o site pede 1x por dia."""
+    import modelos
+    rows = universe.universe((cache.data or {}).get("rows") or [])
+    if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
+    b = body or {}
+    try:
+        D = modelos.data(); modelos.set_setores(D, rows, _cad())
+        out = modelos.simgrupo(D, [r["ticker"] for r in rows], str(b.get("di") or "")[:7], b.get("v0"))
+    except Exception:
+        log.exception("modelos: grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
+    return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
+
 @app.get("/api/indices/{name}")
 def api_indices(name: str):
     if name not in history.SGS:

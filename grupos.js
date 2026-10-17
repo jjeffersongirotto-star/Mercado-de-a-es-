@@ -3,9 +3,44 @@
   const KEY = 'screenerB3.grupos.v1';
   const $g = (s) => document.querySelector(s);
   let groups = (() => { try { const g = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(g) ? g : []; } catch (e) { return []; } })();
-  window.userGroups = () => groups.map(g => ({ n: g.name, t: g.tickers }));  // Previsão → Modelos (rodízio nos grupos do usuário)
+  window.userGroups = () => groups.filter(g => !g.sim).map(g => ({ n: g.name, t: g.tickers }));  // Previsão → Modelos (rodízio nos grupos do usuário)
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(groups)); } catch (e) { uiAlert('Não foi possível salvar no navegador.'); } if (typeof sendPins === 'function') sendPins(); pushGroups(); };
   state.selSet = new Set(); state.selMode = false; state.group = null;
+  // Grupo simulação (criado na Previsão): {name, tickers: [], sim: {di, v0}}; o servidor simula todos os modelos desde di
+  // (/api/modelos/simgrupo, mesma conta do Comparar). Resultado guardado no aparelho e pedido de novo só 1x por dia.
+  const SKEY = 'screenerB3.simgrupo.v1';
+  const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
+  const simK = (g) => g.sim.di + '|' + g.sim.v0, today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const saveSim = () => { for (const k in SIM) if (!groups.some(g => g.sim && g.name === k)) delete SIM[k]; try { localStorage.setItem(SKEY, JSON.stringify(SIM)); } catch (e) { } };
+  function simData(g) {
+    const c = SIM[g.name], ok = c && c.k === simK(g);
+    if ((!ok || c.day !== today()) && !simLoad.has(g.name)) {
+      simLoad.add(g.name);
+      (async () => {
+        let d = null;
+        for (let i = 0; i < 6; i++) { try { const r = await fetch('/api/modelos/simgrupo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(g.sim) }); d = await r.json(); if (r.status !== 202) break; } catch (e) { d = { error: 'Sem conexão.' }; break; } await new Promise(z => setTimeout(z, 5000)); }
+        simLoad.delete(g.name);
+        if (d && !d.error && d.m) { SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); } else if (!ok) SIM[g.name] = { k: simK(g), day: '', err: (d && d.error) || 'Não foi possível simular agora.' };
+        window.gruposRefresh && gruposRefresh();
+      })();
+    }
+    return ok ? c : null;
+  }
+  const modN = (m) => m.n;
+  function simBody(g, full) {
+    const c = simData(g);
+    if (!c) return loaderHTML('Simulando os modelos…');
+    if (!c.d) return `<p class="gt-empty">${esc(c.err || '')}</p>`;
+    const d = c.d, L = full ? d.m : d.m.filter(x => !x.ref);
+    return `<p class="gt-help">Desde ${dataBR(d.d0)} · ${brl.format(d.v0)} em cada modelo · ${d.n} empresas${full ? ` · dados até ${dataBR(d.d1)}` : ''}</p>
+      <table class="gtab gsim"><thead><tr><th>Modelo</th><th>Rendimento</th><th>Hoje</th></tr></thead><tbody>${L.map(x => `<tr class="${x.ref ? '' : 'tap'}"${x.ref ? '' : ` data-simm="${esc(g.name)}|${x.m}"`}><td style="white-space:normal">${esc(modN(x))}${x.ref ? '' : `<span class="gsub">${x.np} empresa(s)</span>`}</td>
+      <td class="${x.pct == null ? '' : x.pct < 0 ? 'neg' : 'pos'}">${x.pct == null ? '—' : pc(x.pct)}</td><td>${x.v == null ? '—' : brl.format(x.v)}</td></tr>`).join('')}</tbody></table>`;
+  }
+  window.gSim = {
+    has: (n) => groups.some(g => g.name === n),
+    next: (n) => { let i = 2; while (groups.some(g => g.name === `${n} ${i}`)) i++; return `${n} ${i}`; },
+    create: (name, sim) => { groups = groups.filter(g => g.name !== name); delete SIM[name]; groups.push({ name, tickers: [], sim: { di: sim.di, v0: sim.v0 }, updated: new Date().toISOString() }); groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); saveSim(); },
+  };
   let editing = null, viewing = null;
 
   const VKEY = 'screenerB3.ordsetor.v1';
@@ -73,7 +108,7 @@
     else if (a === 'back') { viewing = null; state.group = null; state.groupRank = null; refresh(); showTab('grupos'); }
     else if (a === 'open') openGroup(find(b.dataset.n));
     else if (a === 'edit') startSel(find(b.dataset.n));
-    else if (a === 'del') { const g = find(b.dataset.n); if (g && await uiConfirm(`Excluir o grupo "${g.name}"?`, { ok: 'Excluir', danger: true })) { groups = groups.filter(x => x !== g); save(); list(); } }
+    else if (a === 'del') { const g = find(b.dataset.n); if (g && await uiConfirm(`Excluir o grupo "${g.name}"?`, { ok: 'Excluir', danger: true })) { groups = groups.filter(x => x !== g); save(); saveSim(); list(); } }
     else if (a === 'export') exportG();
     else if (a === 'import') $g('#gFile').click();
   });
@@ -241,6 +276,7 @@
     if (id === 'fav') return { title: '★ Favoritos', n: favList().length };
     if (id.startsWith('pre:')) { const p = PRE.find(x => 'pre:' + x.id === id); return { title: preTitle(p), p, rows: p.calc(ui.per[p.id] || 1).slice(0, 10), h: p.h }; }
     const gg = groups.find(x => x.name === id.slice(5)); if (!gg) return null;
+    if (gg.sim) return { title: gg.name, g: gg, sim: true };
     const byT = new Map(rowsAll().map(r => [r.ticker, r]));
     return { title: gg.name, g: gg, rows: gg.tickers.map(t => byT.get(t)).filter(Boolean).map(r => [r, r.v.valmerc ? 'R$ ' + (r.v.valmerc / 1e9).toFixed(1).replace('.', ',') + ' bi' : '—']), h: 'Valor de mercado' };
   }
@@ -250,7 +286,7 @@
     if (id === 'fav') return `<div class="gt gt-fav${favReord ? ' reord' : ''}" data-id="fav"${ui.favH ? ` style="height:${ui.favH}px;max-height:none"` : ''}><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span><button type="button" class="gbtn gford${favReord ? ' on' : ''}" data-favord aria-pressed="${favReord}" aria-label="Reorganizar favoritos" title="Reorganizar favoritos">⋮⋮</button></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}<div class="gt-grip" data-favgrip role="separator" aria-orientation="horizontal" aria-label="Arraste para aumentar ou diminuir os Favoritos" title="Arraste para aumentar ou diminuir"></div></div>`;
     return `<div class="gt" data-id="${esc(id)}"><div class="gt-head" data-open="${esc(id)}">${starB(id)}<span class="gt-name">${esc(d.title)}</span></div>
       ${d.p ? ctlRow(d.p) : ''}
-      <div class="gt-list">${grpBody(d, false)}</div><div class="gt-foot">${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}${d.p ? '' : `<button type="button" class="gt-act" data-g="edit" data-n="${esc(d.g.name)}">Editar</button><button type="button" class="gt-act dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button>`}</div></div>`;
+      <div class="gt-list">${d.sim ? simBody(d.g, false) : grpBody(d, false)}</div><div class="gt-foot">${d.sim ? `<div class="upd gt-upd">${SIM[d.g.name] && SIM[d.g.name].d ? 'Dados até ' + dataBR(SIM[d.g.name].d.d1) : ''}</div>` : window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}${d.p ? '' : `${d.sim ? '' : `<button type="button" class="gt-act" data-g="edit" data-n="${esc(d.g.name)}">Editar</button>`}<button type="button" class="gt-act dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button>`}</div></div>`;
   }
   // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
   let FLOW = null, flowLoading = false;
@@ -280,7 +316,7 @@
   let sortable = null, reorg = false, fullId = null, lastY = 0;
   function fullHtml(id) {
     const d = groupData(id); if (!d) { fullId = null; return ''; }
-    const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? ctlRow(d.p) : '') + grpBody(d, true);
+    const body = id === 'fav' ? favControls() + favBody(true) : (d.p ? ctlRow(d.p) : '') + (d.sim ? simBody(d.g, true) : grpBody(d, true));
     return `<section class="gfull"><div class="gfull-head"><b>${esc(d.title)}</b><button type="button" class="gx" data-gclose aria-label="Fechar grupo">✕</button></div>${body}</section>`;
   }
   function openDet(tr) {  // abre o card completo abaixo da linha (um por vez); mesmo código para todos os grupos e Favoritos
@@ -340,6 +376,11 @@
     if (e.target.closest('[data-gclose]')) { const id = fullId, y = lastY; fullId = null; list(); requestAnimationFrame(() => { window.scrollTo(0, y); const t = document.querySelector(`.gt[data-id="${CSS.escape(id || '')}"]`); if (t) t.classList.add('hl'); }); return; }
     if (e.target.closest('[data-alr]')) return;
     if (favReord && e.target.closest('.gt-fav') && !e.target.closest('[data-favord]')) return;  // reorganizando: toque não abre card nem destaca
+    const sm = e.target.closest('[data-simm]');
+    if (sm) {
+      const [gn, mid] = sm.dataset.simm.split('|'), c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x) return;
+      uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0 }, x)) }); return;
+    }
     const tr = e.target.closest('tr.tap[data-row]');
     if (tr) {
       const nx = tr.nextElementSibling; if (nx && nx.classList.contains('gdet')) { nx.remove(); tr.classList.remove('sel'); return; }
@@ -381,16 +422,17 @@
       for (const g of arr || []) {
         if (!g || typeof g.name !== 'string' || !Array.isArray(g.tickers)) continue;
         let name = g.name.trim().slice(0, 40); const tk = [...new Set(g.tickers.map(t => String(t).toUpperCase().trim()).filter(Boolean))].sort();
+        const sim = g.sim && /^\d{4}-\d{2}$/.test(g.sim.di) && +g.sim.v0 > 0 ? { di: g.sim.di, v0: +g.sim.v0 } : null;  // Grupo simulação
         const ex = groups.find(x => x.name === name);
         if (ex) {
-          if (ex.tickers.join() === tk.join()) continue;
+          if (ex.tickers.join() === tk.join() && JSON.stringify(ex.sim || null) === JSON.stringify(sim)) continue;
           if (await uiConfirm(`O grupo "${name}" já existe.`, { ok: 'Substituir', cancel: 'Importar como cópia', danger: true })) groups = groups.filter(x => x !== ex);
           else { let i = 2; while (groups.some(x => x.name === `${name} (${i})`)) i++; name = `${name} (${i})`; }
         }
-        groups.push({ name, tickers: tk, updated: g.updated || new Date().toISOString() }); n++;
+        groups.push(Object.assign({ name, tickers: sim ? [] : tk, updated: g.updated || new Date().toISOString() }, sim ? { sim } : {})); n++;
       }
       if (fv.length) { fv.forEach(t => FAVS.add(t)); setFavOrder([...FAVS]); }  // favoritos do arquivo entram no fim da sua ordem
-      groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); list();
+      groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); saveSim(); list();
       uiToast(n + ' grupo(s) importado(s)' + (fv.length ? ` e ${fv.length} favorito(s)` : ''));
     } catch (err) { uiAlert('Não foi possível importar: ' + err.message); }
     e.target.value = '';

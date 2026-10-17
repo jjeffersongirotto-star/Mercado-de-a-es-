@@ -870,6 +870,7 @@ def ui_labels():
 GLOSS_SYN = VOC["glossario"]
 # assunto da pergunta -> seções do painel ⓘ (títulos <h3>/<summary>); o texto fica só no painel
 HOWTO_KEYS = [
+    (("grupo simulacao", "grupo de simulacao", "carteira por modelo", "simulacao ate hoje", "desde a data inicial"), ["Grupos", "Modelos da Previsão"]),
     (("metodo de investimento", "metodos de investimento", "estrategia de investimento"), ["Métodos de investimento"]),
     (("carteira", "posicao", "posicoes", "preco medio"), ["Carteira"]),
     (("alerta", "sininho", "avisar", "aviso de preco", "notifica"), ["Favoritos"]),

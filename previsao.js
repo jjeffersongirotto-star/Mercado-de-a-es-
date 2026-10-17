@@ -289,7 +289,21 @@ if (typeof document !== 'undefined') {
     resetMes(); if (id === 'pvDi') st.di = v; else st.df = v;
     if (st.df && st.di && st.df < st.di) st.df = st.di;
     el('pvDi').value = st.di; el('pvDf').value = st.df; compute(); save();
+    if (st.ticker === '*' && st.di && !st.df && window.gSim) askSim();  // Todos + data inicial + data final vazia: oferece o Grupo simulação
   });
+  // Grupo simulação: uma carteira por modelo desde a data inicial, com o Valor inicial; continua sozinho até hoje (aba Grupos)
+  async function askSim() {
+    if (!(st.ini > 0)) { uiAlert('Para criar o Grupo simulação, preencha o Valor inicial.'); return; }
+    if (!(await uiConfirm(`Cada modelo começa com ${brl.format(st.ini)} em ${dataBR(st.di)} e segue as próprias regras até hoje, atualizando sozinho. O grupo fica na aba Grupos.`,
+      { title: 'Criar grupo de simulação?', ok: 'Criar', cancel: 'Agora não' }))) return;
+    let name = 'Grupo simulação';
+    if (gSim.has(name)) {
+      const nx = gSim.next(name), c = await uiChoose(`Já existe "${name}".`, [{ label: 'Substituir', value: 'rep' }, { label: `Criar "${esc(nx)}"`, value: 'new' }]);
+      if (!c) return; if (c === 'new') name = nx;
+    }
+    gSim.create(name, { di: st.di, v0: st.ini });
+    uiToast(`"${name}" criado na aba Grupos`);
+  }
   el('pvOldest').addEventListener('click', () => { const t = el('pvOldest').dataset.tip; if (t) uiAlert(t); });
 
   // Cálculo. Convenção (igual à planilha): mês 1 = valor inicial; no mês n,
@@ -533,7 +547,21 @@ if (typeof document !== 'undefined') {
     if (tk) { sel = { t: tk, m }; el('pvDes').querySelectorAll('tr.sel').forEach(x => x.classList.remove('sel')); t.classList.add('sel'); }
     openPeek(tk, m);
   });
+  // movimentações: rodízio (Saiu/Entrou) ou carteira do Grupo simulação (r.sim: compras, vendas e reforços com data, preço e quantidade)
+  window.pvGroupHtml = groupHtml;
+  function simHtml(r) {
+    const qf = (q) => q >= 100 ? F0.format(q) : F2.format(q);
+    const pos = r.pos.map(x => `<tr><td><b>${esc(x.t)}</b></td><td>${qf(x.q)}</td><td>${brl.format(x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`).join('');
+    const op = (x) => x.op === 'reforço' ? `Reforço em ${x.n} empresa(s)` : x.op === 'imposto' ? 'Imposto (IR)' : `${x.op === 'venda' ? 'Venda' : 'Compra'} <b>${esc(x.t)}</b>${x.m ? `<br><span class="pvd-note">${esc(x.m)}</span>` : ''}`;
+    const mv = r.mov.slice().reverse().map(x => `<tr><td>${dataBR(x.d)}</td><td style="white-space:normal;text-align:left">${op(x)}</td><td>${x.q != null ? qf(x.q) : '—'}</td><td>${x.p != null ? brl.format(x.p) : '—'}</td><td>${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`).join('');
+    return `<p class="pvd-note">Desde ${dataBR(r.d0)} com ${brl.format(r.v0)} · hoje ${brl.format(r.v)} (<span class="${r.pct < 0 ? 'dn' : 'up'}">${pc(r.pct)}</span>) · ${r.c} compras e ${r.s} vendas · imposto ${brl.format(r.ir)} · dados até ${dataBR(r.d1)}</p>
+      <p class="pvd-note">Posição hoje: ${r.np} empresa(s)${r.np > r.pos.length ? ` (as ${r.pos.length} maiores abaixo)` : ''} e ${brl.format(r.cash)} no CDB.</p>
+      <table class="gtab"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Preço</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="5">Tudo no CDB.</td></tr>'}</tbody></table>
+      <table class="gtab"><thead><tr><th>Data</th><th>Operação</th><th>Qtd.</th><th>Preço</th><th>Valor</th></tr></thead><tbody>${mv || '<tr><td colspan="5">Nenhuma movimentação.</td></tr>'}</tbody></table>
+      ${r.nmov > r.mov.length ? `<p class="pvd-note">Mostrando as ${r.mov.length} últimas de ${r.nmov} movimentações.</p>` : ''}`;
+  }
   function groupHtml(r) {
+    if (r.sim) return simHtml(r);
     const h = r.hist, sem = (x) => `${F0.format(x)} sem. (~${F0.format(x / 4.35)} meses)`;
     const emp = h.emp.map(x => `<tr><td><b>${esc(x.t)}</b></td><td>${x.c}</td><td>${sem(x.sem)}</td><td class="${x.res < 0 ? 'dn' : 'up'}">${brl.format(x.res)}</td><td>${brl.format(x.ir)}</td></tr>`).join('');
     // valor movimentado: venda (com o resultado da posição, proventos incluídos) e compra
