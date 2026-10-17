@@ -1,6 +1,6 @@
 """Barato/Caro: configuração e conta do valor justo (fonte única). O site recebe FAIR em /api/data → `fair` e faz a mesma
 conta em app.js → fairOf (e lpaRef = lpa_ref); o chat usa fair() daqui. Explicação ao usuário: painel ⓘ → Glossário → Barato/Caro."""
-import statistics
+import re, statistics
 
 FAIR = {
     "ke": 14.0,        # custo de capital (% ao ano) do Gordon: bancos e seguradoras
@@ -13,6 +13,10 @@ FAIR = {
     # sem valor justo: texto da célula (card, CSV, chat) e versão curta (widget do app); o motivo fica no detalhe
     "zero": 0.5,       # |margem| abaixo disso (%) = 0%: preço no valor justo, sem sinal, verde (site, chat, CSV e widget)
     "rot": {"prej": ["Prejuízo recorrente", "Prej."], "sem": ["Sem valor justo", "s/ VJ"]},
+    # só empresas brasileiras: ação de fora (cur != BRL) e BDR (balanço da empresa de fora) ficam "Sem valor justo" · "Empresa estrangeira"
+    # (backtest nos EUA 2023–25: nenhuma regra previu retorno; Graham dava −50% para quase metade do mercado por causa das recompras)
+    "so_br": True,
+    "bdr_re": "^[A-Z0-9]{4}3[2-59]$",
     # Barsi (preço teto): dividendo médio por ação dos últimos anos completos (B3, 3 a 5 anos) ÷ taxa; segmentos oficiais da B3
     "barsi_taxa": 6.0,
     "barsi_anos": [3, 5],
@@ -76,10 +80,16 @@ def rotulo(motivo):
     return FAIR["rot"]["prej" if motivo.startswith("Prejuízo médio") else "sem"]
 
 
+def estrangeira(r):
+    """Ação de fora (moeda diferente do real) ou BDR negociado na B3 (fundamentos da empresa de fora)."""
+    return r.get("cur") != "BRL" or bool(re.match(FAIR["bdr_re"], r.get("ticker") or ""))
+
+
 def fair(r, val, rows):
     """-> (valor justo, %, método) ou (None, motivo, None). r = linha de /api/data; val(r, k) = valor exibido; rows = todas (P/VP do setor).
     Método com a janela do LPA quando não é a padrão: "Barsi · média 5a", "Graham · LPA 12m". Texto da célula sem valor: rotulo(motivo)."""
     p, b, br = val(r, "preco"), val(r, "vpa"), r.get("cur") == "BRL"
+    if FAIR["so_br"] and estrangeira(r): return None, "Empresa estrangeira", None
     if not (p and p > 0): return None, "Sem preço", None
     if (r.get("st") or {}).get("vpa") == "red": return None, "Dados divergentes entre as fontes", None  # consenso (mesma regra de fairOf)
     if b is None: return None, "Sem VPA", None

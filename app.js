@@ -385,6 +385,7 @@ function lpaRef(r, b, lpa, br) {
 function fairOf(r) {
   const FC = (state.data && state.data.fair) || {}, br = state.country === 'br', p = priceOf(r), b = val(r, 'vpa');
   const no = (why) => ({ why, lab: ((FC.rot || {})[why.startsWith('Prejuízo médio') ? 'prej' : 'sem'] || ['—'])[0] });
+  if (FC.so_br && (!br || new RegExp(FC.bdr_re).test(r.ticker || ''))) return no('Empresa estrangeira');  // só empresas brasileiras (valor_justo.estrangeira)
   if (!(p > 0)) return no('Sem preço');
   if (state.source === 'all' && (r.st || {}).vpa === 'red') return no('Dados divergentes entre as fontes');
   if (b == null) return no(state.source === 'all' ? 'Sem VPA nas fontes' : 'Sem VPA nesta fonte');

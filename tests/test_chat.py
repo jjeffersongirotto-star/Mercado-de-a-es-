@@ -32,6 +32,7 @@ ROWS = [R("PETR4", "Petroleo Brasileiro SA Pfd", "Energy Minerals", "Integrated 
         R("POSI3", "Positivo Tecnologia SA", "Electronic Technology", "Computer Processing Hardware", 14.5, preco=6.0, dy=3.0, pl=5.0, pvp=0.45, roe=9.0, lpa=1.2),
         R("SYNE3", "Syn Prop e Tech SA", "Finance", "Real Estate Development", 0.0, preco=3.0, dy=74.0, pl=2.0, pvp=0.5, roe=10.0)]
 ROWS[6]["st"] = {"roe": "red"}
+for _r in ROWS: _r["cur"] = "BRL"  # linhas da B3 (como em /api/data); sem cur = ação de fora
 CAD = {"PETR": ["PETROLEO BRASILEIRO S.A. PETROBRAS", "Exploração. Refino e Distribuição"], "VALE": ["VALE S.A.", "Minerais Metálicos"],
        "ITUB": ["ITAU UNIBANCO HOLDING S.A.", "Bancos"], "BBDC": ["BCO BRADESCO S.A.", "Bancos"], "BBAS": ["BCO BRASIL S.A.", "Bancos"],
        "BBSE": ["BB SEGURIDADE PARTICIPAÇÕES S.A.", "Seguradoras"], "WEGE": ["WEG S.A.", "Motores . Compressores e Outros"],
@@ -442,7 +443,7 @@ def test_ai_answer_order_moves_specialized_sites():
 def test_fair_value_and_fear_greed():
     D["by"]["PETR4"]["v"].update(vpa=40.0)  # LPA 10,3 · VPA 40 · preço 56 -> justo √(22,5×10,3×40) = 96,28
     a = ask("a petr4 está barata?")[1]
-    assert a.startswith("PETR4: +72% até o valor justo") and "valor justo (Graham) R$ 96,28" in a and "Graham" in a
+    assert a.startswith("PETR4: +72% até o valor justo") and "valor justo (Graham · LPA 12m) R$ 96,28" in a and "Graham" in a
     assert ask("vale3 está cara?")[1].startswith("VALE3: sem Barato/Caro")
     old = chat.fg_data
     chat.fg_data = lambda: {"d": ["2026-10-0%d" % i for i in range(1, 9)] + ["2026-10-09"] * 22, "v": [30] * 9 + [50] * 19 + [58, 62],

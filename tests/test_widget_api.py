@@ -21,7 +21,7 @@ def test_short_and_dotted_tickers():
     r = {x["t"]: x for x in widget("KO,BRK.B,PETR4,AAPL34,7203,bad ticker!,X" + "Y" * 20)}
     assert set(r) == {"KO", "BRK.B", "PETR4", "AAPL34", "7203"}
     assert r["KO"]["p"] == 60.0 and r["KO"]["v"] == -0.5 and r["KO"]["c"] == "USD" and r["KO"]["s"] == "Coca-Cola" and r["KO"]["l"] == "4cd4fb315e6f.png"
-    assert r["KO"]["g"] is None and r["KO"]["m"] == "Graham" and r["KO"]["f"] is not None  # Graham com LPA e VPA do TradingView, como fairOf
+    assert r["KO"]["g"] is None and r["KO"]["f"] is None and r["KO"]["x"] == "s/ VJ"  # ação de fora: sem valor justo (Empresa estrangeira)
     assert r["BRK.B"]["p"] == 480.0 and r["BRK.B"]["f"] is None  # prejuízo: sem valor justo (como fairOf)
     assert r["7203"]["c"] == "JPY" and r["7203"]["f"] is None  # sem VPA
     assert r["AAPL34"] == {"t": "AAPL34", "l": "651952a76745.png", "s": "Apple"}  # BDR que o site não mostra: só o logo e o nome popular

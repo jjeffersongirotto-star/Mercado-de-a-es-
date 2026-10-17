@@ -31,6 +31,14 @@ def test_rotulos():
         assert j is None and V.rotulo(why) == ["Sem valor justo", "s/ VJ"], (r, v, why)
     assert f({}, preco=10.0, vpa=-5.0)[1] == "Patrimônio negativo"
 
+def test_estrangeira_sem_valor_justo():
+    v = lambda r, k: r["v"].get(k)
+    us = {"ticker": "GOOG", "cur": "USD", "v": {"preco": 250.0, "lpa": 10.0, "vpa": 30.0}}
+    bdr = {"ticker": "AURA33", "cur": "BRL", "v": {"preco": 50.0, "lpa": 5.0, "vpa": 20.0}}
+    br = {"ticker": "PETR4", "cur": "BRL", "v": {"preco": 30.0, "lpa": 5.0, "vpa": 20.0}}
+    assert V.fair(us, v, []) == (None, "Empresa estrangeira", None) and V.fair(bdr, v, [])[1] == "Empresa estrangeira"
+    assert V.rotulo("Empresa estrangeira") == ["Sem valor justo", "s/ VJ"] and V.fair(br, v, [])[0] is not None
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"): fn()
