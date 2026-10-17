@@ -12,7 +12,7 @@ public class WidgetTap extends Activity {
         super.onCreate(b);
         Intent i = getIntent();
         String a = i.getStringExtra(A), t = i.getStringExtra(T);
-        if (t != null && t.matches("[A-Z0-9]{3,12}")) {
+        if (t != null && WidgetData.validTicker(t)) {
             if ("o".equals(a)) {
                 startActivity(new Intent(this, MainActivity.class).putExtra(FavWidget.EXTRA_TICKER, t)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP));

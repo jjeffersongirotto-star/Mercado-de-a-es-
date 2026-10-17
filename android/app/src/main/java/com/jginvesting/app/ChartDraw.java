@@ -48,7 +48,7 @@ final class ChartDraw {
         lab.setTextAlign(Paint.Align.RIGHT);
         for (double v = Math.ceil(y0 / step) * step; v <= y1; v += step) {
             float y = Y.apply(v); cv.drawLine(left, y, right, y, grid);
-            cv.drawText(WidgetData.price(v), left - 3 * dp, y + 3.5f * dp, lab);
+            cv.drawText(WidgetData.axis(v, ch.cur), left - 3 * dp, y + 3.5f * dp, lab);
         }
         Paint zero = new Paint(Paint.ANTI_ALIAS_FLAG); zero.setColor(c.getColor(R.color.c_mut)); zero.setAlpha(153); zero.setStrokeWidth(dp);
         zero.setStyle(Paint.Style.STROKE); zero.setPathEffect(new DashPathEffect(new float[]{4 * dp, 3 * dp}, 0));

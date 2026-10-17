@@ -14,12 +14,12 @@ final class Api {
 
     /** -> JSON da resposta ou null (sem internet, servidor acordando etc.). */
     static String widget(List<String> favs, int timeoutMs) {
-        try { return get("/api/widget?t=" + URLEncoder.encode(WidgetData.param(favs), "UTF-8"), timeoutMs); }
+        try { return get("/api/widget?v=2&t=" + URLEncoder.encode(WidgetData.param(favs), "UTF-8"), timeoutMs); }
         catch (Exception e) { return null; }
     }
 
     /** Gráfico de 5 anos de uma ação (/api/widget/chart). */
-    static String chart(String t, int timeoutMs) { return get("/api/widget/chart?t=" + t, timeoutMs); }
+    static String chart(String t, int timeoutMs) { try { return get("/api/widget/chart?t=" + URLEncoder.encode(t, "UTF-8"), timeoutMs); } catch (java.io.UnsupportedEncodingException e) { return null; } }
 
     /** PNG de um logo (/logos/<arquivo>) ou null. */
     static byte[] logo(String file, int timeoutMs) {

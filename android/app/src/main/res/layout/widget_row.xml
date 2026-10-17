@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- linha do widget: logo (32dp, formato original; sem logo: iniciais) + ticker e nome curto | colunas fixas (dimens.xml); aberta, gráfico de 5 anos com 16 faixas de toque -->
+<!-- linha do widget: logo (32dp, formato original; sem logo: iniciais) + ticker e nome curto | colunas fixas (dimens.xml; preço na moeda da ação, símbolo menor e texto que encolhe para caber); aberta, gráfico de 5 anos com 16 faixas de toque -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/r_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -30,8 +31,10 @@
                     android:ellipsize="end" android:maxLines="1" android:textColor="@color/c_mut" android:textSize="10sp" />
             </LinearLayout>
         </LinearLayout>
-        <TextView android:id="@+id/r_price" android:layout_width="@dimen/col_p" android:layout_height="wrap_content" android:gravity="center"
-            android:maxLines="1" android:textColor="@color/c_txt" android:textSize="13sp" />
+        <TextView android:id="@+id/r_price" android:layout_width="@dimen/col_p" android:layout_height="20dp" android:gravity="center"
+            android:maxLines="1" android:textColor="@color/c_txt" android:textSize="13sp"
+            android:autoSizeTextType="uniform" android:autoSizeMinTextSize="9sp" android:autoSizeMaxTextSize="13sp" android:autoSizeStepGranularity="0.5sp"
+            tools:targetApi="26" />
         <TextView android:id="@+id/r_var" android:layout_width="@dimen/col_v" android:layout_height="wrap_content" android:gravity="center"
             android:maxLines="1" android:textSize="12sp" android:textStyle="bold" />
         <FrameLayout android:layout_width="@dimen/col_f" android:layout_height="wrap_content">

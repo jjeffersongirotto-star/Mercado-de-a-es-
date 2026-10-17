@@ -15,12 +15,18 @@ import java.util.Map;
 public final class WidgetData {
     private WidgetData() { }
 
+    /** Ticker aceito do site (Favoritos/grupos), do widget e de /api/widget: PETR4, KO, V, BRK.B, RR., BT-A, 7203.
+     *  Letras, dígitos, ponto e hífen; começa com letra ou dígito; 1 a 12 caracteres (mesmo padrão de server.WIDGET_TK). */
+    public static final String TICKER = "[A-Z0-9][A-Z0-9.\\-]{0,11}";
+    public static boolean validTicker(String t) { return t != null && t.matches(TICKER); }
+
     /** Uma linha do widget. Campos nulos = sem dado ("—"). f = Barato/Caro em % (+ até o valor justo, − acima dele). */
     public static final class Item {
         public final String t, m;
         public final Double p, v, f;
         public final Integer g;  // Medo e Ganância da ação (0–100)
         public String s, l;      // nome curto da empresa e arquivo do logo (/logos/<l>; null = iniciais)
+        public String c;         // moeda (USD, GBP, EUR, JPY; null = real)
         Item(String t, Double p, Double v, Double f, String m, Integer g) { this.t = t; this.p = p; this.v = v; this.f = f; this.m = m; this.g = g; }
     }
 
@@ -56,7 +62,7 @@ public final class WidgetData {
             JSONArray a = new JSONArray(json);
             for (int i = 0; i < a.length(); i++) {
                 String t = a.optString(i, "").trim().toUpperCase(Locale.ROOT);
-                if (t.matches("[A-Z0-9]{3,12}") && !out.contains(t)) out.add(t);
+                if (validTicker(t) && !out.contains(t)) out.add(t);
             }
         } catch (Exception e) { /* lista inválida = vazia */ }
         return out;
@@ -117,6 +123,7 @@ public final class WidgetData {
                 Item it = new Item(t, num(o, "p"), num(o, "v"), num(o, "f"), o.isNull("m") ? null : o.optString("m", null), g == null ? null : (int) Math.round(g));
                 it.s = o.isNull("s") ? null : o.optString("s", null);
                 it.l = logo(o.isNull("l") ? null : o.optString("l", null));
+                it.c = cur(o.isNull("c") ? null : o.optString("c", null));
                 by.put(t, it);
             }
         } catch (Exception e) { /* sem dados: só os tickers */ }
@@ -141,8 +148,26 @@ public final class WidgetData {
 
     private static DecimalFormat df(String pat) { return new DecimalFormat(pat, DecimalFormatSymbols.getInstance(new Locale("pt", "BR"))); }
 
+    /** Código de moeda válido (3 letras) ou null (= real). */
+    public static String cur(String c) { return c != null && c.matches("[A-Z]{3}") ? c : null; }
+
+    /** Símbolo da moeda, como o site (app.js → CUR). */
+    public static String symbol(String cur) {
+        if (cur == null || "BRL".equals(cur)) return "R$";
+        switch (cur) { case "USD": return "US$"; case "EUR": return "€"; case "GBP": return "£"; case "JPY": return "¥"; default: return cur; }
+    }
+
     /** R$ 1.234,56 (formato brasileiro, como no site). */
-    public static String price(Double p) { return p == null ? "—" : "R$ " + df("#,##0.00").format(p); }
+    public static String price(Double p) { return price(p, null); }
+
+    /** Preço na moeda da ação, compacto para a coluna: US$ 343,46 · ¥ 3.094 (iene sem centavos, como o site) ·
+     *  US$ 12.345 (de 10 mil para cima sem centavos) · US$ 1,07 mi (de 1 milhão para cima). */
+    public static String price(Double p, String cur) {
+        if (p == null) return "—";
+        double a = Math.abs(p);
+        String n = a >= 1e6 ? df("#,##0.00").format(p / 1e6) + " mi" : (a >= 10000 || "JPY".equals(cur)) ? df("#,##0").format(p) : df("#,##0.00").format(p);
+        return symbol(cur) + " " + n;
+    }
 
     /** Variação do dia: ▲ 1,23% / ▼ 0,55% (como no card). */
     public static String change(Double v) {
@@ -154,6 +179,13 @@ public final class WidgetData {
     public static String badge(Double f) {
         if (f == null) return "—";
         return (f >= 0 ? "+" : "−") + df("0").format(Math.abs(f)) + "%";
+    }
+
+    /** Rótulo do eixo do gráfico: real como antes (R$ 59,68); outra moeda só o número, para caber na margem (a moeda está na dica). */
+    public static String axis(double v, String cur) {
+        if (cur == null || "BRL".equals(cur)) return price(v);
+        double a = Math.abs(v);
+        return a >= 1e6 ? df("#,##0.0").format(v / 1e6) + " mi" : (a >= 100 || "JPY".equals(cur)) ? df("#,##0").format(v) : df("#,##0.00").format(v);
     }
 
     // ---------- Medo e Ganância da ação (faixas de /api/widget → gf, as mesmas do card: snapshot fg_acoes) ----------
@@ -179,6 +211,7 @@ public final class WidgetData {
     /** Série do gráfico: t em segundos, c = fechamento; base = preço no início do período (variação = c ÷ base − 1). */
     public static final class Chart {
         public final long[] t; public final double[] c; public final double base;
+        public String cur;  // moeda (null = real)
         Chart(long[] t, double[] c, double base) { this.t = t; this.c = c; this.base = base; }
         public int size() { return t.length; }
     }
@@ -188,7 +221,9 @@ public final class WidgetData {
             int n = p.length(); if (n < 2 || o.isNull("b")) return null;
             long[] t = new long[n]; double[] c = new double[n];
             for (int i = 0; i < n; i++) { JSONArray q = p.getJSONArray(i); t[i] = q.getLong(0); c[i] = q.getDouble(1); }
-            return new Chart(t, c, o.getDouble("b"));
+            Chart ch = new Chart(t, c, o.getDouble("b"));
+            ch.cur = cur(o.isNull("c") ? null : o.optString("c", null));
+            return ch;
         } catch (Exception e) { return null; }
     }
     /** Toque na faixa z (0..n-1) do gráfico: data em z ÷ (n − 1) do período (1ª faixa = início, última = hoje) e o ponto =
@@ -200,11 +235,11 @@ public final class WidgetData {
         for (int i = 0; i < ch.size(); i++) { if (ch.t[i] > at) break; k = i; }
         return k;
     }
-    /** Dica do ponto, como a do gráfico do site: 16/10/2026 · R$ 59,68 · +101,62% (variação desde o início do período). */
+    /** Dica do ponto, como a do gráfico do site: 16/10/2026 · R$ 59,68 · +101,62% (variação desde o início do período; moeda da ação). */
     public static String tip(Chart ch, int i) {
         java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("dd/MM/yyyy", Locale.ROOT);
         f.setTimeZone(java.util.TimeZone.getTimeZone("America/Sao_Paulo"));
         double v = (ch.c[i] / ch.base - 1) * 100;
-        return f.format(new java.util.Date(ch.t[i] * 1000)) + " · " + price(ch.c[i]) + " · " + (v >= 0 ? "+" : "-") + df("#,##0.00").format(Math.abs(v)) + "%";
+        return f.format(new java.util.Date(ch.t[i] * 1000)) + " · " + price(ch.c[i], ch.cur) + " · " + (v >= 0 ? "+" : "-") + df("#,##0.00").format(Math.abs(v)) + "%";
     }
 }

@@ -905,27 +905,80 @@ def api_pin(body: dict):
     return Response(status_code=204)
 
 @app.get("/api/widget")
-def api_widget(t: str = ""):
+def api_widget(t: str = "", v: int = 1):
     """Widget de Favoritos do app Android (android/): preço, variação do dia e Barato/Caro (valor_justo.fair, a mesma conta do card)
     só dos tickers pedidos, a partir dos dados já em memória (/api/data). Leve: nada é baixado nem recalculado por pedido."""
     d = cache.data or {}
     rows = d.get("rows") or []
     if not rows: return JSONResponse({"loading": True, "r": []}, status_code=503, headers={"Cache-Control": "no-store"})
-    want = [x.strip().upper() for x in (t or "").split(",") if x.strip()][:40]
+    want = [x for x in (x.strip().upper() for x in (t or "").split(",")) if WIDGET_TK.fullmatch(x)][:40]
     by = {r["ticker"]: r for r in rows}
-    v = lambda o, k: (o.get("v") or {}).get(k)
+    ver, v = v, (lambda o, k: (o.get("v") or {}).get(k))
     logos = logo_index()
+    fq, fqw = foreign_quotes(), _FQ["want"]
     out = []
     for tk in want:
         r = by.get(tk)
-        if not r:  # fora da B3 (EUA etc.) ou BDR: só o logo, se houver (sem preço aqui: nada pesado por pedido)
-            out.append({"t": tk, "l": (logos.get(tk) or {}).get("f")}); continue
+        if not r:  # fora da B3: cotação da aba Ações do país (TradingView, foreign_quotes); BDR que o site não mostra: só o logo
+            q = fq.get(tk)
+            if not q or ver < 2:  # app até 1.5 (sem v=2) mostraria o preço como R$: só logo e país
+                out.append({"t": tk, "l": (logos.get(tk) or {}).get("f"), **({"k": q["c"]} if q else {})}); continue
+            fqw[q["c"]] = time.time()
+            fr = {"cur": q["cur"], "subsetor": q.get("sub")}
+            j, pct, m = valor_justo.fair(fr, lambda o, k: q["v"].get(k), [])
+            out.append({"t": tk, "n": q.get("n"), "s": snapshots.nome_curto(q.get("n")), "l": (logos.get(tk) or {}).get("f"),
+                        "p": q["v"].get("preco"), "v": q.get("var"), "c": q["cur"], "k": q["c"],
+                        "f": round(pct, 1) if j else None, "m": m if j else None, "g": None})  # Medo e Ganância: só B3
+            continue
         j, pct, m = valor_justo.fair(r, v, rows)
         out.append({"t": tk, "n": r.get("nome"), "s": snapshots.nome_curto(r.get("nome")), "l": (logos.get(tk) or {}).get("f"),
                     "p": v(r, "preco"), "v": r.get("var"),
                     "f": round(pct, 1) if j else None, "m": m if j else None,
                     "g": (r.get("fg") or [None])[0]})  # Medo e Ganância da ação hoje (snapshot fg_acoes → rows.fg, o mesmo do card)
     return JSONResponse({"u": d.get("updated_at_sp"), "gf": (d.get("fga") or {}).get("faixas"), "r": out}, headers={"Cache-Control": "no-store"})
+
+WIDGET_TK = re.compile(r"[A-Z0-9][A-Z0-9.\-]{0,11}")  # PETR4, KO, BRK.B, RR., BT-A (mesmo padrão do app: WidgetData.TICKER)
+_FQ = {"q": {}, "at": 0.0, "busy": False, "live": {}, "want": {}}
+
+def foreign_quotes():
+    """Ações de fora no widget: ticker -> {c: país, cur, n: nome, var, sub, v: {preco, vpa, lpa}}. Fonte única = a da aba Ações
+    de cada país (TradingView: build_foreign → load_tv): usa a cópia que a aba já tem em memória (cache.foreign); país pedido
+    por algum widget nas últimas 6 h e sem essa cópia é renovado com load_tv (a mesma chamada da aba) a cada 30 min; os
+    outros, o snapshot da branch data. Tudo em segundo plano: o /api/widget nunca espera (sem cotação ainda = só o logo)."""
+    now = time.time()
+    stale = now - _FQ["at"] > 600 or any(now - w < 6 * 3600 and now - _FQ["live"].get(c, 0) > REFRESH_SECONDS for c, w in _FQ["want"].items())
+    if stale and not _FQ["busy"]:
+        _FQ["busy"] = True
+        def go():
+            try:
+                q = {}
+                for c in [c for c in tradingview.COUNTRIES if c != "br"]:  # ordem de COUNTRIES = prioridade (mesmo ticker em 2 países)
+                    ent, rows = cache.foreign.get(c), None
+                    if ent and time.time() - ent[0] < REFRESH_SECONDS * 4:
+                        rows = {r["ticker"]: {"v": r.get("v") or {}, "m": {"nome": r.get("nome"), "var": r.get("var"), "cur": r.get("cur"), "subsetor": r.get("subsetor")}}
+                                for r in ent[1]["rows"]}
+                    elif time.time() - _FQ["want"].get(c, 0) < 6 * 3600 and time.time() - _FQ["live"].get(c, 0) > REFRESH_SECONDS:
+                        _FQ["live"][c] = time.time()
+                        rows = load_tv(c)[0]
+                    else:
+                        old = [(t, x) for t, x in _FQ["q"].items() if x["c"] == c]
+                        if old and time.time() - _FQ["live"].get(c, 0) < REFRESH_SECONDS * 2:
+                            for t, x in old: q.setdefault(t, x)
+                            continue
+                        rows = (snapshots.load(f"tradingview_{c}", max_mem_age=3 * 3600)[0] or {}).get("rows") or {}
+                    for t, x in (rows or {}).items():
+                        v, m = x.get("v") or {}, x.get("m") or {}
+                        if t not in q and v.get("preco"):
+                            q[t] = {"c": c, "cur": m.get("cur") or tradingview.COUNTRIES[c][2], "n": m.get("nome"), "var": m.get("var"),
+                                    "sub": m.get("subsetor"), "v": {k: v.get(k) for k in ("preco", "vpa", "lpa")}}
+                if q: _FQ["q"] = q
+                _FQ["at"] = time.time()
+            except Exception as e:
+                log.warning("widget: cotações de fora: %s", e); _FQ["at"] = time.time() - 400  # tenta de novo em ~3 min
+            finally:
+                _FQ["busy"] = False
+        threading.Thread(target=go, daemon=True).start()
+    return _FQ["q"]
 
 # ---------- Logos das empresas (AGENTS.md 1.3 "Logo da empresa"): scripts/build_logos.py → branch data → data/logos ----------
 LOGO_FILE = re.compile(r"[0-9a-f]{12}\.png")
@@ -979,13 +1032,15 @@ def api_widget_chart(t: str = ""):
     """Gráfico de 5 anos do widget: o mesmo histórico diário do gráfico do card (history.get, kind d) reduzido a ~120 pontos.
     Início = hoje menos 5 anos e base = último fechamento até o início (mesma convenção de grafico.js → pricePts)."""
     tk = (t or "").strip().upper()
-    if not re.fullmatch(r"[A-Z0-9]{3,12}", tk): return JSONResponse({"error": "ticker inválido"}, status_code=400)
-    try: h = history.get(tk, "d")
+    if not WIDGET_TK.fullmatch(tk): return JSONResponse({"error": "ticker inválido"}, status_code=400)
+    br = any(r["ticker"] == tk for r in ((cache.data or {}).get("rows") or []))
+    q = None if br else foreign_quotes().get(tk)  # de fora: o mesmo histórico do gráfico do card (history.chart_foreign → yget)
+    try: h = history.yget(history.ysym(tk, q["c"]), "d") if q else history.get(tk, "d")
     except Exception as e: return JSONResponse({"error": "histórico indisponível: " + str(e)[:120]}, status_code=502)
     now = datetime.now(TZ)
     try: start = now.replace(year=now.year - 5)
     except ValueError: start = now.replace(year=now.year - 5, day=28)  # 29/02
-    key = (tk, h.get("at") or h.get("_at") or len(h.get("t") or []), now.date())
+    key = (tk, q["c"] if q else "br", h.get("at") or h.get("_at") or len(h.get("t") or []), now.date())
     if key in _WCHART: return JSONResponse(_WCHART[key], headers={"Cache-Control": "public, max-age=1800"})
     s0, ts, cs = int(start.timestamp()), h.get("t") or [], h.get("c") or []
     base, pts = None, []
@@ -997,7 +1052,7 @@ def api_widget_chart(t: str = ""):
     if base is not None and ts and ts[0] <= s0: pts.insert(0, [s0, base])
     k = max(1, -(-len(pts) // 120))
     red = pts[::k] + ([pts[-1]] if pts and (len(pts) - 1) % k else [])
-    out = {"t": tk, "b": base, "p": red}
+    out = {"t": tk, "b": base, "p": red, **({"c": q["cur"]} if q else {})}
     if len(_WCHART) > 300: _WCHART.clear()
     _WCHART[key] = out
     return JSONResponse(out, headers={"Cache-Control": "public, max-age=1800"})

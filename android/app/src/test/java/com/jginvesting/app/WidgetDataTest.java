@@ -2,6 +2,8 @@ package com.jginvesting.app;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -107,5 +109,40 @@ public class WidgetDataTest {
         assertEquals("−75%", WidgetData.badge(-75.2));
         assertEquals("—", WidgetData.change(null));
         assertEquals("—", WidgetData.badge(null));
+    }
+
+    @Test public void shortAndDottedTickersKept() {  // 1.5 descartava KO, V, GE, F, BRK.B e RR. (regra antiga: 3 a 12 letras/dígitos)
+        assertEquals(Arrays.asList("KO", "V", "GE", "F", "BRK.B", "RR.", "BT-A", "7203", "PETR4"),
+                WidgetData.favs("[\"ko\",\"V\",\"GE\",\"F\",\"BRK.B\",\"RR.\",\"BT-A\",\"7203\",\"PETR4\",\"KO\"]"));
+        for (String bad : new String[]{"", ".X", "-A", "A B", "A'B", "<x>", "ABCDEFGHIJKLM", "A/B", "javascript:"})
+            assertFalse(bad, WidgetData.validTicker(bad));
+        assertEquals(1, WidgetData.groups("[{\"id\":\"g1\",\"n\":\"EUA\",\"t\":[\"KO\",\"BRK.B\"]}]").size());
+        assertEquals(Arrays.asList("KO", "BRK.B"), WidgetData.groups("[{\"id\":\"g1\",\"n\":\"EUA\",\"t\":[\"KO\",\"BRK.B\"]}]").get(0).t);
+    }
+
+    @Test public void foreignPriceInOwnCurrency() {
+        String j = "{\"r\":[{\"t\":\"KO\",\"p\":93.9,\"v\":2.07,\"c\":\"USD\",\"f\":null,\"g\":null},"
+                + "{\"t\":\"7203\",\"p\":3094,\"v\":-1.5,\"c\":\"JPY\"},{\"t\":\"PETR4\",\"p\":30.5,\"v\":1}]}";
+        java.util.List<WidgetData.Item> it = WidgetData.items(Arrays.asList("KO", "7203", "PETR4", "AAPL34"), j);
+        assertEquals("US$ 93,90", WidgetData.price(it.get(0).p, it.get(0).c));
+        assertEquals("¥ 3.094", WidgetData.price(it.get(1).p, it.get(1).c));
+        assertEquals("R$ 30,50", WidgetData.price(it.get(2).p, it.get(2).c));
+        assertEquals("—", WidgetData.price(it.get(3).p, it.get(3).c));
+        assertEquals("—", WidgetData.badge(it.get(0).f));
+        assertNull(it.get(0).g);
+        assertEquals("£ 13,51", WidgetData.price(13.506, "GBP"));
+        assertEquals("€ 199,22", WidgetData.price(199.22, "EUR"));
+        assertEquals("US$ 12.345", WidgetData.price(12345.4, "USD"));     // compacto: sem centavos de 10 mil para cima
+        assertEquals("US$ 1,07 mi", WidgetData.price(1070000.0, "USD"));  // BRK.A
+        assertNull(WidgetData.cur("usd")); assertNull(WidgetData.cur("<b>"));
+    }
+
+    @Test public void foreignChartTipAndAxis() {
+        WidgetData.Chart ch = WidgetData.chart("{\"t\":\"KO\",\"b\":50,\"c\":\"USD\",\"p\":[[1700000000,50],[1760000000,93.9]]}");
+        assertEquals("USD", ch.cur);
+        assertTrue(WidgetData.tip(ch, 1).contains("US$ 93,90"));
+        assertEquals("340", WidgetData.axis(340.0, "USD"));
+        assertEquals("R$ 60,00", WidgetData.axis(60.0, null));
+        assertNull(WidgetData.chart("{\"t\":\"PETR4\",\"b\":10,\"p\":[[1,10],[2,11]]}").cur);
     }
 }

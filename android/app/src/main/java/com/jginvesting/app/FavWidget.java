@@ -174,7 +174,7 @@ public class FavWidget extends AppWidgetProvider {
                 r.setViewVisibility(R.id.r_logo, View.GONE); r.setViewVisibility(R.id.r_ini, View.VISIBLE);
             }
         }
-        r.setTextViewText(R.id.r_price, WidgetData.price(it.p));
+        r.setTextViewText(R.id.r_price, priceText(WidgetData.price(it.p, it.c)));
         r.setTextViewText(R.id.r_var, WidgetData.change(it.v));
         r.setTextColor(R.id.r_var, c.getColor(it.v == null ? R.color.c_mut : it.v >= 0 ? R.color.c_pos : R.color.c_neg));
         r.setTextViewText(R.id.r_badge, WidgetData.badge(it.f));
@@ -208,6 +208,15 @@ public class FavWidget extends AppWidgetProvider {
         r.setImageViewBitmap(R.id.r_chart, ChartDraw.draw(c, ch, (int) ((wDp - 20) * dd), (int) (110 * dd), sel, dd));
         for (int i = 0; i < ZONES; i++) r.setOnClickFillInIntent(Z_IDS[i], tap("z", it.t, i));
         return r;
+    }
+
+    /** Preço com o símbolo da moeda menor (R$, US$, £, €, ¥), para caber na coluna sem desalinhar. */
+    static CharSequence priceText(String s) {
+        int i = s.indexOf(' ');
+        if (i <= 0) return s;
+        android.text.SpannableString sp = new android.text.SpannableString(s);
+        sp.setSpan(new android.text.style.RelativeSizeSpan(0.72f), 0, i, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return sp;
     }
 
     private static final int[] FG_COL = {R.color.c_neg, R.color.c_orange, R.color.c_amber, R.color.c_lime, R.color.c_pos};

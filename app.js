@@ -718,9 +718,22 @@ document.addEventListener('favs', sendPins);
 function pushApp() { try { if (window.JGApp) window.JGApp.setFavs(JSON.stringify([...FAVS])); } catch (e) { } }
 document.addEventListener('favs', pushApp);
 // Abre o card de uma ação na aba Ações (toque no widget do app: ?acao=PETR4 ao abrir, ou jgOpen com o app já aberto)
-window.jgOpen = function (t) {
+// Ação de outro país (KO, BRK.B, RR.): /api/widget diz o país (k) e a aba troca de país antes de abrir
+window.jgOpen = function (t, k, n) {
   t = String(t || '').toUpperCase().trim(); if (!t) return;
-  if (!state.data) { setTimeout(() => window.jgOpen(t), 500); return; }
+  n = n || 0;
+  if (!state.data) { if (n < 120) setTimeout(() => window.jgOpen(t, k, n + 1), 500); return; }
+  const here = (state.data.rows || []).some(r => r.ticker === t);
+  if (!here && k === undefined) {
+    fetch('/api/widget?t=' + encodeURIComponent(t)).then(r => r.json()).then(j => window.jgOpen(t, ((j.r || [])[0] || {}).k || null, n)).catch(() => window.jgOpen(t, null, n));
+    return;
+  }
+  if (!here && k && k !== state.country) {
+    const c = document.querySelector(`#countryMenu [data-country="${k}"]`);
+    if (c && n === 0) c.click();
+    if (c && n < 60) { setTimeout(() => window.jgOpen(t, k, n + 1), 500); return; }
+  }
+  if (!here && k && state.country === k && (state.data.country || 'br') !== k && n < 60) { setTimeout(() => window.jgOpen(t, k, n + 1), 500); return; }
   const b = document.querySelector('[data-tab="acoes"]'); if (b) b.click();
   $('#q').value = t; state.expanded.add(t); apply(); window.scrollTo(0, 0);
 };

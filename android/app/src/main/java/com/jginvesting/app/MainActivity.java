@@ -87,10 +87,10 @@ public class MainActivity extends Activity {
         else web.loadUrl(BuildConfig.SITE + "/" + acaoQuery(getIntent()));
     }
 
-    /** Toque numa ação do widget: ?acao=TICKER (só letras e números). */
+    /** Toque numa ação do widget: ?acao=TICKER (WidgetData.TICKER: letras, dígitos, ponto e hífen). */
     private static String ticker(Intent i) {
         String t = i == null ? null : i.getStringExtra(FavWidget.EXTRA_TICKER);
-        return t != null && t.matches("[A-Z0-9]{3,12}") ? t : null;
+        return t != null && WidgetData.validTicker(t) ? t : null;
     }
     private static String acaoQuery(Intent i) { String t = ticker(i); return t == null ? "" : "?acao=" + t; }
 
