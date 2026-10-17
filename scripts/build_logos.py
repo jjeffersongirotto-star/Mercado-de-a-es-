@@ -4,6 +4,11 @@ Cadeia, por empresa (4 letras do ticker), parando na primeira que der um logo de
   2. ícone do próprio site (apple-touch-icon / link rel=icon); ícones repetidos em 3+ empresas (plataforma de RI) ficam de fora;
   3. brapi (icons.brapi.dev, por ticker; sem o genérico BRAPI.svg), desenhado como quadrado arredondado;
   4. outra classe da mesma empresa; senão nada (o widget desenha as iniciais).
+Ações de fora (EUA, Reino Unido, Alemanha, Portugal, Japão: as mesmas do site, snapshots tradingview_<país>) e BDRs, por site da empresa:
+  site = Yahoo (yfinance, campo website) ou Wikidata (P856), guardado em logos/sites.json (90 dias) →
+  1. favicon (Google) → 2. ícone do site → 3. quadrado do TradingView (s3-symbol-logo, arredondado) → iniciais.
+  BDR (B3, final 31–39) = logo da empresa de fora com o mesmo logo no TradingView; senão o quadrado. Logo de fora quase todo
+  escuro ganha o fundo claro sozinho (contraste < 2:1 sobre o fundo do widget em mais de 90% dos pixels).
 Ajustes à mão: scripts/logos_override/override.json (+ imagens da pasta): file (imagem própria), backing (fundo claro arredondado
 para logo escuro quase invisível no fundo escuro), skip (etapas a pular).
 Saída: <data>/logos/index.json (ticker -> arquivo, origem, fundo claro) e <data>/logos/<hash>.png (64×64, formato original,
@@ -13,6 +18,7 @@ from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
 import requests
 from PIL import Image, ImageDraw
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OVR_DIR = os.path.join(HERE, "logos_override")
@@ -240,19 +246,209 @@ def build(data_dir, force=False):
         if t not in idx:
             sib = next((idx[s] for s in tickers if s[:4] == t[:4] and s in idx and idx[s]["s"] != "classe"), None)
             if sib: idx[t] = {**sib, "s": "classe"}
+    n_b3, fstats = len(idx), {"fora": 0}
+    try:
+        fstats = foreign(data_dir, out_dir, ovr, is_gen, files, idx)
+    except Exception as e:  # ações de fora não derrubam as da B3
+        print(f"  logos de fora: falhou ({type(e).__name__}: {e})")
     for f in os.listdir(out_dir):
         if f.endswith(".png") and f not in files: os.remove(os.path.join(out_dir, f))
     for name, data in files.items():
         p = os.path.join(out_dir, name)
         if not os.path.exists(p): open(p, "wb").write(data)
-    stats = {s: sum(1 for v in idx.values() if v["s"] == s) for s in ("favicon", "site", "manual", "brapi", "classe")}
-    stats.update(tickers=len(tickers), com_logo=len(idx), iniciais=len(tickers) - len(idx), arquivos=len(files), fundo_claro=sum(1 for v in idx.values() if v.get("b")))
+    stats = {s: sum(1 for v in idx.values() if v["s"] == s) for s in ("favicon", "site", "manual", "brapi", "classe", "tv", "bdr")}
+    stats.update(tickers=len(tickers), com_logo=n_b3, iniciais=len(tickers) - n_b3, **fstats, arquivos=len(files), fundo_claro=sum(1 for v in idx.values() if v.get("b")))
     doc = {"fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "override": ovr_hash, "size": SIZE,
            "source": "favicon do site oficial (CVM FCA, serviço de favicons do Google) → ícone do site → brapi → outra classe; ajustes em scripts/logos_override",
            "stats": stats, "t": idx}
     json.dump(doc, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print("  logos:", json.dumps(stats, ensure_ascii=False))
-    return len(idx) >= 200
+    return n_b3 >= 200
+
+# ---------- ações de fora e BDRs ----------
+FOREIGN = ("us", "gb", "de", "pt", "jp")  # ordem = prioridade se o mesmo ticker existe em dois países
+SITE_TTL, SITE_RETRY = 90 * 86400, 14 * 86400
+WD_EX = {"us": ("Q13677", "Q82059"), "gb": ("Q171240",), "de": ("Q151139", "Q155567"), "jp": ("Q217475",), "pt": ("Q2416688", "Q1059291", "Q1145434")}
+
+def tv_logoids(market):
+    """TradingView: ticker -> logoid de um mercado (uma consulta; ações e recibos de depósito)."""
+    body = {"columns": ["name", "logoid"], "range": [0, 30000], "filter": [{"left": "type", "operation": "in_range", "right": ["stock", "dr"]}],
+            "sort": {"sortBy": "market_cap_basic", "sortOrder": "desc"}}
+    r = requests.post(f"https://scanner.tradingview.com/{market}/scan", json=body, headers=UA, timeout=(10, 60))
+    r.raise_for_status()
+    out = {}
+    for x in r.json().get("data", []):
+        n, l = x["d"][0], x["d"][1]
+        if n and l and n not in out: out[n] = l
+    return out
+
+def wikidata_sites():
+    """(país, ticker) -> site oficial (Wikidata: bolsa P414 com o ticker P249 e site P856)."""
+    vals = " ".join("wd:" + q for qs in WD_EX.values() for q in qs)
+    q = f"SELECT ?ex ?tk ?site WHERE {{ VALUES ?ex {{ {vals} }} ?c p:P414 ?st . ?st ps:P414 ?ex ; pq:P249 ?tk . ?c wdt:P856 ?site . }}"
+    r = requests.get("https://query.wikidata.org/sparql", params={"query": q}, timeout=(10, 120),
+                     headers={"Accept": "application/sparql-results+json", "User-Agent": "JGInvestingLogos/1.0 (jjeffersongirotto-star@users.noreply.github.com)"})
+    r.raise_for_status()
+    ex_c = {q: c for c, qs in WD_EX.items() for q in qs}
+    out = {}
+    for b in r.json()["results"]["bindings"]:
+        c = ex_c.get(b["ex"]["value"].rsplit("/", 1)[-1])
+        if c: out.setdefault((c, b["tk"]["value"].upper().strip()), b["site"]["value"])
+    return out
+
+YAHOO_MAX = 600  # por execução (semanal): o resto fica para as próximas; o Yahoo limita e também serve aos preços
+_Y_STOP = []
+
+def yahoo_site(sym):
+    if _Y_STOP: return None
+    try:
+        import yfinance as yf
+        return (yf.Ticker(sym).info or {}).get("website") or ""
+    except Exception as e:
+        if "Too Many Requests" in str(e) or "Rate limited" in str(e): _Y_STOP.append(1)  # limite: para por hoje
+        return None  # erro (rede/limite): tenta de novo na próxima
+
+def _lin(c):
+    c /= 255; return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+_LB = 0.2126 * _lin(2) + 0.7152 * _lin(6) + 0.0722 * _lin(23)  # --bg-in do site (fundo do widget)
+
+def too_dark(im):
+    """Logo quase todo escuro (menos de 10% dos pixels com contraste 2:1 sobre o fundo do widget): some no fundo escuro."""
+    a = fit(im, 48); px = [a.getpixel((x, y)) for y in range(a.height) for x in range(a.width)]
+    op = [(r, g, b) for r, g, b, al in px if al > 128]
+    if not op: return False
+    ok = sum(1 for r, g, b in op if (0.2126 * _lin(r) + 0.7152 * _lin(g) + 0.0722 * _lin(b) + 0.05) / (_LB + 0.05) >= 2.0)
+    return ok < 0.10 * len(op)
+
+def foreign(data_dir, out_dir, ovr, is_gen, files, idx):
+    import history, tradingview
+    uni = {}  # ticker -> país (primeiro na ordem de FOREIGN)
+    for c in FOREIGN:
+        try: rows = json.load(open(os.path.join(data_dir, f"tradingview_{c}.json"), encoding="utf-8")).get("rows") or {}
+        except Exception: rows = {}
+        for t in rows:
+            if t not in idx and t not in uni: uni[t] = c
+    # sites (cache de 90 dias; falha/sem site: tenta de novo em 14 dias)
+    sp = os.path.join(out_dir, "sites.json")
+    try: cache = json.load(open(sp, encoding="utf-8"))
+    except Exception: cache = {}
+    now = datetime.now(timezone.utc).timestamp()
+    key = lambda t: f"{uni[t]}:{t}"
+    need = [t for t in uni if key(t) not in cache or now - cache[key(t)][1] > (SITE_TTL if cache[key(t)][0] else SITE_RETRY)]
+    print(f"  logos de fora: {len(uni)} tickers; site a buscar no Yahoo: {len(need)} (até {YAHOO_MAX} agora)")
+    need = need[:YAHOO_MAX]
+    with cf.ThreadPoolExecutor(2) as ex:
+        for t, w in zip(need, ex.map(lambda t: yahoo_site(history.ysym(t, uni[t])), need)):
+            if w is not None: cache[key(t)] = [dom(w) or "", now, "yahoo"]
+    miss = [t for t in uni if not (cache.get(key(t)) or [""])[0]]
+    if miss:
+        try:
+            wd = wikidata_sites()
+            for t in miss:
+                for v in (t, t.rstrip("."), t.replace(".", "-"), t.replace(".", " ")):
+                    if (uni[t], v) in wd: cache[key(t)] = [dom(wd[(uni[t], v)]) or "", now, "wikidata"]; break
+        except Exception as e:
+            print(f"  Wikidata: {e}")
+    json.dump(cache, open(sp, "w", encoding="utf-8"), separators=(",", ":"))
+    site = {t: (cache.get(key(t)) or [""])[0] for t in uni}
+    doms = sorted({d for d in site.values() if d})
+    skip = lambda d, st: st in ((ovr.get(d) or {}).get("skip") or [])
+    # 1. favicon por domínio (Google); o mesmo ícone em 5+ domínios = genérico
+    fav = {}
+    with cf.ThreadPoolExecutor(16) as ex:
+        for d, b in zip(doms, ex.map(lambda d: None if skip(d, "favicon") else google_favicon(d), doms)):
+            if b: fav[d] = b
+    gen = {h for h, n in _count(fav.values()).items() if n >= 5}
+    chosen = {}
+    for d, b in fav.items():
+        if hashlib.sha1(b).hexdigest() in gen: continue
+        im = open_img(b)
+        if big_enough(im) and not is_gen(im): chosen[d] = (im, "favicon")
+    # 2. ícone do próprio site
+    gap = [d for d in doms if d not in chosen and not skip(d, "site")]
+    got = {}
+    with cf.ThreadPoolExecutor(16) as ex:
+        for d, lst in zip(gap, ex.map(lambda d: site_icons("https://" + d), gap)): got[d] = lst
+    gen2 = {h for h, n in _count([b for lst in got.values() for b in set(lst)]).items() if n >= 3}
+    for d, lst in got.items():
+        best = None
+        for b in lst:
+            if hashlib.sha1(b).hexdigest() in gen2: continue
+            im = open_img(b)
+            if big_enough(im) and not is_gen(im) and (best is None or min(im.size) > min(best.size)): best = im
+        if best is not None: chosen[d] = (best, "site")
+    for d in ovr_files(ovr):
+        if "." in d: chosen[d] = (open_img(open(os.path.join(OVR_DIR, ovr[d]["file"]), "rb").read()), "manual")
+    def save(im, src, k):
+        o = ovr.get(k) or {}
+        b = o.get("backing", src in ("favicon", "site") and too_dark(im))
+        img = backing(im) if b else (tile(im) if src == "tv" else fit(im))
+        data = png(img); name = hashlib.sha1(data).hexdigest()[:12] + ".png"
+        files[name] = data
+        return {"f": name, "s": src, **({"b": 1} if b else {})}
+    by_dom = {d: save(im, src, d) for d, (im, src) in chosen.items() if im is not None}
+    for t in uni:
+        if site[t] in by_dom: idx[t] = by_dom[site[t]]
+    # 3. quadrado do TradingView (por logoid) para quem ficou sem
+    lid, mk = {}, {}
+    for c in FOREIGN:
+        try: m = mk[c] = tv_logoids(tradingview.COUNTRIES[c][0])
+        except Exception as e: print(f"  TradingView {c}: {e}"); continue
+        for t in uni:
+            if uni[t] == c and t in m: lid[t] = m[t]
+    try: br_lid = tv_logoids("brazil")
+    except Exception: br_lid = {}
+    tiles, svg = {}, {}
+    def fetch_svgs(ls):
+        ls = sorted({l for l in ls if l and l not in svg})
+        with cf.ThreadPoolExecutor(8) as ex:
+            for l, x in zip(ls, ex.map(lambda l: get(f"https://s3-symbol-logo.tradingview.com/{l}--big.svg", 15), ls)):
+                svg[l] = x.content if x else None
+    def tv_tile(l):
+        if l not in tiles:
+            if l not in svg: fetch_svgs([l])
+            im = open_img(svg[l]) if svg[l] else None
+            tiles[l] = save(im, "tv", l) if im is not None else None
+        return tiles[l]
+    rest = [t for t in uni if t not in idx and lid.get(t)]
+    fetch_svgs(lid[t] for t in rest)
+    for t in rest:
+        e = tv_tile(lid[t])
+        if e: idx[t] = e
+    # outra classe da mesma empresa (o site mostra uma: GOOG, BRK.A; o favorito pode ser GOOGL, BRK.B)
+    root = lambda t: re.split(r"[.\-/]", t)[0][:4]
+    ncl = 0
+    for c, m in mk.items():
+        has = {}
+        for t in uni:
+            if uni[t] == c and t in idx and lid.get(t): has.setdefault((lid[t], root(t)), idx[t])
+        for t2, l in m.items():
+            e = has.get((l, root(t2)))
+            if e and t2 not in idx and t2 not in uni: idx[t2] = {**e, "s": "classe"}; ncl += 1
+    # BDRs: logo da empresa de fora com o mesmo logoid; senão o quadrado do TradingView
+    try:
+        r = requests.get("https://brapi.dev/api/quote/list", params={"type": "bdr", "limit": 3000}, timeout=(10, 60)); r.raise_for_status()
+        bdrs = {x["stock"].upper() for x in r.json().get("stocks", []) if x.get("stock")}
+    except Exception:
+        bdrs = set()
+    bdrs |= {t for t in br_lid if re.fullmatch(r"[A-Z0-9]{4}3[1-9]", t)}
+    by_lid = {}
+    for t, l in lid.items():
+        if t in idx and l not in by_lid: by_lid[l] = idx[t]
+    nb = 0
+    fetch_svgs(br_lid.get(t) for t in bdrs if t not in idx and br_lid.get(t) not in by_lid)
+    for t in sorted(bdrs):
+        if t in idx or not re.fullmatch(r"[A-Z0-9]{4}3[1-9]", t): continue
+        l = br_lid.get(t)
+        if not l: continue
+        e = by_lid.get(l)
+        if e: idx[t] = {**e, "s": "bdr"}; nb += 1
+        else:
+            e = tv_tile(l)
+            if e: idx[t] = e; nb += 1
+    per = {c: [sum(1 for t in uni if uni[t] == c), sum(1 for t in uni if uni[t] == c and t in idx)] for c in FOREIGN}
+    print(f"  logos de fora: por país [tickers, com logo] {per}; outras classes {ncl}; BDRs com logo {nb}")
+    return {"paises": per, "classe_fora": ncl, "bdr": nb, "fora": len(uni)}
 
 def is_placeholder(u): return u.rsplit("/", 1)[-1].upper() == "BRAPI.SVG"  # logo genérico da brapi
 

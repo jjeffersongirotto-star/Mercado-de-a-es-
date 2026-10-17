@@ -50,6 +50,20 @@ def test_helpers_and_override():
     except ImportError:
         pass
 
+def test_too_dark_foreign():
+    from PIL import Image
+    import build_logos as bl
+    dark = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    for x in range(16, 48):
+        for y in range(16, 48): dark.putpixel((x, y), (10, 10, 10, 255))
+    light = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    for x in range(16, 48):
+        for y in range(16, 48): light.putpixel((x, y), (240, 200, 40, 255))
+    square = Image.new("RGBA", (64, 64), (10, 10, 10, 255))  # quadrado preto com letra branca: aparece
+    for x in range(20, 44):
+        for y in range(20, 44): square.putpixel((x, y), (255, 255, 255, 255))
+    assert bl.too_dark(dark) and not bl.too_dark(light) and not bl.too_dark(square)
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):

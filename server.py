@@ -918,7 +918,8 @@ def api_widget(t: str = ""):
     out = []
     for tk in want:
         r = by.get(tk)
-        if not r: out.append({"t": tk}); continue
+        if not r:  # fora da B3 (EUA etc.) ou BDR: só o logo, se houver (sem preço aqui: nada pesado por pedido)
+            out.append({"t": tk, "l": (logos.get(tk) or {}).get("f")}); continue
         j, pct, m = valor_justo.fair(r, v, rows)
         out.append({"t": tk, "n": r.get("nome"), "s": snapshots.nome_curto(r.get("nome")), "l": (logos.get(tk) or {}).get("f"),
                     "p": v(r, "preco"), "v": r.get("var"),

@@ -72,7 +72,7 @@ step() {
     modelos)        run "Modelos da Previsão" "$PY" "$HERE/scripts/build_modelos.py" "$TMP/data" ;;
     modpre)         run "Comparar Modelos pré-calculado" "$PY" "$HERE/scripts/build_modelos_pre.py" "$TMP/data" ;;
     kb)             run "Base do chat" "$PY" "$HERE/scripts/build_kb.py" "$TMP/data" ;;
-    logos)          run "Logos das empresas" "$PY" "$HERE/scripts/build_logos.py" "$TMP/data" ;;  # refaz só se o índice tem 7+ dias (ou o override mudou)
+    logos)          run "Logos das empresas" "$PY" "$HERE/scripts/build_logos.py" "$TMP/data" ${LOGOS_FORCE:+--force} ;;  # refaz só se o índice tem 7+ dias (ou o override mudou; LOGOS_FORCE=1 refaz já)
   esac
 }
 for B in "$BLOCK1" "$BLOCK2" "$BLOCK3"; do
