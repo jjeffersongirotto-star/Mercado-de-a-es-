@@ -56,6 +56,29 @@ public final class WidgetData {
     /** Largura atual do widget em dp: retrato = largura mínima, paisagem = máxima (regra do AppWidgetManager); 0 = desconhecida. */
     public static int widthDp(int minW, int maxW, boolean landscape) { return landscape && maxW > 0 ? maxW : minW > 0 ? minW : maxW; }
 
+    /** Altura (dp) do widget: em pé = altura máxima; deitado = mínima (o contrário da largura). */
+    public static int heightDp(int minH, int maxH, boolean landscape) { return landscape ? (minH > 0 ? minH : maxH) : (maxH > 0 ? maxH : minH); }
+
+    /** Títulos das colunas: 2 linhas de 10sp (≈11,7 por linha) + 4dp embaixo; cresce com a escala de fonte do aparelho. */
+    public static float colsDp(float fontScale) { return 4 + 24 * Math.max(1f, fontScale); }
+
+    /** Cabeçalho até a lista: margens (8 em cima, 6 embaixo) + barra 36 + aviso de atualização (4+28) + 6 + títulos + linha 1. */
+    public static float headerDp(float fontScale, boolean upd) { return 8 + 36 + (upd ? 32 : 0) + 6 + colsDp(fontScale) + 1 + 6; }
+
+    /** Linha base (dp): 46, ou nome em 2 linhas + ticker com fonte grande. */
+    public static float rowBaseDp(float fontScale) { return Math.max(46f, 8 + 38 * fontScale); }
+
+    /** Linhas inteiras na altura da lista: {n, altura de cada linha em px}. n = quantas linhas base cabem (com o divisor de 1dp);
+     *  com itens para encher, a sobra é dividida entre as n linhas (até 1,6× a base) e a última termina rente à borda;
+     *  com menos itens que n, linha base e o espaço fica vazio embaixo. Lista mais baixa que uma linha: 1 linha base. */
+    public static int[] rows(int listPx, float density, float fontScale, int items) {
+        int base = Math.round(rowBaseDp(fontScale) * density), div = Math.max(1, Math.round(density));
+        int n = Math.max(1, (listPx + div) / (base + div));
+        if (items < n || listPx < base) return new int[]{n, base};
+        int h = (listPx - (n - 1) * div) / n;
+        return new int[]{n, Math.min(h, Math.round(base * 1.6f))};
+    }
+
     /** Largura (dp) da coluna Ação para o texto: widget − margens − colunas Preço/Dia/Barato/Caro/Medo (230dp) − slot do logo. */
     public static float nameRoomDp(int wDp, boolean narrow) { return Math.max(40, (wDp > 0 ? wDp : 300) - 18 - 230 - 4 - (narrow ? 0 : 40)); }
 

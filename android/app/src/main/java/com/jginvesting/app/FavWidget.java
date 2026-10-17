@@ -138,9 +138,15 @@ public class FavWidget extends AppWidgetProvider {
             v.setPendingIntentTemplate(R.id.w_list, PendingIntent.getActivity(c, 2, tpl, flagsMut));
             v.setEmptyView(R.id.w_list, R.id.w_empty);
             if (Build.VERSION.SDK_INT >= 31) {
+                // 1.12: N linhas inteiras na altura do widget, a última rente à borda (títulos com altura fixa para a conta fechar)
+                int hDp = WidgetData.heightDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0),
+                        cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
+                v.setViewLayoutHeight(R.id.w_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                int listPx = Math.round((hDp - WidgetData.headerDp(cf.fontScale, upd)) * dens);
+                int rowPx = hDp > 0 ? WidgetData.rows(listPx, dens, cf.fontScale, items.size())[1] : 0;
                 RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
                 int wDp = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
-                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp, px, bmp));
+                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp, px, bmp, rowPx));
                 v.setRemoteAdapter(R.id.w_list, b.build());
             } else {
                 Intent svc = new Intent(c, WidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
@@ -206,7 +212,13 @@ public class FavWidget extends AppWidgetProvider {
     static final int NARROW = 330;
 
     static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp) {
+        return row(c, it, bands, wDp, px, bmp, 0);
+    }
+
+    /** rowPx > 0 (Android 12+): altura da linha (WidgetData.rows), para a lista fechar em linhas inteiras. */
+    static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp, int rowPx) {
         RemoteViews r = new RemoteViews(c.getPackageName(), R.layout.widget_row);
+        if (rowPx > 0 && Build.VERSION.SDK_INT >= 31) r.setViewLayoutHeight(R.id.r_main, rowPx, android.util.TypedValue.COMPLEX_UNIT_PX);
         // nome popular em cima (negrito, maior que cabe) e o ticker embaixo (cinza); sem nome: só o ticker em cima
         boolean hasName = it.s != null && !it.s.isEmpty();
         boolean narrow = wDp < NARROW;

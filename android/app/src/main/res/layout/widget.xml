@@ -109,7 +109,9 @@
         android:textStyle="bold"
         android:visibility="gone" />
 
+    <!-- títulos das colunas: altura fixa (WidgetData.colsDp, pela escala de fonte) para a conta das linhas inteiras (WidgetData.rows) -->
     <LinearLayout
+        android:id="@+id/w_cols"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"

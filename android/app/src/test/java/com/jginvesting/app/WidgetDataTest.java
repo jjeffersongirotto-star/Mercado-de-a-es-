@@ -227,4 +227,25 @@ public class WidgetDataTest {
         assertEquals(12f, WidgetData.nameSp("Jerónimo Martins Investimentos", room), 1e-6);
         assertTrue(WidgetData.nameRoomDp(250, true) >= 40);
     }
+
+    @Test public void wholeRowsFillHeight() {  // 1.12: N linhas inteiras e a última rente à borda
+        float d = 2.75f;
+        int base = Math.round(46 * d), div = 3;
+        for (int hDp : new int[]{180, 250, 300, 333, 420, 500, 640}) {
+            int list = Math.round((hDp - WidgetData.headerDp(1f, false)) * d);
+            int[] r = WidgetData.rows(list, d, 1f, 40);
+            assertTrue(r[0] >= 1);
+            assertTrue(r[1] >= base);                                  // nunca menor que a base
+            int used = r[0] * r[1] + (r[0] - 1) * div;
+            if (r[1] < Math.round(base * 1.6f)) assertTrue(list - used >= 0 && list - used < r[0]);  // sobra < 1 px por linha
+            assertTrue((r[0] + 1) * base + r[0] * div > list);       // não caberia mais uma linha base
+        }
+        int list = Math.round((500 - WidgetData.headerDp(1f, false)) * d);
+        assertEquals(base, WidgetData.rows(list, d, 1f, 3)[1]);       // poucos itens: base, espaço vazio embaixo
+        assertEquals(1, WidgetData.rows(50, d, 1f, 10)[0]);            // lista mais baixa que uma linha
+        assertEquals(base, WidgetData.rows(50, d, 1f, 10)[1]);
+        assertTrue(WidgetData.rows(list, d, 1.3f, 40)[0] < WidgetData.rows(list, d, 1f, 40)[0]);  // fonte grande: menos linhas
+        assertEquals(500, WidgetData.heightDp(300, 500, false));
+        assertEquals(300, WidgetData.heightDp(300, 500, true));
+    }
 }
