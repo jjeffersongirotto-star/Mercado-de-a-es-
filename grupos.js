@@ -4,7 +4,7 @@
   const $g = (s) => document.querySelector(s);
   let groups = (() => { try { const g = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(g) ? g : []; } catch (e) { return []; } })();
   window.userGroups = () => groups.map(g => ({ n: g.name, t: g.tickers }));  // Previsão → Modelos (rodízio nos grupos do usuário)
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(groups)); } catch (e) { uiAlert('Não foi possível salvar no navegador.'); } if (typeof sendPins === 'function') sendPins(); };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(groups)); } catch (e) { uiAlert('Não foi possível salvar no navegador.'); } if (typeof sendPins === 'function') sendPins(); pushGroups(); };
   state.selSet = new Set(); state.selMode = false; state.group = null;
   let editing = null, viewing = null;
 
@@ -290,6 +290,7 @@
     tr.insertAdjacentHTML('afterend', `<tr class="gdet"><td colspan="9">${blockHtml(r)}</td></tr>`);
   }
   async function list() {
+    pushGroups();  // grupos, períodos ou ordem mudaram: o widget do app acompanha
     if (favDrag) { favDrag = 2; return; }  // arrastando um favorito: redesenha ao soltar
     const r = $g('#gruposRoot');
     if (!METRICS) { r.innerHTML = loaderHTML('Carregando grupos…'); await loadMetrics(); }
@@ -395,8 +396,16 @@
     e.target.value = '';
   }
 
-  loadMetrics().then(() => { if (state.data && window.apply) apply(); });
-  document.addEventListener('dataload', () => { if (!document.querySelector('[data-tabpane="grupos"]').classList.contains('hidden')) list(); });
+  // App Android (window.JGApp): manda os grupos da aba Grupos (mesmas ações e ordem dos quadros: groupData) para o seletor do widget
+  function pushGroups() {
+    if (!window.JGApp || !window.JGApp.setGroups || state.country !== 'br' || !state.data || !METRICS) return;
+    try {
+      const out = tileIds().filter(id => id !== 'fav').map(id => { const d = groupData(id); return d && { id, n: d.title, t: (d.rows || []).map(x => x[0].ticker) }; }).filter(x => x && x.t.length);
+      window.JGApp.setGroups(JSON.stringify(out));
+    } catch (e) { }
+  }
+  loadMetrics().then(() => { if (state.data && window.apply) apply(); pushGroups(); });
+  document.addEventListener('dataload', () => { pushGroups(); if (!document.querySelector('[data-tabpane="grupos"]').classList.contains('hidden')) list(); });
   document.addEventListener('tabshow', (e) => {
     if (e.detail === 'grupos') { list(); if (viewing || state.group) { viewing = null; state.group = null; refresh(); } }
     if (e.detail === 'acoes' && !state.selMode && viewing) { /* abrindo grupo */ }

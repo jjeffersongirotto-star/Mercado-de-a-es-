@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_name">★ Favoritos</string>
-    <string name="widget_desc">Preço, variação do dia e Barato/Caro dos seus favoritos</string>
+    <string name="widget_name">Favoritos e grupos</string>
+    <string name="widget_desc">Preço, variação, Barato/Caro e Medo e Ganância dos Favoritos ou de um grupo</string>
     <string name="widget_empty">Marque ☆ nas ações dentro do app</string>
     <string name="widget_refresh">Atualizar</string>
     <string name="col_t">Ação</string>
     <string name="col_p">Preço</string>
     <string name="col_v">Dia</string>
     <string name="col_f">Barato/Caro</string>
-    <string name="col_g">Medo e Gan.</string>
+    <string name="col_g">Medo/Gan.</string>
     <string name="open_app">Abrir no app</string>
+    <string name="fav_sel">Favoritos  ▾</string>
+    <string name="widget_empty_group">Abra o app para atualizar este grupo</string>
 </resources>

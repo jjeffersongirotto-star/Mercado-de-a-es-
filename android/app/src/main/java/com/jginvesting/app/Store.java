@@ -15,8 +15,19 @@ final class Store {
         sp(c).edit().putString("favs", json).apply();
         return true;
     }
-    static String data(Context c) { return sp(c).getString("data", "{}"); }
-    static void setData(Context c, String json) { sp(c).edit().putString("data", json).apply(); }
+    /** Última resposta de /api/widget de cada lista ("fav" ou id do grupo). */
+    static String data(Context c, String sel) { return sp(c).getString("data_" + sel, "{}"); }
+    static void setData(Context c, String sel, String json) { sp(c).edit().putString("data_" + sel, json).apply(); }
+    /** Grupos da aba Grupos enviados pelo site (grupos.js → pushGroups): [{id, n, t:[...]}]. */
+    static String groups(Context c) { return sp(c).getString("groups", "[]"); }
+    static boolean setGroups(Context c, String json) {
+        if (json.equals(groups(c))) return false;
+        sp(c).edit().putString("groups", json).apply();
+        return true;
+    }
+    /** Lista escolhida em cada widget (padrão: Favoritos). */
+    static String sel(Context c, int id) { return sp(c).getString("sel_" + id, "fav"); }
+    static void setSel(Context c, int id, String sel) { sp(c).edit().putString("sel_" + id, sel).commit(); }
     /** Linha aberta (com o gráfico) e ponto marcado nela (-1 = último). */
     static String expanded(Context c) { return sp(c).getString("exp", ""); }
     static void setExpanded(Context c, String t) { sp(c).edit().putString("exp", t).putInt("zone", -1).commit(); }

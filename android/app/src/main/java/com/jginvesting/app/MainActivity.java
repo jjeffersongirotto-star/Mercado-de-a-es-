@@ -129,6 +129,15 @@ public class MainActivity extends Activity {
             }
         }
 
+        /** Grupos da aba Grupos (grupos.js → pushGroups) para o seletor do widget. */
+        @JavascriptInterface public void setGroups(String json) {
+            if (json == null || json.length() > 200000) return;
+            if (Store.setGroups(MainActivity.this, json)) {
+                FavWidget.render(getApplicationContext());
+                FavWidget.refreshAsync(getApplicationContext(), null);
+            }
+        }
+
         /** Exportar (ui.js → saveFile): grava o arquivo em Downloads. */
         @JavascriptInterface public void saveFile(String name, String type, String text) {
             String n = name == null ? "arquivo.txt" : name.replaceAll("[^A-Za-z0-9._-]", "_");

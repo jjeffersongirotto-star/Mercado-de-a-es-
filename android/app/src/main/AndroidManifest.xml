@@ -33,6 +33,14 @@
             android:taskAffinity=""
             android:theme="@style/Tap" />
 
+        <activity
+            android:name=".PickerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Tap" />
+
         <receiver
             android:name=".FavWidget"
             android:exported="false"

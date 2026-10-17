@@ -35,6 +35,25 @@ public class WidgetDataTest {
         assertEquals(0, WidgetData.bands("{}").lim.length);
     }
 
+    @Test public void groupsAndSelection() {
+        String g = "[{\"id\":\"pre:valor\",\"n\":\"Maior valorização (1 ano)\",\"t\":[\"PETR4\",\"vale3\"]},"
+                 + "{\"id\":\"user:Bancos\",\"n\":\"Bancos\",\"t\":[\"ITUB4\",\"BBAS3\",\"ITUB4\"]},"
+                 + "{\"id\":\"vazio\",\"n\":\"Vazio\",\"t\":[]},{\"id\":\"fav\",\"n\":\"x\",\"t\":[\"A1B2\"]}]";
+        List<WidgetData.Group> gs = WidgetData.groups(g);
+        assertEquals(2, gs.size());                                   // vazio e "fav" ficam de fora
+        assertEquals(Arrays.asList("PETR4", "VALE3"), WidgetData.tickers("pre:valor", "[]", gs));
+        assertEquals(Arrays.asList("ITUB4", "BBAS3"), WidgetData.tickers("user:Bancos", "[]", gs));
+        assertEquals(Arrays.asList("WEGE3"), WidgetData.tickers("fav", "[\"WEGE3\"]", gs));
+        assertEquals(0, WidgetData.tickers("user:Apagado", "[\"WEGE3\"]", gs).size());
+        assertEquals("Maior valorização (1 ano)", WidgetData.name("pre:valor", gs));
+        assertEquals("Favoritos", WidgetData.name("fav", gs));
+        assertEquals(true, WidgetData.exists("fav", gs)); assertEquals(false, WidgetData.exists("user:Apagado", gs));
+        StringBuilder many = new StringBuilder("[");
+        for (int i = 0; i < 60; i++) many.append(i == 0 ? "" : ",").append("\"T").append(1000 + i).append("\"");
+        assertEquals(WidgetData.MAX_ROWS, WidgetData.tickers("fav", many + "]", gs).size());
+        assertEquals(0, WidgetData.groups("lixo").size());
+    }
+
     @Test public void chartZonesAndTip() {
         // 11 pontos semanais a partir de 01/01/2024 00:00 (Brasília); base 10
         StringBuilder p = new StringBuilder();

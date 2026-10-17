@@ -18,8 +18,10 @@ public class WidgetService extends RemoteViewsService {
             int wDp = 300;
             public void onCreate() { }
             public void onDataSetChanged() {
-                items = WidgetData.items(WidgetData.favs(Store.favs(c)), Store.data(c)); bands = WidgetData.bands(Store.data(c));
                 int id = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, 0);
+                List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
+                String sel = FavWidget.selOf(c, id, gs), data = Store.data(c, sel);
+                items = WidgetData.items(WidgetData.tickers(sel, Store.favs(c), gs), data); bands = WidgetData.bands(data);
                 wDp = android.appwidget.AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
             }
             public void onDestroy() { }

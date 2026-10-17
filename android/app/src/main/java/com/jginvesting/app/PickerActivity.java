@@ -1,0 +1,35 @@
+package com.jginvesting.app;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.appwidget.AppWidgetManager;
+import android.os.Bundle;
+
+import java.util.List;
+
+/** Seletor do widget (toque em "Favoritos ▾"): Favoritos ou um grupo da aba Grupos; a escolha fica guardada em cada widget. */
+public class PickerActivity extends Activity {
+    @Override protected void onCreate(Bundle b) {
+        super.onCreate(b);
+        final int id = getIntent().getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+        final List<WidgetData.Group> gs = WidgetData.groups(Store.groups(this));
+        String[] names = new String[gs.size() + 1];
+        names[0] = WidgetData.FAV_NAME;
+        for (int i = 0; i < gs.size(); i++) names[i + 1] = gs.get(i).name;
+        String cur = FavWidget.selOf(this, id, gs);
+        int checked = 0;
+        for (int i = 0; i < gs.size(); i++) if (gs.get(i).id.equals(cur)) checked = i + 1;
+        AlertDialog.Builder d = new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+                .setTitle("Mostrar no widget")
+                .setSingleChoiceItems(names, checked, (dlg, w) -> {
+                    Store.setSel(this, id, w == 0 ? WidgetData.FAV : gs.get(w - 1).id);
+                    Store.setExpanded(this, "");
+                    FavWidget.render(this);
+                    FavWidget.refreshAsync(this, null);
+                    dlg.dismiss();
+                })
+                .setOnDismissListener(x -> { finish(); overridePendingTransition(0, 0); });
+        if (gs.isEmpty()) d.setMessage("Abra o app uma vez para carregar os grupos da aba Grupos.");
+        d.show();
+    }
+}

@@ -37,6 +37,42 @@ public final class WidgetData {
         return out;
     }
 
+    /** Um grupo da aba Grupos (id, nome e ações na ordem do quadro). */
+    public static final class Group {
+        public final String id, name; public final List<String> t;
+        Group(String id, String name, List<String> t) { this.id = id; this.name = name; this.t = t; }
+    }
+    public static final String FAV = "fav", FAV_NAME = "Favoritos";
+    public static final int MAX_ROWS = 40;  // mesmo limite de /api/widget
+    public static List<Group> groups(String json) {
+        List<Group> out = new ArrayList<>();
+        try {
+            JSONArray a = new JSONArray(json);
+            for (int i = 0; i < a.length(); i++) {
+                JSONObject o = a.getJSONObject(i);
+                String id = o.optString("id", ""), n = o.optString("n", "");
+                List<String> t = favs(o.optJSONArray("t") == null ? "[]" : o.getJSONArray("t").toString());
+                if (!id.isEmpty() && !n.isEmpty() && !t.isEmpty() && !FAV.equals(id)) out.add(new Group(id, n, t.size() > MAX_ROWS ? t.subList(0, MAX_ROWS) : t));
+            }
+        } catch (Exception e) { /* sem grupos */ }
+        return out;
+    }
+    /** Ações da lista escolhida: Favoritos ou o grupo (grupo que sumiu = vazio; o widget volta aos Favoritos). */
+    public static List<String> tickers(String sel, String favsJson, List<Group> gs) {
+        if (FAV.equals(sel)) { List<String> f = favs(favsJson); return f.size() > MAX_ROWS ? f.subList(0, MAX_ROWS) : f; }
+        for (Group g : gs) if (g.id.equals(sel)) return g.t;
+        return new ArrayList<>();
+    }
+    public static String name(String sel, List<Group> gs) {
+        for (Group g : gs) if (g.id.equals(sel)) return g.name;
+        return FAV_NAME;
+    }
+    public static boolean exists(String sel, List<Group> gs) {
+        if (FAV.equals(sel)) return true;
+        for (Group g : gs) if (g.id.equals(sel)) return true;
+        return false;
+    }
+
     /** Parâmetro t= de /api/widget. */
     public static String param(List<String> favs) {
         StringBuilder b = new StringBuilder();

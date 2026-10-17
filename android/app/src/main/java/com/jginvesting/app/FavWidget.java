@@ -14,7 +14,7 @@ import android.widget.RemoteViews;
 
 import java.util.List;
 
-/** Widget ★ Favoritos: preço, variação do dia e Barato/Caro de cada favorito. Atualiza a cada 30 min (widget_info) e no ⟳. */
+/** Widget JG Investing: Favoritos ou um grupo da aba Grupos (seletor no topo) com preço, variação, Barato/Caro e Medo e Ganância. Atualiza a cada 30 min (widget_info) e no ⟳. */
 public class FavWidget extends AppWidgetProvider {
     static final String ACTION_REFRESH = "com.jginvesting.app.REFRESH";
     static final String EXTRA_TICKER = "ticker";
@@ -29,15 +29,25 @@ public class FavWidget extends AppWidgetProvider {
         super.onReceive(c, i);
     }
 
-    /** Busca os dados dos favoritos e redesenha. pr = broadcast pendente (pode ser null quando chamado pelo app). */
+    /** Lista escolhida no widget (grupo que deixou de existir volta para Favoritos). */
+    static String selOf(Context c, int id, List<WidgetData.Group> gs) {
+        String s = Store.sel(c, id);
+        return WidgetData.exists(s, gs) ? s : WidgetData.FAV;
+    }
+
+    /** Busca os dados de cada lista em uso e redesenha. pr = broadcast pendente (pode ser null quando chamado pelo app). */
     static void refreshAsync(Context ctx, PendingResult pr) {
         final Context c = ctx.getApplicationContext();
         new Thread(() -> {
             try {
-                List<String> favs = WidgetData.favs(Store.favs(c));
-                if (!favs.isEmpty()) {
-                    String j = Api.widget(favs, pr != null ? 8000 : 30000);  // broadcast: o Android dá ~10 s
-                    if (j != null) Store.setData(c, j);
+                List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
+                java.util.LinkedHashSet<String> sels = new java.util.LinkedHashSet<>();
+                for (int id : ids(c)) sels.add(selOf(c, id, gs));
+                for (String sel : sels) {
+                    List<String> tk = WidgetData.tickers(sel, Store.favs(c), gs);
+                    if (tk.isEmpty()) continue;
+                    String j = Api.widget(tk, pr != null ? 8000 : 30000);  // broadcast: o Android dá ~10 s
+                    if (j != null) Store.setData(c, sel, j);
                 }
                 render(c);
             } finally {
@@ -55,19 +65,25 @@ public class FavWidget extends AppWidgetProvider {
         AppWidgetManager m = AppWidgetManager.getInstance(c);
         int[] ids = ids(c);
         if (ids.length == 0) return;
-        List<String> favs = WidgetData.favs(Store.favs(c));
-        String data = Store.data(c);
-        List<WidgetData.Item> items = WidgetData.items(favs, data);
-        WidgetData.Bands bands = WidgetData.bands(data);
+        List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
         int flagsImm = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         int flagsMut = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
         for (int id : ids) {
+            String sel = selOf(c, id, gs), data = Store.data(c, sel);
+            List<WidgetData.Item> items = WidgetData.items(WidgetData.tickers(sel, Store.favs(c), gs), data);
+            WidgetData.Bands bands = WidgetData.bands(data);
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget);
+            v.setTextViewText(R.id.w_sel, WidgetData.name(sel, gs) + "  ▾");
+            Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+            pick.setData(Uri.parse("jg://pick/" + id));  // um PendingIntent por widget
+            v.setOnClickPendingIntent(R.id.w_sel, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
+            v.setTextViewText(R.id.w_empty, c.getString(WidgetData.FAV.equals(sel) ? R.string.widget_empty : R.string.widget_empty_group));
             String up = WidgetData.updated(data);
             v.setTextViewText(R.id.w_time, up);
             v.setViewVisibility(R.id.w_time, up.isEmpty() ? View.GONE : View.VISIBLE);
             Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            v.setOnClickPendingIntent(R.id.w_title, PendingIntent.getActivity(c, 0, open, flagsImm));
+            v.setOnClickPendingIntent(R.id.w_logo, PendingIntent.getActivity(c, 0, open, flagsImm));
             Intent rf = new Intent(c, FavWidget.class).setAction(ACTION_REFRESH);
             v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(c, 1, rf, flagsImm));
             // toques nas linhas (abrir/fechar gráfico, marcar ponto, abrir no app): WidgetTap, sem tela; o que fazer vem no fill-in
