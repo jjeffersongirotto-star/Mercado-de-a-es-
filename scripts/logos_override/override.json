@@ -4,9 +4,28 @@
   "ddf4c374c75b",
   "72ed71769b28"
  ],
+ "BBAS": {
+  "file": "BBAS.png",
+  "why": "favicon do bb.com.br é o símbolo azul transparente (ficava sobre o fundo escuro); símbolo oficial sobre o amarelo BB, como o da BBSE3"
+ },
  "PRIO": {
   "file": "PRIO.png",
   "why": "brapi ainda mostra PetroRio; símbolo atual do site de RI da PRIO"
+ },
+ "VBBR": {
+  "backing": true
+ },
+ "RDOR": {
+  "backing": true
+ },
+ "YDUQ": {
+  "backing": true
+ },
+ "PCAR": {
+  "backing": true
+ },
+ "SCAR": {
+  "backing": true
  },
  "POMO": {
   "backing": true
