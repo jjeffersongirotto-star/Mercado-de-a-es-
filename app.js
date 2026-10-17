@@ -354,7 +354,7 @@ function tipHtml(r, f) {
 }
 
 const chartSlot = (r) => `<div class="gchart" data-gt="${r.ticker}"${state.country === 'br' ? '' : ` data-gc="${state.country}"`}></div>`;  // fora do Brasil: índice do país
-// preço exibido (respeita a fonte escolhida no topo): cards da aba Ações e Carteira
+// preço exibido (respeita a fonte escolhida no topo): cards da aba Mercado e Carteira
 const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
 // Barato/Caro: preço do card × valor justo de Graham √(22,5 × LPA × VPA) (explicação no Glossário do painel ⓘ).
 // pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
@@ -728,7 +728,7 @@ document.addEventListener('favs', sendPins);
 // App Android (android/, WebView com window.JGApp): manda a lista e a ordem dos Favoritos para o widget da tela inicial
 function pushApp() { try { if (window.JGApp) window.JGApp.setFavs(JSON.stringify([...FAVS])); } catch (e) { } }
 document.addEventListener('favs', pushApp);
-// Abre o card de uma ação na aba Ações (toque no widget do app: ?acao=PETR4 ao abrir, ou jgOpen com o app já aberto)
+// Abre o card de uma ação na aba Mercado (toque no widget do app: ?acao=PETR4 ao abrir, ou jgOpen com o app já aberto)
 // Ação de outro país (KO, BRK.B, RR.): /api/widget diz o país (k) e a aba troca de país antes de abrir
 window.jgOpen = function (t, k, n) {
   t = String(t || '').toUpperCase().trim(); if (!t) return;

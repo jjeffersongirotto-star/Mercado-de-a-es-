@@ -217,4 +217,12 @@ public class WidgetDataTest {
         assertTrue(WidgetData.ownsLoading(200, 200));
         assertTrue(WidgetData.accept(5, 5)); assertFalse(WidgetData.accept(4, 5));
     }
+
+    @Test public void popularNameFits() {  // 1.11: nome em cima, maior tamanho que cabe; nome longo vai para 2 linhas em 12 sp
+        float room = WidgetData.nameRoomDp(363, false);   // largura do print do Jefferson
+        assertEquals(14f, WidgetData.nameSp("Petrobras", room), 1e-6);
+        assertTrue(WidgetData.nameSp("Caixa Seguridade", room) < 14f);
+        assertEquals(12f, WidgetData.nameSp("Jerónimo Martins Investimentos", room), 1e-6);
+        assertTrue(WidgetData.nameRoomDp(250, true) >= 40);
+    }
 }

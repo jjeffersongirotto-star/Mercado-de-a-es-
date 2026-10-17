@@ -796,7 +796,7 @@ def api_returns(di: str, df: str):
 
 def period_returns(di, df, tickers):
     """Variação % do preço entre di e df (AAAA-MM-DD) de cada ticker + índices. Fonte única: aba Comparar e chat.
-    Base = último fechamento até di; fim = último fechamento até df ou o preço atual da aba Ações."""
+    Base = último fechamento até di; fim = último fechamento até df ou o preço atual da aba Mercado."""
     from datetime import datetime as _dt
     s0 = _dt.strptime(di, "%Y-%m-%d").timestamp() - 1
     e0 = _dt.strptime(df, "%Y-%m-%d").timestamp() + 86399
@@ -925,19 +925,19 @@ def api_widget(t: str = "", v: int = 1):
     out = []
     for tk in want:
         r = by.get(tk)
-        if not r:  # fora da B3: cotação da aba Ações do país (TradingView, foreign_quotes); BDR que o site não mostra: só o logo
+        if not r:  # fora da B3: cotação da aba Mercado do país (TradingView, foreign_quotes); BDR que o site não mostra: só o logo
             q = fq.get(tk)
             if not q or ver < 2:  # app até 1.5 (sem v=2) mostraria o preço como R$: só logo e país
                 out.append({"t": tk, "l": (logos.get(tk) or {}).get("f"), **({"k": q["c"]} if q else {})}); continue
             fqw[q["c"]] = time.time()
             fr = {"cur": q["cur"], "subsetor": q.get("sub")}
             j, pct, m = valor_justo.fair(fr, lambda o, k: q["v"].get(k), [])
-            out.append({"t": tk, "n": q.get("n"), "s": snapshots.nome_curto(q.get("n")), "l": (logos.get(tk) or {}).get("f"),
+            out.append({"t": tk, "n": q.get("n"), "s": snapshots.nome_popular(tk, q.get("n")), "l": (logos.get(tk) or {}).get("f"),
                         "p": q["v"].get("preco"), "v": q.get("var"), "c": q["cur"], "k": q["c"],
                         "f": round(pct, 1) if j else None, "m": m if j else None, **vj_x(j, pct), "g": None})  # Medo e Ganância: só B3
             continue
         j, pct, m = valor_justo.fair(r, v, rows)
-        out.append({"t": tk, "n": r.get("nome"), "s": snapshots.nome_curto(r.get("nome")), "l": (logos.get(tk) or {}).get("f"),
+        out.append({"t": tk, "n": r.get("nome"), "s": snapshots.nome_popular(tk, r.get("nome")), "l": (logos.get(tk) or {}).get("f"),
                     "p": v(r, "preco"), "v": r.get("var"),
                     "f": round(pct, 1) if j else None, "m": m if j else None, **vj_x(j, pct),
                     "g": (r.get("fg") or [None])[0]})  # Medo e Ganância da ação hoje (snapshot fg_acoes → rows.fg, o mesmo do card)
@@ -947,7 +947,7 @@ WIDGET_TK = re.compile(r"[A-Z0-9][A-Z0-9.\-]{0,11}")  # PETR4, KO, BRK.B, RR., B
 _FQ = {"q": {}, "at": 0.0, "busy": False, "live": {}, "want": {}}
 
 def foreign_quotes():
-    """Ações de fora no widget: ticker -> {c: país, cur, n: nome, var, sub, v: {preco, vpa, lpa}}. Fonte única = a da aba Ações
+    """Ações de fora no widget: ticker -> {c: país, cur, n: nome, var, sub, v: {preco, vpa, lpa}}. Fonte única = a da aba Mercado
     de cada país (TradingView: build_foreign → load_tv): usa a cópia que a aba já tem em memória (cache.foreign); país pedido
     por algum widget nas últimas 6 h e sem essa cópia é renovado com load_tv (a mesma chamada da aba) a cada 30 min; os
     outros, o snapshot da branch data. Tudo em segundo plano: o /api/widget nunca espera (sem cotação ainda = só o logo)."""

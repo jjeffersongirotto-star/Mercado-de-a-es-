@@ -207,11 +207,14 @@ public class FavWidget extends AppWidgetProvider {
 
     static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp) {
         RemoteViews r = new RemoteViews(c.getPackageName(), R.layout.widget_row);
-        r.setTextViewText(R.id.r_ticker, it.t);
+        // nome popular em cima (negrito, maior que cabe) e o ticker embaixo (cinza); sem nome: só o ticker em cima
         boolean hasName = it.s != null && !it.s.isEmpty();
-        r.setTextViewText(R.id.r_name, hasName ? it.s : "");
-        r.setViewVisibility(R.id.r_name, hasName ? View.VISIBLE : View.GONE);
         boolean narrow = wDp < NARROW;
+        String top = hasName ? it.s : it.t;
+        r.setTextViewText(R.id.r_ticker, top);
+        r.setTextViewTextSize(R.id.r_ticker, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetData.nameSp(top, WidgetData.nameRoomDp(wDp, narrow)));
+        r.setTextViewText(R.id.r_name, hasName ? it.t : "");
+        r.setViewVisibility(R.id.r_name, hasName ? View.VISIBLE : View.GONE);
         r.setViewVisibility(R.id.r_slot, narrow ? View.GONE : View.VISIBLE);
         if (!narrow) {  // logo no formato original (fit-center no slot de 32dp); sem logo: círculo com as iniciais
             // logo da própria ação (arquivo da mesma resposta); ainda não baixado: iniciais e imagem limpa (linha reaproveitada

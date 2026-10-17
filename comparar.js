@@ -10,7 +10,7 @@
   S.ini = S.ini >= 0 ? S.ini : 20000; S.ap = S.ap >= 0 ? S.ap : 500; S.mu = S.mu || 'sel'; S.mv = S.mv || 'media'; S.mg = S.mg === 'grp' ? 'grp' : 'ind';  // Modelos: valores, empresas e tabela
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct, vm: S.vm, fgOrd: S.fgOrd, ini: S.ini, ap: S.ap, mu: S.mu, mv: S.mv, mg: S.mg })); } catch (e) { } };
   // País da comparação (bandeiras): 'br' (padrão), outro país ou 'all' (🌐). Ação de fora = "us:AAPL"; índice do país = "@ix:us".
-  // Linhas de cada país = mesmo /api/data das abas (carregadas uma vez); Brasil reaproveita state.data quando a aba Ações está no Brasil.
+  // Linhas de cada país = mesmo /api/data das abas (carregadas uma vez); Brasil reaproveita state.data quando a aba Mercado está no Brasil.
   const RC = {};
   const ctry = (c) => (state.countries || []).find(x => x.id === c) || { id: c, name: c, index: 'Índice' };
   const cOf = (id) => id.startsWith('@ix:') ? id.slice(4) : id.includes(':') ? id.split(':')[0] : 'br';
@@ -318,12 +318,12 @@
   // ---------- Modelos: todos os modelos da Previsão nas empresas escolhidas (simulação do servidor: modelos.compare) ----------
   let MD = null, MN = {};
   const MV = [['media', 'Média'], ['emp', 'Por empresa'], ['pos', 'Colocações'], ['con', 'Consistência']];
-  // Empresas (Modelos): as escolhidas acima, 5 maiores de cada setor ou uma empresa da aba Ações (todas: botão Comparar tudo)
+  // Empresas (Modelos): as escolhidas acima, 5 maiores de cada setor ou uma empresa da aba Mercado (todas: botão Comparar tudo)
   const mgOn = () => root.querySelectorAll('[data-mg]').forEach(b => b.classList.toggle('on', b.dataset.mg === S.mg));
   function muFill() {
     const rows = ((state.data && state.data.rows) || []).filter(r => /\d$/.test(r.ticker)).map(r => r.ticker).sort();
     if (S.mu === 'all') S.mu = 'sel';
-    $c('#cmpMu').innerHTML = `<option value="sel">Escolhidas acima</option><option value="top5">5 maiores de cada setor</option><optgroup label="Empresas da aba Ações">${rows.map(t => `<option value="t:${t}">${t}</option>`).join('')}</optgroup>`;
+    $c('#cmpMu').innerHTML = `<option value="sel">Escolhidas acima</option><option value="top5">5 maiores de cada setor</option><optgroup label="Empresas da aba Mercado">${rows.map(t => `<option value="t:${t}">${t}</option>`).join('')}</optgroup>`;
     $c('#cmpMu').value = S.mu; if ($c('#cmpMu').value !== S.mu) { S.mu = 'sel'; $c('#cmpMu').value = 'sel'; }
   }
   async function modRun(my) {

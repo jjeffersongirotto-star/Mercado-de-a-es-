@@ -883,7 +883,7 @@ HOWTO_KEYS = [
     (("grupo",), ["Grupos (criar e editar)"]),
     (("filtr", "ordenar", "ordena", "busca", "pesquis", "procurar"), ["Filtros e ordenação"]),
     (("chat",), ["Chat"]),
-    (("acoes", "acao", "aba acoes", "cards", "card"), ["Ações"]),
+    (("acoes", "acao", "aba acoes", "aba mercado", "cards", "card"), ["Mercado"]),
 ]
 _LN = None
 

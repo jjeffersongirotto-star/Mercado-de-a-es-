@@ -9,7 +9,7 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,
 const dataBR = (iso) => iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '—';  // 2026-10-12 -> 12/10/2026 (2026-10 -> 10/2026)
 const parseBR = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
 
-// Setas de ordem (˄ menor → maior · ˅ maior → menor; verde = sentido atual): Ordenar da aba Ações e títulos de colunas
+// Setas de ordem (˄ menor → maior · ˅ maior → menor; verde = sentido atual): Ordenar da aba Mercado e títulos de colunas
 window.sortIc = (dir) => `<svg class="sd-ic" viewBox="0 0 16 18" width="16" height="18" aria-hidden="true"><path class="${dir > 0 ? 'on' : ''}" d="M4 7 8 3l4 4"/><path class="${dir < 0 ? 'on' : ''}" d="M4 11l4 4 4-4"/></svg>`;
 window.thSort = (label, key, cur, dir) => `<th data-sc="${key}" class="th-s"><span>${label}</span>${sortIc(cur === key ? dir : 0)}</th>`;
 // Tabela ordenável no próprio navegador: <table data-srt> com títulos thSort e células com data-v (número ou texto)

@@ -1,5 +1,5 @@
 // ---------- Índice de Medo e Ganância da B3 (snapshot fg; cálculo em scripts/build_fg.py) ----------
-// Velocímetro no topo da aba Ações (só Brasil). fgLoad/fgBand também servem ao Comparar.
+// Velocímetro no topo da aba Mercado (só Brasil). fgLoad/fgBand também servem ao Comparar.
 (function () {
   const box = document.getElementById('fgCard');
   const cache = {};

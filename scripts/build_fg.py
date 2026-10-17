@@ -4,7 +4,7 @@ Só dados da B3 que o site já guarda: histórico COTAHIST (history4/), fluxo po
 "Mercado" = média dos retornos diários das 50 ações mais negociadas (volume médio de 60 pregões), parecido com o Ibovespa,
 mas disponível desde 1995 (o Ibovespa diário do Yahoo só tem 5 anos). Cada parte vira uma nota de 0 a 100 pela posição do
 valor de hoje entre os valores do último ano (252 pregões); o índice é a média das partes disponíveis no dia.
-O índice de cada ação usa medo.stock_index (mesma regra de nota, medo.rank): no Comparar, na hora; no card da aba Ações, fg_acoes.json (aqui).
+O índice de cada ação usa medo.stock_index (mesma regra de nota, medo.rank): no Comparar, na hora; no card da aba Mercado, fg_acoes.json (aqui).
 Uso: build_fg.py OUT_DIR   (lê OUT_DIR/history4, OUT_DIR/b3_flow.json, OUT_DIR/history/bcb_cdi.json)."""
 import glob, gzip, json, os, sys
 from datetime import datetime, timezone
@@ -97,7 +97,7 @@ def main(OUT):
 
 def acoes(OUT, C, V, n=600):
     """Índice de cada ação hoje (medo.stock_index, últimos n pregões bastam para a janela de 1 ano) -> OUT/fg_acoes.json
-    {t: [hoje, 1 pregão antes, 5 antes, 21 antes]}: card da aba Ações."""
+    {t: [hoje, 1 pregão antes, 5 antes, 21 antes]}: card da aba Mercado."""
     C, V = C.iloc[-n:], V.iloc[-n:]; A = {}
     for t in C.columns:
         c = C[t]; ok = c.notna()

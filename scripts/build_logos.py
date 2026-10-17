@@ -158,6 +158,27 @@ def site_icons(site):
         if out: break
     return out
 
+# ---------- nitidez (1.11) ----------
+def _on_grey(im):
+    b = Image.new("RGBA", im.size, (128, 128, 128, 255)); b.alpha_composite(im); return b.convert("RGB")
+
+def sharpness(im):
+    """Variância do Laplaciano do logo já no 64×64 (maior = mais nítido; borrado/ampliado dá baixo)."""
+    from PIL import ImageFilter, ImageStat
+    g = _on_grey(fit(im)).convert("L").filter(ImageFilter.Kernel((3, 3), [0, 1, 0, 1, -4, 1, 0, 1, 0], 1, 128))
+    return ImageStat.Stat(g).var[0]
+
+def same_logo(a, b, tol=22):
+    """Mesmo desenho e cores? (diferença média por canal a 24 px sobre cinza) — para trocar só a resolução, nunca o logo."""
+    pa = _on_grey(fit(a)).resize((24, 24), Image.LANCZOS).tobytes(); pb = _on_grey(fit(b)).resize((24, 24), Image.LANCZOS).tobytes()
+    return sum(abs(x - y) for x, y in zip(pa, pb)) / len(pa) < tol
+
+def small(im): return min(trim(im).size) < SIZE  # a fonte é menor que o logo publicado (seria ampliada = borrada)
+
+def better(cur, cand):
+    """O ícone do site substitui o favicon só se for maior, mais nítido e o mesmo logo."""
+    return cur is None or (min(trim(cand).size) > min(trim(cur).size) and sharpness(cand) >= sharpness(cur) and same_logo(cur, cand))
+
 def big_enough(im): return im is not None and min(trim(im).size) >= MIN_PX * 0.6 and max(im.size) >= MIN_PX
 
 # ---------- montagem ----------
@@ -204,8 +225,8 @@ def build(data_dir, force=False):
         if hashlib.sha1(b).hexdigest() in gen: continue
         im = open_img(b)
         if big_enough(im) and not is_gen(im): chosen[r] = (im, "favicon")
-    # 2. ícone do próprio site (só quem ficou sem)
-    gap = [r for r in roots if r not in chosen and site_of.get(r) and not skip(r, "site") and r not in ovr_files(ovr)]
+    # 2. ícone do próprio site: quem ficou sem e quem tem favicon pequeno (seria ampliado/borrado; prefere a fonte maior)
+    gap = [r for r in roots if (r not in chosen or small(chosen[r][0])) and site_of.get(r) and not skip(r, "site") and r not in ovr_files(ovr)]
     got = {}
     with cf.ThreadPoolExecutor(10) as ex:
         for r, lst in ex.map(lambda r: (r, site_icons(site_of[r])), gap): got[r] = lst
@@ -217,7 +238,7 @@ def build(data_dir, force=False):
             if hashlib.sha1(b).hexdigest() in gen2: continue
             im = open_img(b)
             if big_enough(im) and not is_gen(im) and (best is None or min(im.size) > min(best.size)): best = im
-        if best is not None: chosen[r] = (best, "site")
+        if best is not None and (r not in chosen or better(chosen[r][0], best)): chosen[r] = (best, "site")
     # imagens à mão
     for r in ovr_files(ovr):
         im = open_img(open(os.path.join(OVR_DIR, ovr[r]["file"]), "rb").read())
@@ -365,7 +386,7 @@ def foreign(data_dir, out_dir, ovr, is_gen, files, idx):
         im = open_img(b)
         if big_enough(im) and not is_gen(im): chosen[d] = (im, "favicon")
     # 2. ícone do próprio site
-    gap = [d for d in doms if d not in chosen and not skip(d, "site")]
+    gap = [d for d in doms if (d not in chosen or small(chosen[d][0])) and not skip(d, "site")]
     got = {}
     with cf.ThreadPoolExecutor(16) as ex:
         for d, lst in zip(gap, ex.map(lambda d: site_icons("https://" + d), gap)): got[d] = lst
@@ -376,7 +397,7 @@ def foreign(data_dir, out_dir, ovr, is_gen, files, idx):
             if hashlib.sha1(b).hexdigest() in gen2: continue
             im = open_img(b)
             if big_enough(im) and not is_gen(im) and (best is None or min(im.size) > min(best.size)): best = im
-        if best is not None: chosen[d] = (best, "site")
+        if best is not None and (d not in chosen or better(chosen[d][0], best)): chosen[d] = (best, "site")
     for d in ovr_files(ovr):
         if "." in d: chosen[d] = (open_img(open(os.path.join(OVR_DIR, ovr[d]["file"]), "rb").read()), "manual")
     def save(im, src, k):

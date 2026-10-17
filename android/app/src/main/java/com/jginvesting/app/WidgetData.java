@@ -56,6 +56,17 @@ public final class WidgetData {
     /** Largura atual do widget em dp: retrato = largura mínima, paisagem = máxima (regra do AppWidgetManager); 0 = desconhecida. */
     public static int widthDp(int minW, int maxW, boolean landscape) { return landscape && maxW > 0 ? maxW : minW > 0 ? minW : maxW; }
 
+    /** Largura (dp) da coluna Ação para o texto: widget − margens − colunas Preço/Dia/Barato/Caro/Medo (230dp) − slot do logo. */
+    public static float nameRoomDp(int wDp, boolean narrow) { return Math.max(40, (wDp > 0 ? wDp : 300) - 18 - 230 - 4 - (narrow ? 0 : 40)); }
+
+    /** Tamanho (sp) do nome em cima: o maior de 14 a 11 sp em que cabe numa linha (≈0,52 em por letra em negrito); não cabendo
+     *  nem em 11, 12 sp em até 2 linhas (o layout permite 2) — nunca cortado no meio de uma palavra curta. */
+    public static float nameSp(String s, float roomDp) {
+        int n = s == null ? 0 : s.length();
+        for (float sp = 14f; sp >= 11f; sp -= 0.5f) if (n * 0.52f * sp <= roomDp) return sp;
+        return 12f;
+    }
+
     /** Arquivo de logo válido de /api/widget (hash de 12 dígitos .png) ou null. */
     public static String logo(String l) { return l != null && l.matches("[0-9a-f]{12}\\.png") ? l : null; }
 

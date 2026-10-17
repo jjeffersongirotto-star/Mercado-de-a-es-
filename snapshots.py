@@ -27,6 +27,19 @@ _DROP = re.compile(r"\s*(-\s*EM RECUPERA[CÇ][AÃ]O JUDICIAL|\bEM RECUPERA[CÇ][
 
 _END = re.compile(r"(?:[\s,&]+|^)(?:\(The\)|Inc|Incorporated|Corp|Corporation|Co|Company|Ltd|Limited|plc|p\.l\.c|AG|SE|N\.?V|KGaA|S\.?p\.?A|Group|Class [A-Z]|Series [A-Z]|Cl\.? [A-Z])\.?\s*$", re.I)
 
+_POP = None
+
+def nome_popular(ticker, n):
+    """Nome pelo qual a empresa é conhecida (nomes_populares.json, fonte única: Petrobras, Itaú, SpaceX…); chave = 4 letras da B3
+    (PETR4 -> PETR) ou o ticker de fora; sem entrada, nome_curto(n). Widget do app (/api/widget → s)."""
+    global _POP
+    if _POP is None:
+        try: _POP = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "nomes_populares.json"), encoding="utf-8"))
+        except Exception: _POP = {}
+    t = (ticker or "").upper()
+    k = t[:4] if re.fullmatch(r"[A-Z0-9]{4}\d{1,2}B?", t) and not t.isdigit() else t
+    return _POP.get(k) or _POP.get(t) or nome_curto(n)
+
 def nome_curto(n):
     """Nome da empresa para espaço pequeno (widget): sem S.A./S/A/Ltda/Holding/Participações; tudo maiúsculo vira
     Primeira Maiúscula (siglas de até 3 letras ficam, preposições em minúsculas); corta depois de ' - '. 'BCO' -> 'Banco'."""

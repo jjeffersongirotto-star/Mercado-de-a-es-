@@ -112,5 +112,73 @@
   "skip": [
    "site"
   ]
+ },
+ "AGRO": {
+  "file": "AGRO.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 112 px)"
+ },
+ "CCTY": {
+  "file": "CCTY.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 99 px)"
+ },
+ "CXSE": {
+  "file": "CXSE.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "DMVF": {
+  "file": "DMVF.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "DXCO": {
+  "file": "DXCO.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "ECOR": {
+  "file": "ECOR.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 139 px)"
+ },
+ "POSI": {
+  "file": "POSI.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "RADL": {
+  "file": "RADL.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 179 px)"
+ },
+ "RAPT": {
+  "file": "RAPT.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 177 px)"
+ },
+ "TOKY": {
+  "file": "TOKY.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "VVEO": {
+  "file": "VVEO.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 113 px)"
+ },
+ "WLMM": {
+  "file": "WLMM.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 71 px)"
+ },
+ "CEED": {
+  "file": "CEED.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "EQMA": {
+  "file": "EQMA.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "EQTL": {
+  "file": "EQTL.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (ícone do site oficial, 180 px)"
+ },
+ "MRSA": {
+  "file": "MRSA.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (Wikimedia Commons: File:MRS Logística.svg (símbolo))"
+ },
+ "PETR": {
+  "file": "PETR.png",
+  "why": "nitidez: favicon pequeno/borrado; mesmo logo oficial em resolução maior (Wikimedia Commons: Logotipo da Petrobras (símbolo BR))"
  }
 }
