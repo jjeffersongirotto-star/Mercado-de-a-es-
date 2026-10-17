@@ -18,6 +18,7 @@ import java.util.List;
 public class FavWidget extends AppWidgetProvider {
     static final String ACTION_REFRESH = "com.jginvesting.app.REFRESH";
     static final String EXTRA_TICKER = "ticker";
+    static final String EXTRA_UPDATE = "update";
 
     @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) {
         render(c);
@@ -49,6 +50,7 @@ public class FavWidget extends AppWidgetProvider {
                     String j = Api.widget(tk, pr != null ? 8000 : 30000);  // broadcast: o Android dá ~10 s
                     if (j != null) Store.setData(c, sel, j);
                 }
+                Updater.quietCheck(c, pr != null ? 6000 : 20000);  // aviso "Atualização disponível" no topo
                 render(c);
             } finally {
                 if (pr != null) pr.finish();
@@ -84,6 +86,15 @@ public class FavWidget extends AppWidgetProvider {
             v.setViewVisibility(R.id.w_time, up.isEmpty() ? View.GONE : View.VISIBLE);
             Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             v.setOnClickPendingIntent(R.id.w_logo, PendingIntent.getActivity(c, 0, open, flagsImm));
+            UpdateLogic.Info nu = Updater.known(c);
+            boolean upd = UpdateLogic.available(nu, BuildConfig.VERSION_CODE);
+            v.setViewVisibility(R.id.w_upd, upd ? View.VISIBLE : View.GONE);
+            if (upd) {
+                v.setTextViewText(R.id.w_upd, c.getString(R.string.widget_update, nu.name));
+                Intent ui = new Intent(c, MainActivity.class).putExtra(EXTRA_UPDATE, true).setAction("com.jginvesting.app.UPDATE")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                v.setOnClickPendingIntent(R.id.w_upd, PendingIntent.getActivity(c, 3, ui, flagsImm));
+            }
             Intent rf = new Intent(c, FavWidget.class).setAction(ACTION_REFRESH);
             v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(c, 1, rf, flagsImm));
             // toques nas linhas (abrir/fechar gráfico, marcar ponto, abrir no app): WidgetTap, sem tela; o que fazer vem no fill-in

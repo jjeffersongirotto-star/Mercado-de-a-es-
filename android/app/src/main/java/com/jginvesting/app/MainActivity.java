@@ -81,6 +81,8 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33)  // Android 13+: voltar (no 16 o onBackPressed não é mais chamado)
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::back);
         updater = new Updater(this);
+        if (getIntent().getBooleanExtra(FavWidget.EXTRA_UPDATE, false)) updater.forceOffer();
+        FavWidget.render(getApplicationContext());  // depois de atualizar o app: tira o aviso do widget
         if (saved != null) web.restoreState(saved);
         else web.loadUrl(BuildConfig.SITE + "/" + acaoQuery(getIntent()));
     }
@@ -94,6 +96,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
+        if (i.getBooleanExtra(FavWidget.EXTRA_UPDATE, false)) updater.forceOffer();  // onResume vem em seguida
         String t = ticker(i);
         if (t != null) web.evaluateJavascript("window.jgOpen ? jgOpen('" + t + "') : location.assign('/?acao=" + t + "')", null);
     }
@@ -115,7 +118,7 @@ public class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     @Override public void onBackPressed() { back(); }
 
-    @Override protected void onPause() { super.onPause(); web.onPause(); }
+    @Override protected void onPause() { super.onPause(); web.onPause(); updater.onPause(); }
     @Override protected void onResume() { super.onResume(); web.onResume(); updater.onResume(); }
 
     /** window.JGApp no site (só existe dentro do app). */

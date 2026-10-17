@@ -12,4 +12,5 @@
     <string name="open_app">Abrir no app</string>
     <string name="fav_sel">Favoritos  ▾</string>
     <string name="widget_empty_group">Abra o app para atualizar este grupo</string>
+    <string name="widget_update">⬆  Atualização disponível (%1$s) · tocar para instalar</string>
 </resources>

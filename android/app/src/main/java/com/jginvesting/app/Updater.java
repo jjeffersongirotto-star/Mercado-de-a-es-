@@ -22,28 +22,70 @@ import java.security.MessageDigest;
 final class Updater {
     private final Activity a;
     private UpdateLogic.Info pending;  // aguardando a permissão "instalar apps desta fonte"
-    private boolean busy;
+    private boolean busy, checking, resumed, force;
+    private AlertDialog dialog;
 
     Updater(Activity a) { this.a = a; }
-    private SharedPreferences sp() { return a.getSharedPreferences("upd", Context.MODE_PRIVATE); }
+    static SharedPreferences sp(Context c) { return c.getSharedPreferences("upd", Context.MODE_PRIVATE); }
+    private SharedPreferences sp() { return sp(a); }
 
-    /** Ao abrir/voltar ao app: no máximo a cada 3 h. Se a permissão acabou de ser dada, segue com a atualização. */
+    /** Última versão publicada que o app ou o widget viu (null se nenhuma). */
+    static UpdateLogic.Info known(Context c) { return UpdateLogic.parse(sp(c).getString("known", "")); }
+    static boolean available(Context c) { return UpdateLogic.available(known(c), BuildConfig.VERSION_CODE); }
+
+    /** Uma conferência (com novas tentativas se falhar). Guarda a versão vista; só conta como feita se deu certo. Fora da thread principal. */
+    static UpdateLogic.Info fetch(Context c, int timeoutMs, int tries) {
+        UpdateLogic.Info i = null;
+        for (int k = 0; k < Math.min(tries, UpdateLogic.RETRY_MS.length) && i == null; k++) {
+            if (UpdateLogic.RETRY_MS[k] > 0) try { Thread.sleep(UpdateLogic.RETRY_MS[k]); } catch (InterruptedException e) { break; }
+            String j = get(BuildConfig.SITE + "/app/version.json", timeoutMs);
+            i = j == null ? null : UpdateLogic.parse(j);
+            if (i != null) sp(c).edit().putString("known", j).putLong("ok", System.currentTimeMillis()).commit();
+        }
+        return i;
+    }
+
+    /** Widget (a cada 30 min e no ⟳): conferência leve, no máximo a cada 10 min. true = mudou o aviso. */
+    static boolean quietCheck(Context c, int timeoutMs) {
+        if (!UpdateLogic.shouldCheck(sp(c).getLong("ok", 0), System.currentTimeMillis())) return false;
+        boolean before = available(c);
+        fetch(c, timeoutMs, 1);
+        return before != available(c);
+    }
+
+    /** Ao abrir e ao voltar ao app. Se a permissão acabou de ser dada, segue com a atualização. */
     void onResume() {
+        resumed = true;
         if (pending != null && canInstall()) { UpdateLogic.Info i = pending; pending = null; download(i); return; }
+        maybeAsk(known(a));  // já se sabe de uma versão nova (widget ou conferência anterior): oferece na hora
         long now = System.currentTimeMillis();
-        if (busy || !UpdateLogic.shouldCheck(sp().getLong("last", 0), now)) return;
-        sp().edit().putLong("last", now).apply();
+        if (busy || checking || !(force || UpdateLogic.shouldCheck(sp().getLong("ok", 0), now))) return;
+        checking = true;
         new Thread(() -> {
-            String j = get(BuildConfig.SITE + "/app/version.json");
-            UpdateLogic.Info i = j == null ? null : UpdateLogic.parse(j);
-            if (UpdateLogic.offer(i, BuildConfig.VERSION_CODE, sp().getInt("snoozeCode", 0), sp().getLong("snoozeUntil", 0), System.currentTimeMillis()))
-                a.runOnUiThread(() -> ask(i));
+            boolean before = available(a);
+            UpdateLogic.Info i = fetch(a, 20000, UpdateLogic.RETRY_MS.length);
+            if (before != available(a)) FavWidget.render(a.getApplicationContext());
+            a.runOnUiThread(() -> { checking = false; maybeAsk(i); });
         }).start();
+    }
+
+    void onPause() { resumed = false; }
+
+    /** Toque em "Atualização disponível" no widget: oferece mesmo se adiada. */
+    void forceOffer() { force = true; }
+
+    private void maybeAsk(UpdateLogic.Info i) {
+        if (i == null || !resumed || busy || a.isFinishing() || a.isDestroyed() || (dialog != null && dialog.isShowing())) return;
+        boolean ok = force ? UpdateLogic.available(i, BuildConfig.VERSION_CODE)
+                : UpdateLogic.offer(i, BuildConfig.VERSION_CODE, sp().getInt("snoozeCode", 0), sp().getLong("snoozeUntil", 0), System.currentTimeMillis());
+        if (!ok) return;
+        force = false;
+        ask(i);
     }
 
     private void ask(UpdateLogic.Info i) {
         if (a.isFinishing()) return;
-        new AlertDialog.Builder(a, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+        dialog = new AlertDialog.Builder(a, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
                 .setTitle("Nova versão disponível (" + i.name + ")")
                 .setMessage("Instalada: " + BuildConfig.VERSION_NAME + ".")
                 .setPositiveButton("Atualizar", (d, w) -> start(i))
@@ -99,11 +141,12 @@ final class Updater {
         }).start();
     }
 
-    private static String get(String url) {
+    private static String get(String url, int timeoutMs) {
         HttpURLConnection c = null;
         try {
             c = (HttpURLConnection) new URL(url).openConnection();
-            c.setConnectTimeout(15000); c.setReadTimeout(15000);
+            c.setConnectTimeout(timeoutMs); c.setReadTimeout(timeoutMs);
+            c.setUseCaches(false);
             if (c.getResponseCode() != 200) return null;
             try (InputStream in = c.getInputStream()) {
                 java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream(); byte[] buf = new byte[4096]; int n;
