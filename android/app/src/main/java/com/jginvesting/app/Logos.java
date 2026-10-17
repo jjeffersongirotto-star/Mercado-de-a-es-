@@ -62,7 +62,7 @@ final class Logos {
         return out;
     }
 
-    /** Lado do bitmap: o slot tem 32dp, mas o arquivo tem 64 px; com muitas linhas, menor (orçamento de ~1 MB do widget). */
+    /** Lado do bitmap: o slot tem 32dp (até 96 px), o arquivo tem 128 px; com muitas linhas, menor (orçamento de ~1 MB do widget). */
     static int px(Context c, int rows) { return WidgetData.logoPx(c.getResources().getDisplayMetrics().density, rows); }
 
     static Map<String, Bitmap> newCache() { return new HashMap<>(); }

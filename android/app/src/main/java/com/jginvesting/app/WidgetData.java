@@ -74,7 +74,8 @@ public final class WidgetData {
     public static String initials(String t) { return t == null ? "" : t.substring(0, Math.min(2, t.length())); }
 
     /** Lado do bitmap do logo: slot de 32dp, arquivo de 64 px; com muitas linhas, menor. */
-    public static int logoPx(float density, int rows) { return Math.min(Math.round(32 * density), rows > 24 ? 44 : 56); }
+    // 1.11: até 12 linhas o logo vai na resolução real da tela (32dp × densidade, até 96 px; o arquivo tem 128 px) — antes 56 px ampliados = borrado
+    public static int logoPx(float density, int rows) { return Math.min(Math.round(32 * density), rows > 24 ? 44 : rows > 12 ? 64 : 96); }
 
     /** Bytes de bitmap que o widget manda de uma vez: logos (ARGB) de todas as linhas + o gráfico aberto (RGB_565, escala até 1,5).
      *  O Android recusa a atualização acima de ~1 MB. */

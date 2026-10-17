@@ -11,7 +11,7 @@ Ações de fora (EUA, Reino Unido, Alemanha, Portugal, Japão: as mesmas do site
   escuro ganha o fundo claro sozinho (contraste < 2:1 sobre o fundo do widget em mais de 90% dos pixels).
 Ajustes à mão: scripts/logos_override/override.json (+ imagens da pasta): file (imagem própria), backing (fundo claro arredondado
 para logo escuro quase invisível no fundo escuro), skip (etapas a pular).
-Saída: <data>/logos/index.json (ticker -> arquivo, origem, fundo claro) e <data>/logos/<hash>.png (64×64, formato original,
+Saída: <data>/logos/index.json (ticker -> arquivo, origem, fundo claro) e <data>/logos/<hash>.png (128×128, formato original,
 fundo transparente). Uso: build_logos.py <pasta data> [--force]. Sem --force, não refaz se o índice tem menos de 7 dias."""
 import concurrent.futures as cf, csv, hashlib, io, json, os, re, sys, zipfile
 from datetime import datetime, timezone
@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OVR_DIR = os.path.join(HERE, "logos_override")
-SIZE, MIN_PX, RADIUS = 64, 32, 14
+SIZE, MIN_PX, RADIUS, SMALL = 128, 32, 28, 64  # 1.11: 128 px (o widget mostra até 96 px; 64 ampliado ficava borrado)
 LIGHT = (226, 232, 240, 255)  # --c-txt do site: fundo claro dos logos escuros
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36",
       "Accept-Language": "pt-BR,pt;q=0.9"}
@@ -78,8 +78,9 @@ def backing(im):
     """Fundo claro arredondado com o logo dentro (logo escuro no fundo escuro do widget)."""
     out = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     out.paste(Image.new("RGBA", (SIZE, SIZE), LIGHT), (0, 0), rounded_mask(SIZE, RADIUS))
-    inner = fit(im, SIZE - 12)
-    out.alpha_composite(inner, (6, 6))
+    pad = SIZE * 6 // 64
+    inner = fit(im, SIZE - 2 * pad)
+    out.alpha_composite(inner, (pad, pad))
     return out
 
 def png(im):
@@ -163,7 +164,7 @@ def _on_grey(im):
     b = Image.new("RGBA", im.size, (128, 128, 128, 255)); b.alpha_composite(im); return b.convert("RGB")
 
 def sharpness(im):
-    """Variância do Laplaciano do logo já no 64×64 (maior = mais nítido; borrado/ampliado dá baixo)."""
+    """Variância do Laplaciano do logo já no tamanho publicado (maior = mais nítido; borrado/ampliado dá baixo)."""
     from PIL import ImageFilter, ImageStat
     g = _on_grey(fit(im)).convert("L").filter(ImageFilter.Kernel((3, 3), [0, 1, 0, 1, -4, 1, 0, 1, 0], 1, 128))
     return ImageStat.Stat(g).var[0]
@@ -173,7 +174,7 @@ def same_logo(a, b, tol=22):
     pa = _on_grey(fit(a)).resize((24, 24), Image.LANCZOS).tobytes(); pb = _on_grey(fit(b)).resize((24, 24), Image.LANCZOS).tobytes()
     return sum(abs(x - y) for x, y in zip(pa, pb)) / len(pa) < tol
 
-def small(im): return min(trim(im).size) < SIZE  # a fonte é menor que o logo publicado (seria ampliada = borrada)
+def small(im): return min(trim(im).size) < SMALL  # fonte pequena (seria ampliada = borrada): procura o ícone maior do site
 
 def better(cur, cand):
     """O ícone do site substitui o favicon só se for maior, mais nítido e o mesmo logo."""
@@ -207,7 +208,7 @@ def build(data_dir, force=False):
     print(f"  logos: {len(tickers)} tickers, {len(roots)} empresas, {sum(1 for v in site_of.values() if v)} com site no FCA")
     skip = lambda r, st: st in ((ovr.get(r) or {}).get("skip") or [])
     generic = set(ovr.get("_generic") or [])
-    is_gen = lambda im: hashlib.sha1(png(fit(im))).hexdigest()[:12] in generic
+    is_gen = lambda im: hashlib.sha1(png(fit(im, 64))).hexdigest()[:12] in generic  # hashes de _generic: gerados a 64 px
 
     # 1. favicon (Google)
     fav = {}

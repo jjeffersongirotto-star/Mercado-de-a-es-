@@ -72,9 +72,11 @@ public class WidgetDataTest {
 
     @Test public void bitmapBudgetUnderOneMegabyte() {
         for (float d : new float[]{1f, 2f, 2.75f, 3.5f, 4f})
-            for (int rows : new int[]{1, 10, 24, 25, WidgetData.MAX_ROWS})
+            for (int rows : new int[]{1, 10, 12, 13, 24, 25, WidgetData.MAX_ROWS})
                 assertEquals(true, WidgetData.bitmapBytes(rows, d, 600) < 1_000_000L);
-        assertEquals(56, WidgetData.logoPx(2.75f, 10));
+        assertEquals(88, WidgetData.logoPx(2.75f, 10));
+        assertEquals(96, WidgetData.logoPx(3.5f, 12));
+        assertEquals(64, WidgetData.logoPx(3.5f, 20));
         assertEquals(44, WidgetData.logoPx(2.75f, 40));
         assertEquals(32, WidgetData.logoPx(1f, 10));
     }

@@ -1016,7 +1016,7 @@ def api_logos():
 
 @app.get("/logos/{f}")
 def logo_file(f: str):
-    """PNG 64×64 de um logo (/api/logos ou /api/widget → l). Baixado da branch data uma vez e guardado em memória."""
+    """PNG 128×128 de um logo (/api/logos ou /api/widget → l). Baixado da branch data uma vez e guardado em memória."""
     if not LOGO_FILE.fullmatch(f): return JSONResponse({"error": "não encontrado"}, status_code=404)
     b = _LOGO_BYTES.get(f)
     if b is None:
