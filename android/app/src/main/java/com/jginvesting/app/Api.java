@@ -21,6 +21,26 @@ final class Api {
     /** Gráfico de 5 anos de uma ação (/api/widget/chart). */
     static String chart(String t, int timeoutMs) { return get("/api/widget/chart?t=" + t, timeoutMs); }
 
+    /** PNG de um logo (/logos/<arquivo>) ou null. */
+    static byte[] logo(String file, int timeoutMs) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(BuildConfig.SITE + "/logos/" + file).openConnection();
+            c.setConnectTimeout(timeoutMs); c.setReadTimeout(timeoutMs);
+            if (c.getResponseCode() != 200) return null;
+            try (InputStream in = c.getInputStream()) {
+                ByteArrayOutputStream b = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int n;
+                while ((n = in.read(buf)) > 0 && b.size() < 200_000) b.write(buf, 0, n);
+                byte[] x = b.toByteArray();
+                return x.length > 8 && (x[0] & 0xff) == 0x89 && x[1] == 'P' ? x : null;
+            }
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
     private static String get(String path, int timeoutMs) {
         HttpURLConnection c = null;
         try {

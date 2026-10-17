@@ -914,15 +914,62 @@ def api_widget(t: str = ""):
     want = [x.strip().upper() for x in (t or "").split(",") if x.strip()][:40]
     by = {r["ticker"]: r for r in rows}
     v = lambda o, k: (o.get("v") or {}).get(k)
+    logos = logo_index()
     out = []
     for tk in want:
         r = by.get(tk)
         if not r: out.append({"t": tk}); continue
         j, pct, m = valor_justo.fair(r, v, rows)
-        out.append({"t": tk, "n": r.get("nome"), "p": v(r, "preco"), "v": r.get("var"),
+        out.append({"t": tk, "n": r.get("nome"), "s": snapshots.nome_curto(r.get("nome")), "l": (logos.get(tk) or {}).get("f"),
+                    "p": v(r, "preco"), "v": r.get("var"),
                     "f": round(pct, 1) if j else None, "m": m if j else None,
                     "g": (r.get("fg") or [None])[0]})  # Medo e Ganância da ação hoje (snapshot fg_acoes → rows.fg, o mesmo do card)
     return JSONResponse({"u": d.get("updated_at_sp"), "gf": (d.get("fga") or {}).get("faixas"), "r": out}, headers={"Cache-Control": "no-store"})
+
+# ---------- Logos das empresas (AGENTS.md 1.3 "Logo da empresa"): scripts/build_logos.py → branch data → data/logos ----------
+LOGO_FILE = re.compile(r"[0-9a-f]{12}\.png")
+_LOGO_BYTES = {}  # arquivo -> PNG (nome = hash do conteúdo: nunca muda)
+
+_LOGO_IDX = {"t": {}, "at": 0.0, "busy": False}
+
+def logo_index():
+    """ticker -> {f: arquivo, s: origem, b: fundo claro}. Índice semanal da branch data, renovado a cada 6 h em segundo plano
+    (o /api/widget nunca espera o GitHub: sem índice ainda, responde sem logo e o widget pega na próxima atualização)."""
+    if time.time() - _LOGO_IDX["at"] > 6 * 3600 and not _LOGO_IDX["busy"]:
+        _LOGO_IDX["busy"] = True
+        def go():
+            try:
+                d, _ = snapshots.load("logos/index", max_mem_age=6 * 3600)
+                if d and d.get("t"): _LOGO_IDX["t"] = d["t"]
+                _LOGO_IDX["at"] = time.time() if d else time.time() - 6 * 3600 + 600  # falhou: tenta de novo em 10 min
+            finally:
+                _LOGO_IDX["busy"] = False
+        threading.Thread(target=go, daemon=True).start()
+    return _LOGO_IDX["t"]
+
+@app.get("/api/logos")
+def api_logos():
+    """Índice dos logos (widget; e quem mais mostrar logo de empresa)."""
+    d, desc = snapshots.load("logos/index", max_mem_age=6 * 3600)
+    if not d: return JSONResponse({"error": "sem índice de logos", "detail": desc}, status_code=404, headers={"Cache-Control": "no-store"})
+    return JSONResponse(d, headers={"Cache-Control": "public, max-age=21600"})
+
+@app.get("/logos/{f}")
+def logo_file(f: str):
+    """PNG 64×64 de um logo (/api/logos ou /api/widget → l). Baixado da branch data uma vez e guardado em memória."""
+    if not LOGO_FILE.fullmatch(f): return JSONResponse({"error": "não encontrado"}, status_code=404)
+    b = _LOGO_BYTES.get(f)
+    if b is None:
+        try:
+            r = requests.get(f"{snapshots.RAW}/logos/{f}", timeout=(5, 15))
+        except Exception:
+            return JSONResponse({"error": "indisponível"}, status_code=502, headers={"Cache-Control": "no-store"})
+        if r.status_code != 200 or not r.content.startswith(b"\x89PNG"):
+            return JSONResponse({"error": "não encontrado"}, status_code=404, headers={"Cache-Control": "no-store"})
+        b = r.content
+        if len(_LOGO_BYTES) > 800: _LOGO_BYTES.clear()  # ~350 logos de ~2 KB: teto de memória
+        _LOGO_BYTES[f] = b
+    return Response(b, media_type="image/png", headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 _WCHART = {}  # (ticker, versão do histórico, dia) -> resposta pronta do gráfico do widget
 

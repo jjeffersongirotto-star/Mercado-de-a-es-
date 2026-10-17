@@ -6,6 +6,7 @@
 #   Investidor10 (~1 req/s, ~1000 páginas)     · Dados de Mercado (~1 req/2,5 s, ~300 páginas)
 #   CVM dados abertos (DFP/ITR, pré-processado: data/cvm.json compacto) · Proventos B3 (dividendo por ação, 1×/semana) · Notícias (aba Notícias)
 #   Histórico (Yahoo 20a mensal/5a diário + Ibovespa + BCB; maiores ações de fora em history5, 1×/semana) e perfis (brapi) do universo exibido
+#   Logos das empresas (widget do app; favicon do site da CVM/FCA → ícone do site → brapi; 1×/semana; requer Pillow e resvg-py)
 #   Índice de Medo e Ganância (B3: COTAHIST, fluxo, CDI) · Sinais dos modelos da Previsão (e Comparar → Modelos pré-calculado) · Base do chat (resumos da Wikipedia dos itens do conhecimento.json; renova uma vez por semana)
 # ONLY="cvm tradingview" limita as etapas; PYTHON = interpretador com pandas/lxml/yfinance/requests.
 set -e
@@ -16,7 +17,7 @@ if [ -z "$PY" ]; then
   if [ -x /workspace/b3-api/.venv/bin/python ]; then PY=/workspace/b3-api/.venv/bin/python; else PY=python3; fi
 fi
 # Grava em blocos (commit + push ao fim de cada um): se a rotina for cortada no meio, o que já ficou pronto não se perde.
-BLOCK1="fundamentus statusinvest yfinance tradingview cvm b3prov noticias"                         # rápidos
+BLOCK1="fundamentus statusinvest yfinance tradingview cvm b3prov noticias logos"                   # rápidos (logos: 1×/semana)
 BLOCK2="b3indices b3cad b3btb vol30 cotahist history metrics fg fund modelos modpre kb"           # B3, históricos e derivados
 BLOCK3="investidor10 dadosdemercado"                                                             # lentos (~1 h): por último
 STEPS="${ONLY:-$BLOCK1 $BLOCK2 $BLOCK3}"
@@ -71,6 +72,7 @@ step() {
     modelos)        run "Modelos da Previsão" "$PY" "$HERE/scripts/build_modelos.py" "$TMP/data" ;;
     modpre)         run "Comparar Modelos pré-calculado" "$PY" "$HERE/scripts/build_modelos_pre.py" "$TMP/data" ;;
     kb)             run "Base do chat" "$PY" "$HERE/scripts/build_kb.py" "$TMP/data" ;;
+    logos)          run "Logos das empresas" "$PY" "$HERE/scripts/build_logos.py" "$TMP/data" ;;  # refaz só se o índice tem 7+ dias (ou o override mudou)
   esac
 }
 for B in "$BLOCK1" "$BLOCK2" "$BLOCK3"; do

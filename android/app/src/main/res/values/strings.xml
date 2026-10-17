@@ -7,8 +7,8 @@
     <string name="col_t">Ação</string>
     <string name="col_p">Preço</string>
     <string name="col_v">Dia</string>
-    <string name="col_f">Barato/Caro</string>
-    <string name="col_g">Medo/Gan.</string>
+    <string name="col_f">Barato/​Caro</string>
+    <string name="col_g">Medo e Ganância</string>
     <string name="open_app">Abrir no app</string>
     <string name="fav_sel">Favoritos  ▾</string>
     <string name="widget_empty_group">Abra o app para atualizar este grupo</string>

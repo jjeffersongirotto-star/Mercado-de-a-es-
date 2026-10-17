@@ -33,6 +33,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      - run: pip install "pillow>=11" "resvg-py==0.5.0"   # logos das empresas (scripts/build_logos.py), só na rotina
       - name: Arquivos anuais COTAHIST (cache)
         uses: actions/cache@v4
         with:

@@ -20,7 +20,32 @@ public final class WidgetData {
         public final String t, m;
         public final Double p, v, f;
         public final Integer g;  // Medo e Ganância da ação (0–100)
+        public String s, l;      // nome curto da empresa e arquivo do logo (/logos/<l>; null = iniciais)
         Item(String t, Double p, Double v, Double f, String m, Integer g) { this.t = t; this.p = p; this.v = v; this.f = f; this.m = m; this.g = g; }
+    }
+
+    /** Arquivo de logo válido de /api/widget (hash de 12 dígitos .png) ou null. */
+    public static String logo(String l) { return l != null && l.matches("[0-9a-f]{12}\\.png") ? l : null; }
+
+    /** Iniciais do círculo quando a empresa não tem logo: 2 primeiras letras do ticker. */
+    public static String initials(String t) { return t == null ? "" : t.substring(0, Math.min(2, t.length())); }
+
+    /** Lado do bitmap do logo: slot de 32dp, arquivo de 64 px; com muitas linhas, menor. */
+    public static int logoPx(float density, int rows) { return Math.min(Math.round(32 * density), rows > 24 ? 44 : 56); }
+
+    /** Bytes de bitmap que o widget manda de uma vez: logos (ARGB) de todas as linhas + o gráfico aberto (RGB_565, escala até 1,5).
+     *  O Android recusa a atualização acima de ~1 MB. */
+    public static long bitmapBytes(int rows, float density, int wDp) {
+        int px = logoPx(density, rows);
+        float d = Math.min(1.5f, density);
+        return (long) rows * px * px * 4 + (long) ((wDp - 20) * d) * (long) (110 * d) * 2;
+    }
+
+    /** Logos usados pelas linhas (sem repetir), para baixar os que faltam. */
+    public static List<String> logos(List<Item> items) {
+        List<String> out = new ArrayList<>();
+        for (Item it : items) if (it.l != null && !out.contains(it.l)) out.add(it.l);
+        return out;
     }
 
     /** Lista de favoritos (JSON ["PETR4", ...], na ordem do site) -> tickers válidos, sem repetir. */
@@ -89,7 +114,10 @@ public final class WidgetData {
                 JSONObject o = r.getJSONObject(i);
                 String t = o.optString("t", "");
                 Double g = num(o, "g");
-                by.put(t, new Item(t, num(o, "p"), num(o, "v"), num(o, "f"), o.isNull("m") ? null : o.optString("m", null), g == null ? null : (int) Math.round(g)));
+                Item it = new Item(t, num(o, "p"), num(o, "v"), num(o, "f"), o.isNull("m") ? null : o.optString("m", null), g == null ? null : (int) Math.round(g));
+                it.s = o.isNull("s") ? null : o.optString("s", null);
+                it.l = logo(o.isNull("l") ? null : o.optString("l", null));
+                by.put(t, it);
             }
         } catch (Exception e) { /* sem dados: só os tickers */ }
         List<Item> out = new ArrayList<>();

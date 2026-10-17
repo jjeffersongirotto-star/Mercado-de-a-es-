@@ -39,6 +39,7 @@ public class FavWidget extends AppWidgetProvider {
     /** Busca os dados de cada lista em uso e redesenha. pr = broadcast pendente (pode ser null quando chamado pelo app). */
     static void refreshAsync(Context ctx, PendingResult pr) {
         final Context c = ctx.getApplicationContext();
+        final long start = System.currentTimeMillis();
         new Thread(() -> {
             try {
                 List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
@@ -49,6 +50,8 @@ public class FavWidget extends AppWidgetProvider {
                     if (tk.isEmpty()) continue;
                     String j = Api.widget(tk, pr != null ? 8000 : 30000);  // broadcast: o Android dá ~10 s
                     if (j != null) Store.setData(c, sel, j);
+                    // logos que faltam no aparelho (só na primeira vez de cada um; ficam guardados)
+                    Logos.ensure(c, WidgetData.logos(WidgetData.items(tk, Store.data(c, sel))), pr != null ? start + 8500 : 0);
                 }
                 Updater.quietCheck(c, pr != null ? 6000 : 20000);  // aviso "Atualização disponível" no topo
                 render(c);
@@ -73,6 +76,8 @@ public class FavWidget extends AppWidgetProvider {
         for (int id : ids) {
             String sel = selOf(c, id, gs), data = Store.data(c, sel);
             List<WidgetData.Item> items = WidgetData.items(WidgetData.tickers(sel, Store.favs(c), gs), data);
+            java.util.Map<String, android.graphics.Bitmap> bmp = Logos.newCache();
+            int px = Logos.px(c, items.size());
             WidgetData.Bands bands = WidgetData.bands(data);
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget);
             v.setTextViewText(R.id.w_sel, WidgetData.name(sel, gs) + "  ▾");
@@ -105,7 +110,7 @@ public class FavWidget extends AppWidgetProvider {
             if (Build.VERSION.SDK_INT >= 31) {
                 RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
                 int wDp = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
-                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp));
+                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp, px, bmp));
                 v.setRemoteAdapter(R.id.w_list, b.build());
             } else {
                 Intent svc = new Intent(c, WidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
@@ -145,10 +150,30 @@ public class FavWidget extends AppWidgetProvider {
         return new Intent().putExtra(WidgetTap.A, a).putExtra(WidgetTap.T, t).putExtra(WidgetTap.Z, z);
     }
 
-    /** Uma linha: colunas fixas Ação | Preço | Dia | Barato/Caro | Medo e Ganância; aberta, o gráfico de 5 anos com faixas de toque. */
-    static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp) {
+    /** Uma linha: logo + Ação (nome curto embaixo) | Preço | Dia | Barato/Caro | Medo e Ganância; aberta, o gráfico de 5 anos com faixas de toque. */
+    static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp) { return row(c, it, bands, wDp, Logos.px(c, 1), null); }
+
+    /** Widget estreito (menos de NARROW dp): sem o logo, para o ticker caber. */
+    static final int NARROW = 330;
+
+    static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp) {
         RemoteViews r = new RemoteViews(c.getPackageName(), R.layout.widget_row);
         r.setTextViewText(R.id.r_ticker, it.t);
+        boolean hasName = it.s != null && !it.s.isEmpty();
+        r.setTextViewText(R.id.r_name, hasName ? it.s : "");
+        r.setViewVisibility(R.id.r_name, hasName ? View.VISIBLE : View.GONE);
+        boolean narrow = wDp < NARROW;
+        r.setViewVisibility(R.id.r_slot, narrow ? View.GONE : View.VISIBLE);
+        if (!narrow) {  // logo no formato original (fit-center no slot de 32dp); sem logo: círculo com as iniciais
+            android.graphics.Bitmap lg = Logos.bitmap(c, it.l, px, bmp);
+            if (lg != null) {
+                r.setImageViewBitmap(R.id.r_logo, lg);
+                r.setViewVisibility(R.id.r_logo, View.VISIBLE); r.setViewVisibility(R.id.r_ini, View.GONE);
+            } else {
+                r.setTextViewText(R.id.r_ini, WidgetData.initials(it.t));
+                r.setViewVisibility(R.id.r_logo, View.GONE); r.setViewVisibility(R.id.r_ini, View.VISIBLE);
+            }
+        }
         r.setTextViewText(R.id.r_price, WidgetData.price(it.p));
         r.setTextViewText(R.id.r_var, WidgetData.change(it.v));
         r.setTextColor(R.id.r_var, c.getColor(it.v == null ? R.color.c_mut : it.v >= 0 ? R.color.c_pos : R.color.c_neg));

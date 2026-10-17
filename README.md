@@ -45,7 +45,7 @@ O deploy automático pelo GitHub não está chegando ao Render: depois do merge 
 `.github/workflows/keepalive.yml` acessa o site a cada 10 min para o plano gratuito não dormir.
 
 ## App Android (APK com widget)
-`android/` gera o app JG Investing para Android (abre o site em tela cheia e traz o widget Favoritos e grupos — o chip do topo troca entre Favoritos e os grupos da aba Grupos; uso: painel ⓘ → **Instalar o app** → **App Android com widget**).
+`android/` gera o app JG Investing para Android (abre o site em tela cheia e traz o widget Favoritos e grupos — o chip do topo troca entre Favoritos e os grupos da aba Grupos; cada linha tem o logo da empresa (`scripts/build_logos.py`, semanal, na branch `data`; ajustes em `scripts/logos_override/`) e o nome curto; uso: painel ⓘ → **Instalar o app** → **App Android com widget**).
 Nome, cor, endereço e ícone vêm do site no build (AGENTS.md, tabela 1.3). Para gerar o APK assinado (JDK 17 e Android SDK com a plataforma 36):
 ```bash
 cd android && JG_SIGNING=/caminho/keystore.properties ./gradlew testReleaseUnitTest assembleRelease   # app/build/outputs/apk/release/app-release.apk

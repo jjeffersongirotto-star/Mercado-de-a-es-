@@ -1,0 +1,97 @@
+{
+ "_doc": "Ajustes à mão dos logos (scripts/build_logos.py). Chave = 4 letras da empresa. file: imagem desta pasta no lugar da cadeia; backing: fundo claro arredondado (logo escuro quase invisível no fundo escuro); skip: etapas a pular (favicon, site, brapi). _generic: hash (12 primeiros do sha1 do PNG gerado sem ajustes) de ícones genéricos (ex.: ícone padrão do WordPress), descartados em qualquer etapa.",
+ "_generic": [
+  "ddf4c374c75b",
+  "72ed71769b28"
+ ],
+ "PRIO": {
+  "file": "PRIO.png",
+  "why": "brapi ainda mostra PetroRio; símbolo atual do site de RI da PRIO"
+ },
+ "POMO": {
+  "backing": true
+ },
+ "AUAU": {
+  "backing": true
+ },
+ "TFCO": {
+  "backing": true
+ },
+ "OBTC": {
+  "backing": true
+ },
+ "TASA": {
+  "backing": true
+ },
+ "BRBI": {
+  "backing": true
+ },
+ "DASA": {
+  "backing": true
+ },
+ "EALT": {
+  "backing": true
+ },
+ "PDTC": {
+  "backing": true
+ },
+ "MNPR": {
+  "backing": true
+ },
+ "VIVA": {
+  "backing": true
+ },
+ "UNIP": {
+  "backing": true
+ },
+ "TOTS": {
+  "backing": true
+ },
+ "COGN": {
+  "backing": true
+ },
+ "CAMB": {
+  "backing": true
+ },
+ "MDIA": {
+  "backing": true
+ },
+ "KEPL": {
+  "backing": true
+ },
+ "EVEN": {
+  "backing": true
+ },
+ "IGTI": {
+  "backing": true
+ },
+ "LAVV": {
+  "backing": true
+ },
+ "MGLU": {
+  "skip": [
+   "site"
+  ],
+  "why": "o ícone do site é a Lu (mascote), não o logo"
+ },
+ "APTI": {
+  "skip": [
+   "site"
+  ]
+ },
+ "CSMG": {
+  "skip": [
+   "site"
+  ]
+ },
+ "AZUL": {
+  "skip": [
+   "site"
+  ]
+ },
+ "TAEE": {
+  "skip": [
+   "site"
+  ]
+ }
+}

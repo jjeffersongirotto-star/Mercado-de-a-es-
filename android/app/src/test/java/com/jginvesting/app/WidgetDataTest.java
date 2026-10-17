@@ -54,6 +54,29 @@ public class WidgetDataTest {
         assertEquals(0, WidgetData.groups("lixo").size());
     }
 
+    @Test public void logoNameAndInitials() {
+        String j = "{\"r\":[{\"t\":\"ITUB4\",\"s\":\"Itau Unibanco\",\"l\":\"9fa9da007cc7.png\",\"p\":38.5},"
+                 + "{\"t\":\"ITUB3\",\"s\":\"Itau Unibanco\",\"l\":\"9fa9da007cc7.png\"},"
+                 + "{\"t\":\"NATU3\",\"s\":\"Natura\",\"l\":null},{\"t\":\"XPTO3\",\"l\":\"../../x.png\"}]}";
+        List<WidgetData.Item> it = WidgetData.items(Arrays.asList("ITUB4", "ITUB3", "NATU3", "XPTO3", "SEMD3"), j);
+        assertEquals("Itau Unibanco", it.get(0).s);
+        assertEquals("9fa9da007cc7.png", it.get(0).l);
+        assertEquals(null, it.get(2).l);                     // sem logo: iniciais
+        assertEquals(null, it.get(3).l);                     // nome de arquivo inválido é ignorado
+        assertEquals(null, it.get(4).s);                     // ticker sem dados
+        assertEquals(Arrays.asList("9fa9da007cc7.png"), WidgetData.logos(it));  // mesmo logo baixado uma vez
+        assertEquals("NA", WidgetData.initials("NATU3"));
+    }
+
+    @Test public void bitmapBudgetUnderOneMegabyte() {
+        for (float d : new float[]{1f, 2f, 2.75f, 3.5f, 4f})
+            for (int rows : new int[]{1, 10, 24, 25, WidgetData.MAX_ROWS})
+                assertEquals(true, WidgetData.bitmapBytes(rows, d, 600) < 1_000_000L);
+        assertEquals(56, WidgetData.logoPx(2.75f, 10));
+        assertEquals(44, WidgetData.logoPx(2.75f, 40));
+        assertEquals(32, WidgetData.logoPx(1f, 10));
+    }
+
     @Test public void chartZonesAndTip() {
         // 11 pontos semanais a partir de 01/01/2024 00:00 (Brasília); base 10
         StringBuilder p = new StringBuilder();
