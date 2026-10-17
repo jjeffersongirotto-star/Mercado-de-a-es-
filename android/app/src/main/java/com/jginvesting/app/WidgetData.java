@@ -207,6 +207,20 @@ public final class WidgetData {
         return out;
     }
 
+    /** "Atualizando…" some sozinho depois disso (⟳ espera o servidor refazer os dados: até RefreshJob.WAIT_MS + a busca). */
+    public static final long LOADING_MS = 180_000;
+
+    /** Horário que o widget mostra: quando a resposta chegou (fim da atualização), "dd/MM HH:mm" no fuso do aparelho. */
+    public static String fetched(long ms, java.util.TimeZone tz) {
+        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.US); f.setTimeZone(tz);
+        return f.format(new java.util.Date(ms));
+    }
+
+    /** O servidor ainda está refazendo os dados? (resposta de /api/refresh ou /api/status; null/erro = não) */
+    public static boolean refreshing(String json) {
+        try { return json != null && new JSONObject(json).optBoolean("refreshing", false); } catch (Exception e) { return false; }
+    }
+
     /** Horário dos dados no site (u, "dd/mm/aaaa hh:mm:ss", Brasília) -> "dd/mm hh:mm". */
     public static String updated(String json) {
         try {

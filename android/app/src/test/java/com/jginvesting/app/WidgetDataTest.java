@@ -248,4 +248,15 @@ public class WidgetDataTest {
         assertEquals(500, WidgetData.heightDp(300, 500, false));
         assertEquals(300, WidgetData.heightDp(300, 500, true));
     }
+
+    @Test public void showsFetchTimeAndRefreshState() {  // 1.13: horário = fim da busca; estado do servidor
+        java.util.TimeZone sp = java.util.TimeZone.getTimeZone("America/Sao_Paulo");
+        long t = 1792357259000L;  // 2026-10-18 21:00:59 UTC = 18:00:59 em Brasília
+        assertEquals("18/10 18:00", WidgetData.fetched(t, sp));
+        assertEquals("18/10 18:01", WidgetData.fetched(t + 2000, sp));  // terminou no minuto seguinte: mostra o do fim
+        assertTrue(WidgetData.refreshing("{\"started\":true,\"refreshing\":true}"));
+        assertFalse(WidgetData.refreshing("{\"started\":false,\"refreshing\":false}"));
+        assertFalse(WidgetData.refreshing(null));
+        assertFalse(WidgetData.refreshing("<html>"));
+    }
 }

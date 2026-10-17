@@ -684,8 +684,24 @@ def api_data(request: Request, country: str = "br"):
         return JSONResponse({"loading": True, "error": cache.last_error}, status_code=503)
     return _json_fast(request, cache.data, {"refreshing": cache.refreshing, "last_error": cache.last_error})
 
+WIDGET_STALE = 10 * 60  # ⟳ do widget só refaz os dados se tiverem mais de 10 min E for horário de pregão
+
+def pregao(now=None):
+    """Pregão da B3 (seg–sex, 10:00–18:30 de Brasília, com o leilão de fechamento e a folga dos atrasos das fontes)."""
+    n = (now or datetime.now(TZ)).astimezone(TZ)
+    return n.weekday() < 5 and (10, 0) <= (n.hour, n.minute) <= (18, 30)
+
+def widget_should_refresh(age, now=None):
+    """O ⟳ do widget pede a mesma atualização do ⟳ do site só com dados velhos no pregão; fora dele, nada pesado."""
+    return age > WIDGET_STALE and pregao(now)
+
 @app.post("/api/refresh")
-def api_refresh():
+def api_refresh(src: str = ""):
+    if src == "widget":  # widget: mesma atualização (uma por vez), só se os dados estão velhos no pregão; não limpa as ações de fora
+        go = widget_should_refresh(cache.age())
+        started = go and not cache.refreshing
+        if go: cache.refresh_async()
+        return {"started": started, "refreshing": cache.refreshing or started}
     started = not cache.refreshing
     cache.refresh_async()
     cache.foreign.clear()

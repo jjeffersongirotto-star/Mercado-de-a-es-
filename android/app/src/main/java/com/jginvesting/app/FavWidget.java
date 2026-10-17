@@ -19,6 +19,7 @@ public class FavWidget extends AppWidgetProvider {
     static final String ACTION_REFRESH = "com.jginvesting.app.REFRESH";
     static final String EXTRA_TICKER = "ticker";
     static final String EXTRA_UPDATE = "update";
+    static final String EXTRA_FORCE = "force";
 
     @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) {
         render(c);
@@ -27,7 +28,10 @@ public class FavWidget extends AppWidgetProvider {
 
     @Override public void onReceive(Context c, Intent i) {
         if (ACTION_REFRESH.equals(i.getAction())) {  // ⟳ e troca de grupo (PickerActivity): "Atualizando…" já e busca na hora
-            long tk = Math.max(System.currentTimeMillis(), Store.loading(c) + 1); Store.setLoading(c, tk); render(c); refreshAsync(c, goAsync(), tk); return;
+            long tk = Math.max(System.currentTimeMillis(), Store.loading(c) + 1); Store.setLoading(c, tk); render(c);
+            // ⟳: o servidor refaz os dados se estiverem velhos no pregão (RefreshJob espera e busca); troca de grupo: só busca
+            if (i.getBooleanExtra(EXTRA_FORCE, false) && RefreshJob.schedule(c, tk)) return;
+            refreshAsync(c, goAsync(), tk); return;
         }
         super.onReceive(c, i);
     }
@@ -44,8 +48,13 @@ public class FavWidget extends AppWidgetProvider {
     /** token = início do "Atualizando…" desta atualização (0 = atualização sem aviso); só ela o limpa (Store.endLoading). */
     static void refreshAsync(Context ctx, PendingResult pr, long token) {
         final Context c = ctx.getApplicationContext();
+        new Thread(() -> refreshNow(c, pr, token)).start();
+    }
+
+    /** Busca e redesenha nesta thread (RefreshJob chama direto, depois de esperar o servidor). */
+    static void refreshNow(Context c, PendingResult pr, long token) {
         final long start = System.currentTimeMillis();
-        new Thread(() -> {
+        {
             try {
                 List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
                 java.util.LinkedHashSet<String> sels = new java.util.LinkedHashSet<>();
@@ -67,7 +76,7 @@ public class FavWidget extends AppWidgetProvider {
                 if (token != 0 && Store.endLoading(c, token)) render(c);
                 if (pr != null) pr.finish();
             }
-        }).start();
+        }
     }
 
     static int[] ids(Context c) {
@@ -98,8 +107,10 @@ public class FavWidget extends AppWidgetProvider {
             v.setOnClickPendingIntent(R.id.w_sel, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
             v.setOnClickPendingIntent(R.id.w_sel2, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
             v.setTextViewText(R.id.w_empty, c.getString(WidgetData.FAV.equals(sel) ? R.string.widget_empty : R.string.widget_empty_group));
-            boolean busy = System.currentTimeMillis() - Store.loading(c) < 25000;  // ⟳ / troca de grupo em andamento
-            String up = busy ? c.getString(R.string.widget_loading) : WidgetData.updated(data);
+            boolean busy = System.currentTimeMillis() - Store.loading(c) < WidgetData.LOADING_MS;  // ⟳ / troca de grupo em andamento
+            // horário = quando a última atualização terminou (dados chegaram); sem isso ainda, o horário dos dados no site
+            long fat = Store.fetchedAt(c, sel);
+            String up = busy ? c.getString(R.string.widget_loading) : fat > 0 ? WidgetData.fetched(fat, java.util.TimeZone.getDefault()) : WidgetData.updated(data);
             v.setTextViewText(R.id.w_time, up);
             v.setViewVisibility(R.id.w_time, up.isEmpty() ? View.GONE : View.VISIBLE);
             // marca comprida "JG Investing" ou, se o nome do grupo não couber ao lado dela, o logo quadrado (refeito ao redimensionar)
@@ -130,7 +141,7 @@ public class FavWidget extends AppWidgetProvider {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 v.setOnClickPendingIntent(R.id.w_upd, PendingIntent.getActivity(c, 3, ui, flagsImm));
             }
-            Intent rf = new Intent(c, FavWidget.class).setAction(ACTION_REFRESH);
+            Intent rf = new Intent(c, FavWidget.class).setAction(ACTION_REFRESH).putExtra(EXTRA_FORCE, true);
             v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(c, 1, rf, flagsImm));
             // toques nas linhas (abrir/fechar gráfico, marcar ponto, abrir no app): WidgetTap, sem tela; o que fazer vem no fill-in
             Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION

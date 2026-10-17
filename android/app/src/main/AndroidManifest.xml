@@ -63,5 +63,11 @@
             android:name=".WidgetService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- ⟳ do widget: pede a atualização do servidor (se os dados estão velhos no pregão) e espera terminar, fora do limite de ~10 s do broadcast -->
+        <service
+            android:name=".RefreshJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

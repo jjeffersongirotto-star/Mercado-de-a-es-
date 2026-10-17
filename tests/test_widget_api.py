@@ -46,6 +46,24 @@ def test_chart_foreign_uses_card_history():
         history.yget, history.get = oy, og
     assert seen == ["BRK-B", "B3:PETR4"] and a["c"] == "USD" and "c" not in b and len(a["p"]) > 50
 
+def test_widget_refresh_only_stale_in_session():
+    from datetime import datetime
+    tz = server.TZ
+    seg_14h, sab_14h, seg_20h = datetime(2026, 10, 19, 14, 0, tzinfo=tz), datetime(2026, 10, 17, 14, 0, tzinfo=tz), datetime(2026, 10, 19, 20, 0, tzinfo=tz)
+    assert server.widget_should_refresh(15 * 60, seg_14h)
+    assert not server.widget_should_refresh(5 * 60, seg_14h)       # dados recentes: só busca
+    assert not server.widget_should_refresh(3 * 3600, sab_14h)     # fim de semana: nada pesado
+    assert not server.widget_should_refresh(3 * 3600, seg_20h)     # depois do pregão
+    calls = []
+    orig_ra, orig_age = server.cache.refresh_async, server.cache.age
+    server.cache.refresh_async = lambda: calls.append(1); server.cache.age = lambda: 0
+    try:
+        fq = dict(server.cache.foreign)
+        r = server.api_refresh("widget")
+        assert r == {"started": False, "refreshing": server.cache.refreshing} and not calls and server.cache.foreign == fq  # não limpa as de fora
+    finally:
+        server.cache.refresh_async, server.cache.age = orig_ra, orig_age
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):

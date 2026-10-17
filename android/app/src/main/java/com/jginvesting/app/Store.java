@@ -21,9 +21,11 @@ final class Store {
     /** Guarda a resposta pedida em req (System.nanoTime no início do pedido) só se for mais nova que a guardada (WidgetData.accept). */
     static synchronized boolean setDataIfNewer(Context c, String sel, String json, long req) {
         if (!WidgetData.accept(req, sp(c).getLong("dreq_" + sel, Long.MIN_VALUE))) return false;
-        sp(c).edit().putString("data_" + sel, json).putLong("dreq_" + sel, req).commit();
+        sp(c).edit().putString("data_" + sel, json).putLong("dreq_" + sel, req).putLong("fat_" + sel, System.currentTimeMillis()).commit();  // hora em que os dados chegaram
         return true;
     }
+    /** Quando a última resposta de /api/widget desta lista chegou (ms; 0 = nunca): é o horário que o widget mostra. */
+    static long fetchedAt(Context c, String sel) { return sp(c).getLong("fat_" + sel, 0); }
     /** Grupos da aba Grupos enviados pelo site (grupos.js → pushGroups): [{id, n, t:[...]}]. */
     static String groups(Context c) { return sp(c).getString("groups", "[]"); }
     static boolean setGroups(Context c, String json) {
