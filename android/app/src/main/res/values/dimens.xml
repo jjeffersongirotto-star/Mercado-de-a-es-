@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- colunas do widget: mesma largura no título e em todas as linhas (alinhadas) -->
+<resources>
+    <dimen name="col_t">56dp</dimen>
+    <dimen name="col_p">72dp</dimen>
+    <dimen name="col_v">60dp</dimen>
+    <dimen name="col_f">52dp</dimen>
+    <dimen name="col_g">60dp</dimen>
+</resources>

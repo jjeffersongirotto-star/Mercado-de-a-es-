@@ -14,9 +14,17 @@ final class Api {
 
     /** -> JSON da resposta ou null (sem internet, servidor acordando etc.). */
     static String widget(List<String> favs, int timeoutMs) {
+        try { return get("/api/widget?t=" + URLEncoder.encode(WidgetData.param(favs), "UTF-8"), timeoutMs); }
+        catch (Exception e) { return null; }
+    }
+
+    /** Gráfico de 5 anos de uma ação (/api/widget/chart). */
+    static String chart(String t, int timeoutMs) { return get("/api/widget/chart?t=" + t, timeoutMs); }
+
+    private static String get(String path, int timeoutMs) {
         HttpURLConnection c = null;
         try {
-            URL u = new URL(BuildConfig.SITE + "/api/widget?t=" + URLEncoder.encode(WidgetData.param(favs), "UTF-8"));
+            URL u = new URL(BuildConfig.SITE + path);
             c = (HttpURLConnection) u.openConnection();
             c.setConnectTimeout(timeoutMs); c.setReadTimeout(timeoutMs);
             c.setRequestProperty("Accept", "application/json");

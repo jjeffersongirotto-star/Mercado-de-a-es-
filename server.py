@@ -920,8 +920,39 @@ def api_widget(t: str = ""):
         if not r: out.append({"t": tk}); continue
         j, pct, m = valor_justo.fair(r, v, rows)
         out.append({"t": tk, "n": r.get("nome"), "p": v(r, "preco"), "v": r.get("var"),
-                    "f": round(pct, 1) if j else None, "m": m if j else None})
-    return JSONResponse({"u": d.get("updated_at_sp"), "r": out}, headers={"Cache-Control": "no-store"})
+                    "f": round(pct, 1) if j else None, "m": m if j else None,
+                    "g": (r.get("fg") or [None])[0]})  # Medo e Ganância da ação hoje (snapshot fg_acoes → rows.fg, o mesmo do card)
+    return JSONResponse({"u": d.get("updated_at_sp"), "gf": (d.get("fga") or {}).get("faixas"), "r": out}, headers={"Cache-Control": "no-store"})
+
+_WCHART = {}  # (ticker, versão do histórico, dia) -> resposta pronta do gráfico do widget
+
+@app.get("/api/widget/chart")
+def api_widget_chart(t: str = ""):
+    """Gráfico de 5 anos do widget: o mesmo histórico diário do gráfico do card (history.get, kind d) reduzido a ~120 pontos.
+    Início = hoje menos 5 anos e base = último fechamento até o início (mesma convenção de grafico.js → pricePts)."""
+    tk = (t or "").strip().upper()
+    if not re.fullmatch(r"[A-Z0-9]{3,12}", tk): return JSONResponse({"error": "ticker inválido"}, status_code=400)
+    try: h = history.get(tk, "d")
+    except Exception as e: return JSONResponse({"error": "histórico indisponível: " + str(e)[:120]}, status_code=502)
+    now = datetime.now(TZ)
+    try: start = now.replace(year=now.year - 5)
+    except ValueError: start = now.replace(year=now.year - 5, day=28)  # 29/02
+    key = (tk, h.get("at") or h.get("_at") or len(h.get("t") or []), now.date())
+    if key in _WCHART: return JSONResponse(_WCHART[key], headers={"Cache-Control": "public, max-age=1800"})
+    s0, ts, cs = int(start.timestamp()), h.get("t") or [], h.get("c") or []
+    base, pts = None, []
+    for x, c in zip(ts, cs):
+        if c is None: continue
+        if x <= s0: base = c; continue
+        if base is None: base = c
+        pts.append([x, c])
+    if base is not None and ts and ts[0] <= s0: pts.insert(0, [s0, base])
+    k = max(1, -(-len(pts) // 120))
+    red = pts[::k] + ([pts[-1]] if pts and (len(pts) - 1) % k else [])
+    out = {"t": tk, "b": base, "p": red}
+    if len(_WCHART) > 300: _WCHART.clear()
+    _WCHART[key] = out
+    return JSONResponse(out, headers={"Cache-Control": "public, max-age=1800"})
 
 @app.post("/api/modelos")
 def api_modelos_sim(body: dict):

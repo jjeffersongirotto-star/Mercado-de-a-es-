@@ -12,6 +12,8 @@ def cssColor = { String name ->
     def m = (html =~ ("--" + name + /:\s*rgb\((\d+) (\d+) (\d+)\)/))[0]
     String.format("#%02x%02x%02x", m[1] as int, m[2] as int, m[3] as int)
 }
+// cor da linha da ação no gráfico do site (grafico.js → SERIES, id 'stock')
+def chartStock = (new File(site, "grafico.js").getText("UTF-8") =~ /id: 'stock'[^}]*color: '(#[0-9a-fA-F]{6})'/)[0][1]
 def appUrl = (new File(site, "snapshots.py").getText("UTF-8") =~ /"(https:\/\/[^"]+onrender\.com)"/)[0][1]
 
 // Assinatura: arquivo de propriedades FORA do repositório (storeFile, storePassword, keyAlias, keyPassword),
@@ -35,11 +37,12 @@ android {
         applicationId "com.jginvesting.app"
         minSdk 24
         targetSdk 36
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
         resValue "string", "app_name", appName
         resValue "color", "theme", themeColor
-        ["c-pos", "c-neg", "c-amber", "c-txt", "c-mut", "bg-in", "bg-sec", "bd"].each { resValue "color", it.replace("-", "_"), cssColor(it) }
+        resValue "color", "chart_stock", chartStock
+        ["c-pos", "c-neg", "c-amber", "c-orange", "c-lime", "c-txt", "c-mut", "c-dim", "bg-in", "bg-sec", "bd"].each { resValue "color", it.replace("-", "_"), cssColor(it) }
         buildConfigField "String", "SITE", "\"" + appUrl + "\""
     }
     buildFeatures { buildConfig true }

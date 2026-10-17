@@ -7,4 +7,11 @@
         <item name="android:colorPrimary">@color/theme</item>
         <item name="android:colorAccent">@color/c_pos</item>
     </style>
+    <!-- toque no widget: sem tela nem animação -->
+    <style name="Tap" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
 </resources>

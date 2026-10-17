@@ -11,6 +11,7 @@ import android.os.Build;
 import android.view.View;
 import android.widget.RemoteViews;
 
+
 import java.util.List;
 
 /** Widget ★ Favoritos: preço, variação do dia e Barato/Caro de cada favorito. Atualiza a cada 30 min (widget_info) e no ⟳. */
@@ -57,6 +58,7 @@ public class FavWidget extends AppWidgetProvider {
         List<String> favs = WidgetData.favs(Store.favs(c));
         String data = Store.data(c);
         List<WidgetData.Item> items = WidgetData.items(favs, data);
+        WidgetData.Bands bands = WidgetData.bands(data);
         int flagsImm = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         int flagsMut = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
         for (int id : ids) {
@@ -68,13 +70,15 @@ public class FavWidget extends AppWidgetProvider {
             v.setOnClickPendingIntent(R.id.w_title, PendingIntent.getActivity(c, 0, open, flagsImm));
             Intent rf = new Intent(c, FavWidget.class).setAction(ACTION_REFRESH);
             v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(c, 1, rf, flagsImm));
-            // toque numa linha: abre o card da ação (o ticker vem no fill-in de cada linha)
-            Intent tpl = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            // toques nas linhas (abrir/fechar gráfico, marcar ponto, abrir no app): WidgetTap, sem tela; o que fazer vem no fill-in
+            Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
             v.setPendingIntentTemplate(R.id.w_list, PendingIntent.getActivity(c, 2, tpl, flagsMut));
             v.setEmptyView(R.id.w_list, R.id.w_empty);
             if (Build.VERSION.SDK_INT >= 31) {
                 RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
-                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i)));
+                int wDp = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
+                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp));
                 v.setRemoteAdapter(R.id.w_list, b.build());
             } else {
                 Intent svc = new Intent(c, WidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
@@ -92,8 +96,30 @@ public class FavWidget extends AppWidgetProvider {
     @SuppressWarnings("deprecation")
     private static void legacyNotify(AppWidgetManager m, int[] ids) { m.notifyAppWidgetViewDataChanged(ids, R.id.w_list); }
 
-    /** Uma linha: ticker, preço, variação (verde/vermelho) e selo Barato/Caro. */
-    static RemoteViews row(Context c, WidgetData.Item it) {
+    @Override public void onAppWidgetOptionsChanged(Context c, AppWidgetManager m, int id, android.os.Bundle o) { render(c); }
+
+    /** Busca o gráfico de 5 anos da ação aberta (se o guardado tem mais de 6 h) e redesenha. */
+    static void chartAsync(Context ctx, String t) {
+        final Context c = ctx.getApplicationContext();
+        if (Store.chart(c, t) != null && System.currentTimeMillis() - Store.chartAt(c, t) < 6 * 3600_000L) return;
+        new Thread(() -> {
+            String j = Api.chart(t, 30000);
+            if (j != null && WidgetData.chart(j) != null) Store.setChart(c, t, j);
+            else if (Store.chart(c, t) == null) Store.setChart(c, t, "{}");  // sem histórico: mostra "Sem dados"
+            render(c);
+        }).start();
+    }
+
+    static final int ZONES = 16;
+    private static final int[] Z_IDS = {R.id.z0, R.id.z1, R.id.z2, R.id.z3, R.id.z4, R.id.z5, R.id.z6, R.id.z7,
+            R.id.z8, R.id.z9, R.id.z10, R.id.z11, R.id.z12, R.id.z13, R.id.z14, R.id.z15};
+
+    private static Intent tap(String a, String t, int z) {
+        return new Intent().putExtra(WidgetTap.A, a).putExtra(WidgetTap.T, t).putExtra(WidgetTap.Z, z);
+    }
+
+    /** Uma linha: colunas fixas Ação | Preço | Dia | Barato/Caro | Medo e Ganância; aberta, o gráfico de 5 anos com faixas de toque. */
+    static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp) {
         RemoteViews r = new RemoteViews(c.getPackageName(), R.layout.widget_row);
         r.setTextViewText(R.id.r_ticker, it.t);
         r.setTextViewText(R.id.r_price, WidgetData.price(it.p));
@@ -102,7 +128,35 @@ public class FavWidget extends AppWidgetProvider {
         r.setTextViewText(R.id.r_badge, WidgetData.badge(it.f));
         r.setTextColor(R.id.r_badge, c.getColor(it.f == null ? R.color.c_mut : it.f >= 0 ? R.color.c_pos : R.color.c_neg));
         r.setInt(R.id.r_badge, "setBackgroundResource", it.f == null ? R.drawable.chip_none : it.f >= 0 ? R.drawable.chip_pos : R.drawable.chip_neg);
-        r.setOnClickFillInIntent(R.id.r_root, new Intent().putExtra(EXTRA_TICKER, it.t));
+        if (it.g == null || bands.lim.length == 0) {
+            r.setTextViewText(R.id.r_fg, "—"); r.setTextColor(R.id.r_fg, c.getColor(R.color.c_mut));
+            r.setViewVisibility(R.id.r_fgn, View.GONE);
+        } else {  // cor da faixa como no card (.fg-0 … .fg-4)
+            int col = c.getColor(FG_COL[Math.min(FG_COL.length - 1, bands.index(it.g))]);
+            r.setTextViewText(R.id.r_fg, String.valueOf(it.g)); r.setTextColor(R.id.r_fg, col);
+            r.setTextViewText(R.id.r_fgn, bands.shortName(it.g)); r.setTextColor(R.id.r_fgn, col);
+            r.setViewVisibility(R.id.r_fgn, View.VISIBLE);
+        }
+        r.setOnClickFillInIntent(R.id.r_main, tap("x", it.t, -1));
+        boolean open = it.t.equals(Store.expanded(c));
+        r.setViewVisibility(R.id.r_exp, open ? View.VISIBLE : View.GONE);
+        if (!open) return r;
+        r.setOnClickFillInIntent(R.id.r_open, tap("o", it.t, -1));
+        String js = Store.chart(c, it.t);
+        WidgetData.Chart ch = js == null ? null : WidgetData.chart(js);
+        if (ch == null) {
+            r.setTextViewText(R.id.r_tip, js == null ? "Carregando 5 anos…" : "Sem dados de preço");
+            r.setViewVisibility(R.id.r_chartbox, View.GONE);
+            return r;
+        }
+        int z = Store.zone(c), sel = z < 0 ? ch.size() - 1 : WidgetData.zonePoint(ch, z, ZONES);
+        r.setTextViewText(R.id.r_tip, WidgetData.tip(ch, sel));
+        float dd = Math.min(1.5f, c.getResources().getDisplayMetrics().density);  // ~160 KB por gráfico
+        r.setViewVisibility(R.id.r_chartbox, View.VISIBLE);
+        r.setImageViewBitmap(R.id.r_chart, ChartDraw.draw(c, ch, (int) ((wDp - 20) * dd), (int) (110 * dd), sel, dd));
+        for (int i = 0; i < ZONES; i++) r.setOnClickFillInIntent(Z_IDS[i], tap("z", it.t, i));
         return r;
     }
+
+    private static final int[] FG_COL = {R.color.c_neg, R.color.c_orange, R.color.c_amber, R.color.c_lime, R.color.c_pos};
 }

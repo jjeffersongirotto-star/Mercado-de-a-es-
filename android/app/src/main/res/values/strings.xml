@@ -4,4 +4,10 @@
     <string name="widget_desc">Preço, variação do dia e Barato/Caro dos seus favoritos</string>
     <string name="widget_empty">Marque ☆ nas ações dentro do app</string>
     <string name="widget_refresh">Atualizar</string>
+    <string name="col_t">Ação</string>
+    <string name="col_p">Preço</string>
+    <string name="col_v">Dia</string>
+    <string name="col_f">Barato/Caro</string>
+    <string name="col_g">Medo e Gan.</string>
+    <string name="open_app">Abrir no app</string>
 </resources>
