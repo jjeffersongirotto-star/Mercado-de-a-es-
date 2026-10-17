@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
     private static final int REQ_FILE = 7;
     private WebView web;
     private ValueCallback<Uri[]> fileCb;
+    private Updater updater;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override protected void onCreate(Bundle saved) {
@@ -79,6 +80,7 @@ public class MainActivity extends Activity {
         });
         if (Build.VERSION.SDK_INT >= 33)  // Android 13+: voltar (no 16 o onBackPressed não é mais chamado)
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::back);
+        updater = new Updater(this);
         if (saved != null) web.restoreState(saved);
         else web.loadUrl(BuildConfig.SITE + "/" + acaoQuery(getIntent()));
     }
@@ -114,7 +116,7 @@ public class MainActivity extends Activity {
     @Override public void onBackPressed() { back(); }
 
     @Override protected void onPause() { super.onPause(); web.onPause(); }
-    @Override protected void onResume() { super.onResume(); web.onResume(); }
+    @Override protected void onResume() { super.onResume(); web.onResume(); updater.onResume(); }
 
     /** window.JGApp no site (só existe dentro do app). */
     final class Bridge {

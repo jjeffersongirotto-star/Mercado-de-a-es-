@@ -1042,12 +1042,18 @@ def _hash(path):
         return hashlib.sha1(fh.read()).hexdigest()[:10]
 
 APK = os.path.join(BASE, "static", "app", "JG-Investing.apk")  # gerado pelo build do android/ (README → App Android)
-APK_GRADLE = os.path.join(BASE, "android", "app", "build.gradle")
+APK_VERSION = os.path.join(BASE, "static", "app", "version.json")  # gerado junto com o APK (versionCode, versionName, apk, sha256)
 
 def apk_version():
-    """Versão do APK = versionName de android/app/build.gradle (fonte única; o build copia o APK para static/app/)."""
-    try: return re.search(r'versionName "([^"]+)"', open(APK_GRADLE, encoding="utf-8").read()).group(1)
+    """Versão do APK publicado = versionName de static/app/version.json (o build grava a partir de android/app/build.gradle)."""
+    try: return json.load(open(APK_VERSION, encoding="utf-8"))["versionName"]
     except Exception: return "atual"
+
+@app.get("/app/version.json")
+def app_version_json():
+    """Versão do APK para o app oferecer a atualização (MainActivity → Updater)."""
+    if not os.path.exists(APK_VERSION): return JSONResponse({"error": "não encontrado"}, status_code=404)
+    return FileResponse(APK_VERSION, media_type="application/json", headers={"Cache-Control": "no-cache"})
 
 @app.get("/app.apk")
 def app_apk():
@@ -1059,7 +1065,7 @@ def app_apk():
 def _index_html():
     """index.html com ?v=<hash do arquivo> em cada JS/CSS: o navegador guarda os arquivos por 1 ano e baixa de novo
     só quando o conteúdo muda. Com static/tw.css, troca o Tailwind do CDN (compila no navegador) pelo CSS pronto."""
-    files = [os.path.join(BASE, "index.html"), TW_CSS, APK_GRADLE] + [os.path.join(BASE, n + ".js") for n in JS_FILES]
+    files = [os.path.join(BASE, "index.html"), TW_CSS, APK_VERSION] + [os.path.join(BASE, n + ".js") for n in JS_FILES]
     key = tuple(os.path.getmtime(f) if os.path.exists(f) else 0 for f in files)
     if _INDEX.get("key") != key:
         with open(files[0], encoding="utf-8") as fh:
