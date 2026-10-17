@@ -25,7 +25,7 @@ _PREP = {"DE", "DA", "DO", "DAS", "DOS", "E", "EM"}
 _WORD = {"SAO": "São", "SUL": "Sul", "RIO": "Rio", "MAR": "Mar", "LUZ": "Luz", "GAS": "Gás", "SOL": "Sol", "BOM": "Bom", "PAO": "Pão", "VIA": "Via", "LAR": "Lar"}
 _DROP = re.compile(r"\s*(-\s*EM RECUPERA[CÇ][AÃ]O JUDICIAL|\bEM RECUPERA[CÇ][AÃ]O JUDICIAL)\s*$|\b(S\.?\s?A\.?|S/A|LTDA\.?|HOLDING|PARTICIPA[CÇ][OÕ]ES)(?=\s|$|[.,-])", re.I)
 
-_END = re.compile(r"(?:[\s,&]+|^)(?:\(The\)|Inc|Incorporated|Corp|Corporation|Co|Company|Ltd|Limited|plc|p\.l\.c|AG|SE|N\.?V|KGaA|S\.?p\.?A|Group)\.?\s*$", re.I)
+_END = re.compile(r"(?:[\s,&]+|^)(?:\(The\)|Inc|Incorporated|Corp|Corporation|Co|Company|Ltd|Limited|plc|p\.l\.c|AG|SE|N\.?V|KGaA|S\.?p\.?A|Group|Class [A-Z]|Series [A-Z]|Cl\.? [A-Z])\.?\s*$", re.I)
 
 def nome_curto(n):
     """Nome da empresa para espaço pequeno (widget): sem S.A./S/A/Ltda/Holding/Participações; tudo maiúsculo vira
