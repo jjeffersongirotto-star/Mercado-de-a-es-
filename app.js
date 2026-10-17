@@ -725,7 +725,7 @@ window.jgOpen = function (t, k, n) {
   if (!state.data) { if (n < 120) setTimeout(() => window.jgOpen(t, k, n + 1), 500); return; }
   const here = (state.data.rows || []).some(r => r.ticker === t);
   if (!here && k === undefined) {
-    fetch('/api/widget?t=' + encodeURIComponent(t)).then(r => r.json()).then(j => window.jgOpen(t, ((j.r || [])[0] || {}).k || null, n)).catch(() => window.jgOpen(t, null, n));
+    fetch('/api/widget?t=' + encodeURIComponent(t)).then(r => r.json()).then(j => window.jgOpen(t, ((j.r || [])[0] || {}).k || null, 0)).catch(() => window.jgOpen(t, null, 0));
     return;
   }
   if (!here && k && k !== state.country) {
