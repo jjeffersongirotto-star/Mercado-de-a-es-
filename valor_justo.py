@@ -1,5 +1,5 @@
 """Barato/Caro: configuração e conta do valor justo (fonte única). O site recebe FAIR em /api/data → `fair` e faz a mesma
-conta em app.js → fairOf; o chat usa fair() daqui. Explicação ao usuário: painel ⓘ → Glossário → Barato/Caro."""
+conta em app.js → fairOf (e lpaRef = lpa_ref); o chat usa fair() daqui. Explicação ao usuário: painel ⓘ → Glossário → Barato/Caro."""
 import statistics
 
 FAIR = {
@@ -8,6 +8,10 @@ FAIR = {
     "pvp_min": 5,      # P/VP do setor só com pelo menos 5 empresas no subsetor
     "pvp_sub": ["Exploração de Imóveis", "Holdings Diversificadas"],  # holdings e imobiliárias: VPA × P/VP mediano do subsetor
     "teto": 2.0,       # LPA médio: ano com lucro maior que 2× a mediana dos outros conta pela metade
+    # LPA de referência (Brasil): média de 3 anos (ln3); se ela der prejuízo, a de 5 anos (ln5); sem média, o de 12 meses
+    "lpa_anos": [3, 5],
+    # sem valor justo: texto da célula (card, CSV, chat) e versão curta (widget do app); o motivo fica no detalhe
+    "rot": {"prej": ["Prejuízo recorrente", "Prej."], "sem": ["Sem valor justo", "s/ VJ"]},
     # Barsi (preço teto): dividendo médio por ação dos últimos anos completos (B3, 3 a 5 anos) ÷ taxa; segmentos oficiais da B3
     "barsi_taxa": 6.0,
     "barsi_anos": [3, 5],
@@ -50,31 +54,49 @@ def lucro_medio(ni, n=3):
     return sum(out) / n
 
 
+def lpa_ref(r, b, lpa, br):
+    """LPA de referência -> (lpa, janela): Brasil = média de 3 anos (ln3 × VPA); se der prejuízo, a de 5 anos (ln5 × VPA) quando
+    positiva; sem média de 3 anos, o de 12 meses. Exterior = 12 meses. janela: "3a", "5a", "12m" ou None (sem dado)."""
+    if not br: return lpa, ("12m" if lpa is not None else None)
+    if r.get("ln3") is None: return lpa, ("12m" if lpa is not None else None)
+    l3 = r["ln3"] * b
+    if l3 > 0 or r.get("ln5") is None: return l3, "3a"
+    return (r["ln5"] * b, "5a") if r["ln5"] > 0 else (l3, "3a")
+
+
+def rotulo(motivo):
+    """Texto da célula sem valor justo: prejuízo nas médias (3 e 5 anos) = "Prejuízo recorrente"; resto = "Sem valor justo"."""
+    return FAIR["rot"]["prej" if motivo.startswith("Prejuízo médio") else "sem"]
+
+
 def fair(r, val, rows):
-    """-> (valor justo, %, método) ou (None, motivo, None). r = linha de /api/data; val(r, k) = valor exibido; rows = todas (P/VP do setor)."""
+    """-> (valor justo, %, método) ou (None, motivo, None). r = linha de /api/data; val(r, k) = valor exibido; rows = todas (P/VP do setor).
+    Método com a janela do LPA quando não é a padrão: "Barsi · média 5a", "Graham · LPA 12m". Texto da célula sem valor: rotulo(motivo)."""
     p, b, br = val(r, "preco"), val(r, "vpa"), r.get("cur") == "BRL"
     if not (p and p > 0): return None, "Sem preço", None
     if (r.get("st") or {}).get("vpa") == "red": return None, "Dados divergentes entre as fontes", None  # consenso (mesma regra de fairOf)
     if b is None: return None, "Sem VPA", None
     if b <= 0: return None, "Patrimônio negativo", None
-    lpa = val(r, "lpa")
-    if br and lpa is not None and lpa < 0: return None, "Prejuízo nos últimos 12 meses", None
+    l, w = lpa_ref(r, b, val(r, "lpa"), br)
+    if l is not None and l < 0:
+        if w == "12m": return None, "Prejuízo nos últimos 12 meses", None
+        return None, "Prejuízo médio nos últimos 3 e 5 anos" if r.get("ln5") is not None else "Prejuízo médio nos últimos 3 anos", None
+    tag = lambda m: m + (" · média 5a" if w == "5a" else "")
     if br and r.get("fin"):
         roe = r.get("roe3")
         if roe is None: return None, "Sem ROE de 3 anos na CVM", None
         j = b * (roe - FAIR["g"]) / (FAIR["ke"] - FAIR["g"])
         if j <= 0: return None, "ROE abaixo do crescimento", None
-        return j, (j / p - 1) * 100, "Gordon"
+        return j, (j / p - 1) * 100, tag("Gordon")
     if br and r.get("subsetor") in FAIR["pvp_sub"]:
         pv = [x for x in (val(o, "pvp") for o in rows if o.get("subsetor") == r.get("subsetor")) if x and x > 0]
         if len(pv) < FAIR["pvp_min"]: return None, "Poucas empresas no setor", None
         j = b * statistics.median(pv)
-        return j, (j / p - 1) * 100, "P/VP do setor"
+        return j, (j / p - 1) * 100, tag("P/VP do setor")
     if br and r.get("seg") in FAIR["barsi_seg"] and r.get("dpsm"):  # sem histórico de proventos: segue no Graham
         j = r["dpsm"] / (FAIR["barsi_taxa"] / 100)
-        return j, (j / p - 1) * 100, "Barsi"
-    l = (r["ln3"] * b if r.get("ln3") is not None else None) if br else lpa
-    if l is None: return None, "Sem lucro de 3 anos na CVM" if br else "Sem LPA", None
-    if l <= 0: return None, "Prejuízo médio nos últimos 3 anos" if br else "Prejuízo nos últimos 12 meses", None
+        return j, (j / p - 1) * 100, tag("Barsi")
+    if l is None: return None, "Sem LPA" if not br else "Sem lucro de 3 anos na CVM nem LPA de 12 meses", None
+    if l == 0: return None, "Lucro zero", None
     j = (22.5 * l * b) ** 0.5
-    return j, (j / p - 1) * 100, "Graham"
+    return j, (j / p - 1) * 100, "Graham" + (" · média 5a" if w == "5a" else " · LPA 12m" if br and w == "12m" else "")

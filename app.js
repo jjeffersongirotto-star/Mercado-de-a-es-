@@ -358,11 +358,11 @@ const chartSlot = (r) => `<div class="gchart" data-gt="${r.ticker}"${state.count
 const priceOf = (r) => val(r, 'preco') ?? (state.source === 'all' ? null : r.v.preco);
 // Barato/Caro: preço do card × valor justo de Graham √(22,5 × LPA × VPA) (explicação no Glossário do painel ⓘ).
 // pos = posição na barra pela proporção preço ÷ justo (metade e dobro do justo ficam à mesma distância do meio).
-// Sem cálculo -> { why: motivo curto } (o card mostra "—" e o motivo no lugar da barra).
+// Sem cálculo -> { why: motivo curto, lab } (o card mostra lab = Prejuízo recorrente / Sem valor justo e o motivo no lugar da barra).
 // Barato/Caro: mesma conta de valor_justo.fair (servidor; configuração em /api/data → fair). Brasil: bancos e seguradoras = Gordon
 // VPA × (ROE − g) ÷ (Ke − g); holdings e imobiliárias = VPA × P/VP mediano do subsetor; elétricas, saneamento, gás e rodovias
 // (segmento B3) = Barsi: dividendo médio por ação (B3, 3–5 anos) ÷ taxa; demais = Graham √(22,5 × LPA × VPA) com
-// LPA médio de 3 anos = ln3 (lucro médio com teto ÷ patrimônio, CVM) × VPA do card. Exterior: Graham com o LPA de 12 meses.
+// LPA de referência = lpaRef (média de 3 anos ln3 ou de 5 anos ln5: lucro médio com teto ÷ patrimônio, CVM, × VPA do card). Exterior: LPA de 12 meses.
 const _pvMed = { k: null, m: {} };
 function sectorPvp(sub) {  // P/VP mediano do subsetor com os valores exibidos (respeita o seletor de fonte)
   const k = state.data && state.data.updated_at + '|' + state.source + '|' + state.country;
@@ -373,28 +373,39 @@ function sectorPvp(sub) {  // P/VP mediano do subsetor com os valores exibidos (
   }
   return _pvMed.m[sub];
 }
+// LPA de referência (mesma regra de valor_justo.lpa_ref): Brasil = média de 3 anos (ln3 × VPA); com prejuízo nela, a de 5 anos
+// (ln5) se positiva; sem média, o de 12 meses. Exterior = 12 meses. -> [lpa, janela '3a' | '5a' | '12m' | null]
+function lpaRef(r, b, lpa, br) {
+  if (!br || r.ln3 == null) return [lpa, lpa != null ? '12m' : null];
+  const l3 = r.ln3 * b;
+  if (l3 > 0 || r.ln5 == null) return [l3, '3a'];
+  return r.ln5 > 0 ? [r.ln5 * b, '5a'] : [l3, '3a'];
+}
+// Sem valor justo -> { why: motivo, lab: texto da célula } (rótulos em /api/data → fair.rot, mesma regra de valor_justo.rotulo)
 function fairOf(r) {
-  const FC = (state.data && state.data.fair) || {}, br = state.country === 'br', p = priceOf(r), b = val(r, 'vpa'), lpa = val(r, 'lpa');
-  if (!(p > 0)) return { why: 'Sem preço' };
-  if (state.source === 'all' && (r.st || {}).vpa === 'red') return { why: 'Dados divergentes entre as fontes' };
-  if (b == null) return { why: state.source === 'all' ? 'Sem VPA nas fontes' : 'Sem VPA nesta fonte' };
-  if (b <= 0) return { why: 'Patrimônio negativo' };
-  if (br && lpa != null && lpa < 0) return { why: 'Prejuízo nos últimos 12 meses' };
+  const FC = (state.data && state.data.fair) || {}, br = state.country === 'br', p = priceOf(r), b = val(r, 'vpa');
+  const no = (why) => ({ why, lab: ((FC.rot || {})[why.startsWith('Prejuízo médio') ? 'prej' : 'sem'] || ['—'])[0] });
+  if (!(p > 0)) return no('Sem preço');
+  if (state.source === 'all' && (r.st || {}).vpa === 'red') return no('Dados divergentes entre as fontes');
+  if (b == null) return no(state.source === 'all' ? 'Sem VPA nas fontes' : 'Sem VPA nesta fonte');
+  if (b <= 0) return no('Patrimônio negativo');
+  const [l, w] = lpaRef(r, b, val(r, 'lpa'), br);
+  if (l != null && l < 0) return no(w === '12m' ? 'Prejuízo nos últimos 12 meses' : r.ln5 != null ? 'Prejuízo médio nos últimos 3 e 5 anos' : 'Prejuízo médio nos últimos 3 anos');
+  const tag = (m) => m + (w === '5a' ? ' · média 5a' : '');
   const out = (j, m) => ({ j, m, pct: (j / p - 1) * 100, pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) });
   if (br && r.fin) {
-    if (r.roe3 == null) return { why: 'Sem ROE de 3 anos na CVM' };
+    if (r.roe3 == null) return no('Sem ROE de 3 anos na CVM');
     const j = b * (r.roe3 - FC.g) / (FC.ke - FC.g);
-    return j > 0 ? out(j, 'Gordon') : { why: 'ROE abaixo do crescimento' };
+    return j > 0 ? out(j, tag('Gordon')) : no('ROE abaixo do crescimento');
   }
   if (br && (FC.pvp_sub || []).includes(r.subsetor)) {
     const s = sectorPvp(r.subsetor);
-    return s.n >= FC.pvp_min ? out(b * s.med, 'P/VP do setor') : { why: 'Poucas empresas no setor' };
+    return s.n >= FC.pvp_min ? out(b * s.med, tag('P/VP do setor')) : no('Poucas empresas no setor');
   }
-  if (br && (FC.barsi_seg || []).includes(r.seg) && r.dpsm) return out(r.dpsm / (FC.barsi_taxa / 100), 'Barsi');  // sem proventos: Graham
-  const l = br ? (r.ln3 != null ? r.ln3 * b : null) : lpa;
-  if (l == null) return { why: br ? 'Sem lucro de 3 anos na CVM' : (state.source === 'all' ? 'Sem LPA nas fontes' : 'Sem LPA nesta fonte') };
-  if (l <= 0) return { why: br ? 'Prejuízo médio nos últimos 3 anos' : 'Prejuízo nos últimos 12 meses' };
-  return out(Math.sqrt(22.5 * l * b), 'Graham');
+  if (br && (FC.barsi_seg || []).includes(r.seg) && r.dpsm) return out(r.dpsm / (FC.barsi_taxa / 100), tag('Barsi'));  // sem proventos: Graham
+  if (l == null) return no(br ? 'Sem lucro de 3 anos na CVM nem LPA de 12 meses' : (state.source === 'all' ? 'Sem LPA nas fontes' : 'Sem LPA nesta fonte'));
+  if (l === 0) return no('Lucro zero');
+  return out(Math.sqrt(22.5 * l * b), 'Graham' + (w === '5a' ? ' · média 5a' : br && w === '12m' ? ' · LPA 12m' : ''));
 }
 window.fairOf = fairOf;
 // Alertas do Barato/Caro (mesma regra de valor_justo.alertas; limites em /api/data → fair): não mudam o percentual.
@@ -409,7 +420,7 @@ function alertsOf(r) {
 window.alertsOf = alertsOf;
 function fairHtml(r) {
   const f = fairOf(r), al = alertsOf(r).length ? `<button type="button" class="fv-al" data-fval="${r.ticker}" aria-label="Alertas de ${r.ticker}">⚠️</button>` : '';
-  if (f.why) return `<div class="fv"><span class="fv-t text-slate-400">—</span>${al}<div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
+  if (f.why) return `<div class="fv"><span class="fv-t fv-lab text-slate-400">${f.lab}</span>${al}<div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
   const up = f.pct >= 0;  // + verde: o preço precisa subir até o valor justo · − vermelho: precisa cair
   return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>${al}` +
     `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
@@ -552,10 +563,10 @@ function ruleText() {
 function exportCsv() {
   const fields = state.data.fields;
   const q = (s) => { s = s == null ? '' : String(s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', 'Confiança das fontes', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : f.unit === '$' ? ` (${state.data.currency})` : ''))];
+  const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', 'Confiança das fontes', 'Barato/Caro (%)', 'Valor justo (método)', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : f.unit === '$' ? ` (${state.data.currency})` : ''))];
   const lines = [head.map(q).join(';')];
   const n = (v) => v == null ? '' : String(v).replace('.', ',');
-  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), r.S ? confTxt(r) : '', ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
+  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), r.S ? confTxt(r) : '', ...(f => f.why ? [f.lab, f.why] : [n(Math.round(f.pct * 10) / 10), f.m])(fairOf(r)), ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
   saveFile('\ufeff' + lines.join('\r\n'), `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`, 'text/csv;charset=utf-8');
 }
 

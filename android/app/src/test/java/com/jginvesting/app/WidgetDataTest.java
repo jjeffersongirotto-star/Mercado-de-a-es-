@@ -109,6 +109,10 @@ public class WidgetDataTest {
         assertEquals("−75%", WidgetData.badge(-75.2));
         assertEquals("—", WidgetData.change(null));
         assertEquals("—", WidgetData.badge(null));
+        assertEquals("Prej.", WidgetData.badge(null, "Prej."));
+        assertEquals("s/ VJ", WidgetData.badge(null, "s/ VJ"));
+        assertEquals("—", WidgetData.badge(null, "Prejuízo recorrente"));  // longo demais para o chip
+        assertEquals("+43%", WidgetData.badge(43.3, "Prej."));
     }
 
     @Test public void shortAndDottedTickersKept() {  // 1.5 descartava KO, V, GE, F, BRK.B e RR. (regra antiga: 3 a 12 letras/dígitos)

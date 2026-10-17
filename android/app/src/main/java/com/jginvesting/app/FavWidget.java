@@ -177,7 +177,7 @@ public class FavWidget extends AppWidgetProvider {
         r.setTextViewText(R.id.r_price, priceText(WidgetData.price(it.p, it.c)));
         r.setTextViewText(R.id.r_var, WidgetData.change(it.v));
         r.setTextColor(R.id.r_var, c.getColor(it.v == null ? R.color.c_mut : it.v >= 0 ? R.color.c_pos : R.color.c_neg));
-        r.setTextViewText(R.id.r_badge, WidgetData.badge(it.f));
+        r.setTextViewText(R.id.r_badge, WidgetData.badge(it.f, it.x));
         r.setTextColor(R.id.r_badge, c.getColor(it.f == null ? R.color.c_mut : it.f >= 0 ? R.color.c_pos : R.color.c_neg));
         r.setInt(R.id.r_badge, "setBackgroundResource", it.f == null ? R.drawable.chip_none : it.f >= 0 ? R.drawable.chip_pos : R.drawable.chip_neg);
         if (it.g == null || bands.lim.length == 0) {

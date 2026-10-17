@@ -704,12 +704,14 @@ def fair(D, r):
 
 
 def fair_answer(P, D):
+    import valor_justo
     out = []
     for t in P["tickers"][:4]:
         f = fair(D, D["by"][t])
         if not f:
             v = lambda k: fmt(D, k, val(D, D["by"][t], k))
-            out.append(f"{t}: sem Barato/Caro (preço {v('preco')}, LPA {v('lpa')}, VPA {v('vpa')})."); continue
+            _, why, _ = valor_justo.fair(D["by"][t], lambda o, k: val(D, o, k), list(D["by"].values()))
+            out.append(f"{t}: sem Barato/Caro — {valor_justo.rotulo(why)[0]} ({why}; preço {v('preco')}, LPA {v('lpa')}, VPA {v('vpa')})."); continue
         j, pct, p, m = f
         out.append(f"{t}: {'+' if pct >= 0 else '−'}{br(abs(pct), 0)}% {'até o' if pct >= 0 else 'acima do'} valor justo (valor justo ({m}) R$ {br(j)}; preço R$ {br(p)})")
         al = __import__("valor_justo").alertas(D["by"][t], val(D, D["by"][t], "dy"))  # ⚠️ do card (Glossário: Alertas)

@@ -27,6 +27,7 @@ public final class WidgetData {
         public final Integer g;  // Medo e Ganância da ação (0–100)
         public String s, l;      // nome curto da empresa e arquivo do logo (/logos/<l>; null = iniciais)
         public String c;         // moeda (USD, GBP, EUR, JPY; null = real)
+        public String x;         // sem Barato/Caro: texto curto do servidor ("Prej.", "s/ VJ"; valor_justo.rotulo); null = "—"
         Item(String t, Double p, Double v, Double f, String m, Integer g) { this.t = t; this.p = p; this.v = v; this.f = f; this.m = m; this.g = g; }
     }
 
@@ -124,6 +125,7 @@ public final class WidgetData {
                 it.s = o.isNull("s") ? null : o.optString("s", null);
                 it.l = logo(o.isNull("l") ? null : o.optString("l", null));
                 it.c = cur(o.isNull("c") ? null : o.optString("c", null));
+                it.x = o.isNull("x") ? null : o.optString("x", null);
                 by.put(t, it);
             }
         } catch (Exception e) { /* sem dados: só os tickers */ }
@@ -176,8 +178,11 @@ public final class WidgetData {
     }
 
     /** Barato/Caro como no card: +43% (verde: o preço precisa subir até o valor justo) ou −75% (vermelho). */
-    public static String badge(Double f) {
-        if (f == null) return "—";
+    public static String badge(Double f) { return badge(f, null); }
+
+    /** Sem Barato/Caro: o texto curto do servidor (x, até 6 letras para caber no chip) ou "—". */
+    public static String badge(Double f, String x) {
+        if (f == null) return x != null && !x.isEmpty() && x.length() <= 6 ? x : "—";
         return (f >= 0 ? "+" : "−") + df("0").format(Math.abs(f)) + "%";
     }
 

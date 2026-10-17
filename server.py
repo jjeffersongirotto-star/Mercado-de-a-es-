@@ -254,8 +254,8 @@ def cvm_values(c, price, fund_pvp):
                   "evebit_adj": q(mc + nd, c.get("_ebit_adj")) if nd is not None else None})
     return {k: x for k, x in v.items() if x is not None}, {k: x for k, x in a.items() if x is not None}, sh
 
-def lucro_pl(fd, n=3):
-    """Barato/Caro (Brasil, DFP da CVM, snapshot fund): ln3 = lucro médio de n anos com teto (valor_justo.lucro_medio) ÷ patrimônio
+def lucro_pl(fd, n=valor_justo.FAIR["lpa_anos"][0]):
+    """Barato/Caro (Brasil, DFP da CVM, snapshot fund): ln3 (e ln5) = lucro médio de n (e 5) anos com teto (valor_justo.lucro_medio) ÷ patrimônio
     do último balanço (o site faz LPA = ln3 × VPA do card: sem depender da quantidade de ações da CVM) e roe3 = ROE médio (%)
     dos n anos (Gordon, bancos e seguradoras)."""
     fd = fd or {}
@@ -263,7 +263,9 @@ def lucro_pl(fd, n=3):
     eq = [x for x in (fd.get("eq") or [])[-n:]]
     if m is None or len(eq) != n or not eq[-1] or eq[-1] <= 0: return {}
     ni = (fd.get("ni") or [])[-n:]
-    return {"ln3": round(m / eq[-1], 6), "roe3": round(sum(ni) / sum(eq) * 100, 2) if sum(eq) > 0 else None}
+    m5 = valor_justo.lucro_medio(fd.get("ni"), valor_justo.FAIR["lpa_anos"][1])  # ln5: média de 5 anos (valor_justo.lpa_ref)
+    return {"ln3": round(m / eq[-1], 6), "roe3": round(sum(ni) / sum(eq) * 100, 2) if sum(eq) > 0 else None,
+            **({"ln5": round(m5 / eq[-1], 6)} if m5 is not None else {})}
 
 def build():
     t0 = time.time()
@@ -382,7 +384,7 @@ def finalize(base, yf_store=None):
         if not isbr and r.get("ipo"): nr["ipo"] = r["ipo"]  # data de listagem no exterior (TradingView); no Brasil vem da B3 (metrics.ftd)
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
-        for k in ("ln3", "roe3", "dpsm", "al"):
+        for k in ("ln3", "ln5", "roe3", "dpsm", "al"):
             if r.get(k) is not None: nr[k] = r[k]
         fga = (FGA.get("a") or {}).get(r["ticker"])
         if fga: nr["fg"] = fga  # [hoje, 1 pregão antes, 5 antes, 21 antes]
@@ -904,6 +906,10 @@ def api_pin(body: dict):
     history.pin([str(t) for t in ((body or {}).get("t") or [])[:200]])
     return Response(status_code=204)
 
+def vj_x(j, motivo):
+    """Widget: sem valor justo -> x = texto curto do chip (valor_justo.rotulo: "Prej." / "s/ VJ"); app até 1.6 ignora e mostra "—"."""
+    return {} if j else {"x": valor_justo.rotulo(motivo)[1]}
+
 @app.get("/api/widget")
 def api_widget(t: str = "", v: int = 1):
     """Widget de Favoritos do app Android (android/): preço, variação do dia e Barato/Caro (valor_justo.fair, a mesma conta do card)
@@ -928,12 +934,12 @@ def api_widget(t: str = "", v: int = 1):
             j, pct, m = valor_justo.fair(fr, lambda o, k: q["v"].get(k), [])
             out.append({"t": tk, "n": q.get("n"), "s": snapshots.nome_curto(q.get("n")), "l": (logos.get(tk) or {}).get("f"),
                         "p": q["v"].get("preco"), "v": q.get("var"), "c": q["cur"], "k": q["c"],
-                        "f": round(pct, 1) if j else None, "m": m if j else None, "g": None})  # Medo e Ganância: só B3
+                        "f": round(pct, 1) if j else None, "m": m if j else None, **vj_x(j, pct), "g": None})  # Medo e Ganância: só B3
             continue
         j, pct, m = valor_justo.fair(r, v, rows)
         out.append({"t": tk, "n": r.get("nome"), "s": snapshots.nome_curto(r.get("nome")), "l": (logos.get(tk) or {}).get("f"),
                     "p": v(r, "preco"), "v": r.get("var"),
-                    "f": round(pct, 1) if j else None, "m": m if j else None,
+                    "f": round(pct, 1) if j else None, "m": m if j else None, **vj_x(j, pct),
                     "g": (r.get("fg") or [None])[0]})  # Medo e Ganância da ação hoje (snapshot fg_acoes → rows.fg, o mesmo do card)
     return JSONResponse({"u": d.get("updated_at_sp"), "gf": (d.get("fga") or {}).get("faixas"), "r": out}, headers={"Cache-Control": "no-store"})
 
