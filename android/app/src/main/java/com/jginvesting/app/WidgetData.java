@@ -31,15 +31,26 @@ public final class WidgetData {
         Item(String t, Double p, Double v, Double f, String m, Integer g) { this.t = t; this.p = p; this.v = v; this.f = f; this.m = m; this.g = g; }
     }
 
-    /** Topo do widget: a marca comprida (brandDp de largura) cabe ao lado do seletor com este nome? Senão, o logo quadrado.
-     *  Estimativa sem medir texto: chip = margens + "  ▾" + letras × 6,6dp (14sp negrito); fixo = margens do widget, ⟳ e horário
-     *  (11sp). Tudo que é texto cresce com a escala de fonte do aparelho. widthDp = largura atual do widget (min/max conforme a tela). */
-    public static boolean longLogo(String name, int widthDp, int brandDp, float fontScale, boolean hasTime) {
-        if (widthDp <= 0) return false;
+    /** Topo do widget com nome curto: [marca comprida][seletor][horário][⟳]. -> dp que sobram para a marca (o seletor fica colado
+     *  ao horário). Estimativa sem medir texto: seletor = margens + "  ▾" + letras × 6,6dp (14sp negrito); fixo = margens do widget,
+     *  ⟳ e horário (11sp). Texto cresce com a escala de fonte do aparelho. widthDp = largura atual (min/max conforme a tela). */
+    public static float brandRoom(String name, int widthDp, float fontScale, boolean hasTime) {
+        if (widthDp <= 0) return 0;
         float fs = fontScale > 0 ? fontScale : 1f;
-        float chip = 22 + (12 + (name == null ? 0 : name.length()) * 6.6f) * fs;
-        float fixed = 18 + 34 + 8 + (hasTime ? 62 * fs : 0);
-        return fixed + brandDp + 6 + chip <= widthDp;
+        float chip = 22 + 16 + (12 + (name == null ? 0 : name.length()) * 6.6f) * fs;
+        float fixed = 18 + 34 + (hasTime ? 62 * fs : 0);
+        return widthDp - fixed - chip;
+    }
+
+    /** A marca comprida (no mínimo brandDp) cabe ao lado do seletor com este nome? Senão, o logo quadrado com o seletor no meio. */
+    public static boolean longLogo(String name, int widthDp, int brandDp, float fontScale, boolean hasTime) {
+        return widthDp > 0 && brandRoom(name, widthDp, fontScale, hasTime) >= brandDp;
+    }
+
+    /** Largura em px do gráfico da marca: nome sem distorcer (nameW) + gráfico esticado até roomPx, entre o mínimo (minW, a marca
+     *  compacta) e 1,5× a largura natural (natW, proporção da faixa do site). */
+    public static int brandGrafPx(int roomPx, int nameW, int minW, int natW) {
+        return Math.max(minW, Math.min(roomPx - nameW, natW * 3 / 2));
     }
 
     /** Largura atual do widget em dp: retrato = largura mínima, paisagem = máxima (regra do AppWidgetManager); 0 = desconhecida. */
@@ -194,10 +205,17 @@ public final class WidgetData {
     /** Barato/Caro como no card: +43% (verde: o preço precisa subir até o valor justo) ou −75% (vermelho). */
     public static String badge(Double f) { return badge(f, null); }
 
+    /** Barato/Caro que arredonda para 0% (o servidor já manda 0: valor_justo.FAIR["zero"]): "0%" no chip verde, sem sinal. */
+    public static boolean zero(Double f) { return f != null && Math.abs(f) < 0.5; }
+    /** Chip verde (preço até o valor justo, inclusive 0%) ou vermelho. */
+    public static boolean up(Double f) { return f != null && (f >= 0 || zero(f)); }
+
     /** Sem Barato/Caro: o texto curto do servidor (x, até 6 letras para caber no chip) ou "—". */
     public static String badge(Double f, String x) {
         if (f == null) return x != null && !x.isEmpty() && x.length() <= 6 ? x : "—";
-        return (f >= 0 ? "+" : "−") + df("0").format(Math.abs(f)) + "%";
+        if (zero(f)) return "0%";
+        DecimalFormat d = df("0"); d.setRoundingMode(java.math.RoundingMode.HALF_UP);  // como o site (Intl: metade para cima)
+        return (f >= 0 ? "+" : "−") + d.format(Math.abs(f)) + "%";
     }
 
     /** Rótulo do eixo do gráfico: real como antes (R$ 59,68); outra moeda só o número, para caber na margem (a moeda está na dica). */

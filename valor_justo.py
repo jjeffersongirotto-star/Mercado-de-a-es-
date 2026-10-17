@@ -11,6 +11,7 @@ FAIR = {
     # LPA de referência (Brasil): média de 3 anos (ln3); se ela der prejuízo, a de 5 anos (ln5); sem média, o de 12 meses
     "lpa_anos": [3, 5],
     # sem valor justo: texto da célula (card, CSV, chat) e versão curta (widget do app); o motivo fica no detalhe
+    "zero": 0.5,       # |margem| abaixo disso (%) = 0%: preço no valor justo, sem sinal, verde (site, chat, CSV e widget)
     "rot": {"prej": ["Prejuízo recorrente", "Prej."], "sem": ["Sem valor justo", "s/ VJ"]},
     # Barsi (preço teto): dividendo médio por ação dos últimos anos completos (B3, 3 a 5 anos) ÷ taxa; segmentos oficiais da B3
     "barsi_taxa": 6.0,
@@ -54,6 +55,12 @@ def lucro_medio(ni, n=3):
     return sum(out) / n
 
 
+def margem(j, p):
+    """Barato/Caro em %: (justo ÷ preço − 1) × 100; o que arredonda para 0% vira 0 (FAIR["zero"], mesma regra de app.js → fairOf)."""
+    x = (j / p - 1) * 100
+    return 0.0 if abs(x) < FAIR["zero"] else x
+
+
 def lpa_ref(r, b, lpa, br):
     """LPA de referência -> (lpa, janela): Brasil = média de 3 anos (ln3 × VPA); se der prejuízo, a de 5 anos (ln5 × VPA) quando
     positiva; sem média de 3 anos, o de 12 meses. Exterior = 12 meses. janela: "3a", "5a", "12m" ou None (sem dado)."""
@@ -87,16 +94,16 @@ def fair(r, val, rows):
         if roe is None: return None, "Sem ROE de 3 anos na CVM", None
         j = b * (roe - FAIR["g"]) / (FAIR["ke"] - FAIR["g"])
         if j <= 0: return None, "ROE abaixo do crescimento", None
-        return j, (j / p - 1) * 100, tag("Gordon")
+        return j, margem(j, p), tag("Gordon")
     if br and r.get("subsetor") in FAIR["pvp_sub"]:
         pv = [x for x in (val(o, "pvp") for o in rows if o.get("subsetor") == r.get("subsetor")) if x and x > 0]
         if len(pv) < FAIR["pvp_min"]: return None, "Poucas empresas no setor", None
         j = b * statistics.median(pv)
-        return j, (j / p - 1) * 100, tag("P/VP do setor")
+        return j, margem(j, p), tag("P/VP do setor")
     if br and r.get("seg") in FAIR["barsi_seg"] and r.get("dpsm"):  # sem histórico de proventos: segue no Graham
         j = r["dpsm"] / (FAIR["barsi_taxa"] / 100)
-        return j, (j / p - 1) * 100, tag("Barsi")
+        return j, margem(j, p), tag("Barsi")
     if l is None: return None, "Sem LPA" if not br else "Sem lucro de 3 anos na CVM nem LPA de 12 meses", None
     if l == 0: return None, "Lucro zero", None
     j = (22.5 * l * b) ** 0.5
-    return j, (j / p - 1) * 100, "Graham" + (" · média 5a" if w == "5a" else " · LPA 12m" if br and w == "12m" else "")
+    return j, margem(j, p), "Graham" + (" · média 5a" if w == "5a" else " · LPA 12m" if br and w == "12m" else "")

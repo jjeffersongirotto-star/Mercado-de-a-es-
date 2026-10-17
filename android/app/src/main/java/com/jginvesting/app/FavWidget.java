@@ -26,7 +26,9 @@ public class FavWidget extends AppWidgetProvider {
     }
 
     @Override public void onReceive(Context c, Intent i) {
-        if (ACTION_REFRESH.equals(i.getAction())) { render(c); refreshAsync(c, goAsync()); return; }
+        if (ACTION_REFRESH.equals(i.getAction())) {  // ⟳ e troca de grupo (PickerActivity): "Atualizando…" já e busca na hora
+            Store.setLoading(c, System.currentTimeMillis()); render(c); refreshAsync(c, goAsync()); return;
+        }
         super.onReceive(c, i);
     }
 
@@ -53,9 +55,11 @@ public class FavWidget extends AppWidgetProvider {
                     // logos que faltam no aparelho (só na primeira vez de cada um; ficam guardados)
                     Logos.ensure(c, WidgetData.logos(WidgetData.items(tk, Store.data(c, sel))), pr != null ? start + 8500 : 0);
                 }
+                Store.setLoading(c, 0); render(c);  // dados novos na tela antes da conferência de versão
                 Updater.quietCheck(c, pr != null ? 6000 : 20000);  // aviso "Atualização disponível" no topo
                 render(c);
             } finally {
+                if (Store.loading(c) != 0) { Store.setLoading(c, 0); render(c); }
                 if (pr != null) pr.finish();
             }
         }).start();
@@ -82,12 +86,15 @@ public class FavWidget extends AppWidgetProvider {
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget);
             String nm = WidgetData.name(sel, gs);
             v.setTextViewText(R.id.w_sel, nm + "  ▾");
+            v.setTextViewText(R.id.w_sel2, nm + "  ▾");
             Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
             pick.setData(Uri.parse("jg://pick/" + id));  // um PendingIntent por widget
             v.setOnClickPendingIntent(R.id.w_sel, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
+            v.setOnClickPendingIntent(R.id.w_sel2, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
             v.setTextViewText(R.id.w_empty, c.getString(WidgetData.FAV.equals(sel) ? R.string.widget_empty : R.string.widget_empty_group));
-            String up = WidgetData.updated(data);
+            boolean busy = System.currentTimeMillis() - Store.loading(c) < 25000;  // ⟳ / troca de grupo em andamento
+            String up = busy ? c.getString(R.string.widget_loading) : WidgetData.updated(data);
             v.setTextViewText(R.id.w_time, up);
             v.setViewVisibility(R.id.w_time, up.isEmpty() ? View.GONE : View.VISIBLE);
             // marca comprida "JG Investing" ou, se o nome do grupo não couber ao lado dela, o logo quadrado (refeito ao redimensionar)
@@ -95,10 +102,17 @@ public class FavWidget extends AppWidgetProvider {
             android.content.res.Configuration cf = c.getResources().getConfiguration();
             int hw = WidgetData.widthDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
                     cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
-            boolean brand = WidgetData.longLogo(nm, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / c.getResources().getDisplayMetrics().density),
-                    cf.fontScale, !up.isEmpty());
+            float dens = c.getResources().getDisplayMetrics().density;
+            boolean brand = WidgetData.longLogo(nm, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
+            // nome curto: marca comprida até o seletor, que fica colado ao horário; nome longo: logo quadrado e seletor no meio
             v.setViewVisibility(R.id.w_brand, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.w_sel2, brand ? View.VISIBLE : View.GONE);
             v.setViewVisibility(R.id.w_logo, brand ? View.GONE : View.VISIBLE);
+            v.setViewVisibility(R.id.w_mid, brand ? View.GONE : View.VISIBLE);
+            if (brand) {
+                android.graphics.Bitmap bm = brandBitmap(c, Math.round((WidgetData.brandRoom(nm, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens));
+                if (bm != null) v.setImageViewBitmap(R.id.w_brand, bm);
+            }
             Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             v.setOnClickPendingIntent(R.id.w_logo, PendingIntent.getActivity(c, 0, open, flagsImm));
             v.setOnClickPendingIntent(R.id.w_brand, PendingIntent.getActivity(c, 0, open, flagsImm));
@@ -131,6 +145,25 @@ public class FavWidget extends AppWidgetProvider {
             m.updateAppWidget(id, v);
         }
         if (Build.VERSION.SDK_INT < 31) legacyNotify(m, ids);
+    }
+
+    /** Marca comprida do tamanho do espaço: nome "JG Investing" na proporção original + gráfico da faixa esticado na horizontal
+     *  (static/brand/jg-investing-widget-nome/-graf.png → ic_brand_nome/ic_brand_graf). null = usa a marca compacta (ic_brand). */
+    static android.graphics.Bitmap brandBitmap(Context c, int roomPx, int hPx) {
+        try {
+            android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options(); o.inScaled = false;
+            android.graphics.Bitmap n = android.graphics.BitmapFactory.decodeResource(c.getResources(), R.drawable.ic_brand_nome, o);
+            android.graphics.Bitmap g = android.graphics.BitmapFactory.decodeResource(c.getResources(), R.drawable.ic_brand_graf, o);
+            int nw = Math.round(n.getWidth() * (float) hPx / n.getHeight());
+            int gmin = Math.round(190f * hPx / n.getHeight()), gnat = Math.round(g.getWidth() * (float) hPx / g.getHeight());
+            int gw = WidgetData.brandGrafPx(roomPx, nw, gmin, gnat);
+            android.graphics.Bitmap out = android.graphics.Bitmap.createBitmap(nw + gw, hPx, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas cv = new android.graphics.Canvas(out);
+            android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG | android.graphics.Paint.ANTI_ALIAS_FLAG);
+            cv.drawBitmap(n, null, new android.graphics.Rect(0, 0, nw, hPx), p);
+            cv.drawBitmap(g, null, new android.graphics.Rect(nw, 0, nw + gw, hPx), p);
+            return out;
+        } catch (Exception | OutOfMemoryError e) { return null; }
     }
 
     @SuppressWarnings("deprecation")
@@ -189,8 +222,8 @@ public class FavWidget extends AppWidgetProvider {
         r.setTextViewText(R.id.r_var, WidgetData.change(it.v));
         r.setTextColor(R.id.r_var, c.getColor(it.v == null ? R.color.c_mut : it.v >= 0 ? R.color.c_pos : R.color.c_neg));
         r.setTextViewText(R.id.r_badge, WidgetData.badge(it.f, it.x));
-        r.setTextColor(R.id.r_badge, c.getColor(it.f == null ? R.color.c_mut : it.f >= 0 ? R.color.c_pos : R.color.c_neg));
-        r.setInt(R.id.r_badge, "setBackgroundResource", it.f == null ? R.drawable.chip_none : it.f >= 0 ? R.drawable.chip_pos : R.drawable.chip_neg);
+        r.setTextColor(R.id.r_badge, c.getColor(it.f == null ? R.color.c_mut : WidgetData.up(it.f) ? R.color.c_pos : R.color.c_neg));
+        r.setInt(R.id.r_badge, "setBackgroundResource", it.f == null ? R.drawable.chip_none : WidgetData.up(it.f) ? R.drawable.chip_pos : R.drawable.chip_neg);
         if (it.g == null || bands.lim.length == 0) {
             r.setTextViewText(R.id.r_fg, "—"); r.setTextColor(R.id.r_fg, c.getColor(R.color.c_mut));
             r.setViewVisibility(R.id.r_fgn, View.GONE);

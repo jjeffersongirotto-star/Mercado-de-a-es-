@@ -24,8 +24,8 @@ public class PickerActivity extends Activity {
                 .setSingleChoiceItems(names, checked, (dlg, w) -> {
                     Store.setSel(this, id, w == 0 ? WidgetData.FAV : gs.get(w - 1).id);
                     Store.setExpanded(this, "");
-                    FavWidget.render(this);
-                    FavWidget.refreshAsync(this, null);
+                    // mesmo caminho do ⟳ (broadcast com goAsync: o Android não congela a busca quando o seletor fecha)
+                    sendBroadcast(new android.content.Intent(this, FavWidget.class).setAction(FavWidget.ACTION_REFRESH));
                     dlg.dismiss();
                 })
                 .setOnDismissListener(x -> { finish(); overridePendingTransition(0, 0); });

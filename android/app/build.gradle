@@ -28,8 +28,10 @@ def copyIcons = tasks.register("copyIcons", Copy) {
         rename "icon-512.png", "ic_legacy.png"
     }
     from(new File(site, "static/brand")) {  // marca comprida do topo do widget (scripts/build_icons.py → marca_widget)
-        include "jg-investing-widget.png"
+        include "jg-investing-widget.png", "jg-investing-widget-nome.png", "jg-investing-widget-graf.png"
         rename "jg-investing-widget.png", "ic_brand.png"
+        rename "jg-investing-widget-nome.png", "ic_brand_nome.png"
+        rename "jg-investing-widget-graf.png", "ic_brand_graf.png"
     }
     into iconsOut.map { it.dir("drawable-nodpi") }
 }
@@ -41,8 +43,8 @@ android {
         applicationId "com.jginvesting.app"
         minSdk 24
         targetSdk 36
-        versionCode 9
-        versionName "1.8"
+        versionCode 10
+        versionName "1.9"
         resValue "string", "app_name", appName
         resValue "color", "theme", themeColor
         resValue "color", "chart_stock", chartStock

@@ -113,6 +113,11 @@ public class WidgetDataTest {
         assertEquals("s/ VJ", WidgetData.badge(null, "s/ VJ"));
         assertEquals("—", WidgetData.badge(null, "Prejuízo recorrente"));  // longo demais para o chip
         assertEquals("+43%", WidgetData.badge(43.3, "Prej."));
+        assertEquals("0%", WidgetData.badge(-0.2));  // AURE3: era "−0%" vermelho
+        assertEquals("0%", WidgetData.badge(0.0));
+        assertTrue(WidgetData.up(-0.2)); assertFalse(WidgetData.up(-0.6)); assertTrue(WidgetData.up(0.0));
+        assertEquals("−1%", WidgetData.badge(-0.6));
+        assertEquals("+3%", WidgetData.badge(2.5));  // metade para cima, como o site
     }
 
     @Test public void shortAndDottedTickersKept() {  // 1.5 descartava KO, V, GE, F, BRK.B e RR. (regra antiga: 3 a 12 letras/dígitos)
@@ -158,6 +163,10 @@ public class WidgetDataTest {
         assertFalse(WidgetData.longLogo("Favoritos", 323, 90, 1.6f, true));                     // fonte grande do aparelho
         assertTrue(WidgetData.longLogo("Dividendos", 323, 90, 1f, false));
         assertFalse(WidgetData.longLogo("Favoritos", 0, 90, 1f, true));                         // largura desconhecida: quadrado
+        assertTrue(WidgetData.brandRoom("Favoritos", 323, 1f, true) > 90);                      // sobra para esticar a marca
+        assertEquals(190, WidgetData.brandGrafPx(100, 200, 190, 600));                          // nunca menor que a compacta
+        assertEquals(500, WidgetData.brandGrafPx(700, 200, 190, 600));                          // estica até o seletor
+        assertEquals(900, WidgetData.brandGrafPx(2000, 200, 190, 600));                         // no máximo 1,5× a natural
         assertEquals(300, WidgetData.widthDp(300, 560, false));
         assertEquals(560, WidgetData.widthDp(300, 560, true));
         assertEquals(560, WidgetData.widthDp(0, 560, false));

@@ -25,6 +25,9 @@ final class Store {
         sp(c).edit().putString("groups", json).apply();
         return true;
     }
+    /** Atualização em andamento (⟳ ou troca de grupo): quando começou; 0 = parada. O widget mostra "Atualizando…" no lugar do horário. */
+    static long loading(Context c) { return sp(c).getLong("loading", 0); }
+    static void setLoading(Context c, long t) { sp(c).edit().putLong("loading", t).commit(); }
     /** Lista escolhida em cada widget (padrão: Favoritos). */
     static String sel(Context c, int id) { return sp(c).getString("sel_" + id, "fav"); }
     static void setSel(Context c, int id, String sel) { sp(c).edit().putString("sel_" + id, sel).commit(); }

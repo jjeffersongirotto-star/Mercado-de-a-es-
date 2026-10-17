@@ -392,7 +392,7 @@ function fairOf(r) {
   const [l, w] = lpaRef(r, b, val(r, 'lpa'), br);
   if (l != null && l < 0) return no(w === '12m' ? 'Prejuízo nos últimos 12 meses' : r.ln5 != null ? 'Prejuízo médio nos últimos 3 e 5 anos' : 'Prejuízo médio nos últimos 3 anos');
   const tag = (m) => m + (w === '5a' ? ' · média 5a' : '');
-  const out = (j, m) => ({ j, m, pct: (j / p - 1) * 100, pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) });
+  const out = (j, m) => ({ j, m, pct: (x => Math.abs(x) < FC.zero ? 0 : x)((j / p - 1) * 100), pos: Math.min(.97, Math.max(.03, .5 + Math.log(p / j) / (2 * Math.log(3)))) });
   if (br && r.fin) {
     if (r.roe3 == null) return no('Sem ROE de 3 anos na CVM');
     const j = b * (r.roe3 - FC.g) / (FC.ke - FC.g);
@@ -421,8 +421,8 @@ window.alertsOf = alertsOf;
 function fairHtml(r) {
   const f = fairOf(r), al = alertsOf(r).length ? `<button type="button" class="fv-al" data-fval="${r.ticker}" aria-label="Alertas de ${r.ticker}">⚠️</button>` : '';
   if (f.why) return `<div class="fv"><span class="fv-t fv-lab text-slate-400">${f.lab}</span>${al}<div class="fv-b"><span class="fv-why">${f.why}</span>${glossBtn('Barato/Caro')}</div></div>`;
-  const up = f.pct >= 0;  // + verde: o preço precisa subir até o valor justo · − vermelho: precisa cair
-  return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>${al}` +
+  const up = f.pct >= 0;  // + verde: o preço precisa subir até o valor justo · − vermelho: precisa cair · 0 (valor_justo.margem): 0%, verde
+  return `<div class="fv"><span class="fv-t ${up ? 'text-emerald-400' : 'text-rose-400'}" title="Valor justo (${f.m}): R$ ${F2.format(f.j)}">${f.pct === 0 ? '' : up ? '+' : '−'}${F0.format(Math.abs(f.pct))}%</span>${al}` +
     `<div class="fv-b"><span class="fv-bar"><i style="left:${(f.pos * 100).toFixed(1)}%"></i></span>${glossBtn('Barato/Caro')}</div></div>`;
 }
 // Medo e Ganância da própria ação (build_fg.acoes -> /api/data rows.fg; faixas em data.fga): no computador, no meio do card

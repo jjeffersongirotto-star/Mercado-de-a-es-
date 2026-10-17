@@ -23,6 +23,8 @@ MARCAS = ((os.path.join(AQUI, "brand-source.jpg"), (56, 54, 3404, 510), "jg-inve
           (os.path.join(AQUI, "brand-source-wide.jpg"), (7, 390, 2118, 505), "jg-investing-wide.webp", 115))
 # marca do widget do app (android/: ic_brand): faixa do celular com o gráfico encolhido, para caber no topo do widget
 WIDGET = ("jg-investing.webp", 215, 190, "jg-investing-widget.png")  # (faixa de origem, px do nome "JG Investing", px do gráfico, arquivo)
+# o widget estica a marca até o seletor: nome sem distorcer + gráfico esticado na horizontal (android: ic_brand_nome, ic_brand_graf)
+WIDGET_PARTES = ("jg-investing-widget-nome.png", "jg-investing-widget-graf.png")
 FUNDO = (3, 12, 34)               # cor escura do interior do botão (fundo dos ícones que o celular recorta)
 
 
@@ -89,4 +91,7 @@ if __name__ == "__main__":
     os.makedirs(BRAND, exist_ok=True)
     for fonte, caixa, nome, altura in MARCAS:
         m = marca(fonte, caixa, altura); m.save(os.path.join(BRAND, nome), quality=90, method=6); print(nome)
-        if nome == WIDGET[0]: marca_widget(m).save(os.path.join(BRAND, WIDGET[3]), optimize=True); print(WIDGET[3])
+        if nome == WIDGET[0]:
+            marca_widget(m).save(os.path.join(BRAND, WIDGET[3]), optimize=True); print(WIDGET[3])
+            m.crop((0, 0, WIDGET[1], m.size[1])).save(os.path.join(BRAND, WIDGET_PARTES[0]), optimize=True)
+            m.crop((WIDGET[1], 0, m.size[0], m.size[1])).save(os.path.join(BRAND, WIDGET_PARTES[1]), optimize=True); print(*WIDGET_PARTES)

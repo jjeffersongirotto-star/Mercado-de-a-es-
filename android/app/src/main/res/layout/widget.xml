@@ -25,16 +25,19 @@
             android:scaleType="fitCenter"
             android:src="@drawable/ic_legacy" />
 
+        <!-- marca comprida (nome curto): ocupa até o seletor w_sel2, que fica colado ao horário; bitmap montado em FavWidget.brand -->
         <ImageView
             android:id="@+id/w_brand"
-            android:layout_width="@dimen/brand_w"
-            android:layout_height="28dp"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
             android:contentDescription="@string/app_name"
-            android:scaleType="fitCenter"
+            android:scaleType="fitStart"
             android:src="@drawable/ic_brand"
             android:visibility="gone" />
 
         <FrameLayout
+            android:id="@+id/w_mid"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
@@ -55,6 +58,22 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </FrameLayout>
+
+        <TextView
+            android:id="@+id/w_sel2"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/sel_chip"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingStart="12dp"
+            android:paddingEnd="10dp"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/w_time"

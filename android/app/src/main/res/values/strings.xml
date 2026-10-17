@@ -4,6 +4,7 @@
     <string name="widget_desc">Preço, variação, Barato/Caro e Medo e Ganância dos Favoritos ou de um grupo</string>
     <string name="widget_empty">Marque ☆ nas ações dentro do app</string>
     <string name="widget_refresh">Atualizar</string>
+    <string name="widget_loading">Atualizando…</string>
     <string name="col_t">Ação</string>
     <string name="col_p">Preço</string>
     <string name="col_v">Dia</string>
