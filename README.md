@@ -51,7 +51,8 @@ Nome, cor, endereço e ícone vêm do site no build (AGENTS.md, tabela 1.3). Par
 cd android && JG_SIGNING=/caminho/keystore.properties ./gradlew testReleaseUnitTest assembleRelease   # app/build/outputs/apk/release/app-release.apk
 ```
 `keystore.properties` (storeFile, storePassword, keyAlias, keyPassword) e a chave ficam **fora do repositório**; use sempre a mesma chave
-para a nova versão instalar por cima. Nova versão: suba `versionCode`/`versionName` em `android/app/build.gradle`.
+para a nova versão instalar por cima. Nova versão: suba `versionCode`/`versionName` em `android/app/build.gradle` e gere o APK:
+o build copia o APK assinado para `static/app/JG-Investing.apk` (botão **Baixar APK**, rota `/app.apk`) e o painel ⓘ mostra o `versionName`; faça commit dos dois.
 
 ## Como os dados chegam ao servidor
 Os dados são atualizados a cada 30 minutos (ou pelo botão ⟳). Fontes que bloqueiam o servidor usam a cópia (snapshot) da branch **`data`**,

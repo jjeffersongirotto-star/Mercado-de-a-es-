@@ -1010,10 +1010,25 @@ def _hash(path):
     with open(path, "rb") as fh:
         return hashlib.sha1(fh.read()).hexdigest()[:10]
 
+APK = os.path.join(BASE, "static", "app", "JG-Investing.apk")  # gerado pelo build do android/ (README → App Android)
+APK_GRADLE = os.path.join(BASE, "android", "app", "build.gradle")
+
+def apk_version():
+    """Versão do APK = versionName de android/app/build.gradle (fonte única; o build copia o APK para static/app/)."""
+    try: return re.search(r'versionName "([^"]+)"', open(APK_GRADLE, encoding="utf-8").read()).group(1)
+    except Exception: return "atual"
+
+@app.get("/app.apk")
+def app_apk():
+    """Baixar APK (painel ⓘ → App Android)."""
+    if not os.path.exists(APK): return JSONResponse({"error": "não encontrado"}, status_code=404)
+    return FileResponse(APK, media_type="application/vnd.android.package-archive", filename="JG-Investing.apk",
+                        headers={"Cache-Control": "no-cache"})
+
 def _index_html():
     """index.html com ?v=<hash do arquivo> em cada JS/CSS: o navegador guarda os arquivos por 1 ano e baixa de novo
     só quando o conteúdo muda. Com static/tw.css, troca o Tailwind do CDN (compila no navegador) pelo CSS pronto."""
-    files = [os.path.join(BASE, "index.html"), TW_CSS] + [os.path.join(BASE, n + ".js") for n in JS_FILES]
+    files = [os.path.join(BASE, "index.html"), TW_CSS, APK_GRADLE] + [os.path.join(BASE, n + ".js") for n in JS_FILES]
     key = tuple(os.path.getmtime(f) if os.path.exists(f) else 0 for f in files)
     if _INDEX.get("key") != key:
         with open(files[0], encoding="utf-8") as fh:
@@ -1025,6 +1040,7 @@ def _index_html():
             h = re.sub(r'<script src="https://cdn\.tailwindcss\.com"></script>\s*<script src="/tailwind\.config\.js"></script>',
                        f'<link rel="stylesheet" href="/static/tw.css?v={_hash(TW_CSS)}">', h, count=1)
         h = h.replace('<script src="/static/', f'<script>window.INDICES={json.dumps(history.INDICES, ensure_ascii=False)}</script><script src="/static/', 1)
+        h = h.replace('<span class="apk-v">atual</span>', f'<span class="apk-v">{apk_version()}</span>', 1)  # ⓘ → App Android
         _INDEX.update(key=key, html=h.encode("utf-8"))
     return _INDEX["html"]
 

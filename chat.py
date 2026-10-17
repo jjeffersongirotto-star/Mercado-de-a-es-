@@ -870,7 +870,7 @@ HOWTO_KEYS = [
     (("compar",), ["Comparar"]),
     (("favorit", "estrela"), ["Favoritos"]),
     (("reorganiz", "arrastar", "reordenar", "mudar a ordem", "trocar a ordem"), ["Reorganizar"]),
-    (("widget", "apk", "app android", "app do android", "aplicativo android"), ["App Android com widget"]),
+    (("widget", "apk", "app android", "app do android", "aplicativo android"), ["App Android"]),
     (("instal", "aplicativo", "baixar o app", "baixar app", "tela inicial", "app no celular", "como app"), ["Instalar o app"]),
     (("importar", "exportar grupo", "exportar os grupos", "backup", "outro aparelho", "outro celular"), ["Grupos (criar e editar)"]),
     (("export", "csv", "baixar", "planilha", "excel", "download"), ["Exportar (CSV)"]),

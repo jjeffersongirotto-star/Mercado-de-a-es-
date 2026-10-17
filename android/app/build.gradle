@@ -66,6 +66,15 @@ android {
 }
 tasks.named("preBuild") { dependsOn copyIcons }
 
+// APK assinado -> static/app/JG-Investing.apk: o site o oferece em /app.apk (ⓘ → App Android) com a versão de versionName
+def publishApk = tasks.register("publishApk", Copy) {
+    onlyIf { signProps != null && signProps.exists() }
+    from layout.buildDirectory.file("outputs/apk/release/app-release.apk")
+    into new File(site, "static/app")
+    rename { "JG-Investing.apk" }
+}
+afterEvaluate { tasks.named("assembleRelease") { finalizedBy publishApk } }
+
 dependencies {
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.json:json:20240303"
