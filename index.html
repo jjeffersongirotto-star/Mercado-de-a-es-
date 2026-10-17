@@ -426,6 +426,7 @@
   .rg-n { flex: none; width: 1.8em; height: 1.8em; display: grid; place-items: center; border-radius: 9999px; background: rgb(6 78 59 / .6); color: rgb(110 231 183); font-weight: 800; font-size: .9em; }
   .rg-t { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rg-h { color: rgb(100 116 139); }
   /* ================= Design system (único para todas as abas) ================= */
+  .in-app .no-app { display: none !important; }  /* dentro do app Android: sem opções de instalar (ui.js) */
   :root { --c-pos: rgb(52 211 153); --c-pos-bg: rgb(5 150 105); --c-pos-bd: rgb(16 185 129); --c-neg: rgb(251 113 133); --c-neg-bg: rgb(190 18 60); --c-neg-bd: rgb(244 63 94);
           --c-amber: rgb(251 191 36); --c-orange: rgb(251 146 60); --c-lime: rgb(163 230 53); --c-amber-bg: rgb(120 53 15 / .45); --c-info: rgb(56 189 248); --c-bank: rgb(30 64 175); --c-txt: rgb(226 232 240); --c-mut: rgb(148 163 184); --c-dim: rgb(100 116 139);
           --bg-card: rgb(15 23 42 / .6); --bg-in: rgb(2 6 23); --bg-sec: rgb(30 41 59); --bd: rgb(51 65 85); --bd-card: rgb(30 41 59);
@@ -697,8 +698,8 @@
   <div class="info-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-6 text-sm text-slate-300 shadow-2xl">
     <button type="button" data-close class="sticky top-0 float-right -mt-1 -mr-1" aria-label="Fechar">✕</button>
     <h2 class="text-lg font-bold text-slate-100 mb-1">Informações</h2>
-    <details class="icard"><summary>Instalar o app</summary><div class="ib">
-<ol class="list-decimal pl-5"><li>Android (Chrome): abra o site, toque no menu ⋮ e em Instalar app (ou Adicionar à tela inicial).</li><li>iPhone (Safari): abra o site, toque em Compartilhar e em Adicionar à Tela de Início.</li><li>O ícone JG Investing aparece na tela inicial e abre em tela cheia, sem a barra do navegador.</li><li>O app se atualiza sozinho com o site; sem internet, mostra os últimos dados que você abriu.</li></ol>
+    <details class="icard no-app"><summary>Instalar o app</summary><div class="ib">
+<ol class="list-decimal pl-5"><li>Android: toque em Baixar APK (em App Android, abaixo) e instale o arquivo. Não use Instalar app do menu do Chrome: ele cria a versão antiga, sem widget.</li><li>iPhone (Safari): abra o site, toque em Compartilhar e em Adicionar à Tela de Início.</li><li>O ícone JG Investing aparece na tela inicial e abre em tela cheia, sem a barra do navegador.</li><li>O app se atualiza sozinho com o site; sem internet, mostra os últimos dados que você abriu.</li></ol>
 <h3>App Android</h3>
 <p><a class="gbtn pri" href="/app.apk" download="JG-Investing.apk">Baixar APK</a> <span class="text-slate-400">versão <span class="apk-v">atual</span></span></p>
 <p>Ao instalar, permita instalar desta fonte. Antes de desinstalar o app do Chrome, leve Favoritos e grupos: no app antigo, Grupos → Exportar; no novo, Grupos → Importar.</p>

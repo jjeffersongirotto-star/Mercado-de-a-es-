@@ -162,7 +162,7 @@ def test_definitions_colors_howto():
     assert "Graham" in ask("o que é graham")[1]
     assert ask("o que é on e pn")[1].startswith("ON, PN e Unit")
     assert ask("bom dia")[1].startswith("Olá")
-    assert ask("como instalar o app no celular")[1].startswith("Instalar o app")
+    assert ask("como instalar o app no celular")[1].startswith("Instalar o app") and "Baixar APK" in ask("como instalar o app no celular")[1]
     assert ask("como baixar o apk")[1].startswith("App Android")
 
 

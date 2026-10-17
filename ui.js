@@ -234,6 +234,11 @@ if (typeof document !== 'undefined') (function () {
   });
 })();
 
-// App instalável (manifesto + service worker): no celular, "Instalar app" / "Adicionar à tela inicial" (passo a passo no painel ⓘ)
+// App instalável (manifesto + service worker): iPhone e computador instalam pelo navegador; no Android o app é o APK (/app.apk, com widget),
+// então o site não deixa o Chrome oferecer a instalação dele. Dentro do app (window.JGApp) as opções de instalar somem (classe in-app).
+if (typeof window !== 'undefined' && window.addEventListener) {
+  if (window.JGApp) document.documentElement.classList.add('in-app');
+  else if (/Android/i.test(navigator.userAgent)) window.addEventListener('beforeinstallprompt', (e) => e.preventDefault());
+}
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof window !== 'undefined' && window.addEventListener)
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));
