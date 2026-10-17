@@ -44,6 +44,15 @@ Variáveis de ambiente:
 O deploy automático pelo GitHub não está chegando ao Render: depois do merge na `main`, publique pelo deploy hook ou pela API do Render.
 `.github/workflows/keepalive.yml` acessa o site a cada 10 min para o plano gratuito não dormir.
 
+## App Android (APK com widget)
+`android/` gera o app JG Investing para Android (abre o site em tela cheia e traz o widget ★ Favoritos; uso: painel ⓘ → **Instalar o app** → **App Android com widget**).
+Nome, cor, endereço e ícone vêm do site no build (AGENTS.md, tabela 1.3). Para gerar o APK assinado (JDK 17 e Android SDK com a plataforma 36):
+```bash
+cd android && JG_SIGNING=/caminho/keystore.properties ./gradlew testReleaseUnitTest assembleRelease   # app/build/outputs/apk/release/app-release.apk
+```
+`keystore.properties` (storeFile, storePassword, keyAlias, keyPassword) e a chave ficam **fora do repositório**; use sempre a mesma chave
+para a nova versão instalar por cima. Nova versão: suba `versionCode`/`versionName` em `android/app/build.gradle`.
+
 ## Como os dados chegam ao servidor
 Os dados são atualizados a cada 30 minutos (ou pelo botão ⟳). Fontes que bloqueiam o servidor usam a cópia (snapshot) da branch **`data`**,
 que não dispara deploy.

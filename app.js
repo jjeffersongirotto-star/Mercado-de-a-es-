@@ -556,9 +556,7 @@ function exportCsv() {
   const lines = [head.map(q).join(';')];
   const n = (v) => v == null ? '' : String(v).replace('.', ',');
   for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), r.S ? confTxt(r) : '', ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
-  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  saveFile('\ufeff' + lines.join('\r\n'), `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`, 'text/csv;charset=utf-8');
 }
 
 // ---------- País e fonte ----------
@@ -716,6 +714,17 @@ function sendPins() {
   }, 1500);
 }
 document.addEventListener('favs', sendPins);
+// App Android (android/, WebView com window.JGApp): manda a lista e a ordem dos Favoritos para o widget da tela inicial
+function pushApp() { try { if (window.JGApp) window.JGApp.setFavs(JSON.stringify([...FAVS])); } catch (e) { } }
+document.addEventListener('favs', pushApp);
+// Abre o card de uma ação na aba Ações (toque no widget do app: ?acao=PETR4 ao abrir, ou jgOpen com o app já aberto)
+window.jgOpen = function (t) {
+  t = String(t || '').toUpperCase().trim(); if (!t) return;
+  if (!state.data) { setTimeout(() => window.jgOpen(t), 500); return; }
+  const b = document.querySelector('[data-tab="acoes"]'); if (b) b.click();
+  $('#q').value = t; state.expanded.add(t); apply(); window.scrollTo(0, 0);
+};
+{ const a = new URLSearchParams(location.search).get('acao'); if (a) { history.replaceState(null, '', location.pathname); window.jgOpen(a); } }
 document.addEventListener('click', (e) => { const b = e.target.closest('.star[data-fav]'); if (b) { e.stopPropagation(); toggleFav(b.dataset.fav); } }, true);
 $('#btnFilt').addEventListener('click', () => { const p = $('#moreFilt'), open = p.classList.toggle('hidden') === false; $('#btnFilt').setAttribute('aria-expanded', String(open)); });
 
@@ -732,7 +741,7 @@ async function load() {
     if (country === 'br') { d.rowsK = universe(d.rows); d.rows = tradable(d.rows); await loadProfiles(d.rows); } // todas as classes negociadas; grupos prontos usam rowsK (1 por empresa)
     d.rows.forEach(prepRow); d.hasLiq = d.rows.some(x => x.v.liq2m != null);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
-    sendPins();
+    sendPins(); pushApp();
     $('#updated').innerHTML = `<span class="max-sm:hidden">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp.replace(/^(\d\d\/\d\d\/)\d\d(\d\d) (.*)$/, '$1$2 <span class="upd-t whitespace-nowrap">$3</span>')}</b> <span class="max-sm:hidden">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
     const L = { fundamentus: 'Fundamentus', statusinvest: 'Status Invest', cvm: 'CVM', investidor10: 'Investidor10', tradingview: 'TradingView', dadosdemercado: 'Dados de Mercado', yfinance: 'Yahoo' };

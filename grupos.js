@@ -368,15 +368,16 @@
   });
   document.addEventListener('favs', () => { if (!$g('[data-tabpane="grupos"]').classList.contains('hidden')) list(); });
   function exportG() {
-    saveJSON({ app: 'screener-b3', tipo: 'grupos', versao: 1, exportado: new Date().toISOString(), grupos: groups }, 'grupos-screener');
+    saveJSON({ app: 'screener-b3', tipo: 'grupos', versao: 1, exportado: new Date().toISOString(), grupos: groups, favoritos: [...FAVS] }, 'grupos-screener');  // favoritos: leva a ★ para outro aparelho ou para o app Android
   }
   async function importG(e) {
     const f = e.target.files[0]; if (!f) return;
     try {
       const d = JSON.parse(await f.text()); const arr = Array.isArray(d) ? d : d.grupos;
-      if (!Array.isArray(arr)) throw new Error('arquivo sem grupos');
+      const fv = Array.isArray(d.favoritos) ? [...new Set(d.favoritos.map(t => String(t).toUpperCase().trim()))].filter(t => t && !FAVS.has(t)) : [];
+      if (!Array.isArray(arr) && !Array.isArray(d.favoritos)) throw new Error('arquivo sem grupos');
       let n = 0;
-      for (const g of arr) {
+      for (const g of arr || []) {
         if (!g || typeof g.name !== 'string' || !Array.isArray(g.tickers)) continue;
         let name = g.name.trim().slice(0, 40); const tk = [...new Set(g.tickers.map(t => String(t).toUpperCase().trim()).filter(Boolean))].sort();
         const ex = groups.find(x => x.name === name);
@@ -387,8 +388,9 @@
         }
         groups.push({ name, tickers: tk, updated: g.updated || new Date().toISOString() }); n++;
       }
+      if (fv.length) { fv.forEach(t => FAVS.add(t)); setFavOrder([...FAVS]); }  // favoritos do arquivo entram no fim da sua ordem
       groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); list();
-      uiToast(n + ' grupo(s) importado(s)');
+      uiToast(n + ' grupo(s) importado(s)' + (fv.length ? ` e ${fv.length} favorito(s)` : ''));
     } catch (err) { uiAlert('Não foi possível importar: ' + err.message); }
     e.target.value = '';
   }

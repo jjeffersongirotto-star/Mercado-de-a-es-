@@ -54,6 +54,7 @@ def fair(r, val, rows):
     """-> (valor justo, %, método) ou (None, motivo, None). r = linha de /api/data; val(r, k) = valor exibido; rows = todas (P/VP do setor)."""
     p, b, br = val(r, "preco"), val(r, "vpa"), r.get("cur") == "BRL"
     if not (p and p > 0): return None, "Sem preço", None
+    if (r.get("st") or {}).get("vpa") == "red": return None, "Dados divergentes entre as fontes", None  # consenso (mesma regra de fairOf)
     if b is None: return None, "Sem VPA", None
     if b <= 0: return None, "Patrimônio negativo", None
     lpa = val(r, "lpa")

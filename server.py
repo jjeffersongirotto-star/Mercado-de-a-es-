@@ -904,6 +904,25 @@ def api_pin(body: dict):
     history.pin([str(t) for t in ((body or {}).get("t") or [])[:200]])
     return Response(status_code=204)
 
+@app.get("/api/widget")
+def api_widget(t: str = ""):
+    """Widget de Favoritos do app Android (android/): preço, variação do dia e Barato/Caro (valor_justo.fair, a mesma conta do card)
+    só dos tickers pedidos, a partir dos dados já em memória (/api/data). Leve: nada é baixado nem recalculado por pedido."""
+    d = cache.data or {}
+    rows = d.get("rows") or []
+    if not rows: return JSONResponse({"loading": True, "r": []}, status_code=503, headers={"Cache-Control": "no-store"})
+    want = [x.strip().upper() for x in (t or "").split(",") if x.strip()][:40]
+    by = {r["ticker"]: r for r in rows}
+    v = lambda o, k: (o.get("v") or {}).get(k)
+    out = []
+    for tk in want:
+        r = by.get(tk)
+        if not r: out.append({"t": tk}); continue
+        j, pct, m = valor_justo.fair(r, v, rows)
+        out.append({"t": tk, "n": r.get("nome"), "p": v(r, "preco"), "v": r.get("var"),
+                    "f": round(pct, 1) if j else None, "m": m if j else None})
+    return JSONResponse({"u": d.get("updated_at_sp"), "r": out}, headers={"Cache-Control": "no-store"})
+
 @app.post("/api/modelos")
 def api_modelos_sim(body: dict):
     """Simulação dos modelos (Desempenho) ou a tabela mês a mês de uma empresa (tab). Grupos prontos + grupos do usuário."""

@@ -163,6 +163,7 @@ def test_definitions_colors_howto():
     assert ask("o que é on e pn")[1].startswith("ON, PN e Unit")
     assert ask("bom dia")[1].startswith("Olá")
     assert ask("como instalar o app no celular")[1].startswith("Instalar o app")
+    assert ask("como usar o widget")[1].startswith("App Android com widget")
 
 
 def test_fake_labels_only_for_site_buttons():

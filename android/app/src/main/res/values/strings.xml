@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">★ Favoritos</string>
+    <string name="widget_desc">Preço, variação do dia e Barato/Caro dos seus favoritos</string>
+    <string name="widget_empty">Marque ☆ nas ações dentro do app</string>
+    <string name="widget_refresh">Atualizar</string>
+</resources>
