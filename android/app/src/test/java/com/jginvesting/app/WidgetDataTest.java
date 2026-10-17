@@ -149,4 +149,17 @@ public class WidgetDataTest {
         assertEquals("R$ 60,00", WidgetData.axis(60.0, null));
         assertNull(WidgetData.chart("{\"t\":\"PETR4\",\"b\":10,\"p\":[[1,10],[2,11]]}").cur);
     }
+
+    @Test public void brandLogoOnlyWhenNameFits() {  // 1.8: marca comprida no topo; nome de grupo longo volta ao logo quadrado
+        assertTrue(WidgetData.longLogo("Favoritos", 323, 90, 1f, true));                        // print do Jefferson (≈323dp)
+        assertFalse(WidgetData.longLogo("Pequenas e médias promissoras", 323, 90, 1f, true));
+        assertFalse(WidgetData.longLogo("Favoritos", 250, 90, 1f, true));                       // widget estreito
+        assertTrue(WidgetData.longLogo("Pequenas e médias promissoras", 520, 90, 1f, true));    // largo (paisagem)
+        assertFalse(WidgetData.longLogo("Favoritos", 323, 90, 1.6f, true));                     // fonte grande do aparelho
+        assertTrue(WidgetData.longLogo("Dividendos", 323, 90, 1f, false));
+        assertFalse(WidgetData.longLogo("Favoritos", 0, 90, 1f, true));                         // largura desconhecida: quadrado
+        assertEquals(300, WidgetData.widthDp(300, 560, false));
+        assertEquals(560, WidgetData.widthDp(300, 560, true));
+        assertEquals(560, WidgetData.widthDp(0, 560, false));
+    }
 }

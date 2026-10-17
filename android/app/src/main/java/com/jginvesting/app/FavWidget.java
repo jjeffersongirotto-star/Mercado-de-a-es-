@@ -80,7 +80,8 @@ public class FavWidget extends AppWidgetProvider {
             int px = Logos.px(c, items.size());
             WidgetData.Bands bands = WidgetData.bands(data);
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget);
-            v.setTextViewText(R.id.w_sel, WidgetData.name(sel, gs) + "  ▾");
+            String nm = WidgetData.name(sel, gs);
+            v.setTextViewText(R.id.w_sel, nm + "  ▾");
             Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
             pick.setData(Uri.parse("jg://pick/" + id));  // um PendingIntent por widget
@@ -89,8 +90,18 @@ public class FavWidget extends AppWidgetProvider {
             String up = WidgetData.updated(data);
             v.setTextViewText(R.id.w_time, up);
             v.setViewVisibility(R.id.w_time, up.isEmpty() ? View.GONE : View.VISIBLE);
+            // marca comprida "JG Investing" ou, se o nome do grupo não couber ao lado dela, o logo quadrado (refeito ao redimensionar)
+            android.os.Bundle op = m.getAppWidgetOptions(id);
+            android.content.res.Configuration cf = c.getResources().getConfiguration();
+            int hw = WidgetData.widthDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
+                    cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
+            boolean brand = WidgetData.longLogo(nm, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / c.getResources().getDisplayMetrics().density),
+                    cf.fontScale, !up.isEmpty());
+            v.setViewVisibility(R.id.w_brand, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.w_logo, brand ? View.GONE : View.VISIBLE);
             Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             v.setOnClickPendingIntent(R.id.w_logo, PendingIntent.getActivity(c, 0, open, flagsImm));
+            v.setOnClickPendingIntent(R.id.w_brand, PendingIntent.getActivity(c, 0, open, flagsImm));
             UpdateLogic.Info nu = Updater.known(c);
             boolean upd = UpdateLogic.available(nu, BuildConfig.VERSION_CODE);
             v.setViewVisibility(R.id.w_upd, upd ? View.VISIBLE : View.GONE);

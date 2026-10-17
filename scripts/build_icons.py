@@ -2,7 +2,8 @@
 """Gera os ícones do app instalável em static/icons/ e a marca do topo do site em static/brand/ a partir da arte "JG Investing"
 (fonte única do desenho): scripts/icon-source.jpg (botão quadrado: ícones normais e iPhone), scripts/icon-source-round.jpg
 (botão redondo: Android), scripts/brand-source.jpg (faixa horizontal: topo do site no celular) e
-scripts/brand-source-wide.jpg (faixa comprida: topo do site no computador). Uso: python scripts/build_icons.py   (requer Pillow).
+scripts/brand-source-wide.jpg (faixa comprida: topo do site no computador); da faixa do celular sai a marca do widget do app
+(static/brand/jg-investing-widget.png → android ic_brand). Uso: python scripts/build_icons.py   (requer Pillow).
 Para trocar o ícone: substitua scripts/icon-source.jpg (botão quadrado sobre fundo escuro) e ajuste BOTAO se o recorte mudar."""
 import os
 from PIL import Image, ImageDraw, ImageFilter
@@ -20,6 +21,8 @@ RAIO_FAIXA = 0.19                 # raio dos cantos da faixa (fração da altura
 # faixas da marca: (arte, caixa da faixa dentro da arte, arquivo gerado, altura gerada em px)
 MARCAS = ((os.path.join(AQUI, "brand-source.jpg"), (56, 54, 3404, 510), "jg-investing.webp", 126),
           (os.path.join(AQUI, "brand-source-wide.jpg"), (7, 390, 2118, 505), "jg-investing-wide.webp", 115))
+# marca do widget do app (android/: ic_brand): faixa do celular com o gráfico encolhido, para caber no topo do widget
+WIDGET = ("jg-investing.webp", 215, 190, "jg-investing-widget.png")  # (faixa de origem, px do nome "JG Investing", px do gráfico, arquivo)
 FUNDO = (3, 12, 34)               # cor escura do interior do botão (fundo dos ícones que o celular recorta)
 
 
@@ -68,6 +71,14 @@ def icone(size, maskable=False, k=0.8):
     return im.resize((size, size), Image.LANCZOS)
 
 
+def marca_widget(faixa):
+    """Marca comprida do widget: o nome "JG Investing" como no site e o gráfico da faixa encolhido na horizontal (≈3,2 : 1)."""
+    _, nome, graf, _ = WIDGET; W, H = faixa.size
+    o = Image.new("RGBA", (nome + graf, H), (0, 0, 0, 0))
+    o.paste(faixa.crop((0, 0, nome, H)), (0, 0)); o.paste(faixa.crop((nome, 0, W, H)).resize((graf, H), Image.LANCZOS), (nome, 0))
+    return o
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     # Apple: iOS arredonda os cantos (cabe 92% do botão quadrado); Android (maskable): versão redonda em 90% (o texto fica dentro da área segura de 80%)
@@ -77,4 +88,5 @@ if __name__ == "__main__":
     redondo(512, 0.9).save(os.path.join(OUT, "maskable-512.png"), optimize=True); print("maskable-512.png")
     os.makedirs(BRAND, exist_ok=True)
     for fonte, caixa, nome, altura in MARCAS:
-        marca(fonte, caixa, altura).save(os.path.join(BRAND, nome), quality=90, method=6); print(nome)
+        m = marca(fonte, caixa, altura); m.save(os.path.join(BRAND, nome), quality=90, method=6); print(nome)
+        if nome == WIDGET[0]: marca_widget(m).save(os.path.join(BRAND, WIDGET[3]), optimize=True); print(WIDGET[3])

@@ -6,4 +6,6 @@
     <dimen name="col_f">56dp</dimen>
     <dimen name="col_g">54dp</dimen>
     <dimen name="logo_slot">32dp</dimen>
+    <!-- marca comprida do topo do widget: 28dp de altura × proporção de static/brand/jg-investing-widget.png (405 × 126) -->
+    <dimen name="brand_w">90dp</dimen>
 </resources>

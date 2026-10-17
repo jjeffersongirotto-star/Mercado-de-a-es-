@@ -31,6 +31,20 @@ public final class WidgetData {
         Item(String t, Double p, Double v, Double f, String m, Integer g) { this.t = t; this.p = p; this.v = v; this.f = f; this.m = m; this.g = g; }
     }
 
+    /** Topo do widget: a marca comprida (brandDp de largura) cabe ao lado do seletor com este nome? Senão, o logo quadrado.
+     *  Estimativa sem medir texto: chip = margens + "  ▾" + letras × 6,6dp (14sp negrito); fixo = margens do widget, ⟳ e horário
+     *  (11sp). Tudo que é texto cresce com a escala de fonte do aparelho. widthDp = largura atual do widget (min/max conforme a tela). */
+    public static boolean longLogo(String name, int widthDp, int brandDp, float fontScale, boolean hasTime) {
+        if (widthDp <= 0) return false;
+        float fs = fontScale > 0 ? fontScale : 1f;
+        float chip = 22 + (12 + (name == null ? 0 : name.length()) * 6.6f) * fs;
+        float fixed = 18 + 34 + 8 + (hasTime ? 62 * fs : 0);
+        return fixed + brandDp + 6 + chip <= widthDp;
+    }
+
+    /** Largura atual do widget em dp: retrato = largura mínima, paisagem = máxima (regra do AppWidgetManager); 0 = desconhecida. */
+    public static int widthDp(int minW, int maxW, boolean landscape) { return landscape && maxW > 0 ? maxW : minW > 0 ? minW : maxW; }
+
     /** Arquivo de logo válido de /api/widget (hash de 12 dígitos .png) ou null. */
     public static String logo(String l) { return l != null && l.matches("[0-9a-f]{12}\\.png") ? l : null; }
 

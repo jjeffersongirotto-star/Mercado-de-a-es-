@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget: logo (abre o app) | seletor Favoritos/grupo ▾ | horário dos dados | ⟳ ; aviso de nova versão (só quando há); títulos das colunas; linhas -->
+<!-- Widget: logo (marca comprida ou, com nome de grupo longo, o quadrado; abre o app: FavWidget.render → WidgetData.longLogo) | seletor Favoritos/grupo ▾ | horário dos dados | ⟳ ; aviso de nova versão (só quando há); títulos das colunas; linhas -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
@@ -24,6 +24,15 @@
             android:contentDescription="@string/app_name"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_legacy" />
+
+        <ImageView
+            android:id="@+id/w_brand"
+            android:layout_width="@dimen/brand_w"
+            android:layout_height="28dp"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_brand"
+            android:visibility="gone" />
 
         <FrameLayout
             android:layout_width="0dp"
