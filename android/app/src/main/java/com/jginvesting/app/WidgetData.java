@@ -130,6 +130,19 @@ public final class WidgetData {
         return false;
     }
 
+    /** Resposta de /api/widget pedida no instante req (relógio monotônico) substitui a guardada (pedida em stored)? Só se for mais nova:
+     *  com trocas rápidas de grupo (A→B→A) ou ⟳ repetido, uma resposta lenta e antiga não apaga a mais recente da mesma lista. */
+    public static boolean accept(long req, long stored) { return req >= stored; }
+
+    /** Atualização em andamento iniciada em token terminou: só limpa o "Atualizando…" se ninguém começou outra depois. */
+    public static boolean ownsLoading(long token, long current) { return current == token; }
+
+    /** Logo da linha: o arquivo da própria ação (mesma resposta que deu preço e variação) se já está no aparelho; senão null
+     *  (iniciais). Nunca o de outra linha ou de outro grupo. */
+    public static String logoFile(Item it, java.util.function.Predicate<String> have) {
+        return it != null && it.l != null && have.test(it.l) ? it.l : null;
+    }
+
     /** Parâmetro t= de /api/widget. */
     public static String param(List<String> favs) {
         StringBuilder b = new StringBuilder();

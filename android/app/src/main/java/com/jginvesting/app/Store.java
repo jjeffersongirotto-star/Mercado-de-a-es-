@@ -18,6 +18,12 @@ final class Store {
     /** Última resposta de /api/widget de cada lista ("fav" ou id do grupo). */
     static String data(Context c, String sel) { return sp(c).getString("data_" + sel, "{}"); }
     static void setData(Context c, String sel, String json) { sp(c).edit().putString("data_" + sel, json).apply(); }
+    /** Guarda a resposta pedida em req (System.nanoTime no início do pedido) só se for mais nova que a guardada (WidgetData.accept). */
+    static synchronized boolean setDataIfNewer(Context c, String sel, String json, long req) {
+        if (!WidgetData.accept(req, sp(c).getLong("dreq_" + sel, Long.MIN_VALUE))) return false;
+        sp(c).edit().putString("data_" + sel, json).putLong("dreq_" + sel, req).commit();
+        return true;
+    }
     /** Grupos da aba Grupos enviados pelo site (grupos.js → pushGroups): [{id, n, t:[...]}]. */
     static String groups(Context c) { return sp(c).getString("groups", "[]"); }
     static boolean setGroups(Context c, String json) {
@@ -28,6 +34,11 @@ final class Store {
     /** Atualização em andamento (⟳ ou troca de grupo): quando começou; 0 = parada. O widget mostra "Atualizando…" no lugar do horário. */
     static long loading(Context c) { return sp(c).getLong("loading", 0); }
     static void setLoading(Context c, long t) { sp(c).edit().putLong("loading", t).commit(); }
+    /** Fim da atualização que começou em token: limpa só se ela ainda é a última (WidgetData.ownsLoading). true = limpou. */
+    static synchronized boolean endLoading(Context c, long token) {
+        if (!WidgetData.ownsLoading(token, loading(c))) return false;
+        setLoading(c, 0); return true;
+    }
     /** Lista escolhida em cada widget (padrão: Favoritos). */
     static String sel(Context c, int id) { return sp(c).getString("sel_" + id, "fav"); }
     static void setSel(Context c, int id, String sel) { sp(c).edit().putString("sel_" + id, sel).commit(); }

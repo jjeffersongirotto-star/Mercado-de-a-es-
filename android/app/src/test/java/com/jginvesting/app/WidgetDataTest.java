@@ -171,4 +171,50 @@ public class WidgetDataTest {
         assertEquals(560, WidgetData.widthDp(300, 560, true));
         assertEquals(560, WidgetData.widthDp(0, 560, false));
     }
+
+    // ---------- 1.10: troca rápida de grupo (A→B→A), respostas fora de ordem e logos lentos ----------
+    private static String resp(String... tl) {  // {"r":[{"t":..,"p":..,"l":..}]} ; tl = ticker, preço, arquivo do logo
+        StringBuilder b = new StringBuilder("{\"r\":[");
+        for (int i = 0; i < tl.length; i += 3)
+            b.append(i > 0 ? "," : "").append("{\"t\":\"").append(tl[i]).append("\",\"p\":").append(tl[i + 1]).append(",\"l\":\"").append(tl[i + 2]).append("\"}");
+        return b.append("]}").toString();
+    }
+
+    /** Guarda como o Store: por lista, só a resposta pedida por último (WidgetData.accept). */
+    private static final class FakeStore {
+        final java.util.Map<String, String> data = new java.util.HashMap<>();
+        final java.util.Map<String, Long> req = new java.util.HashMap<>();
+        void offer(String sel, long r, String json) {
+            if (WidgetData.accept(r, req.getOrDefault(sel, Long.MIN_VALUE))) { data.put(sel, json); req.put(sel, r); }
+        }
+    }
+
+    @Test public void quickSwitchOutOfOrderKeepsNewestAndOwnLogos() {
+        java.util.List<String> a = Arrays.asList("PETR4", "VALE3"), b = Arrays.asList("ITUB4", "BBAS3");
+        String a1 = resp("PETR4", "30", "aaaaaaaaaaa1.png", "VALE3", "60", "aaaaaaaaaaa2.png");   // A pedido em t=1 (lento)
+        String bb = resp("ITUB4", "35", "bbbbbbbbbbb1.png", "BBAS3", "23", "bbbbbbbbbbb2.png");   // B em t=2
+        String a3 = resp("PETR4", "31", "aaaaaaaaaaa1.png", "VALE3", "61", "aaaaaaaaaaa2.png");   // A de novo em t=3
+        FakeStore st = new FakeStore();
+        st.offer("A", 3, a3); st.offer("B", 2, bb); st.offer("A", 1, a1);  // chegam ao contrário
+        assertEquals(a3, st.data.get("A"));                                 // a antiga não apaga a nova
+        java.util.List<WidgetData.Item> ia = WidgetData.items(a, st.data.get("A")), ib = WidgetData.items(b, st.data.get("B"));
+        assertEquals(31.0, ia.get(0).p, 1e-9);
+        java.util.Set<String> all = new java.util.HashSet<>(Arrays.asList("aaaaaaaaaaa1.png", "aaaaaaaaaaa2.png", "bbbbbbbbbbb1.png", "bbbbbbbbbbb2.png"));
+        assertEquals("aaaaaaaaaaa1.png", WidgetData.logoFile(ia.get(0), all::contains));  // logo da própria ação
+        assertEquals("bbbbbbbbbbb2.png", WidgetData.logoFile(ib.get(1), all::contains));
+        // logos lentos: o de B ainda não baixou -> iniciais (null), nunca o logo que estava na mesma posição em A
+        java.util.Set<String> onlyA = new java.util.HashSet<>(Arrays.asList("aaaaaaaaaaa1.png", "aaaaaaaaaaa2.png"));
+        for (WidgetData.Item it : ib) assertNull(WidgetData.logoFile(it, onlyA::contains));
+        // grupo trocado antes da resposta: lista nova sem dado -> só tickers, sem logo
+        for (WidgetData.Item it : WidgetData.items(b, "{}")) assertNull(WidgetData.logoFile(it, all::contains));
+        // resposta de B sem uma ação (lista mudou): a linha que falta não herda logo de ninguém
+        java.util.List<WidgetData.Item> ic = WidgetData.items(Arrays.asList("ITUB4", "WEGE3"), bb);
+        assertNull(WidgetData.logoFile(ic.get(1), all::contains));
+    }
+
+    @Test public void loadingClearedOnlyByLatestRefresh() {  // ⟳ / troca A→B→A: a primeira busca a terminar não apaga o "Atualizando…" da última
+        assertFalse(WidgetData.ownsLoading(100, 200));
+        assertTrue(WidgetData.ownsLoading(200, 200));
+        assertTrue(WidgetData.accept(5, 5)); assertFalse(WidgetData.accept(4, 5));
+    }
 }
