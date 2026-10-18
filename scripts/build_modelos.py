@@ -22,14 +22,23 @@ F = ["si", "mi", "dsi20", "dmi20", "r5", "r20", "r60", "r120", "r250", "dd", "up
 HS = (20, 60)  # horizontes do algoritmo (pregões): 1 e 3 meses
 
 
+TIPO = (("J", "JRS CAP PROPRIO"), ("D", "DIVIDENDO"), ("R", "RENDIMENTO"), ("K", "REST CAP DIN"))  # rótulos da lista da B3
+TC = [c for c, _ in TIPO]
+
+
 def divs(out, t, idx):
-    """Proventos por pregão (data ex) do arquivo history4 da ação."""
+    """Proventos por pregão (data ex) do arquivo history4 da ação: total (dv) e quanto de cada tipo da B3 (J = JCP, D = dividendo,
+    R = rendimento, K = restituição de capital; datas antigas vêm do Yahoo sem tipo)."""
     h = json.loads(gzip.decompress(open(os.path.join(out, "history4", f"{t}.json.gz"), "rb").read()))
-    dv = np.zeros(len(idx))
+    M = np.zeros((len(idx), 1 + len(TIPO)))
     for x in h.get("divs") or []:
         j = idx.searchsorted(pd.Timestamp(x[0], unit="s").normalize())
-        if j < len(idx): dv[j] += x[1]
-    return pd.Series(dv, index=idx)
+        if j >= len(idx): continue
+        M[j, 0] += x[1]
+        lb = str(x[2] if len(x) > 2 else "").upper()
+        for k, (_, rx) in enumerate(TIPO):
+            if rx in lb: M[j, 1 + k] += x[1]; break
+    return pd.DataFrame(M, index=idx, columns=["dv"] + [c for c, _ in TIPO])
 
 
 def features(c, v, dv, mi, mk):
@@ -121,7 +130,7 @@ def main(out):
     for t in C.columns:
         c = C[t].dropna()
         if len(c) < 260: continue
-        v, dv = V[t].reindex(c.index), divs(out, t, c.index)
+        v, dd = V[t].reindex(c.index), divs(out, t, c.index); dv = dd["dv"]
         X = features(c, v, dv, mi, mk)
         X["liq"] = liq[t].reindex(c.index).fillna(False).astype(bool)
         wd = X.index[X.index.isin(C.index.to_series().groupby(C.index.to_period("W-FRI")).transform("max"))]
@@ -130,7 +139,7 @@ def main(out):
         # séries semanais da simulação (a partir da 1ª semana com preço)
         cw = c.reindex(W, method="ffill", limit=10)
         if cw.notna().sum() < 2: continue
-        dw = dv.groupby(dv.index.to_period("W-FRI")).sum()
+        dw = dd.groupby(dd.index.to_period("W-FRI")).sum()
         dw.index = dw.index.map(lambda p: weeks.get(p, pd.NaT)); dw = dw[dw.index.notna()].reindex(W).fillna(0)
         series[t] = (cw, dw, X)
         print(f"  {t}: {len(c)} pregões ({time.time() - t0:.0f}s)", flush=True) if len(series) % 50 == 0 else None
@@ -145,7 +154,10 @@ def main(out):
         i0 = int(np.argmax(cw.notna().to_numpy()))
         Xw = X.reindex(W, method="ffill", limit=10).iloc[i0:]
         a = {"i0": i0, "c": [None if x != x else round(float(x), 4) for x in cw.iloc[i0:]],
-             "dv": {str(i - i0): round(float(x), 6) for i, x in enumerate(dw.to_numpy()) if x > 0 and i >= i0},
+             "dv": {str(i - i0): round(float(x), 6) for i, x in enumerate(dw["dv"].to_numpy()) if x > 0 and i >= i0},
+             # JCP por ação na semana (o modelo desconta 15% de IR na fonte) e tipos dos proventos da B3 na semana (J, D, R, K)
+             "jc": {str(i - i0): round(float(x), 6) for i, x in enumerate(dw["J"].to_numpy()) if x > 0 and i >= i0},
+             "tp": {str(i - i0): "".join(c for c, x in zip(TC, r) if x > 0) for i, r in enumerate(dw[TC].to_numpy()) if i >= i0 and r.max() > 0},
              "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000), "lp": lucro(FD.get(t), W[i0:])}
         for H, k in zip(HS, ("p1", "p3")):
             p = pred[H].xs(t, level=1) if t in pred[H].index.get_level_values(1) else pd.Series(dtype=float)

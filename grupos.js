@@ -8,7 +8,8 @@
   state.selSet = new Set(); state.selMode = false; state.group = null;
   // Grupo simulação (criado na Previsão): {name, tickers: [], sim: {di, v0}}; o servidor simula todos os modelos desde di
   // (/api/modelos/simgrupo, mesma conta do Comparar). Resultado guardado no aparelho e pedido de novo só 1x por dia.
-  const SKEY = 'screenerB3.simgrupo.v1';
+  const SKEY = 'screenerB3.simgrupo.v2';  // v2: ações inteiras, JCP líquido e movimentações uma a uma (o resultado antigo não vale)
+  try { localStorage.removeItem('screenerB3.simgrupo.v1'); } catch (e) { }
   const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
   const simK = (g) => g.sim.di + '|' + g.sim.v0, today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
   const saveSim = () => { for (const k in SIM) if (!groups.some(g => g.sim && g.name === k)) delete SIM[k]; try { localStorage.setItem(SKEY, JSON.stringify(SIM)); } catch (e) { } };

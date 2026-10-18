@@ -32,7 +32,8 @@ def test_hold_paga_custo_de_compra():
     D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi())
     me = months(D, "2020-01", "2020-12")
     r = modelos.simulate(D, "hold", [0], me, [1000.0] + [0.0] * 11, [0.0] * 12)
-    assert abs(r["v"][0] - 1000 * (1 - modelos.CUSTO)) < 1e-6 and r["c"][0] == 1 and r["s"][0] == 0
+    q = 99  # ações inteiras: 1000 × (1 − custo) ÷ 10 = 99,7 -> 99; a sobra fica no CDB
+    assert abs(r["v"][0] - (q * 10 + 1000 - q * 10 / (1 - modelos.CUSTO))) < 1e-6 and r["c"][0] == 1 and r["s"][0] == 0
 
 
 def test_ir_isencao_ate_20_mil():
@@ -41,17 +42,17 @@ def test_ir_isencao_ate_20_mil():
     me = months(D, "2020-01", "2020-06")
     for ini, isento in ((10000.0, True), (15000.0, False)):
         r = modelos.simulate(D, "tendencia", [0], me, [ini] + [0.0] * (len(me) - 1), [0.0] * len(me))
-        venda = ini * (1 - modelos.CUSTO) / 10 * 20 * (1 - modelos.CUSTO)
-        ir = 0 if isento else (venda - ini) * modelos.IR
-        assert r["s"][0] == 1 and abs(r["ir"][0] - ir) < 1e-6 and abs(r["v"][0] - (venda - ir)) < 1e-6, (ini, r)
+        q = int(ini * (1 - modelos.CUSTO) / 10); custo = q * 10 / (1 - modelos.CUSTO); sobra = ini - custo
+        venda = q * 20 * (1 - modelos.CUSTO)
+        ir = 0 if isento or q * 20 <= modelos.ISENTO else (venda - custo) * modelos.IR
+        assert r["s"][0] == 1 and abs(r["ir"][0] - ir) < 1e-6 and abs(r["v"][0] - (venda + sobra - ir)) < 1e-6, (ini, r)
 
 
 def test_prejuizo_compensa_lucro_seguinte():
     A = modelos.Conta(1); A.cash += 30000
     one, p = np.array([True]), lambda x: np.array([x])
-    A.buy(one, p(10)); A.sell(one, p(8)); A.close_month(p(8), p(0), p(0), None)
-    perda = 30000 - 30000 * (1 - modelos.CUSTO) / 10 * 8 * (1 - modelos.CUSTO)
-    assert A.ir[0] == 0 and abs(A.carry[0] - perda) < 1e-6
+    A.buy(one, p(10)); perda = -A.sell(one, p(8))[0]; A.close_month(p(8), p(0), p(0), None)
+    assert A.ir[0] == 0 and perda > 0 and abs(A.carry[0] - perda) < 1e-6 and A.sh[0] == 0
     base = A.cash[0]; A.buy(one, p(8)); A.sell(one, p(12)); ganho = A.mgain[0]
     A.close_month(p(12), p(0), p(0), None)
     assert abs(A.ir[0] - (ganho - perda) * modelos.IR) < 1e-6 and A.carry[0] == 0 and base > 0
@@ -70,12 +71,14 @@ def test_rodizio_troca_com_motivo_e_vai_para_cdb():
     D = modelos.build(snap({"AAA3": {"c": 10.0, "p1": pa}, "BBB3": {"c": 10.0, "p1": pb}}), cdi())
     me = months(D, "2020-09", "2022-03")
     r = modelos.rotate(D, "alg1", [0, 1], me, [1000.0] + [0.0] * (len(me) - 1), [0.0] * len(me))
-    mv = [(x["de"], x["para"]) for x in r["hist"]["mov"]]
-    assert mv[:3] == [(None, "AAA3"), ("AAA3", "BBB3"), ("BBB3", None)], mv  # melhor chance, troca por margem, todas desfavoráveis
+    m = [x for x in r["hist"]["mov"] if x["k"] in ("compra", "venda")]
+    mv = [(x["k"], x["t"]) for x in m]
+    # melhor chance, troca por margem (vende e compra a outra na mesma semana), todas desfavoráveis
+    assert mv[:4] == [("compra", "AAA3"), ("venda", "AAA3"), ("compra", "BBB3"), ("venda", "BBB3")], mv
     # (depois de meses em 400, a mediana do último ano também vira 400 e a empresa volta a ser favorável)
-    assert r["hist"]["mov"][1]["d"] == W[61] and "BBB3 com sinal melhor" in r["hist"]["mov"][1]["m"]
-    m = r["hist"]["mov"]
-    assert m[0]["vc"] > 0 and m[1]["vv"] > 0 and m[1]["pct"] is not None and m[1]["vc"] > 0 and m[2]["vv"] > 0  # valores de compra e venda
+    assert m[1]["d"] == W[61] == m[2]["d"] and "BBB3 com sinal melhor" in m[1]["x"] and "chance" in m[2]["x"]
+    assert all(x["v"] > 0 and isinstance(x["q"], int) and x["q"] >= 1 and x["p"] > 0 for x in m) and m[1]["pct"] is not None
+    assert m[0]["q"] == 99 and r["hist"]["mov"][0] == {"d": W[me[0]], "k": "aporte", "v": 1000.0, "x": "valor inicial"}
     assert r["hist"]["trocas"] == 1 and r["hist"]["cdb"] > 0 and {x["t"] for x in r["hist"]["emp"]} == {"AAA3", "BBB3"}
 
 
@@ -181,7 +184,8 @@ def test_modo_grupo():
     D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 20.0}}), cdi())
     me = months(D, "2020-02", "2020-12"); ap = [1000.0] + [100.0] * (len(me) - 1)
     v, ir, nb, ns = modelos.grupo(D, "hold", [0, 1], me, ap)
-    assert abs(v - sum(ap) * (1 - modelos.CUSTO)) < 1e-6 and ns == 0 and nb == 2 * len(me)  # divide cada aporte entre as duas
+    # divide cada aporte entre as duas (reserva de cada uma até dar 1 ação inteira); preço parado: só o custo das compras
+    assert sum(ap) * (1 - modelos.CUSTO) - 1e-6 <= v <= sum(ap) and ns == 0 and nb >= len(me)
     out = modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", ap)
     c = {x["m"]: x for x in out["cart"]}; assert abs(c["hold"]["v"] - v) < 0.01 and c["cdb"].get("ref")
 
@@ -240,8 +244,13 @@ def test_grupo_simulacao():
         a, b = modelos.grupo(D, m["id"], [0, 1, 2], me, ap), modelos.grupo(D, m["id"], [0, 1, 2], me, ap, rec=True)
         assert a == b[:4]
         h = b[4]; assert abs(sum(p["v"] for p in h["pos"]) + h["cash"] - b[0]) < 0.05
-        assert sum(1 for x in h["mov"] if x["op"] == "venda") == b[3]
-    al = {x["m"]: x for x in r["m"]}["alg1"]; assert any(x["op"] == "venda" for x in al["mov"]) and all({"d", "t", "q", "p", "v"} <= set(x) for x in al["mov"] if x["op"] in ("compra", "venda"))
+        assert sum(1 for x in h["mov"] if x["k"] == "venda") == b[3] and sum(1 for x in h["mov"] if x["k"] == "compra") == b[2]
+        assert all(float(p["q"]).is_integer() for p in h["pos"]) and not any(x["k"] == "reforço" for x in h["mov"])
+        sem = {}  # CDI: no máximo uma linha por semana
+        for x in h["mov"]:
+            if x["k"] in ("cdi_ap", "cdi_res"): sem[x["d"]] = sem.get(x["d"], 0) + 1
+        assert all(c == 1 for c in sem.values())
+    al = {x["m"]: x for x in r["m"]}["alg1"]; assert any(x["k"] == "venda" for x in al["mov"]) and all({"d", "t", "q", "p", "v"} <= set(x) for x in al["mov"] if x["k"] in ("compra", "venda"))
     # dia seguinte (uma semana nova nos dados): as movimentações de ontem continuam iguais, só entram as novas (igual a recalcular)
     for nw in (NW - 7, NW - 3):
         D0, D1 = modelos.build(_sim_snap(nw), cdi(0.03)), modelos.build(_sim_snap(nw + 1), cdi(0.03))
@@ -249,10 +258,26 @@ def test_grupo_simulacao():
         for x0 in r0["m"]:
             if x0.get("ref"): continue
             x1 = next(x for x in r1["m"] if x["m"] == x0["m"])
-            trade = lambda L: [x for x in L if x["op"] in ("compra", "venda")]
+            trade = lambda L: [x for x in L if x["k"] in ("compra", "venda")]
             assert trade(x1["mov"])[:len(trade(x0["mov"]))] == trade(x0["mov"]), x0["m"]
     assert "error" in modelos.simgrupo(D, tk, "2020-02", 0)
     modelos._C.clear()
+
+
+def test_acoes_inteiras_reserva_e_jcp():
+    """Ação de R$ 300 com aportes de R$ 100: a reserva rende CDB e compra 1 ação inteira quando dá; JCP cai líquido de 15%."""
+    sn = snap({"AAA3": {"c": 300.0}, "BBB3": {"c": 10.0}})
+    sn["a"]["BBB3"]["dv"] = {"40": 1.0}; sn["a"]["BBB3"]["jc"] = {"40": 1.0}; sn["a"]["BBB3"]["tp"] = {"40": "J"}
+    D = modelos.build(sn, cdi(0.01))
+    me = months(D, "2020-02", "2020-12"); ap = [100.0] * len(me); w = [0.0] * len(me)
+    r = modelos.simulate(D, "hold", [0], me, ap, w)
+    assert r["c"][0] == len(me) // 3 and r["v"][0] > sum(ap) * .99  # 1 ação a cada 3 aportes de 100 (300 × 1,003 = 300,90; a sobra rende CDB)
+    v, ir, nb, ns, h = modelos.grupo(D, "hold", [0, 1], me, ap, rec=True)
+    assert all(isinstance(p["q"], int) for p in h["pos"]) and abs(sum(p["v"] for p in h["pos"]) + h["cash"] - v) < 0.05
+    pv = [x for x in h["mov"] if x["k"] == "provento"]
+    q = next(x["q"] for x in h["mov"] if x["k"] == "compra" and x["t"] == "BBB3" and x["d"] <= W[40])
+    assert pv and pv[0]["t"] == "BBB3" and "JCP" in pv[0]["x"] and abs(D["DV"][1, 40] - .85) < 1e-9 and ir > 0
+    assert {x["k"] for x in h["mov"]} >= {"aporte", "compra", "provento", "cdi_ap"} and q >= 1
 
 
 if __name__ == "__main__":

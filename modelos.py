@@ -51,6 +51,8 @@ def set_setores(D, rows, cad=None):
     """Marca as empresas de setor perene nas matrizes (fora delas o Método Barsi fica "fora do método")."""
     bs = {r["ticker"] for r in rows if perene(r, cad)}
     if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
+JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
+ENGINE = 2        # versão das contas (ações inteiras, JCP líquido, movimentações uma a uma): invalida resultados guardados
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -80,7 +82,7 @@ def build(snap, cdi, gold=None):
     # preço e proventos em float64 (dinheiro); sinais em float32 (só comparações): metade da memória
     C, DV = arr(), arr()
     SI, M2, R12, P1, P3 = (arr(np.float32) for _ in range(5))
-    LP = np.ones((N, T), bool)
+    LP = np.ones((N, T), bool); JC = np.zeros((N, T)); DT = {}  # JC: JCP por ação na semana; DT: tipos (J, D, R, K) dos proventos da B3
     for k, t in enumerate(tick):
         a = snap["a"][t]; i0 = a["i0"]
         for M, key in ((C, "c"), (SI, "si"), (M2, "m2"), (R12, "r12"), (P1, "p1"), (P3, "p3")):
@@ -90,6 +92,8 @@ def build(snap, cdi, gold=None):
         lp = a.get("lp")
         if lp: LP[k, i0:i0 + len(lp)] = [x != 0 for x in lp]  # 0 = prejuízo no último balanço; sem balanço = liberado
         for j, v in (a.get("dv") or {}).items(): DV[k, i0 + int(j)] = v
+        for j, v in (a.get("jc") or {}).items(): JC[k, i0 + int(j)] = v
+        for j, v in (a.get("tp") or {}).items(): DT[(k, i0 + int(j))] = v
     import pandas as pd
     fav, MED = {}, {}
     for key, P in (("p1", P1), ("p3", P3)):
@@ -131,7 +135,9 @@ def build(snap, cdi, gold=None):
         TETO[:, Y == y] = np.where(ok5, med / BARSI_DY, np.nan)[:, None]
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
-    return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV, "SI": SI, "M2": M2, "R12": R12,
+    JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
+    # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
+    return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
             "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -205,27 +211,32 @@ class Conta:
         s.ir, s.dtax, s.divT, s.compras, s.vendas = z(), z(), z(), z(), z()
 
     def sell(s, mask, p, frac=None):
-        """Vende (tudo ou a fração frac) das ações marcadas; -> resultado (valor recebido − custo médio) de cada uma."""
-        f = np.where(mask, 1.0 if frac is None else frac, 0.0)
-        q = s.sh * f; v = q * p * (1 - CUSTO); b = s.basis * f; g = np.where(mask, v - b, 0.0)
+        """Vende (tudo ou a fração frac, arredondada para cima em ações inteiras) das ações marcadas;
+        -> resultado (valor recebido − custo médio) de cada uma."""
+        q = s.sh if frac is None else np.minimum(s.sh, np.ceil(s.sh * frac - 1e-9))
+        q = np.where(mask, q, 0.0); f = np.where(s.sh > 0, q / np.where(s.sh > 0, s.sh, 1), 0.0)
+        v = q * p * (1 - CUSTO); b = s.basis * f; g = np.where(mask, v - b, 0.0)
         s.msales += np.where(mask, q * p, 0); s.mgain += g; s.cash += np.where(mask, v, 0)
         s.sh -= q; s.basis -= b
         s.vendas += mask & (q > 0)  # cada venda conta (inclusive parcial, para retirada ou imposto)
+        s.lq = q
         return g
 
     def buy(s, mask, p, amt=None):
-        """Compra com todo o caixa (ou só `amt`) das ações marcadas."""
+        """Compra ações inteiras com o caixa (ou só `amt`) das ações marcadas; a sobra (menos que 1 ação) fica no caixa, no CDB,
+        até dar para comprar pelo menos 1 ação. Custo de CUSTO sobre a compra."""
         a = s.cash if amt is None else np.minimum(s.cash, amt)
-        m = mask & (a > 0.005)
+        q = np.where(mask, np.floor(a * (1 - CUSTO) / np.where(mask & (p > 0), p, np.inf) + 1e-9), 0.0)
+        m = q >= 1; cost = np.where(m, q * p / (1 - CUSTO), 0.0)
         s.compras += m  # cada compra conta (aportes e proventos reinvestidos também)
-        s.sh += np.where(m, a * (1 - CUSTO) / np.where(m, p, 1), 0); s.basis += np.where(m, a, 0)
-        s.cash = s.cash - np.where(m, a, 0)
+        s.sh += np.where(m, q, 0); s.basis += cost; s.cash = s.cash - cost
+        s.lq, s.lc = np.where(m, q, 0), cost
 
     def raise_cash(s, need, p):
-        """Vende só o necessário para ter `need` em caixa (retirada, imposto)."""
+        """Vende só o necessário (ações inteiras) para ter `need` em caixa (retirada, imposto)."""
         falta = np.maximum(0, need - s.cash); val = s.sh * p * (1 - CUSTO)
         m = (falta > 0) & (val > 0)
-        s.sell(m, p, np.where(m, np.minimum(1, falta / np.where(val > 0, val, 1)), 0))
+        return s.sell(m, p, np.where(m, np.minimum(1, falta / np.where(val > 0, val, 1)), 0))
 
     def close_month(s, p, ap, w, tx):
         """Fim do mês: retirada, imposto das vendas (com isenção e prejuízo a compensar) e dos proventos, aporte."""
@@ -280,7 +291,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         if i > s:
             cj += A.cash * (D["cdb"][i] - 1); A.cash *= D["cdb"][i]
             if divs:
-                d = A.sh * np.nan_to_num(DV[idx, i]); A.cash += d; A.mdiv += d; A.divT += d
+                d = A.sh * np.nan_to_num(DV[idx, i]); A.cash += d; A.mdiv += d; A.divT += d; A.dtax += A.sh * D["JT"][idx, i]
         sig = _signals(D, mid, idx, i - 1) if i > s else sig0
         sig = np.nan_to_num(sig, nan=0).astype(bool)
         if mod.get("frac"):  # híbrido: ajusta a parte na ação à exposição alvo (vende ou compra só a diferença)
@@ -310,7 +321,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
                 rows[q].append({"ym": D["ym"][i], "v": float(v[q]), "div": float(A.divT[q]), "tax": float(A.ir[q] + A.dtax[q]),
                                 "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {MOD[HIB[int(np.argmax(D['HW'][:, idx[q], i - 1]))]]['n']}"
                                         if mod.get("frac") and v[q] > 0 else
-                                        "Ação" if A.sh[q] > 0 and A.cash[q] < 1 else "CDB" if A.sh[q] <= 0 else "Ação + CDB"),
+                                        "Ação" if A.sh[q] > 0 and A.cash[q] < max(1, P[q]) else "CDB" if A.sh[q] <= 0 else "Ação + CDB"),
                                 "c": int(A.compras[q]), "s": int(A.vendas[q]), "cdb": float(A.cash[q]), "cj": float(cj[q])})
             cj = np.zeros(n)
         mi += 1
@@ -357,16 +368,40 @@ def _refs(D, me, ap, wd, apT):
     return out
 
 
+TIPO_N = {"J": "JCP", "D": "dividendo", "R": "rendimento", "K": "restituição de capital"}
+
+
+def tipo(D, k, i):
+    """Tipo do provento da ação k na semana i (lista da B3; vazio = histórico do Yahoo, sem tipo)."""
+    c = D["DT"].get((k, i)) or ""
+    return " + ".join(TIPO_N[x] for x in c if x in TIPO_N) + (" (líquido de 15% de IR)" if "J" in c else "")
+
+
+MOV_MAX = 400  # movimentações mandadas ao site (as mais recentes; nmov = total)
+
+
+def _ult(ev):
+    """As MOV_MAX movimentações mais recentes (o aporte inicial sempre vai junto)."""
+    return ev if len(ev) <= MOV_MAX else ev[:1] + ev[-(MOV_MAX - 1):]
+
+
+def _cdi(ev, d, x):
+    """Uma linha por semana com o saldo que entrou (aplicação) ou saiu (resgate) do CDB, sem o rendimento."""
+    if x >= 0.01: ev.append({"d": d, "k": "cdi_ap", "v": round(x, 2)})
+    elif x <= -0.01: ev.append({"d": d, "k": "cdi_res", "v": round(-x, 2)})
+
+
 def rotate(D, mid, gidx, me, ap, wd, tx=None):
     """Rodízio: um modelo que vende, uma empresa do grupo por vez (a de melhor sinal), CDB quando nenhuma está favorável.
-    -> valor final, IR e o histórico (por empresa e cada troca com o motivo)."""
+    Ações inteiras: a sobra fica no CDB. -> valor final, IR e o histórico (por empresa e cada movimentação, uma por linha)."""
     gidx = list(gidx); s, e = me[0], me[-1]; mod = MOD[mid]; nm = D["tick"]
     C, DV = D["C"], D["DV"]
     alg = mid != "tendencia"
-    A = Conta(1); cur, k, pdiv, pend = -1, 0, 0.0, None; lastp = {g: C[g, s] for g in gidx}
+    A = Conta(1); cur, k, pdiv, why_in = -1, 0, 0.0, None; lastp = {g: C[g, s] for g in gidx}
     per = {g: {"t": nm[g], "c": 0, "sem": 0, "n": 0, "res": 0.0, "ir": 0.0} for g in gidx}
-    moves, cdbw, tot, vm = [], 0, 0, []; nav, navpk, dd, vprev = 1.0, 1.0, 0.0, None
+    trocas, cdbw, tot, vm, ev = 0, 0, 0, [], []; nav, navpk, dd, vprev = 1.0, 1.0, 0.0, None
     meset = {w: j for j, w in enumerate(me)}; A.cash += ap[0]; mg = {}  # resultado das vendas do mês por empresa (para dividir o IR)
+    ev.append({"d": D["w"][s], "k": "aporte", "v": round(float(ap[0]), 2), "x": "valor inicial"})
     pct = lambda x: f"{x / 10:.1f}%".replace(".", ",")
 
     def score(g, i):  # (força do sinal, favorável?); modelos com "lucro": só com lucro no último balanço publicado
@@ -386,16 +421,19 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         nonlocal cur, pdiv
         b0 = A.basis[0]; g = A.sell(np.array([True]), np.array([P]))[0]
         per[cur]["res"] += g; mg[cur] = mg.get(cur, 0) + g; per[cur]["n"] += 1
-        moves.append({"d": D["w"][i], "de": nm[cur], "para": None, "m": motivo, "vv": round(b0 + g, 2),
-                      "pct": round((g + pdiv) / b0 * 100, 2) if b0 > 0 else None}); cur = -1; pdiv = 0.0  # resultado com proventos
+        ev.append({"d": D["w"][i], "k": "venda", "t": nm[cur], "q": int(A.lq[0]), "p": round(float(P), 2), "v": round(b0 + g, 2), "x": motivo,
+                   "pct": round((g + pdiv) / b0 * 100, 2) if b0 > 0 else None}); cur = -1; pdiv = 0.0  # resultado com proventos
 
     for i in range(s, e + 1):
         for g in gidx:
             if not np.isnan(C[g, i]): lastp[g] = C[g, i]
         if i > s:
             A.cash *= D["cdb"][i]
-            if cur >= 0:
-                d = A.sh[0] * np.nan_to_num(DV[cur, i]); A.cash += d; A.mdiv += d; A.divT += d; per[cur]["res"] += d; pdiv += d
+        c0 = A.cash[0] - (ap[0] if i == s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
+        if i > s and cur >= 0:
+            d = A.sh[0] * np.nan_to_num(DV[cur, i]); A.cash += d; A.mdiv += d; A.divT += d; per[cur]["res"] += d; pdiv += d
+            A.dtax += A.sh[0] * D["JT"][cur, i]
+            if d >= 0.005: ev.append({"d": D["w"][i], "k": "provento", "t": nm[cur], "v": round(float(d), 2), "x": tipo(D, cur, i)})
         if i > 0:
             # só entra numa empresa em bom momento (sinal forte); senão o dinheiro espera no CDB
             cand = [(score(g, i - 1)[0], g) for g in gidx if not np.isnan(C[g, i]) and score(g, i - 1)[1] and not np.isnan(score(g, i - 1)[0]) and strong(g, i - 1)]
@@ -407,27 +445,32 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
                 if not fav and k >= mod["min"] and not np.isnan(C[cur, i]):
                     sell_cur(lastp[cur], i, "previsão desfavorável" if alg else "abaixo da média de 200 dias"); saiu = True  # espera ao menos 1 semana
                 elif best >= 0 and best != cur and k >= TROCA_SEM and not np.isnan(C[cur, i]) and score(best, i - 1)[0] >= sc + MARGEM[mid]:
-                    sell_cur(lastp[cur], i, f"{nm[best]} com sinal melhor")  # troca direta: a outra está em bom momento agora
+                    sell_cur(lastp[cur], i, f"troca: {nm[best]} com sinal melhor"); trocas += 1  # troca direta: a outra está em bom momento agora
             if cur < 0 and best >= 0 and not saiu:
-                cur, k = best, 0; per[cur]["c"] += 1
-                if moves and moves[-1]["para"] is None and moves[-1]["d"] == D["w"][i]: moves[-1]["para"] = nm[cur]; moves[-1]["m2"] = why(cur, i - 1)
-                else: moves.append({"d": D["w"][i], "de": None, "para": nm[cur], "m": None, "m2": why(cur, i - 1)})
-                pend = moves[-1]
+                cur, k = best, 0; per[cur]["c"] += 1; why_in = why(cur, i - 1)
         P = lastp[cur] if cur >= 0 else 0.0
         j = meset.get(i)
         flow = 0.0
         if j is not None and i > s:
             a, w = (ap[j] if j < len(ap) else 0), (wd[j] if j < len(wd) else 0)
-            ir0, mgain = A.ir[0], dict(mg)
+            ir0, mgain, t0, sh0 = A.ir[0], dict(mg), A.ir[0] + A.dtax[0], A.sh[0]
             A.close_month(np.array([P]), np.array([a]), np.array([w]), tx)
-            ir = A.ir[0] - ir0
+            ir = A.ir[0] - ir0; t1 = A.ir[0] + A.dtax[0] - t0
             pos = {g: x for g, x in mgain.items() if x > 0}
             for g, x in pos.items(): per[g]["ir"] += ir * x / sum(pos.values())
-            mg.clear(); flow = a - w
+            mg.clear(); flow = a - w; dw = D["w"][i]
+            if sh0 > A.sh[0] and cur >= 0:
+                ev.append({"d": dw, "k": "venda", "t": nm[cur], "q": int(sh0 - A.sh[0]), "p": round(float(P), 2), "v": round(float((sh0 - A.sh[0]) * P * (1 - CUSTO)), 2), "x": "para retirada ou imposto"})
+            if w > 0: ev.append({"d": dw, "k": "retirada", "v": round(float(w), 2)})
+            if t1 >= 0.005: ev.append({"d": dw, "k": "imposto", "v": round(float(t1), 2)})
+            if a > 0: ev.append({"d": dw, "k": "aporte", "v": round(float(a), 2), "x": "aporte do mês"})
         if cur >= 0:
-            c0 = A.cash[0]; A.buy(np.array([True]), np.array([P]))
-            if pend is not None: pend["vc"] = round(c0 - A.cash[0], 2); pend = None  # valor comprado na entrada
-        else: cdbw += 1
+            A.buy(np.array([True]), np.array([P]))
+            if A.lq[0] >= 1:
+                ev.append({"d": D["w"][i], "k": "compra", "t": nm[cur], "q": int(A.lq[0]), "p": round(float(P), 2), "v": round(float(A.lc[0]), 2), **({"x": why_in} if why_in else {})})
+                why_in = None
+        if not cur >= 0 or A.sh[0] <= 0: cdbw += 1
+        _cdi(ev, D["w"][i], A.cash[0] - c0)
         tot += 1
         if cur >= 0: per[cur]["sem"] += 1
         v = A.sh[0] * P + A.cash[0]
@@ -440,8 +483,8 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
     emp = [dict(x, sem=round(x["sem"] / max(1, x["n"]), 1), res=round(x["res"], 2), ir=round(x["ir"], 2)) for x in per.values() if x["c"]]
     emp.sort(key=lambda x: -x["res"])
     return {"v": float(v), "ir": float(A.ir[0] + A.dtax[0]), "irv": float(A.ir[0]), "c": int(A.compras[0]), "s": int(A.vendas[0]), "ra": float(anual(vm, ap, wd)[0]),
-            "hist": {"emp": emp, "trocas": sum(1 for m in moves if m["de"] and m["para"]), "cdb": round(cdbw / max(1, tot) * 100, 1),
-                     "dd": round(dd * 100, 1), "mov": moves[-200:]}}
+            "hist": {"emp": emp, "trocas": trocas, "cdb": round(cdbw / max(1, tot) * 100, 1), "dd": round(dd * 100, 1), "mov": _ult(ev), "nmov": len(ev),
+                     "cash": round(float(A.cash[0]), 2), "sh": int(A.sh[0]), "t": nm[cur] if cur >= 0 else None}}
 
 
 def run(D, req):
@@ -533,7 +576,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 2  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 3  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -589,21 +632,30 @@ def _gtargets(D, mid, idx, i):
     s=w.sum(); return (w/s if s>0 else w)
 def grupo(D, mid, idx, me, ap, rec=False):
     """Modo Grupo (Comparar e Grupo simulação): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
-    -> valor final, IR, compras, vendas (rec: + movimentações e posição final, mesmas contas)."""
+    Ações inteiras: o dinheiro destinado a cada empresa fica numa reserva dela, rendendo CDB, até dar para comprar pelo menos 1 ação;
+    se a empresa sai do alvo, a reserva volta ao caixa. -> valor final, IR, compras, vendas (rec: + movimentações uma a uma e posição)."""
     idx=np.asarray(idx);n=len(idx);s,e=me[0],me[-1];mod=MOD[mid];sell=mod['vende'] and not mod.get('frac')
-    sh=np.zeros(n);basis=np.zeros(n);cash=ap[0];age=np.zeros(n);carry=0;msales=0;mgain=0;mdiv=0;ir=0;nb=0;ns=0
-    lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV']
-    mov=[];nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else 'abaixo da média de 200 dias'
+    sh=np.zeros(n);basis=np.zeros(n);pend=np.zeros(n);cash=float(ap[0]);age=np.zeros(n);carry=0;msales=0;mgain=0;mdiv=0;ir=0;nb=0;ns=0
+    lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
+    nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else 'abaixo da média de 200 dias'
+    ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
         if i>s:
-            cash*=D['cdb'][i];d=(sh*np.nan_to_num(DV[idx,i])).sum();cash+=d;mdiv+=d
+            f=D['cdb'][i];cash*=f;pend*=f
+        b0=cash+pend.sum()-(ap[0] if i==s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
+        if i>s:
+            dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdiv+=d;ir+=(sh*JT[idx,i]).sum()  # JCP já líquido; o retido conta no IR
+            if rec:
+                for q in np.flatnonzero(dq>=0.005): ev.append({"d":W[i],"k":"provento","t":nm[idx[q]],"v":round(float(dq[q]),2),"x":tipo(D,idx[q],i)})
         w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1
+        rel=(w==0)&(pend>0)
+        if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa
         if sell and i>s:
             out=(sh>0)&(w==0)&ok&(age>=mod['min'])
             v=sh*P*(1-CUSTO);g=np.where(out,v-basis,0)
             if rec:
-                for q in np.flatnonzero(out): mov.append({"d":D['w'][i],"op":"venda","t":nm[idx[q]],"q":round(float(sh[q]),4),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"m":motivo})
+                for q in np.flatnonzero(out): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":motivo})
             cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
             sh=np.where(out,0,sh);basis=np.where(out,0,basis)
         j=meset.get(i)
@@ -611,23 +663,29 @@ def grupo(D, mid, idx, me, ap, rec=False):
             tax=max(0,mgain-carry)*IR if msales>ISENTO else 0
             carry=carry-mgain if mgain<0 else (max(0,carry-max(0,mgain)) if msales>ISENTO else carry)
             dt=mdiv*.10 if mdiv>50000 else 0
-            cash-=tax+dt;ir+=tax+dt;msales=mgain=mdiv=0;cash+=ap[j] if j<len(ap) else 0
-            if rec and tax+dt>0: mov.append({"d":D['w'][i],"op":"imposto","v":round(float(tax+dt),2)})
-        if cash>1 and w.sum()>0:
-            a=cash*w;m=(a>0.005)&ok
-            new=m&(sh<=0);age=np.where(new,0,age)
-            dq=np.where(m,a*(1-CUSTO)/np.where(P>0,P,1),0)
-            if rec:  # entrada numa empresa: uma linha; reforço das que já tem (aporte, proventos, venda de outra): uma linha por semana
-                for q in np.flatnonzero(new): mov.append({"d":D['w'][i],"op":"compra","t":nm[idx[q]],"q":round(float(dq[q]),4),"p":round(float(P[q]),2),"v":round(float(a[q]),2)})
-                re_=m&~new
-                if re_.any(): mov.append({"d":D['w'][i],"op":"reforço","n":int(re_.sum()),"v":round(float(a[re_].sum()),2)})
-            sh+=dq;basis+=np.where(m,a,0);cash-=a[m].sum();nb+=m.sum()
-    v=float((sh*np.nan_to_num(lastp)).sum()+cash)
+            cash-=tax+dt;ir+=tax+dt;msales=mgain=mdiv=0
+            if cash<0 and pend.sum()>0:  # imposto maior que o caixa: sai das reservas
+                tk=min(-cash,pend.sum());pend*=1-tk/pend.sum();cash+=tk
+            a=ap[j] if j<len(ap) else 0;cash+=a
+            if rec and tax+dt>=0.005: ev.append({"d":W[i],"k":"imposto","v":round(float(tax+dt),2)})
+            if rec and a>0: ev.append({"d":W[i],"k":"aporte","v":round(float(a),2),"x":"aporte do mês"})
+        if cash>0.005 and w.sum()>0:
+            pend+=cash*w;cash=0.0
+        m=ok&(P>0)&(pend>0)
+        if m.any():
+            q=np.where(m,np.floor(pend*(1-CUSTO)/np.where(m,P,np.inf)+1e-9),0.0);m=q>=1
+            if m.any():
+                cost=np.where(m,q*P/(1-CUSTO),0.0);new=m&(sh<=0);age=np.where(new,0,age)
+                if rec:
+                    for k in np.flatnonzero(m): ev.append({"d":W[i],"k":"compra","t":nm[idx[k]],"q":int(q[k]),"p":round(float(P[k]),2),"v":round(float(cost[k]),2)})
+                sh+=np.where(m,q,0);basis+=cost;pend=np.maximum(0,pend-cost);nb+=m.sum()
+        if rec: _cdi(ev,W[i],cash+pend.sum()-b0)
+    L=np.nan_to_num(lastp);res=cash+pend.sum();v=float((sh*L).sum()+res)
     if not rec: return v, float(ir), int(nb), int(ns)
-    L=np.nan_to_num(lastp); pos=[{"t":nm[idx[q]],"q":round(float(sh[q]),4),"p":round(float(L[q]),2),"v":round(float(sh[q]*L[q]),2),
-         "pct":round(float(sh[q]*L[q]/basis[q]*100-100),2) if basis[q]>0 else None} for q in np.flatnonzero(sh>0)]
+    pos=[{"t":nm[idx[q]],"q":int(sh[q]),"p":round(float(L[q]),2),"v":round(float(sh[q]*L[q]),2),"inv":round(float(basis[q]),2),
+          "pct":round(float(sh[q]*L[q]/basis[q]*100-100),2) if basis[q]>0 else None} for q in np.flatnonzero(sh>0)]
     pos.sort(key=lambda x:-x["v"])
-    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(cash),2),"mov":mov}
+    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev}
 
 
 def simgrupo(D, tickers, di, v0):
@@ -638,17 +696,17 @@ def simgrupo(D, tickers, di, v0):
     if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
     v0 = max(0.0, float(v0 or 0))
     if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
-    key = repr(("sim", D["at"], tuple(tickers), di, v0))
+    key = repr(("sim", ENGINE, D["at"], tuple(tickers), di, v0))
     if key in _C: _C.move_to_end(key); return _C[key]
     idx = [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
     if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
     aps = [v0] + [0.0] * (len(me) - 1)
     pc = lambda v: round((v / v0 - 1) * 100, 2)
-    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "at": D["at"], "n": len(idx), "m": []}
+    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "at": D["at"], "n": len(idx), "eng": ENGINE, "m": []}
     for m in MODELOS:
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True)
         out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
-                         "cash": h["cash"], "pos": h["pos"][:30], "mov": h["mov"][-200:], "nmov": len(h["mov"])})
+                         "cash": h["cash"], "pos": h["pos"][:30], "mov": _ult(h["mov"]), "nmov": len(h["mov"])})
     out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": r["pct"], "ref": True} for r in _refs(D, me, aps, [0.0] * len(me), v0)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
     _C[key] = out

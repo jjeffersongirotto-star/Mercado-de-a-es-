@@ -548,36 +548,52 @@ if (typeof document !== 'undefined') {
     if (tk) { sel = { t: tk, m }; el('pvDes').querySelectorAll('tr.sel').forEach(x => x.classList.remove('sel')); t.classList.add('sel'); }
     openPeek(tk, m);
   });
-  // movimentações: rodízio (Saiu/Entrou) ou carteira do Grupo simulação (r.sim: compras, vendas e reforços com data, preço e quantidade)
+  // movimentações (rodízio e Grupo simulação): uma linha por evento (compra, venda, aporte, provento, aplicação/resgate do CDI,
+  // retirada, imposto), mais recentes primeiro; mostra MOV_PG por vez ("Mostrar mais" acrescenta sem redesenhar o resto)
   window.pvGroupHtml = groupHtml;
+  const MOV_PG = 60, movStore = {}; let movSeq = 0;
+  const MOV_N = { compra: 'Compra', venda: 'Venda', aporte: 'Aporte', provento: 'Provento', cdi_ap: 'Aplicação no CDI', cdi_res: 'Resgate do CDI', retirada: 'Retirada', imposto: 'Imposto (IR)' };
+  const movRow = (x) => {
+    const sub = [x.p != null ? brl.format(x.p) + '/ação' : '', x.x || ''].filter(Boolean).join(' · ');
+    const neg = x.k === 'compra' || x.k === 'retirada' || x.k === 'imposto';
+    return `<tr class="mv-${x.k}"><td>${dataBR(x.d)}</td><td style="white-space:normal;text-align:left">${MOV_N[x.k] || esc(x.k)}${x.t ? ` <b>${esc(x.t)}</b>` : ''}${sub ? `<br><span class="pvd-note">${esc(sub)}</span>` : ''}</td>` +
+      `<td>${x.q != null ? F0.format(x.q) : ''}</td><td class="${neg ? '' : x.k === 'cdi_ap' || x.k === 'cdi_res' ? '' : 'up'}">${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`;
+  };
+  function movHtml(mov, nmov) {
+    const L = (mov || []).slice().reverse(), id = 'm' + (++movSeq); movStore[id] = L;
+    for (const k of Object.keys(movStore)) if (k !== id && Object.keys(movStore).length > 8) delete movStore[k];  // só os últimos modais
+    const more = L.length > MOV_PG ? `<button type="button" class="btn mv-more" data-movmore="${id}" data-n="${MOV_PG}">Mostrar mais (${L.length - MOV_PG})</button>` : '';
+    return `<table class="gtab mvtab"><thead><tr><th>Data</th><th>Movimentação</th><th>Qtd. de ações</th><th>Valor</th></tr></thead><tbody id="${id}">${L.slice(0, MOV_PG).map(movRow).join('') || '<tr><td colspan="4">Nenhuma movimentação.</td></tr>'}</tbody></table>${more}` +
+      (nmov > L.length ? `<p class="pvd-note">Mostrando as ${L.length - 1} últimas de ${nmov} movimentações e o aporte inicial.</p>` : '');
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-movmore]'); if (!b) return;
+    const L = movStore[b.dataset.movmore], n = +b.dataset.n, tb = document.getElementById(b.dataset.movmore); if (!L || !tb) return;
+    tb.insertAdjacentHTML('beforeend', L.slice(n, n + MOV_PG).map(movRow).join('')); b.dataset.n = n + MOV_PG;
+    if (n + MOV_PG >= L.length) b.remove(); else b.textContent = `Mostrar mais (${L.length - n - MOV_PG})`;
+  });
   // blocos do resumo: [rótulo, valor, detalhe, classe] (classe: 'big up'/'big dn' para o rendimento, 'w2' ocupa a linha no celular)
   const tiles = (L) => `<div class="sumg">${L.filter(Boolean).map(([l, v, d, c = '']) => `<div class="sumt${/w2/.test(c) ? ' w2' : ''}"><span class="l">${l}</span><span class="v ${c.replace('w2', '')}">${v}</span>${d ? `<span class="s">${d}</span>` : ''}</div>`).join('')}</div>`;
   const pclr = (x) => x == null ? '' : x < 0 ? 'dn' : 'up';
   function simHtml(r) {
-    const qf = (q) => q >= 100 ? F0.format(q) : F2.format(q);
+    const qf = (q) => F0.format(q);
     const pos = r.pos.map(x => `<tr><td><b>${esc(x.t)}</b></td><td>${qf(x.q)}</td><td>${brl.format(x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`).join('');
-    const op = (x) => x.op === 'reforço' ? `Reforço em ${x.n} empresa(s)` : x.op === 'imposto' ? 'Imposto (IR)' : `${x.op === 'venda' ? 'Venda' : 'Compra'} <b>${esc(x.t)}</b>${x.m ? `<br><span class="pvd-note">${esc(x.m)}</span>` : ''}`;
-    const mv = r.mov.slice().reverse().map(x => `<tr><td>${dataBR(x.d)}</td><td style="white-space:normal;text-align:left">${op(x)}</td><td>${x.q != null ? qf(x.q) : '—'}</td><td>${x.p != null ? brl.format(x.p) : '—'}</td><td>${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`).join('');
     return tiles([['Investido', brl.format(r.v0), 'desde ' + dataBR(r.d0)], ['Hoje', brl.format(r.v), `<span class="pct ${pclr(r.pct)}">${pc(r.pct)}</span>`],
         ['Compras / vendas', `${F0.format(r.c)} <span class="s2">/</span> ${F0.format(r.s)}`], ['Imposto', brl.format(r.ir)],
         ['Posição', `${r.np} empresa${r.np === 1 ? '' : 's'}`, `+ ${brl.format(r.cash)} no CDB`, 'w2']]) + `<p class="sumd">dados até ${dataBR(r.d1)}</p>
       ${r.np > r.pos.length ? `<p class="pvd-note">As ${r.pos.length} maiores posições:</p>` : ''}
       <table class="gtab"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Preço</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="5">Tudo no CDB.</td></tr>'}</tbody></table>
-      <table class="gtab"><thead><tr><th>Data</th><th>Operação</th><th>Qtd.</th><th>Preço</th><th>Valor</th></tr></thead><tbody>${mv || '<tr><td colspan="5">Nenhuma movimentação.</td></tr>'}</tbody></table>
-      ${r.nmov > r.mov.length ? `<p class="pvd-note">Mostrando as ${r.mov.length} últimas de ${r.nmov} movimentações.</p>` : ''}`;
+      ${movHtml(r.mov, r.nmov)}`;
   }
   function groupHtml(r) {
     if (r.sim) return simHtml(r);
     const h = r.hist, sem = (x) => `${F0.format(x)} sem. (~${F0.format(x / 4.35)} meses)`;
     const emp = h.emp.map(x => `<tr><td><b>${esc(x.t)}</b></td><td>${x.c}</td><td>${sem(x.sem)}</td><td class="${x.res < 0 ? 'dn' : 'up'}">${brl.format(x.res)}</td><td>${brl.format(x.ir)}</td></tr>`).join('');
-    // valor movimentado: venda (com o resultado da posição, proventos incluídos) e compra
-    const val = (x) => [x.vv != null ? `Venda ${brl.format(x.vv)}${x.pct != null ? ` · <span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}` : '', x.vc != null ? `Compra ${brl.format(x.vc)}` : ''].filter(Boolean).join('<br>');
-    const mv = h.mov.slice().reverse().map(x => `<tr><td>${dataBR(x.d)}</td><td>${esc(x.de || 'CDB')}</td><td>${esc(x.para || 'CDB')}</td><td style="white-space:normal;text-align:left">${esc([x.m && 'saiu: ' + x.m, x.m2 && 'entrou: ' + x.m2].filter(Boolean).join(' · '))}</td><td>${val(x)}</td></tr>`).join('');
     return tiles([['Rendimento', pc(r.pct), null, 'big ' + pclr(r.pct)], ['Valor final', brl.format(r.v)], ['Compras / vendas', `${F0.format(r.c)} <span class="s2">/</span> ${F0.format(r.s)}`],
         ['Trocas diretas', F0.format(h.trocas), 'entre empresas'], ['No CDB', F2.format(h.cdb) + '%', 'do tempo'], ['Maior queda', F2.format(h.dd) + '%', null, h.dd < 0 ? 'dn' : ''], ['Imposto', brl.format(r.ir), null, 'w2']]) + `
       <p class="pvd-note">Empresas do grupo: ${esc(r.t.join(', '))}. Tempo médio = semanas com a ação antes de vender; resultado inclui os proventos.</p>
       <table class="gtab"><thead><tr><th>Ativo</th><th>Compras</th><th>Tempo médio</th><th>Resultado</th><th>Imposto</th></tr></thead><tbody>${emp || '<tr><td colspan="5">Nenhuma compra no período.</td></tr>'}</tbody></table>
-      <table class="gtab"><thead><tr><th>Data</th><th>Saiu</th><th>Entrou</th><th>Motivo</th><th>Valor</th></tr></thead><tbody>${mv}</tbody></table>`;
+      ${movHtml(h.mov, h.nmov)}`;
   }
   async function loadTab(top) {
     const my = seq, S0 = peek || sel;
