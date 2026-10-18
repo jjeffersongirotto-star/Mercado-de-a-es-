@@ -18,7 +18,7 @@ if [ -z "$PY" ]; then
 fi
 # Grava em blocos (commit + push ao fim de cada um): se a rotina for cortada no meio, o que já ficou pronto não se perde.
 BLOCK1="fundamentus statusinvest yfinance tradingview cvm b3prov noticias logos"                   # rápidos (logos: 1×/semana)
-BLOCK2="b3indices b3cad b3btb vol30 cotahist history metrics fg fund modelos modpre kb"           # B3, históricos e derivados
+BLOCK2="b3indices b3cad b3btb vol30 cotahist history metrics fg fund fatos modelos modpre kb"     # B3, históricos e derivados
 BLOCK3="investidor10 dadosdemercado"                                                             # lentos (~1 h): por último
 STEPS="${ONLY:-$BLOCK1 $BLOCK2 $BLOCK3}"
 # Log persistente do dia (lista as etapas que falharam no fim)
@@ -70,6 +70,7 @@ step() {
     dadosdemercado) run "Dados de Mercado" "$PY" "$HERE/scripts/fetch_dadosdemercado.py" "$TMP/data" ;;
     fg)             run "Medo e Ganância" "$PY" "$HERE/scripts/build_fg.py" "$TMP/data" ;;
     fund)           run "Fundamentos anuais CVM" "$PY" "$HERE/scripts/build_fund.py" "$TMP/data" "${CVM_CACHE:-/tmp/cvmraw}" ;;
+    fatos)          run "Fatos Relevantes CVM" "$PY" "$HERE/scripts/build_fatos.py" "$TMP/data" "${CVM_CACHE:-/tmp/cvmraw}" ;;
     modelos)        run "Modelos da Previsão" "$PY" "$HERE/scripts/build_modelos.py" "$TMP/data" ;;
     modpre)         run "Comparar Modelos pré-calculado" "$PY" "$HERE/scripts/build_modelos_pre.py" "$TMP/data" ;;
     kb)             run "Base do chat" "$PY" "$HERE/scripts/build_kb.py" "$TMP/data" ;;
