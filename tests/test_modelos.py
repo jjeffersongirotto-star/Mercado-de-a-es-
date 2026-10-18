@@ -110,7 +110,7 @@ def test_comparar_media_e_empresas_sem_preco():
     out = modelos.compare(D, ["AAA3", "BBB3", "XXX3"], "2020-09", "2021-12", [1000.0] + [100.0] * 15, grupos=[{"n": "G", "t": ["AAA3", "BBB3"]}])
     nm = len(modelos.MODELOS) + len(modelos.REF); fo = out["fora"]  # Barsi fora do método (sem setor perene) nas 2 empresas
     assert len(out["v"]) == nm and len(out["v"][0]) == 2 and fo == 2 and out["p"][out["m"].index("barsi")] == [None, None]
-    assert sum(r["pts"] for r in out["res"]) == 2 * sum((modelos.PONTOS + (0,) * nm)[:nm - 3])  # sem Barsi (fora), Ouro e Ibovespa (sem cotação no teste)
+    assert sum(r["pts"] for r in out["res"]) == 2 * sum((modelos.PONTOS + (0,) * nm)[:nm - 4])  # sem Barsi (fora), Ouro, Ibovespa e IDIV (sem cotação no teste)
     assert {g["m"] for g in out["g"]} == {"alg1", "alg3", "tendencia"}
     assert out["t"] == ["AAA3", "BBB3"] and out["pedidas"] == 3 and len(out["p"]) == nm
     i = out["m"].index("hold"); assert abs(out["res"][i]["media"] - sum(out["p"][i]) / 2) < 0.01
@@ -141,7 +141,8 @@ def test_run_todos_ordena_grupos_primeiro():
 
 def test_referencias_cdb_e_ouro():
     gold = {"d": [w for w in W], "v": [100.0 * 1.01 ** k for k in range(NW)]}  # ouro sobe 1% por semana
-    D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(0.01), gold)
+    idiv = {"d": [w for w in W], "v": [1000.0 * 1.02 ** k for k in range(NW)]}  # IDIV sobe 2% por semana
+    D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(0.01), gold, idiv=idiv)
     me = months(D, "2020-02", "2020-12"); ap = [1000.0] + [100.0] * (len(me) - 1); w = [0.0] * len(me)
     c = modelos.simulate_ref(D, "cdb", me, ap, w, rec=True)
     v = 0.0  # CDB: aporte no fim de cada mês, rende o CDI entre as semanas
@@ -152,10 +153,14 @@ def test_referencias_cdb_e_ouro():
     o = modelos.simulate_ref(D, "ouro", me, ap, w)
     q = sum(a * (1 - modelos.CUSTO) / gold["v"][i] for a, i in zip(ap, me))
     assert abs(o["v"] - q * gold["v"][me[-1]]) < 1e-6
+    iv = modelos.simulate_ref(D, "idiv", me, ap, w)
+    q = sum(a * (1 - modelos.CUSTO) / idiv["v"][i] for a, i in zip(ap, me))
+    assert abs(iv["v"] - q * idiv["v"][me[-1]]) < 1e-6
     out = modelos.compare(D, ["AAA3"], "2020-02", "2020-12", ap)
-    assert [r["m"] for r in out["ref"]] == ["cdb", "ouro", "ibov"] and out["m"][-3:] == ["cdb", "ouro", "ibov"] and modelos.MOD["cdb"]["n"] == "CDB"
+    R = ["cdb", "ouro", "ibov", "idiv"]
+    assert [r["m"] for r in out["ref"]] == R and out["m"][-4:] == R and modelos.MOD["cdb"]["n"] == "CDB"
     pts = {out["m"][i]: out["res"][i]["pts"] for i in range(len(out["m"]))}
-    assert sorted(pts.values())[:3] == sorted([pts["cdb"], pts["ouro"], pts["ibov"]])  # nos Pontos, sempre as últimas colocações
+    assert sorted(pts.values())[:4] == sorted(pts[m] for m in R)  # nos Pontos, sempre as últimas colocações
     t = modelos.run(D, {"di": "2020-02", "df": "2020-12", "ap": ap, "tab": {"t": "", "m": "ouro"}})["tab"]
     assert abs(t[-1]["com"] - o["v"]) < 1e-6
     sem = modelos.simulate_ref(modelos.build(snap({"AAA3": {"c": 10.0}}), cdi()), "ouro", me, ap, w)
