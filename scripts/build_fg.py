@@ -22,10 +22,11 @@ PARTES = {"mom": ("Ibovespa × média de 6 meses", 1), "forca": ("Máximas × m�
           "estr": ("Saldo de estrangeiros em 20 dias", 1)}
 
 
-def load_hist(out):
-    """Fechamentos e volumes diários de todas as ações do history4 (DataFrames: pregões × tickers)."""
+def load_hist(out, sub="history4"):
+    """Fechamentos e volumes diários de todas as ações do history4 (DataFrames: pregões × tickers).
+    sub="history4_saiu": as que saíram da bolsa (só os modelos da Previsão usam; o índice e o "mercado" ficam com as de hoje)."""
     C, V = {}, {}
-    for f in glob.glob(os.path.join(out, "history4", "*.json.gz")):
+    for f in glob.glob(os.path.join(out, sub, "*.json.gz")):
         h = json.loads(gzip.decompress(open(f, "rb").read()))
         d = h.get("d") or {}
         if len(d.get("t") or []) < WIN: continue

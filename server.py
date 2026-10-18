@@ -1134,6 +1134,7 @@ def api_modelos_comparar(body: dict):
             grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
         history.pin([t for g in (grupos or []) for t in g["t"]] + [str(t) for t in (b.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
         D = modelos.data(); modelos.set_setores(D, rows, _cad()); _pre()
+        if u == "all": tick = modelos.todas(D, rows)  # + as que saíram da bolsa
         out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
@@ -1150,7 +1151,7 @@ def api_modelos_simgrupo(body: dict):
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
         di, v0, ap, ex, ret = modelos.sim_def(b)  # valor inicial, aporte mensal, aportes e retiradas extras da Previsão
-        out = modelos.simgrupo(D, [r["ticker"] for r in rows], di, v0, ap, ex, ret)
+        out = modelos.simgrupo(D, modelos.todas(D, rows), di, v0, ap, ex, ret)
     except Exception:
         log.exception("modelos: grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1167,7 +1168,7 @@ def api_modelos_simmov(body: dict):
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
         di, v0, ap, ex, ret = modelos.sim_def(b)
-        out = modelos.simmov(D, [r["ticker"] for r in rows], di, v0, str(b.get("m") or "")[:24], tk, b.get("off") or 0, b.get("n") or 50, ap, ex, ret)
+        out = modelos.simmov(D, modelos.todas(D, rows), di, v0, str(b.get("m") or "")[:24], tk, b.get("off") or 0, b.get("n") or 50, ap, ex, ret)
     except Exception:
         log.exception("modelos: movimentações do grupo simulação"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1183,7 +1184,7 @@ def _simw(di, v0, f):
         try: fx = json.loads(f) if f and len(f) <= 8000 else {}  # app 1.17+: aporte mensal, extras e retiradas do grupo ({ap, ex, ret})
         except Exception: fx = {}
         _, v0, ap, ex, ret = modelos.sim_def(dict(fx if isinstance(fx, dict) else {}, di=di, v0=v0))
-        tk = [r["ticker"] for r in rows]; di = str(di or "")[:7]
+        tk = modelos.todas(D, rows); di = str(di or "")[:7]
         sg = modelos.simgrupo(D, tk, di, v0, ap, ex, ret)
     except Exception:
         log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502), None, None

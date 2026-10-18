@@ -8,7 +8,7 @@ import json, os, sys, time
 from datetime import date, datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from build_cvm import get_zip, stmts, pivot, tickers, da_flows, nao_fin, divida_liquida  # noqa: E402  (mesma leitura e contas da CVM)
+from build_cvm import get_zip, stmts, pivot, tickers, da_flows, nao_fin, divida_liquida, cancelamentos  # noqa: E402  (mesma leitura e contas da CVM)
 
 ANO0 = 2009
 WEEK = 6.5 * 86400
@@ -20,8 +20,8 @@ def main(out, cache):
     try:
         old = json.load(open(path))
         age = time.time() - datetime.fromisoformat(old["fetched_at"]).timestamp()
-        tem_dl = any("dl" in v for v in old["a"].values())  # snapshot antigo sem dívida: refaz
-        if age < WEEK and tem_dl: print("fund: snapshot desta semana já existe"); return 0
+        tem_dl = any("dl" in v for v in old["a"].values())  # snapshot antigo sem dívida ou sem as empresas que saíram: refaz
+        if age < WEEK and tem_dl and "saida" in old: print("fund: snapshot desta semana já existe"); return 0
     except Exception:
         pass
     today = date.today()
@@ -31,6 +31,13 @@ def main(out, cache):
         if len(listed) > 200: t2c = {t: c for t, c in t2c.items() if t in listed}
     except Exception:
         pass
+    # empresas que saíram da bolsa (history4_saiu, build_cotahist.py): CNPJ pelos FCA desde 2010 e motivo do cancelamento na CVM
+    sd = os.path.join(out, "history4_saiu"); saiu = sorted(f[:-8] for f in os.listdir(sd)) if os.path.isdir(sd) else []
+    if saiu:
+        velho = tickers(cache, today.year, anos=today.year - 2009, ativos=False)
+        t2c.update({t: velho[t] for t in saiu if t in velho and t not in t2c})
+    try: canc = cancelamentos() if saiu else {}
+    except Exception as e: canc = {}; print("fund: cadastro da CVM indisponível:", type(e).__name__)
     data = {}  # cnpj -> {ano: {rev, ni, eq, dl, eb}}
     for y in range(ANO0, today.year):
         z = get_zip(cache, "DFP", y)
@@ -63,7 +70,8 @@ def main(out, cache):
         A[t] = {"y": ys, "rev": [d[y].get("rev") for y in ys], "ni": [d[y]["ni"] for y in ys], "eq": [d[y]["eq"] for y in ys]}
         if any("dl" in d[y] for y in ys): A[t].update({"dl": [d[y].get("dl") for y in ys], "eb": [d[y].get("eb") for y in ys]})
     if not A: print("fund: nada montado", file=sys.stderr); return 1
-    json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "fonte": "CVM (DFP, dados abertos)", "a": A},
+    saida = {t: canc.get(t2c.get(t), "") for t in saiu}  # motivo da saída ("" = registro não cancelado ou sem CNPJ: troca de código, etc.)
+    json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "fonte": "CVM (DFP, dados abertos)", "a": A, "saida": saida},
               open(path, "w"), separators=(",", ":"))
     print(f"fund: {len(A)} tickers, exercícios {ANO0}–{today.year - 1}, {os.path.getsize(path) / 1e6:.1f} MB")
     return 0

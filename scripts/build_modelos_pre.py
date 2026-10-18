@@ -32,7 +32,7 @@ def main(out):
     hoje = datetime.now(timezone(timedelta(hours=-3)))
     df = hoje.strftime("%Y-%m")
     E = {}
-    for u, tick in (("all", [r["ticker"] for r in rows]), ("top5", modelos.top_sector(rows))):
+    for u, tick in (("all", modelos.todas(D, rows)), ("top5", modelos.top_sector(rows))):
         for n in modelos.PRE_ANOS:
             di = f"{hoje.year - n:04d}-{hoje.month:02d}" if n else "1900-01"
             aps = [modelos.PRE_INI] + [modelos.PRE_AP] * 600
