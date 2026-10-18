@@ -4,7 +4,7 @@ Cada semana usa o sinal da semana anterior (decide com o fechamento de sexta e o
 Aportes e retiradas entram no último pregão de cada mês (mês 1 = valor inicial), como na tabela da Previsão.
 Imposto: 15% do lucro líquido das vendas do mês quando as vendas passam de R$ 20 mil; prejuízo compensa os meses seguintes.
 Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de R$ 50 mil, ou o % escolhido)."""
-import gc, hashlib, json, threading, time, warnings, zlib
+import gc, hashlib, json, os, threading, time, unicodedata, warnings, zlib
 from collections import OrderedDict
 import numpy as np
 
@@ -64,7 +64,7 @@ def set_setores(D, rows, cad=None):
             CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 6        # versão das contas (6: nota de qualidade e venda por pontos no modo Grupo): invalida resultados guardados
+ENGINE = 7        # versão das contas (7: notícias e Fatos Relevantes no modo Grupo): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -79,6 +79,9 @@ VMARG = {"nota": 25.0, "porte": (0, 0, .5, 1.0), "forte": 1.0, "setor": 1.0, "me
 NOTA = {"pesos": {"porte": .25, "roe": .20, "margem": .10, "constancia": .25, "cresc": .10, "proventos": .10},
         "roe": .15, "margem": .10, "cresc": .20, "porte": (.4, .7, .9), "porte_min": 10, "min_qw": .5, "min_compra": 30}
 PORTE_N = ("pequena", "média", "grande", "gigante")
+# Notícias (_news_mats): peso do fato oficial (Fato Relevante da CVM) e de jornal; suposição/previsão só como contexto (peso e limite
+# por semana); janela de semanas lida pelos modelos (só as já publicadas); nota ≤ 'ruim' bloqueia compra e vira problema na venda
+NOTICIA = {"oficial": 1.0, "jornal": .5, "suposicao": .25, "sup_max": .25, "semanas": 4, "ruim": -1.0, "prob_max": 2.0, "marg_max": 1.0}
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -164,7 +167,56 @@ def _fund_mats(tick, wk, fund):
     return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM, "QY": QY, "QW": QW, "PORTE": PORTE}
 
 
-def build(snap, cdi, gold=None, ibov=None, fund=None):
+_VOCN = None
+def tom_noticia(texto):
+    """Tom de uma notícia pelo vocabulário (vocabulario.json → noticias) -> (tom de -2 a +2, suposição?).
+    Frases mais longas primeiro (uma frase usada não conta de novo nas mais curtas: "saída da recuperação judicial" não vira negativo)."""
+    global _VOCN
+    if _VOCN is None:
+        v = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocabulario.json"), encoding="utf-8"))["noticias"]
+        _VOCN = (sorted({**v["negativo"], **v["positivo"]}.items(), key=lambda x: -len(x[0])), v["suposicao"])
+    t = " " + unicodedata.normalize("NFKD", texto or "").encode("ascii", "ignore").decode().lower() + " "
+    tom = 0.0
+    for w, p in _VOCN[0]:
+        if w in t: tom += p; t = t.replace(w, " ")
+    return float(np.clip(tom, -2, 2)), any(w in t for w in _VOCN[1])
+
+
+def _news_mats(tick, wk, news):
+    """Notícias por empresa e semana: NT = soma do tom (fato oficial NOTICIA['oficial'], de jornal NOTICIA['jornal']; suposição ou
+    previsão só como contexto: NOTICIA['suposicao'] no total, limitado a ±NOTICIA['sup_max'] na semana); NX = texto da mais forte."""
+    ix = {t: k for k, t in enumerate(tick)}; N, T = len(tick), len(wk)
+    NT = np.zeros((N, T), np.float32); SP = np.zeros((N, T), np.float32); NX = {}
+    wd = wk.values.astype("datetime64[D]")
+    for it in news or []:
+        ks = [ix[t] for t in it.get("t") or () if t in ix]
+        if not ks or not it.get("d"): continue
+        i = int(np.searchsorted(wd, np.datetime64(it["d"][:10]), side="left"))
+        if i >= T: continue
+        tom, sup = tom_noticia(it.get("x"))
+        if not tom: continue
+        for k in ks:
+            if sup: SP[k, i] += tom * NOTICIA["suposicao"]
+            else:
+                v = tom * NOTICIA["oficial" if it.get("o") else "jornal"]; NT[k, i] += v
+                if abs(v) >= abs(NX.get((k, i), ("", 0))[1]): NX[(k, i)] = ((it.get("x") or "")[:120], v)
+    return NT + np.clip(SP, -NOTICIA["sup_max"], NOTICIA["sup_max"]), {k: v[0] for k, v in NX.items()}
+
+
+def noticias_itens(fatos=None, noticias=None):
+    """Itens dos snapshots no formato dos modelos {d, t, x, o}: Fatos Relevantes da CVM (snapshot `fatos`, oficiais) e notícias
+    da coleta diária (snapshot `noticias`, itens com a lista de tickers `t`; os sem `t` ficam de fora)."""
+    out = []
+    f = fatos or {}; tc = {}
+    for t, c in (f.get("t") or {}).items(): tc.setdefault(c, []).append(t)  # todas as classes da mesma companhia
+    for c, L in (f.get("c") or {}).items():
+        for d, x in L: out.append({"d": d, "t": tc.get(c, []), "x": x, "o": True})
+    for it in (noticias or {}).get("itens") or []:
+        if it.get("t"): out.append({"d": it.get("data"), "t": it["t"], "x": f"{it.get('titulo') or ''}. {it.get('resumo') or ''}", "o": bool(it.get("oficial"))})
+    return out
+
+
+def build(snap, cdi, gold=None, ibov=None, fund=None, news=None):
     """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda dt=np.float64: np.full((N, T), np.nan, dtype=dt)
@@ -235,6 +287,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None):
     with np.errstate(invalid="ignore", divide="ignore"):
         FM["Q"] = np.where(FM["QW"] >= NOTA["min_qw"], 100 * (FM["QY"] + np.nan_to_num(PAG) * wp) / qw, np.nan).astype(np.float32)
     del FM["QY"], FM["QW"]
+    NT, NX = _news_mats(tick, wk, news)
     # crise no mercado: Ibovespa ≥ VENDA['crise_dd'] abaixo do maior valor dos últimos VENDA['crise_anos'] anos, ou Medo extremo na média de 8 semanas
     MI = np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float)
     ibm = pd.Series(IB).rolling(52 * VENDA["crise_anos"], min_periods=1).max().to_numpy()
@@ -245,7 +298,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None):
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
             "fp": hashlib.sha1(repr(snap.get("fetched_at")).encode() + cdb.tobytes() + np.nan_to_num(G, nan=-1.0).tobytes()).hexdigest()[:16]}
@@ -264,9 +317,10 @@ def data():
             try: ibov = history.get("IBOV", "m")
             except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
             fund = ((snapshots.load("fund")[0]) or {}).get("a") or {}  # balanços anuais: venda ocasional (REGRAS)
+            news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0])  # Fatos Relevantes da CVM + notícias com tickers
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
-                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund); _D["key"] = snap.get("fetched_at")
+                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news); _D["key"] = snap.get("fetched_at")
         snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
@@ -745,6 +799,7 @@ def _regras_w(D, mid, idx, i, w, sh, pend, RG, ban):
     w = np.where(ban > 0, 0, w)
     q, _ = _nota(D, idx, max(0, i - 1)); held = (sh > 0) | (pend > 0)
     w = np.where(held | np.isnan(q) | (q >= NOTA["min_compra"]), w, 0)  # nota baixa não entra (quem já está fica; a venda decide)
+    nv, _ = _noticia(D, idx, max(0, i - 1)); w = np.where(held | (nv > NOTICIA["ruim"]), w, 0)  # fato negativo recente: não entra
     if RG.get("max"):
         held = (sh > 0) | (pend > 0); cand = (w > 0) & ~held; room = max(0, RG["max"] - int(held.sum()))
         keep = held.copy()
@@ -761,6 +816,15 @@ def _nota(D, idx, j):
     FM = D.get("FM")
     if not FM or "Q" not in FM: n = len(idx); return np.full(n, np.nan), np.full(n, -1)
     return FM["Q"][idx, j].astype(float), FM["PORTE"][idx, j].astype(int)
+
+
+def _noticia(D, idx, j):
+    """soma do tom das notícias das últimas NOTICIA['semanas'] semanas até j (só as já publicadas) e o texto da mais forte."""
+    if "NT" not in D: return np.zeros(len(idx)), [""] * len(idx)
+    a = max(0, j - NOTICIA["semanas"] + 1); v = D["NT"][idx, a:j + 1].sum(axis=1).astype(float); NX = D["NX"]; tx = []
+    for k in idx:
+        c = [(NX[(k, i)], i) for i in range(j, a - 1, -1) if (k, i) in NX]; tx.append(c[0][0] if c else "")
+    return v, tx
 
 
 def _desc(q, po):
@@ -794,10 +858,13 @@ def _venda(D, mid, idx, i, sh, basis, P, ok, age):
         corte = (np.nan_to_num(DVn.sum(axis=1) / 2) < 0.5 * np.nan_to_num(med5, nan=0)) & ~np.isnan(med5)
         yoc = np.where(pm > 0, DVn[:, -52:].sum(axis=1) / np.where(pm > 0, pm, 1), 0)
         prob(corte & (yoc < .06), VPROB["corte"], "corte de dividendos (rendimento sobre o custo abaixo de 6%)")
+    nv, ntx = _noticia(D, idx, j)
+    for k in np.flatnonzero(held & (nv <= NOTICIA["ruim"])):
+        pr[k] += min(NOTICIA["prob_max"], -nv[k]); txt[k].append(f"notícia: {ntx[k]}" if ntx[k] else "notícia negativa")
     if not pr.any(): return out
     q, po = _nota(D, idx, j); cri = D["CRI"][idx, j]; cg = bool(D["CG"][j]) if "CG" in D else False
     mg = np.where(np.isnan(q), 0, (q - 50) / VMARG["nota"]) + np.array([VMARG["porte"][x] if x >= 0 else 0 for x in po])
-    mg += VMARG["forte"] * g("FORTE") + VMARG["setor"] * cri + VMARG["mercado"] * cg
+    mg += VMARG["forte"] * g("FORTE") + VMARG["setor"] * cri + VMARG["mercado"] * cg + np.clip(nv, 0, NOTICIA["marg_max"])
     for k in np.flatnonzero((pr > 0) & (pr - mg >= VENDA["limite"])):
         ctx = [_desc(q[k], po[k])] + (["sem histórico forte de lucro"] if not g("FORTE")[k] else []) + ["sem crise no setor nem no mercado"]
         out[k] = "; ".join(txt[k]) + " — " + ", ".join(c for c in ctx if c)

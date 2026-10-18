@@ -380,6 +380,23 @@ def test_nota_de_qualidade_e_porte():
     assert all("nota" in e.get("x", "") for e in h["mov"] if e["k"] == "compra")
 
 
+def test_noticias_fato_e_suposicao():
+    assert modelos.tom_noticia("Pedido de Recuperação Judicial") == (-2.0, False)
+    assert modelos.tom_noticia("Encerramento da recuperação judicial")[0] > 0  # frase longa vale sobre a curta
+    assert modelos.tom_noticia("Empresa pode pedir recuperação judicial, dizem analistas")[1]  # suposição
+    assert modelos.tom_noticia("Pagamento de juros sobre capital próprio")[0] == 0
+    fatos = {"t": {"AAA3": "1"}, "c": {"1": [["2021-06-02", "Pedido de Recuperação Judicial"]]}}
+    for news, vende in ((modelos.noticias_itens(fatos), True),
+                        ([{"d": "2021-06-02", "t": ["AAA3"], "x": "Empresa pode pedir recuperação judicial, dizem analistas"}], False),
+                        ([], False)):
+        D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(), news=news)
+        me = months(D, "2020-02", "2021-12")
+        h = modelos.grupo(D, "hold", [0], me, [1000.0] + [0.0] * (len(me) - 1), rec=True)[4]
+        vs = [e for e in h["mov"] if e["k"] == "venda"]
+        assert bool(vs) == vende, (news, vs)
+        if vende: assert vs[0]["d"] >= "2021-06-02" and "Recuperação Judicial" in vs[0]["x"]  # nunca antes de a notícia sair
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
