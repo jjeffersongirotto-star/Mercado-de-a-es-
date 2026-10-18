@@ -286,7 +286,7 @@ if (typeof document !== 'undefined') {
   for (const id of ['pvDi', 'pvDf']) el(id).addEventListener('change', () => {
     let v = el(id).value; const lo = el(id).min, hi = el(id).max;
     if (v && lo && v < lo) v = lo; if (v && hi && v > hi) v = hi;
-    resetMes(); if (id === 'pvDi') st.di = v; else st.df = v;
+    resetMes(); if (id === 'pvDi') st.di = v; else st.df = v; st.mperC = true;  // datas novas: o chip delas fica marcado no Período
     if (st.df && st.di && st.df < st.di) st.df = st.di;
     el('pvDi').value = st.di; el('pvDf').value = st.df; compute(); save();
     if (st.ticker === '*' && st.di && !st.df && window.gSim) askSim();  // Todos + data inicial + data final vazia: oferece o Grupo simulação
@@ -433,13 +433,19 @@ if (typeof document !== 'undefined') {
   const PER = [5, 10, 15, 20, 25, 30, 0];
   if (!PER.includes(st.mper)) st.mper = 10;
   const perDi = (df) => { if (!st.mper) return MM.ini; const [y, m] = df.split('-').map(Number); const d = `${y - st.mper}-${String(m).padStart(2, '0')}`; return d > MM.ini ? d : MM.ini; };
+  // chip temporário com as datas do "E se eu tivesse investido?" (ex.: 03/2025 a hoje): aparece quando a Data inicial é posterior à
+  // mais antiga ou há Data final; fica marcado ao mudar as datas (st.mperC) e filtra exatamente esse intervalo; some quando as datas voltam ao padrão
+  const perC = () => !!MM && (!!st.df || (!!st.di && st.di > (el('pvDi').min || MM.ini)));
+  const perCOn = () => perC() && st.mperC !== false;
   function perHtml(d) {
     const info = d ? `<span class="pv-per-i">${dataBR(d.ini)} a ${dataBR(d.fim)} · aportado ${brl.format(d.apT)}${isAll() ? ' por empresa' : ''}</span>` : '';
-    el('pvPer').innerHTML = `<span class="pv-per-l">Período</span>${PER.map(n => `<button type="button" data-mper="${n}" class="${n === st.mper ? 'on' : ''}">${n ? n + ' anos' : 'Todo período'}</button>`).join('')}${info}`;
+    const c = perC() ? `<button type="button" data-mper="c" class="pv-per-c${perCOn() ? ' on' : ''}">${dataBR(st.di > MM.ini ? st.di : MM.ini)} a ${st.df ? dataBR(st.df) : 'hoje'}</button>` : '';
+    el('pvPer').innerHTML = `<span class="pv-per-l">Período</span>${c}${PER.map(n => `<button type="button" data-mper="${n}" class="${n === st.mper && !perCOn() ? 'on' : ''}">${n ? n + ' anos' : 'Todo período'}</button>`).join('')}${info}`;
   }
-  el('pvPer').addEventListener('click', (e) => { const b = e.target.closest('[data-mper]'); if (!b) return; st.mper = +b.dataset.mper; save(); perHtml(null); runModels(); });
+  el('pvPer').addEventListener('click', (e) => { const b = e.target.closest('[data-mper]'); if (!b) return; if (b.dataset.mper === 'c') st.mperC = true; else { st.mper = +b.dataset.mper; st.mperC = false; } save(); perHtml(null); runModels(); });
   function modBody() {
-    const df = st.df && st.df < MM.fim ? st.df : MM.fim, di = perDi(df);
+    let df = st.df && st.df < MM.fim ? st.df : MM.fim, di = perDi(df);
+    if (perCOn()) { di = st.di > MM.ini ? st.di : MM.ini; if (di > df) di = df; }  // chip das datas: exatamente o intervalo escolhido
     const f = flows(Math.max(2, months(di, df).length));
     return { di, df, ap: f.ap, w: f.w, tx: st.txc ? st.tx : null };
   }
