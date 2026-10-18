@@ -64,13 +64,21 @@ def set_setores(D, rows, cad=None):
             CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 5        # versão das contas (5: regras de carteira REGRAS no modo Grupo): invalida resultados guardados
+ENGINE = 6        # versão das contas (6: nota de qualidade e venda por pontos no modo Grupo): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
 # modelos de segurar (venda_motivo). Explicação no painel ⓘ → Modelos da Previsão.
 REGRAS = {"max": 30, "liq": 1e6, "conc": 3, "min_compra": 100.0, "venda": True}
-VENDA = {"pl_prej": .15, "setor_crise": .40, "hist_anos": 10, "hist_lucro": .8, "posse": 52, "sem_recompra": 52, "queda": .30}
+VENDA = {"pl_prej": .15, "setor_crise": .40, "hist_anos": 10, "hist_lucro": .8, "posse": 52, "sem_recompra": 52, "queda": .30,
+         "limite": 1.5, "crise_dd": .25, "crise_anos": 3, "medo_extremo": 25}
+# Venda por pontos (_venda): problemas somam, margem desconta; vende quando problemas − margem ≥ VENDA['limite']
+VPROB = {"prej_grande": 2.0, "prej2": 1.0, "prej": .5, "sem_prov": 1.5, "corte": 1.5}
+VMARG = {"nota": 25.0, "porte": (0, 0, .5, 1.0), "forte": 1.0, "setor": 1.0, "mercado": 1.0}  # nota: (nota − 50) ÷ 25; porte: pequena…gigante
+# Nota de qualidade 0–100 (_fund_mats + proventos em build): pesos das partes, referências que valem nota cheia, faixas de porte
+NOTA = {"pesos": {"porte": .25, "roe": .20, "margem": .10, "constancia": .25, "cresc": .10, "proventos": .10},
+        "roe": .15, "margem": .10, "cresc": .20, "porte": (.4, .7, .9), "porte_min": 10, "min_qw": .5, "min_compra": 30}
+PORTE_N = ("pequena", "média", "grande", "gigante")
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -98,25 +106,62 @@ def _fund_mats(tick, wk, fund):
     PREJ2 = prejuízo nos 2 últimos balanços; GRANDE = os 2 prejuízos somam mais de VENDA['pl_prej'] do patrimônio de antes deles
     (ou patrimônio negativo); FORTE = lucro em ≥ VENDA['hist_lucro'] dos VENDA['hist_anos'] anos antes do último balanço
     (ou antes da sequência atual de prejuízos; mínimo 4 anos com balanço);
-    PREJ = prejuízo no último balanço (base da crise do setor, em set_setores)."""
+    PREJ = prejuízo no último balanço (base da crise do setor, em set_setores);
+    QY = parte da nota de qualidade que vem dos balanços (NOTA; 0–1, soma ponderada) e QW = soma dos pesos usados — medida até antes
+    da sequência atual de prejuízos (a empresa é julgada pelo que era antes da crise; os prejuízos entram como problema em _venda);
+    PORTE = 0 pequena, 1 média, 2 grande, 3 gigante (receita entre as empresas do mesmo ano; -1 sem dado)."""
     N, T = len(tick), len(wk); z = lambda: np.zeros((N, T), bool)
     PREJ2, GRANDE, FORTE, PREJ, TEM = z(), z(), z(), z(), z()
+    QY = np.full((N, T), np.nan, np.float32); QW = np.zeros((N, T), np.float32); PORTE = np.full((N, T), -1, np.int8)
+    fa = lambda v: np.array([np.nan if x is None else x for x in v or []], float)
+    F, byy = {}, {}
     for k, t in enumerate(tick):
         f = (fund or {}).get(t)
-        if not f or not f.get("y"): continue
+        if not f or not f.get("y") or len(f.get("ni") or []) != len(f["y"]): continue
+        F[k] = f
+        for y, r in zip(f["y"], f.get("rev") or []):
+            if r and r > 0: byy.setdefault(y, []).append(r)
+    byy = {y: np.sort(v) for y, v in byy.items() if len(v) >= NOTA["porte_min"]}
+    P_ = NOTA["pesos"]
+    for k, f in F.items():
         av = np.array([np.datetime64(f"{y + 1}-05-01") for y in f["y"]]); jl = np.searchsorted(av, wk.values.astype("datetime64[D]"), side="right") - 1
-        ni = np.array([np.nan if x in (None, 0) else x for x in f.get("ni") or []], float); eq = np.array([np.nan if x is None else x for x in f.get("eq") or []], float)
-        if len(ni) != len(f["y"]): continue
-        for i in np.flatnonzero(jl >= 0):
-            j = jl[i]; TEM[k, i] = not np.isnan(ni[j]); PREJ[k, i] = ni[j] < 0
+        ni = np.array([np.nan if x in (None, 0) else x for x in f["ni"]], float); eq = fa(f.get("eq")); rev = fa(f.get("rev"))
+        if len(eq) != len(ni): eq = np.full(len(ni), np.nan)
+        if len(rev) != len(ni): rev = np.full(len(ni), np.nan)
+        per = {}  # por balanço j: (QY, QW, PORTE, FORTE, PREJ2, GRANDE)
+        for j in range(len(ni)):
             e = j  # histórico antes da sequência atual de prejuízos (Petrobras 2014–15 é julgada pelos anos bons de antes)
             while e >= 0 and ni[e] < 0: e -= 1
             h = ni[max(0, e + 1 - VENDA["hist_anos"]):e + 1] if e < j else ni[max(0, j - VENDA["hist_anos"]):j]; h = h[~np.isnan(h)]
-            FORTE[k, i] = len(h) >= 4 and (h > 0).mean() >= VENDA["hist_lucro"]
+            fo = len(h) >= 4 and (h > 0).mean() >= VENDA["hist_lucro"]
+            p2 = gr = False
             if j >= 1 and ni[j] < 0 and ni[j - 1] < 0:
-                PREJ2[k, i] = True; e0 = eq[j - 2] if j >= 2 else np.nan
-                GRANDE[k, i] = (eq[j] <= 0) or (e0 > 0 and -(ni[j] + ni[j - 1]) > VENDA["pl_prej"] * e0)
-    return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM}
+                p2 = True; e0 = eq[j - 2] if j >= 2 else np.nan
+                gr = bool((eq[j] <= 0) or (e0 > 0 and -(ni[j] + ni[j - 1]) > VENDA["pl_prej"] * e0))
+            q, qw, po = 0.0, 0.0, -1
+            if e < 0: q, qw = 0.0, 1.0  # só prejuízos: nota 0
+            else:
+                a = max(0, e + 1 - 5); n5, e5, r5 = ni[a:e + 1], eq[a:e + 1], rev[a:e + 1]
+                def add(peso, v):
+                    nonlocal q, qw
+                    if v is not None and not np.isnan(v): q += peso * float(np.clip(v, 0, 1)); qw += peso
+                y = f["y"][e]; r = rev[e]
+                if y in byy and r > 0:
+                    pc = np.searchsorted(byy[y], r, side="right") / len(byy[y]); add(P_["porte"], pc)
+                    po = int(np.searchsorted(NOTA["porte"], pc, side="right"))
+                m = (e5 > 0) & ~np.isnan(n5)
+                if m.sum() >= 3: add(P_["roe"], np.mean(n5[m] / e5[m]) / NOTA["roe"])
+                m = (r5 > 0) & ~np.isnan(n5)
+                if m.sum() >= 3: add(P_["margem"], np.mean(n5[m] / r5[m]) / NOTA["margem"])
+                h10 = ni[max(0, e + 1 - VENDA["hist_anos"]):e + 1]; h10 = h10[~np.isnan(h10)]
+                if len(h10) >= 4: add(P_["constancia"], (h10 > 0).mean())
+                ok = np.flatnonzero(r5 > 0)
+                if len(ok) >= 3 and ok[-1] > ok[0]: add(P_["cresc"], .5 + ((r5[ok[-1]] / r5[ok[0]]) ** (1 / (ok[-1] - ok[0])) - 1) / NOTA["cresc"])
+            per[j] = (q, qw, po, fo, p2, gr)
+        for i in np.flatnonzero(jl >= 0):
+            j = jl[i]; TEM[k, i] = not np.isnan(ni[j]); PREJ[k, i] = ni[j] < 0
+            QY[k, i], QW[k, i], PORTE[k, i], FORTE[k, i], PREJ2[k, i], GRANDE[k, i] = per[j]
+    return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM, "QY": QY, "QW": QW, "PORTE": PORTE}
 
 
 def build(snap, cdi, gold=None, ibov=None, fund=None):
@@ -181,12 +226,26 @@ def build(snap, cdi, gold=None, ibov=None, fund=None):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore"); med = np.nanmean(a, axis=1) if a.shape[1] else np.full(N, np.nan)
         TETO[:, Y == y] = np.where(ok5, med / BARSI_DY, np.nan)[:, None]
+    # nota de qualidade 0–100: partes dos balanços (_fund_mats) + proventos pagos nos últimos 5 anos completos; sem dados suficientes = NaN
+    FM = _fund_mats(tick, wk, fund); wp = NOTA["pesos"]["proventos"]; PAG = np.full((N, T), np.nan)
+    for y in yrs:
+        a = DPA[:, max(0, yi[y] - BARSI_ANOS):yi[y]]; nn = (~np.isnan(a)).sum(axis=1)
+        PAG[:, Y == y] = np.where(nn >= 3, (np.nan_to_num(a) > 0).sum(axis=1) / np.maximum(nn, 1), np.nan)[:, None]
+    qw = FM["QW"] + np.where(np.isnan(PAG), 0, wp)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        FM["Q"] = np.where(FM["QW"] >= NOTA["min_qw"], 100 * (FM["QY"] + np.nan_to_num(PAG) * wp) / qw, np.nan).astype(np.float32)
+    del FM["QY"], FM["QW"]
+    # crise no mercado: Ibovespa ≥ VENDA['crise_dd'] abaixo do maior valor dos últimos VENDA['crise_anos'] anos, ou Medo extremo na média de 8 semanas
+    MI = np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float)
+    ibm = pd.Series(IB).rolling(52 * VENDA["crise_anos"], min_periods=1).max().to_numpy()
+    with np.errstate(invalid="ignore"):
+        CG = (IB <= (1 - VENDA["crise_dd"]) * ibm) | (pd.Series(MI).rolling(8, min_periods=4).mean().to_numpy() < VENDA["medo_extremo"])
     ym = [w[:7] for w in W]
     first = next((i for i in range(T) if ok[i]), 0)  # modelos começam no 1º mês com CDB
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": _fund_mats(tick, wk, fund), "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "CRI": np.zeros((N, T), bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
             "fp": hashlib.sha1(repr(snap.get("fetched_at")).encode() + cdb.tobytes() + np.nan_to_num(G, nan=-1.0).tobytes()).hexdigest()[:16]}
@@ -627,7 +686,7 @@ PRE_VER = 3  # muda quando a resposta do compare ganha campos (respostas antigas
 
 
 def pre_key(D, tickers, idx, me, aps):
-    h = hashlib.sha1(repr((PRE_VER, D["fp"], tuple(dict.fromkeys(tickers)), tuple(idx), tuple(np.flatnonzero(D["BS"][idx]).tolist()),
+    h = hashlib.sha1(repr((PRE_VER, ENGINE, D["fp"], tuple(dict.fromkeys(tickers)), tuple(idx), tuple(np.flatnonzero(D["BS"][idx]).tolist()),
                            me[0], me[-1], [round(x, 2) for x in aps])).encode())
     return h.hexdigest()[:24]
 
@@ -679,44 +738,69 @@ def _gtargets(D, mid, idx, i):
     s=w.sum(); return (w/s if s>0 else w)
 def _regras_w(D, mid, idx, i, w, sh, pend, RG, ban):
     """Alvos do modelo com as regras de carteira (REGRAS): sem liquidez da época não compra; recém-vendida fica de fora;
-    no máximo RG['max'] empresas — quem já está na carteira mantém a vaga, as novas pelo sinal do modelo (pesos diferentes:
-    Barsi, Híbrido) ou pelo maior volume (modelos de peso igual)."""
+    nota de qualidade abaixo de NOTA['min_compra'] não entra; no máximo RG['max'] empresas — quem já está na carteira mantém a vaga,
+    as novas pelo sinal do modelo × nota (pesos diferentes: Barsi, Híbrido) ou pela nota (modelos de peso igual), empate pelo volume."""
     vol = D["VL"][idx, max(0, i - 1)] if "VL" in D else np.full(len(idx), np.nan)
     if RG.get("liq"): w = np.where(np.isnan(vol) | (vol >= RG["liq"]), w, 0)  # sem volume no snapshot antigo: regra não se aplica
     w = np.where(ban > 0, 0, w)
+    q, _ = _nota(D, idx, max(0, i - 1)); held = (sh > 0) | (pend > 0)
+    w = np.where(held | np.isnan(q) | (q >= NOTA["min_compra"]), w, 0)  # nota baixa não entra (quem já está fica; a venda decide)
     if RG.get("max"):
         held = (sh > 0) | (pend > 0); cand = (w > 0) & ~held; room = max(0, RG["max"] - int(held.sum()))
         keep = held.copy()
         if room and cand.any():
-            c = np.flatnonzero(cand); crit = w[c] if np.ptp(w[c]) > 1e-12 else np.nan_to_num(vol[c])
-            keep[c[np.argsort(-crit, kind="stable")[:room]]] = True
+            c = np.flatnonzero(cand); qn = np.nan_to_num(q[c], nan=50.0)
+            crit = w[c] * (.5 + qn / 100) if np.ptp(w[c]) > 1e-12 else qn  # sinal do modelo pesado pela nota; peso igual: pela nota
+            keep[c[np.lexsort((-np.nan_to_num(vol[c]), -crit))[:room]]] = True  # empate: maior volume
         w = np.where(keep, w, 0)
     t = w.sum(); return w / t if t > 0 else w
 
 
+def _nota(D, idx, j):
+    """nota de qualidade (0–100, NaN sem dados) e porte (-1 sem dado … 3 gigante) das empresas na semana j."""
+    FM = D.get("FM")
+    if not FM or "Q" not in FM: n = len(idx); return np.full(n, np.nan), np.full(n, -1)
+    return FM["Q"][idx, j].astype(float), FM["PORTE"][idx, j].astype(int)
+
+
+def _desc(q, po):
+    """'nota 62, grande' (texto curto das movimentações)."""
+    t = [f"nota {q:.0f}"] if q == q else []
+    if po >= 0: t.append(PORTE_N[po])
+    return ", ".join(t)
+
+
 def _venda(D, mid, idx, i, sh, basis, P, ok, age):
-    """Venda ocasional dos modelos de segurar (REGRAS['venda']) -> motivo por empresa ('' = mantém). Só com ≥ VENDA['posse'] semanas.
-    1) prejuízo nos 2 últimos balanços, grande (GRANDE), sem crise do setor e sem histórico forte de lucro;
-    2) sem proventos há 2 anos e 30% abaixo do preço médio, sem crise do setor e sem histórico forte;
-    3) Método Barsi: corte forte de dividendos (mediana de 2 anos < metade da de 5) e rendimento sobre o custo (12 meses ÷ preço médio) < 6%,
-       e a empresa piorou (prejuízo no último balanço, sem crise do setor) sem histórico forte."""
+    """Venda ocasional dos modelos de segurar (REGRAS['venda']) por pontos -> motivo por empresa ('' = mantém). Só com ≥ VENDA['posse'] semanas.
+    Problemas (VPROB): prejuízo nos 2 últimos balanços (grande: GRANDE), prejuízo no último; sem proventos há 2 anos e 30% abaixo do
+    preço médio; Método Barsi: corte forte de dividendos (mediana de 2 anos < metade da de 5) com rendimento sobre o custo
+    (12 meses ÷ preço médio) < 6%. Margem (VMARG): nota de qualidade de antes da crise, porte, histórico forte de lucro, crise do setor,
+    crise no mercado. Vende quando há problema e problemas − margem ≥ VENDA['limite']."""
     n = len(idx); out = np.full(n, "", dtype=object); FM = D.get("FM")
     held = (sh > 0) & ok & (age >= VENDA["posse"])
     if not held.any(): return out
     j = max(0, i - 1); DVn = np.nan_to_num(D["DV"][idx, max(0, i - 104):i]); pm = np.where(sh > 0, basis / np.where(sh > 0, sh, 1), 0)
-    cri = D["CRI"][idx, j]; forte = FM["FORTE"][idx, j] if FM else np.zeros(n, bool)
-    if FM is not None:
-        r1 = FM["PREJ2"][idx, j] & FM["GRANDE"][idx, j] & ~cri & ~forte
-        out[held & r1] = "prejuízo grande em 2 balanços seguidos"
-    r2 = (DVn.sum(axis=1) <= 0) & (P < (1 - VENDA["queda"]) * pm) & ~cri & ~forte  # crise do setor ou histórico forte: segura
-    out[held & r2 & (out == "")] = "sem proventos há 2 anos e 30% abaixo do preço médio"
+    z = np.zeros(n, bool); g = (lambda k: FM[k][idx, j]) if FM else (lambda k: z)
+    pr = np.zeros(n); txt = [[] for _ in range(n)]
+    def prob(m, pts, t):
+        for q in np.flatnonzero(m & held): pr[q] += pts; txt[q].append(t)
+    p2, gr = g("PREJ2"), g("GRANDE")
+    prob(p2 & gr, VPROB["prej_grande"], "prejuízo grande em 2 balanços seguidos")
+    prob(p2 & ~gr, VPROB["prej2"], "prejuízo em 2 balanços seguidos")
+    prob(g("PREJ") & ~p2, VPROB["prej"], "prejuízo no último balanço")
+    prob((DVn.sum(axis=1) <= 0) & (P < (1 - VENDA["queda"]) * pm), VPROB["sem_prov"], "sem proventos há 2 anos e 30% abaixo do preço médio")
     if mid == "barsi":
         med5 = D["TETO"][idx, j] * BARSI_DY
-        corte = np.nan_to_num(DVn.sum(axis=1) / 2) < 0.5 * np.nan_to_num(med5, nan=0)
+        corte = (np.nan_to_num(DVn.sum(axis=1) / 2) < 0.5 * np.nan_to_num(med5, nan=0)) & ~np.isnan(med5)
         yoc = np.where(pm > 0, DVn[:, -52:].sum(axis=1) / np.where(pm > 0, pm, 1), 0)
-        pior = (FM["PREJ"][idx, j] if FM is not None else np.zeros(n, bool)) & ~cri  # piorou de verdade: prejuízo no último balanço, sem crise do setor
-        r3 = corte & ~np.isnan(med5) & (yoc < .06) & pior & ~forte
-        out[held & r3 & (out == "")] = "corte de dividendos (rendimento sobre o custo abaixo de 6%)"
+        prob(corte & (yoc < .06), VPROB["corte"], "corte de dividendos (rendimento sobre o custo abaixo de 6%)")
+    if not pr.any(): return out
+    q, po = _nota(D, idx, j); cri = D["CRI"][idx, j]; cg = bool(D["CG"][j]) if "CG" in D else False
+    mg = np.where(np.isnan(q), 0, (q - 50) / VMARG["nota"]) + np.array([VMARG["porte"][x] if x >= 0 else 0 for x in po])
+    mg += VMARG["forte"] * g("FORTE") + VMARG["setor"] * cri + VMARG["mercado"] * cg
+    for k in np.flatnonzero((pr > 0) & (pr - mg >= VENDA["limite"])):
+        ctx = [_desc(q[k], po[k])] + (["sem histórico forte de lucro"] if not g("FORTE")[k] else []) + ["sem crise no setor nem no mercado"]
+        out[k] = "; ".join(txt[k]) + " — " + ", ".join(c for c in ctx if c)
     return out
 
 
@@ -757,6 +841,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                     for q in np.flatnonzero(out): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":mo[q]})
                 cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
                 sh=np.where(out,0,sh);basis=np.where(out,0,basis);ban=np.where(out,VENDA["sem_recompra"],ban)
+                w=np.where(out,0,w);tw=w.sum();w=w/tw if tw>0 else w  # vendida não recebe o aporte da mesma semana
                 rel=out&(pend>0)
                 if rel.any(): cash+=pend[rel].sum();pend[rel]=0
         j=meset.get(i)
@@ -795,7 +880,11 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             if m.any():
                 cost=np.where(m,q*P/(1-CUSTO),0.0);new=m&(sh<=0);age=np.where(new,0,age)
                 if rec:
-                    for k in np.flatnonzero(m): ev.append({"d":W[i],"k":"compra","t":nm[idx[k]],"q":int(q[k]),"p":round(float(P[k]),2),"v":round(float(cost[k]),2)})
+                    qn,po=_nota(D,idx,max(0,i-1)) if RG else (None,None)
+                    for k in np.flatnonzero(m):
+                        e={"d":W[i],"k":"compra","t":nm[idx[k]],"q":int(q[k]),"p":round(float(P[k]),2),"v":round(float(cost[k]),2)}
+                        if RG and _desc(qn[k],po[k]): e["x"]=_desc(qn[k],po[k])
+                        ev.append(e)
                 sh+=np.where(m,q,0);basis+=cost;pend=np.maximum(0,pend-cost);nb+=m.sum()
         if rec: _cdi(ev,W[i],cash+pend.sum()-b0)
     L=np.nan_to_num(lastp);res=cash+pend.sum();v=float((sh*L).sum()+res)
