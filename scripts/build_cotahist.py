@@ -223,11 +223,14 @@ def split_adj(keys, days):
         if c[i - 1] <= 0 or c[i] <= 0: continue
         r = c[i] / c[i - 1]
         if abs(math.log(r)) < math.log(1.8): continue
-        if abs(math.log(r)) > math.log(20): k *= r; continue  # 20× num pregão não é mercado: troca de unidade/grupamento (fator exato)
+        if r > 20: k *= r; continue  # alta de 20× num pregão não é mercado: troca de unidade/grupamento (fator exato)
         m = min([x for x in SPL] + [1 / x for x in SPL], key=lambda x: abs(math.log(r / x)))
-        if abs(math.log(r / m)) > 0.08: continue
-        if abs(math.log(r)) >= math.log(4.5): k *= m; continue  # fator redondo grande: desdobramento/grupamento mesmo sem o volume
         qa, qb = sorted(q[i:i + 10])[len(q[i:i + 10]) // 2], sorted(q[max(0, i - 10):i])[len(q[max(0, i - 10):i]) // 2]
+        if r >= 4.5:  # alta grande: grupamento; o fator vem das ações negociadas quando elas mostram (o resto da variação é mercado)
+            fq = min(SPL, key=lambda x: abs(math.log(qb / qa / x))) if qa > 0 and qb > 0 else None
+            if fq and abs(math.log(qb / qa / fq)) < math.log(1.5) and abs(math.log(r / fq)) < math.log(1.6): k *= fq; continue
+            if abs(math.log(r / m)) < math.log(1.35): k *= m; continue
+        if abs(math.log(r / m)) > 0.15: continue
         if qa > 0 and qb > 0 and abs(math.log(qa / qb * m)) < math.log(3): k *= m  # ações negociadas mudam no sentido inverso
     f[0] = k
     return [round(x * y, 4) for x, y in zip(c, f)]
