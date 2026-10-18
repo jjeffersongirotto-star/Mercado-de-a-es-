@@ -297,7 +297,7 @@
     return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior ?? 99, R[i].pior == null ? '—' : RKN(R[i].pior - 1))}</tr>`).join(''));
   };
   // CDB e Ouro: ⓘ com a explicação curta (Glossário); a nota só aparece quando o ouro começa depois do início do período
-  window.refInfo = (m) => glossBtn(m === 'cdb' ? 'CDB nos modelos' : 'Ouro nos modelos');
+  window.refInfo = (m) => glossBtn(({ cdb: 'CDB', ouro: 'Ouro', ibov: 'Ibovespa', idiv: 'IDIV' })[m] + ' nos modelos');
   window.modRefNote = (d) => (d.ref || []).filter(r => /cotação do ouro só desde/.test(r.nota || '')).map(r => `Ouro: ${esc(r.nota.split('; ').slice(1).join('; '))}.`).join(' ') + (d.fora ? ` Método Barsi: ${d.fora} de ${d.t.length} empresas fora do método (setor não perene ou sem dividendos regulares) aparecem como — e não entram nas colocações dele.` : '');
   window.modRK = (p) => RK(p);
   // modo Grupo: cada modelo cuida de UMA carteira com as empresas escolhidas (modelos.grupo); CDB e Ouro com o mesmo dinheiro

@@ -28,7 +28,9 @@ REF = [
      "nota": "sem resgate no período: no resgate paga IR de 15% sobre o rendimento (aplicação acima de 2 anos)"},
     {"id": "ouro", "n": "Ouro", "vende": False, "ref": True, "nota": "ouro em reais, custo de 0,3% em cada compra; nunca vende"},
     {"id": "ibov", "n": "Ibovespa", "vende": False, "ref": True, "nota": "pontos do índice (sem dividendos, como um fundo de índice sem reinvestir), custo de 0,3% em cada compra; nunca vende"},
+    {"id": "idiv", "n": "IDIV", "vende": False, "ref": True, "nota": "índice de dividendos da B3 (pontos do índice, série histórica da B3 desde 2005), custo de 0,3% em cada compra; nunca vende"},
 ]
+REF_SERIE = {"ouro": "G", "ibov": "IB", "idiv": "IV"}  # série de preço de cada referência que compra cotas (CDB: rende o CDI)
 # base dos modelos = empresas listadas hoje: as que saíram da bolsa ou faliram no período não estão -> resultados longos ficam otimistas
 AVISO = "Base histórica: em Todas entram também as empresas que saíram da bolsa desde 1998 (vendidas pelo último preço); elas ficam sem proventos e, antes de 2010, sem balanços, o que pode deixar os resultados um pouco diferentes do real."
 MOD = {m["id"]: m for m in MODELOS + REF}
@@ -228,7 +230,7 @@ def noticias_itens(fatos=None, noticias=None):
     return out
 
 
-def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None):
+def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idiv=None):
     """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda dt=np.float64: np.full((N, T), np.nan, dtype=dt)
@@ -278,6 +280,10 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None):
     if ibov and ibov.get("t"):
         bs = pd.Series(ibov["c"], index=pd.to_datetime(ibov["t"], unit="s").normalize(), dtype="float64"); bs = bs[~bs.index.duplicated(keep="last")]
         IB = bs.reindex(bs.index.union(wk)).ffill(limit=6).reindex(wk).to_numpy()
+    IV = np.full(T, np.nan)  # IDIV (pontos, fechamento diário da B3) no último pregão de cada semana
+    if idiv and idiv.get("d"):
+        vs = pd.Series(idiv["v"], index=pd.to_datetime(idiv["d"]), dtype="float64"); vs = vs[~vs.index.duplicated(keep="last")].sort_index()
+        IV = vs.reindex(vs.index.union(wk)).ffill(limit=10).reindex(wk).to_numpy()
     # Método Barsi: preço teto = média dos proventos por ação dos últimos 5 anos completos ÷ 6% (só com proventos em 4 dos 5 anos:
     # pagamento regular)
     Y = wk.year.to_numpy(); yrs = sorted(set(Y)); DVn = np.nan_to_num(DV); DPA = np.full((N, len(yrs)), np.nan)
@@ -315,7 +321,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None):
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
             "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -335,10 +341,11 @@ def data():
             try: ibov = history.get("IBOV", "m")
             except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
             fj = (snapshots.load("fund")[0]) or {}; fund = fj.get("a") or {}  # balanços anuais: venda ocasional (REGRAS); saida: motivo da saída da bolsa
+            idiv = (((snapshots.load("b3_idx_hist")[0]) or {}).get("s") or {}).get("IDIV")  # referência IDIV (série da B3)
             news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0])  # Fatos Relevantes da CVM + notícias com tickers
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
-                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news, fj.get("saida")); _D["key"] = snap.get("fetched_at")
+                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news, fj.get("saida"), idiv); _D["key"] = snap.get("fetched_at")
         snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
@@ -527,7 +534,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
 
 def simulate_ref(D, rid, me, ap, wd, rec=False):
     """Referência (CDB ou Ouro) com os mesmos aportes e retiradas dos modelos. -> valor final (nan sem dado) e as linhas mensais."""
-    s, e = me[0], me[-1]; meset = {w: j for j, w in enumerate(me)}; G = D["IB"] if rid == "ibov" else D["G"]; px = rid != "cdb"  # ouro/Ibovespa: compra cotas
+    s, e = me[0], me[-1]; meset = {w: j for j, w in enumerate(me)}; px = rid in REF_SERIE; G = D[REF_SERIE[rid]] if px else D["G"]  # ouro/índices: compra cotas
     g0 = next((i for i in range(s, e + 1) if not np.isnan(G[i])), None) if px else s
     if g0 is None: return {"v": float("nan"), "rows": [] if rec else None}
     # ouro sem cotação no início do período: os aportes esperam (sem rendimento) e compram na 1ª semana com preço (nota em _refs)
@@ -773,7 +780,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 3  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 4  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
