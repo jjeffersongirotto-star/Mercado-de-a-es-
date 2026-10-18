@@ -127,6 +127,14 @@ def dividends_declared(z, year):
         out.update(acc)
     return out
 
+def nao_fin(ds305):
+    """Empresa não financeira: a conta 3.05 da DRE é "Resultado Antes do Resultado Financeiro…" (banco/seguradora usa outra)."""
+    return "Financeiro" in (ds305 or "")
+
+def divida_liquida(bal):
+    """Dívida líquida = empréstimos e financiamentos (2.01.04 + 2.02.01) − caixa e aplicações (1.01.01 + 1.01.02)."""
+    return (bal.get("2.01.04") or 0) + (bal.get("2.02.01") or 0) - (bal.get("1.01.01") or 0) - (bal.get("1.01.02") or 0)
+
 def pivot(df, flt):
     d = df[flt]
     return {(c, k): v for c, k, v in zip(d["CNPJ_CIA"], d["CD_CONTA"], d["v"])}
@@ -240,28 +248,28 @@ def main(outdir, cache):
         if (cnpj, "3.01") not in FY: continue
         if cnpj not in cache_co: cache_co[cnpj] = acc(cnpj)
         flow, bal, ref = cache_co[cnpj]
-        fin = "Financeiro" not in (ds305.get(cnpj) or "")
+        fin = not nao_fin(ds305.get(cnpj))
         rev, gross, ebit, ni = flow["3.01"], flow["3.03"], flow["3.05"], flow["3.11.01"] if g0(FY, cnpj, "3.11.01") else flow["3.11"]
         ebit_adj = (gross + (flow["3.04.01"] or 0) + (flow["3.04.02"] or 0)) if gross is not None and not fin else None
         assets, eq = bal["1"], bal["2.03"]
         cash = (bal["1.01.01"] or 0) + (bal["1.01.02"] or 0)
-        debt = (bal["2.01.04"] or 0) + (bal["2.02.01"] or 0)
+        dl = divida_liquida(bal)
         sh = shares.get(cnpj)
         div = lambda a, b, m=1.0: round(a / b * m, 4) if a is not None and b not in (None, 0) else None
         r = {"cnpj": cnpj, "ref": ref, "fin": fin,
              "_rev": rev, "_ebit": None if fin else ebit, "_ebit_adj": ebit_adj, "_ni": ni, "_assets": assets, "_eq": eq,
-             "_netdebt": None if fin else debt - cash, "_shares": sh,
+             "_netdebt": None if fin else dl, "_shares": sh,
              "roe": div(ni, eq, 100) if eq and eq > 0 else None, "roa": div(ni, assets, 100),
              "lpa": div(ni, sh), "vpa": div(eq, sh)}
         if not fin:
              inv = (assets or 0) - (bal["2.01.02"] or 0) - cash
              r.update({"mbruta": div(gross, rev, 100), "mebit": div(ebit, rev, 100), "mebit_adj": div(ebit_adj, rev, 100),
                        "mliq": div(ni, rev, 100), "liqcorr": div(bal["1.01"], bal["2.01"]),
-                       "dlpl": div(debt - cash, eq) if eq and eq > 0 else None, "dlebit": div(debt - cash, ebit) if ebit and ebit > 0 else None,
+                       "dlpl": div(dl, eq) if eq and eq > 0 else None, "dlebit": div(dl, ebit) if ebit and ebit > 0 else None,
                        "roic": div(ebit, inv, 100) if inv > 0 else None, "roic_adj": div(ebit_adj, inv, 100) if inv > 0 else None})
              # EBITDA = EBIT (3.05, 12 meses) + depreciação/amortização (DFC, 12 meses); Dív. líq./EBITDA só com EBITDA positivo
              ebitda = ebit + flow["da"] if ebit is not None and flow.get("da") is not None else None
-             r.update({"_ebitda": ebitda, "dlebitda": div(debt - cash, ebitda) if ebitda and ebitda > 0 else None})
+             r.update({"_ebitda": ebitda, "dlebitda": div(dl, ebitda) if ebitda and ebitda > 0 else None})
         # payout do último exercício (DFP): dividendos + JCP declarados ÷ lucro da controladora
         dv, nfy = DIV_F.get(cnpj), FY.get((cnpj, "3.11.01")) if g0(FY, cnpj, "3.11.01") else FY.get((cnpj, "3.11"))
         if dv and dv > 0 and nfy and nfy > 0: r["payout"] = round(dv / nfy * 100, 2)

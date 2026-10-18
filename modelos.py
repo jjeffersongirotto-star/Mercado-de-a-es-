@@ -5,6 +5,7 @@ Aportes e retiradas entram no último pregão de cada mês (mês 1 = valor inici
 Imposto: 15% do lucro líquido das vendas do mês quando as vendas passam de R$ 20 mil; prejuízo compensa os meses seguintes.
 Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de R$ 50 mil, ou o % escolhido)."""
 import gc, hashlib, json, os, threading, time, unicodedata, warnings, zlib
+import valor_justo
 from collections import OrderedDict
 import numpy as np
 
@@ -64,7 +65,7 @@ def set_setores(D, rows, cad=None):
             CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 7        # versão das contas (7: notícias e Fatos Relevantes no modo Grupo): invalida resultados guardados
+ENGINE = 8        # versão das contas (8: dívida líquida na nota e na venda): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -73,11 +74,11 @@ REGRAS = {"max": 30, "liq": 1e6, "conc": 3, "min_compra": 100.0, "venda": True}
 VENDA = {"pl_prej": .15, "setor_crise": .40, "hist_anos": 10, "hist_lucro": .8, "posse": 52, "sem_recompra": 52, "queda": .30,
          "limite": 1.5, "crise_dd": .25, "crise_anos": 3, "medo_extremo": 25}
 # Venda por pontos (_venda): problemas somam, margem desconta; vende quando problemas − margem ≥ VENDA['limite']
-VPROB = {"prej_grande": 2.0, "prej2": 1.0, "prej": .5, "sem_prov": 1.5, "corte": 1.5}
+VPROB = {"prej_grande": 2.0, "prej2": 1.0, "prej": .5, "sem_prov": 1.5, "corte": 1.5, "divida": 1.0}
 VMARG = {"nota": 25.0, "porte": (0, 0, .5, 1.0), "forte": 1.0, "setor": 1.0, "mercado": 1.0}  # nota: (nota − 50) ÷ 25; porte: pequena…gigante
 # Nota de qualidade 0–100 (_fund_mats + proventos em build): pesos das partes, referências que valem nota cheia, faixas de porte
-NOTA = {"pesos": {"porte": .25, "roe": .20, "margem": .10, "constancia": .25, "cresc": .10, "proventos": .10},
-        "roe": .15, "margem": .10, "cresc": .20, "porte": (.4, .7, .9), "porte_min": 10, "min_qw": .5, "min_compra": 30}
+NOTA = {"pesos": {"porte": .20, "roe": .20, "margem": .10, "constancia": .20, "cresc": .10, "proventos": .10, "divida": .10},
+        "roe": .15, "margem": .10, "cresc": .20, "div_ok": 1.0, "porte": (.4, .7, .9), "porte_min": 10, "min_qw": .5, "min_compra": 30}
 PORTE_N = ("pequena", "média", "grande", "gigante")
 # Notícias (_news_mats): peso do fato oficial (Fato Relevante da CVM) e de jornal; suposição/previsão só como contexto (peso e limite
 # por semana); janela de semanas lida pelos modelos (só as já publicadas); nota ≤ 'ruim' bloqueia compra e vira problema na venda
@@ -112,10 +113,13 @@ def _fund_mats(tick, wk, fund):
     PREJ = prejuízo no último balanço (base da crise do setor, em set_setores);
     QY = parte da nota de qualidade que vem dos balanços (NOTA; 0–1, soma ponderada) e QW = soma dos pesos usados — medida até antes
     da sequência atual de prejuízos (a empresa é julgada pelo que era antes da crise; os prejuízos entram como problema em _venda);
-    PORTE = 0 pequena, 1 média, 2 grande, 3 gigante (receita entre as empresas do mesmo ano; -1 sem dado)."""
+    PORTE = 0 pequena, 1 média, 2 grande, 3 gigante (receita entre as empresas do mesmo ano; -1 sem dado);
+    DIV = dívida líquida ÷ EBITDA acima do alerta do card (valor_justo.FAIR['al_dlebitda']) e maior que no balanço anterior;
+    DLX = essa razão no último balanço (texto do motivo; inf = EBITDA negativo com dívida). Bancos e seguradoras: sem dívida (fund sem dl)."""
     N, T = len(tick), len(wk); z = lambda: np.zeros((N, T), bool)
     PREJ2, GRANDE, FORTE, PREJ, TEM = z(), z(), z(), z(), z()
     QY = np.full((N, T), np.nan, np.float32); QW = np.zeros((N, T), np.float32); PORTE = np.full((N, T), -1, np.int8)
+    DIV = z(); DLX = np.full((N, T), np.nan, np.float32); lim = valor_justo.FAIR["al_dlebitda"]  # limite do alerta ⚠️ do card
     fa = lambda v: np.array([np.nan if x is None else x for x in v or []], float)
     F, byy = {}, {}
     for k, t in enumerate(tick):
@@ -131,7 +135,13 @@ def _fund_mats(tick, wk, fund):
         ni = np.array([np.nan if x in (None, 0) else x for x in f["ni"]], float); eq = fa(f.get("eq")); rev = fa(f.get("rev"))
         if len(eq) != len(ni): eq = np.full(len(ni), np.nan)
         if len(rev) != len(ni): rev = np.full(len(ni), np.nan)
-        per = {}  # por balanço j: (QY, QW, PORTE, FORTE, PREJ2, GRANDE)
+        dl, eb = fa(f.get("dl")), fa(f.get("eb"))
+        if len(dl) != len(ni): dl = np.full(len(ni), np.nan)
+        if len(eb) != len(ni): eb = np.full(len(ni), np.nan)
+        with np.errstate(invalid="ignore", divide="ignore"):  # dívida líquida ÷ EBITDA (caixa líquido: ≤ 0; EBITDA ≤ 0 com dívida: inf)
+            dx = np.where(dl <= 0, np.minimum(dl / np.where(eb > 0, eb, 1), 0), np.where(eb > 0, dl / eb, np.inf))
+        dx[np.isnan(dl)] = np.nan
+        per = {}  # por balanço j: (QY, QW, PORTE, FORTE, PREJ2, GRANDE, DIV, DLX)
         for j in range(len(ni)):
             e = j  # histórico antes da sequência atual de prejuízos (Petrobras 2014–15 é julgada pelos anos bons de antes)
             while e >= 0 and ni[e] < 0: e -= 1
@@ -160,11 +170,13 @@ def _fund_mats(tick, wk, fund):
                 if len(h10) >= 4: add(P_["constancia"], (h10 > 0).mean())
                 ok = np.flatnonzero(r5 > 0)
                 if len(ok) >= 3 and ok[-1] > ok[0]: add(P_["cresc"], .5 + ((r5[ok[-1]] / r5[ok[0]]) ** (1 / (ok[-1] - ok[0])) - 1) / NOTA["cresc"])
-            per[j] = (q, qw, po, fo, p2, gr)
+                if not np.isnan(dx[e]): add(P_["divida"], (lim - dx[e]) / (lim - NOTA["div_ok"]))  # até 1× nota cheia; no limite do alerta, zero
+            dv = bool(dx[j] > lim and j >= 1 and (np.isnan(dx[j - 1]) or dx[j] > dx[j - 1]))  # dívida acima do alerta e subindo
+            per[j] = (q, qw, po, fo, p2, gr, dv, dx[j])
         for i in np.flatnonzero(jl >= 0):
             j = jl[i]; TEM[k, i] = not np.isnan(ni[j]); PREJ[k, i] = ni[j] < 0
-            QY[k, i], QW[k, i], PORTE[k, i], FORTE[k, i], PREJ2[k, i], GRANDE[k, i] = per[j]
-    return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM, "QY": QY, "QW": QW, "PORTE": PORTE}
+            QY[k, i], QW[k, i], PORTE[k, i], FORTE[k, i], PREJ2[k, i], GRANDE[k, i], DIV[k, i], DLX[k, i] = per[j]
+    return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM, "QY": QY, "QW": QW, "PORTE": PORTE, "DIV": DIV, "DLX": DLX}
 
 
 _VOCN = None
@@ -853,6 +865,10 @@ def _venda(D, mid, idx, i, sh, basis, P, ok, age):
     prob(p2 & ~gr, VPROB["prej2"], "prejuízo em 2 balanços seguidos")
     prob(g("PREJ") & ~p2, VPROB["prej"], "prejuízo no último balanço")
     prob((DVn.sum(axis=1) <= 0) & (P < (1 - VENDA["queda"]) * pm), VPROB["sem_prov"], "sem proventos há 2 anos e 30% abaixo do preço médio")
+    if FM and "DIV" in FM:
+        dx = FM["DLX"][idx, j]
+        for q in np.flatnonzero(FM["DIV"][idx, j] & held):
+            pr[q] += VPROB["divida"]; txt[q].append("dívida com EBITDA negativo e subindo" if np.isinf(dx[q]) else f"dívida {dx[q]:.1f}× o EBITDA e subindo".replace(".", ","))
     if mid == "barsi":
         med5 = D["TETO"][idx, j] * BARSI_DY
         corte = (np.nan_to_num(DVn.sum(axis=1) / 2) < 0.5 * np.nan_to_num(med5, nan=0)) & ~np.isnan(med5)
