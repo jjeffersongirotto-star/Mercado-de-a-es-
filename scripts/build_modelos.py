@@ -133,6 +133,7 @@ def main(out):
         v, dd = V[t].reindex(c.index), divs(out, t, c.index); dv = dd["dv"]
         X = features(c, v, dv, mi, mk)
         X["liq"] = liq[t].reindex(c.index).fillna(False).astype(bool)
+        X["vl"] = v.rolling(60, min_periods=20).mean() / 1000  # volume médio diário de 60 pregões (R$ mil): liquidez da época (modelos.REGRAS)
         wd = X.index[X.index.isin(C.index.to_series().groupby(C.index.to_period("W-FRI")).transform("max"))]
         Xw = X.loc[wd]; Xw.index = pd.MultiIndex.from_arrays([Xw.index, [t] * len(Xw)])
         rows.append(Xw)
@@ -158,7 +159,7 @@ def main(out):
              # JCP por ação na semana (o modelo desconta 15% de IR na fonte) e tipos dos proventos da B3 na semana (J, D, R, K)
              "jc": {str(i - i0): round(float(x), 6) for i, x in enumerate(dw["J"].to_numpy()) if x > 0 and i >= i0},
              "tp": {str(i - i0): "".join(c for c, x in zip(TC, r) if x > 0) for i, r in enumerate(dw[TC].to_numpy()) if i >= i0 and r.max() > 0},
-             "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000), "lp": lucro(FD.get(t), W[i0:])}
+             "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000), "lp": lucro(FD.get(t), W[i0:]), "vl": [None if x != x else int(round(x)) for x in Xw.vl]}
         for H, k in zip(HS, ("p1", "p3")):
             p = pred[H].xs(t, level=1) if t in pred[H].index.get_level_values(1) else pd.Series(dtype=float)
             a[k] = q(p.reindex(W, method="ffill", limit=2).iloc[i0:], 1000)
