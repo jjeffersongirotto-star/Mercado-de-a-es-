@@ -15,4 +15,5 @@
     <dimen name="sim_pv">76dp</dimen>
     <dimen name="sim_d">60dp</dimen>
     <dimen name="sim_q">50dp</dimen>
+    <dimen name="sim_emp">96dp</dimen>
 </resources>

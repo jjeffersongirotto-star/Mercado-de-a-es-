@@ -1149,7 +1149,8 @@ def api_modelos_simgrupo(body: dict):
     b = body or {}
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
-        out = modelos.simgrupo(D, [r["ticker"] for r in rows], str(b.get("di") or "")[:7], b.get("v0"))
+        di, v0, ap, ex, ret = modelos.sim_def(b)  # valor inicial, aporte mensal, aportes e retiradas extras da Previsão
+        out = modelos.simgrupo(D, [r["ticker"] for r in rows], di, v0, ap, ex, ret)
     except Exception:
         log.exception("modelos: grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1165,13 +1166,14 @@ def api_modelos_simmov(body: dict):
     if tk and not WIDGET_TK.fullmatch(tk): return JSONResponse({"error": "Ticker inválido."}, status_code=400)
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
-        out = modelos.simmov(D, [r["ticker"] for r in rows], str(b.get("di") or "")[:7], b.get("v0"), str(b.get("m") or "")[:24], tk, b.get("off") or 0, b.get("n") or 50)
+        di, v0, ap, ex, ret = modelos.sim_def(b)
+        out = modelos.simmov(D, [r["ticker"] for r in rows], di, v0, str(b.get("m") or "")[:24], tk, b.get("off") or 0, b.get("n") or 50, ap, ex, ret)
     except Exception:
         log.exception("modelos: movimentações do grupo simulação"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
 @app.get("/api/widget/simgrupo")
-def api_widget_simgrupo(di: str = "", v0: float = 0):
+def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = ""):
     """Widget Grupo simulação do app: por modelo, valor aportado, valor atual (posições do modelos.simgrupo — mesmo cálculo e cache
     da aba Grupos — com o preço de agora de /api/data) e variação do dia; e todas as posições (nº de ações, investido, atual).
     Leve: o simgrupo fica em memória por versão dos dados; o resto é soma sobre as linhas já carregadas."""
@@ -1180,7 +1182,10 @@ def api_widget_simgrupo(di: str = "", v0: float = 0):
     if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
-        sg = modelos.simgrupo(D, [r["ticker"] for r in rows], str(di or "")[:7], v0)
+        try: fx = json.loads(f) if f and len(f) <= 8000 else {}  # app 1.17+: aporte mensal, extras e retiradas do grupo ({ap, ex, ret})
+        except Exception: fx = {}
+        _, v0, ap, ex, ret = modelos.sim_def(dict(fx if isinstance(fx, dict) else {}, di=di, v0=v0))
+        sg = modelos.simgrupo(D, [r["ticker"] for r in rows], str(di or "")[:7], v0, ap, ex, ret)
     except Exception:
         log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     if sg.get("error"): return JSONResponse(sg, status_code=400, headers={"Cache-Control": "no-store"})
@@ -1198,7 +1203,7 @@ def api_widget_simgrupo(di: str = "", v0: float = 0):
             pos.append({"t": t, "q": q, "inv": inv, "v": round(val, 2)})
         pos.sort(key=lambda y: -y["v"])
         for y in pos: y["s"] = snapshots.nome_popular(y["t"], (by.get(y["t"]) or {}).get("nome"))
-        out.append({"m": x["m"], "n": x["n"], "ap": sg["v0"], "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
+        out.append({"m": x["m"], "n": x["n"], "ap": sg.get("apT", sg["v0"]), "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
                     "cash": x["cash"], "np": len(pos), "pos": pos})
     out.sort(key=lambda y: -y["v"])
     return JSONResponse({"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out}, headers={"Cache-Control": "no-store"})

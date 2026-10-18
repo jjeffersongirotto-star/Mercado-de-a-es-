@@ -14,10 +14,11 @@ import java.util.Locale;
 public final class SimData {
     private SimData() { }
 
-    /** Um grupo de simulação da aba Grupos: nome (= id), data inicial (AAAA-MM) e valor inicial. */
+    /** Um grupo de simulação da aba Grupos: nome (= id), data inicial (AAAA-MM), valor inicial e (1.17+) f = JSON {ap, ex, ret} com
+     *  aporte mensal, aportes e retiradas extraordinários da Previsão ("" = grupo antigo, só o valor inicial). */
     public static final class Sim {
-        public final String id, name, di; public final double v0;
-        Sim(String id, String name, String di, double v0) { this.id = id; this.name = name; this.di = di; this.v0 = v0; }
+        public final String id, name, di, f; public final double v0;
+        Sim(String id, String name, String di, double v0, String f) { this.id = id; this.name = name; this.di = di; this.v0 = v0; this.f = f; }
     }
 
     /** Uma posição de um modelo: ticker, nome popular (ou null), nº de ações, valor investido e valor atual. */
@@ -47,9 +48,11 @@ public final class SimData {
                 JSONObject o = a.getJSONObject(i);
                 String id = o.optString("id", ""), n = o.optString("n", id), di = o.optString("di", "");
                 double v0 = o.optDouble("v0", 0);
+                JSONObject fo = o.optJSONObject("f"); String f = fo == null ? "" : fo.toString();
+                if (f.length() > 4000) f = "";
                 if (id.isEmpty() || id.length() > 80 || !di.matches(DI) || !(v0 > 0)) continue;
                 boolean dup = false; for (Sim s : out) if (s.id.equals(id)) dup = true;
-                if (!dup) out.add(new Sim(id, n.isEmpty() ? id : n, di, v0));
+                if (!dup) out.add(new Sim(id, n.isEmpty() ? id : n, di, v0, f));
             }
         } catch (Exception e) { /* sem grupos */ }
         return out;
@@ -61,11 +64,12 @@ public final class SimData {
     public static Sim pick(String sel, List<Sim> ss) { Sim s = find(sel == null ? "" : sel, ss); return s != null ? s : ss.isEmpty() ? null : ss.get(0); }
 
     /** Chave da resposta guardada: muda quando a data ou o valor inicial do grupo mudam (resposta antiga não vale). */
-    public static String key(Sim s) { return s == null ? "" : s.id + "|" + s.di + "|" + s.v0; }
+    public static String key(Sim s) { return s == null ? "" : s.id + "|" + s.di + "|" + s.v0 + (s.f.isEmpty() ? "" : "|" + Integer.toHexString(s.f.hashCode())); }
 
     /** Parâmetros de /api/widget/simgrupo. */
     public static String query(Sim s) {
-        try { return "di=" + java.net.URLEncoder.encode(s.di, "UTF-8") + "&v0=" + new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.ROOT)).format(s.v0); }
+        try { return "di=" + java.net.URLEncoder.encode(s.di, "UTF-8") + "&v0=" + new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.ROOT)).format(s.v0)
+                + (s.f.isEmpty() ? "" : "&f=" + java.net.URLEncoder.encode(s.f, "UTF-8")); }
         catch (Exception e) { return ""; }
     }
 
@@ -140,6 +144,18 @@ public final class SimData {
             if (r.cash >= 0.01) out.add(new Item(Item.CDB, r, null));
         }
         return out;
+    }
+
+    /** " + R$ 500/mês" quando o grupo tem aporte mensal (1.17+), senão "". */
+    public static String monthly(Sim s) {
+        try { double ap = s.f.isEmpty() ? 0 : new JSONObject(s.f).optDouble("ap", 0); return ap > 0 ? " + " + money(ap) + "/mês" : ""; } catch (Exception e) { return ""; }
+    }
+
+    /** Largura da coluna Empresa (dp): só o necessário para o maior nome (ou ticker), entre 56 e 112 dp; nomes maiores quebram em 2 linhas. */
+    public static int empDp(Row r) {
+        int n = 4;
+        for (Pos p : r.pos) { String s = p.s != null && !p.s.isEmpty() ? p.s : p.t; n = Math.max(n, Math.max(s.length(), (int) Math.ceil(p.t.length() * 0.85))); }
+        return Math.max(56, Math.min(112, Math.round(n * 6.6f) + 6));
     }
 
     /** Título do modelo aberto: "Posições atuais · 30 empresas" ou "Tudo no CDB". */

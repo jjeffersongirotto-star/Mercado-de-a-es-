@@ -875,7 +875,7 @@ HOWTO_KEYS = [
     (("carteira", "posicao", "posicoes", "preco medio"), ["Carteira"]),
     (("alerta", "sininho", "avisar", "aviso de preco", "notifica"), ["Favoritos"]),
     (("previsao aluguel", "previsao de aluguel", "aluguel", "alugar"), ["Previsão aluguel"]),
-    (("acoes inteiras", "fracao de acao", "fracoes", "reserva da empresa", "jcp nos modelos", "movimentacoes do modelo", "aplicacao no cdi", "resgate do cdi", "preco medio", "origem/destino", "origem destino", "valor acao", "historico da empresa no modelo", "proventos recebidos"), ["Modelos da Previsão"]),
+    (("acoes inteiras", "fracao de acao", "fracoes", "reserva da empresa", "jcp nos modelos", "movimentacoes do modelo", "aplicacao no cdi", "resgate do cdi", "preco medio", "aporte mensal no grupo simulacao", "retirada no grupo simulacao", "valor aportado", "origem/destino", "origem destino", "valor acao", "historico da empresa no modelo", "proventos recebidos"), ["Modelos da Previsão"]),
     (("modelos da previsao", "modelo de investimento", "modelos de investimento", "rodizio", "algoritmo", "comprar e segurar", "hibrido"), ["Modelos da Previsão"]),
     (("previsao rentab", "rentabilidade", "previsao", "simula", "simulacao", "projecao", "projecoes", "aporte"), ["Previsão rentabilidade"]),
     (("compar",), ["Comparar"]),

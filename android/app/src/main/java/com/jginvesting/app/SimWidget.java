@@ -103,7 +103,7 @@ public class SimWidget extends AppWidgetProvider {
                 android.graphics.Bitmap bm = FavWidget.brandBitmap(c, Math.round((WidgetData.brandRoom(bn, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens));
                 if (bm != null) v.setImageViewBitmap(R.id.s_brand, bm);
             }
-            String sub = s == null ? "" : "Desde " + s.di.substring(5) + "/" + s.di.substring(0, 4) + " · " + SimData.money(s.v0) + " em cada modelo";
+            String sub = s == null ? "" : "Desde " + s.di.substring(5) + "/" + s.di.substring(0, 4) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
             v.setTextViewText(R.id.s_sub, sub);
             v.setViewVisibility(R.id.s_sub, sub.isEmpty() ? View.GONE : View.VISIBLE);
             v.setTextViewText(R.id.s_empty, c.getString(s == null ? R.string.sim_empty : R.string.sim_wait));
@@ -153,11 +153,13 @@ public class SimWidget extends AppWidgetProvider {
         if (it.type == SimData.Item.HEAD) {
             RemoteViews h = new RemoteViews(c.getPackageName(), R.layout.widget_sim_head);
             h.setTextViewText(R.id.h_ph, SimData.head(r));
+            if (Build.VERSION.SDK_INT >= 31) h.setViewLayoutWidth(R.id.h_emp, SimData.empDp(r), android.util.TypedValue.COMPLEX_UNIT_DIP);
             h.setOnClickFillInIntent(R.id.h_open, tap("so", sid, r.m));
             return h;
         }
         if (it.type == SimData.Item.POS || it.type == SimData.Item.CDB) {
             RemoteViews pv = new RemoteViews(c.getPackageName(), R.layout.widget_sim_pos);
+            if (Build.VERSION.SDK_INT >= 31) pv.setViewLayoutWidth(R.id.p_emp, SimData.empDp(r), android.util.TypedValue.COMPLEX_UNIT_DIP);  // Android 7–11: 96 dp
             if (it.type == SimData.Item.CDB) {
                 pv.setTextViewText(R.id.p_name, "Caixa no CDB"); pv.setViewVisibility(R.id.p_t, View.GONE);
                 pv.setTextViewText(R.id.p_q, ""); pv.setTextViewText(R.id.p_inv, "");

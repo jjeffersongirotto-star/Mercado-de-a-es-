@@ -291,18 +291,26 @@ if (typeof document !== 'undefined') {
     el('pvDi').value = st.di; el('pvDf').value = st.df; compute(); save();
     if (st.ticker === '*' && st.di && !st.df && window.gSim) askSim();  // Todos + data inicial + data final vazia: oferece o Grupo simulação
   });
+  // Todos + Data final já em "Hoje (em andamento)": tocar no campo pergunta antes (Sim = cria o grupo; Não = abre o seletor de data)
+  el('pvDf')._udBefore = async () => {  // ui.js → uiDateField: true = abre o calendário do site
+    if (!(st.ticker === '*' && st.di && !st.df && window.gSim)) return true;
+    if (await uiConfirm(simTxt(), { title: 'Deseja criar grupo de simulação?', ok: 'Sim', cancel: 'Não' })) { askSim(true); return false; }
+    return true;
+  };
   // Grupo simulação: uma carteira por modelo desde a data inicial, com o Valor inicial; continua sozinho até hoje (aba Grupos)
-  async function askSim() {
-    if (document.querySelector('.umod')) return;  // já há um diálogo aberto
+  // o grupo guarda as entradas da Previsão: valor inicial, aporte mensal, aportes e retiradas extraordinários (servidor: modelos.sim_flows)
+  const simRows = (L) => L.filter(x => x.ok).map(x => ({ t: x.t || 'm', m: x.m, v: x.v, n: x.n || 0 }));
+  const simTxt = () => `Cada modelo começa com ${brl.format(st.ini)} em ${dataBR(st.di)}${st.ap > 0 ? ` e recebe ${brl.format(st.ap)} por mês` : ''}${simRows(st.ex).length ? ', mais os aportes extraordinários' : ''}${simRows(st.ret).length ? ', com as retiradas extraordinárias' : ''}, e segue as próprias regras até hoje, atualizando sozinho. O grupo fica na aba Grupos.`;
+  async function askSim(sure) {
+    if (!sure && document.querySelector('.umod')) return;  // já há um diálogo aberto
     if (!(st.ini > 0)) { uiAlert('Para criar o Grupo simulação, preencha o Valor inicial.'); return; }
-    if (!(await uiConfirm(`Cada modelo começa com ${brl.format(st.ini)} em ${dataBR(st.di)} e segue as próprias regras até hoje, atualizando sozinho. O grupo fica na aba Grupos.`,
-      { title: 'Criar grupo de simulação?', ok: 'Criar', cancel: 'Agora não' }))) return;
+    if (!sure && !(await uiConfirm(simTxt(), { title: 'Criar grupo de simulação?', ok: 'Criar', cancel: 'Agora não' }))) return;
     let name = 'Grupo simulação';
     if (gSim.has(name)) {
       const nx = gSim.next(name), c = await uiChoose(`Já existe "${name}".`, [{ label: 'Substituir', value: 'rep' }, { label: `Criar "${esc(nx)}"`, value: 'new' }]);
       if (!c) return; if (c === 'new') name = nx;
     }
-    gSim.create(name, { di: st.di, v0: st.ini });
+    gSim.create(name, { di: st.di, v0: st.ini, ap: st.ap || 0, ex: simRows(st.ex), ret: simRows(st.ret) });
     uiToast(`"${name}" criado na aba Grupos`);
   }
   el('pvOldest').addEventListener('click', () => { const t = el('pvOldest').dataset.tip; if (t) uiAlert(t); });
@@ -602,7 +610,7 @@ if (typeof document !== 'undefined') {
   const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b></td><td>${F0.format(x.q)}</td><td>${brl.format(x.pm != null ? x.pm : x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
   function simHtml(r) {
     const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('');
-    return tiles([['Investido', brl.format(r.v0), 'desde ' + dataBR(r.d0)], ['Hoje', brl.format(r.v), `<span class="pct ${pclr(r.pct)}">${pc(r.pct)}</span>`],
+    return tiles([['Aportado', brl.format(r.apT != null ? r.apT : r.v0), r.apT != null && r.apT !== r.v0 ? `${brl.format(r.v0)} iniciais${r.ap > 0 ? ` + ${brl.format(r.ap)}/mês` : ''}${r.wS > 0 ? ` − ${brl.format(r.wS)} retirados` : ''}` : 'desde ' + dataBR(r.d0)], ['Hoje', brl.format(r.v), `<span class="pct ${pclr(r.pct)}">${pc(r.pct)}</span>`],
         ['Compras / vendas', `${F0.format(r.c)} <span class="s2">/</span> ${F0.format(r.s)}`], ['Imposto', brl.format(r.ir)],
         ['Posição', `${r.np} empresa${r.np === 1 ? '' : 's'}`, `+ ${brl.format(r.cash)} no CDB`, 'w2']]) + `<p class="sumd">dados até ${dataBR(r.d1)}</p>
       <p class="pvd-note">Toque numa empresa para ver as compras, vendas e proventos dela.</p>

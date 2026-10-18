@@ -52,7 +52,7 @@ def set_setores(D, rows, cad=None):
     bs = {r["ticker"] for r in rows if perene(r, cad)}
     if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 3        # versão das contas (3: preço médio, proventos por empresa, preço da ação no provento): invalida resultados guardados
+ENGINE = 4        # versão das contas (4: aportes mensais/extras e retiradas no Grupo simulação): invalida resultados guardados
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -630,7 +630,7 @@ def _gtargets(D, mid, idx, i):
         top=np.argsort(-sc)[:GRUPO_K]; w=np.zeros(n); w[top[np.isfinite(sc[top])]]=1
     else: w=(_signals(D,mid,idx,i)&ok).astype(float)
     s=w.sum(); return (w/s if s>0 else w)
-def grupo(D, mid, idx, me, ap, rec=False):
+def grupo(D, mid, idx, me, ap, rec=False, wd=None):
     """Modo Grupo (Comparar e Grupo simulação): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
     Ações inteiras: o dinheiro destinado a cada empresa fica numa reserva dela, rendendo CDB, até dar para comprar pelo menos 1 ação;
     se a empresa sai do alvo, a reserva volta ao caixa. -> valor final, IR, compras, vendas (rec: + movimentações uma a uma e posição)."""
@@ -666,6 +666,17 @@ def grupo(D, mid, idx, me, ap, rec=False):
             cash-=tax+dt;ir+=tax+dt;msales=mgain=mdiv=0
             if cash<0 and pend.sum()>0:  # imposto maior que o caixa: sai das reservas
                 tk=min(-cash,pend.sum());pend*=1-tk/pend.sum();cash+=tk
+            wv=float(wd[j]) if wd is not None and j<len(wd) else 0.0
+            if wv>0:  # retirada (Grupo simulação): caixa, depois as reservas, depois vende ações inteiras de todas na mesma proporção
+                if cash<wv and pend.sum()>0: tk=min(wv-cash,pend.sum());pend*=1-tk/pend.sum();cash+=tk
+                val=sh*P*(1-CUSTO);tv=val.sum()
+                if cash<wv and tv>0:
+                    q=np.minimum(sh,np.ceil(sh*min(1.0,(wv-cash)/tv)-1e-9));v=q*P*(1-CUSTO);f=np.where(sh>0,q/np.where(sh>0,sh,1),0);b=basis*f;g=v-b
+                    if rec:
+                        for k in np.flatnonzero(q>0): ev.append({"d":W[i],"k":"venda","t":nm[idx[k]],"q":int(q[k]),"p":round(float(P[k]),2),"v":round(float(v[k]),2),"pct":round(float(g[k]/b[k]*100),2) if b[k]>0 else None,"x":"para a retirada"})
+                    cash+=v.sum();msales+=(q*P).sum();mgain+=g.sum();ns+=int((q>0).sum());sh=sh-q;basis=basis-b  # preço médio não muda
+                wp=min(wv,max(0.0,cash));cash-=wp
+                if rec and wp>=0.005: ev.append({"d":W[i],"k":"retirada","v":round(float(wp),2)})
             a=ap[j] if j<len(ap) else 0;cash+=a
             if rec and tax+dt>=0.005: ev.append({"d":W[i],"k":"imposto","v":round(float(tax+dt),2)})
             if rec and a>0: ev.append({"d":W[i],"k":"aporte","v":round(float(a),2),"x":"aporte do mês"})
@@ -689,7 +700,48 @@ def grupo(D, mid, idx, me, ap, rec=False):
     return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
 
 
-def simgrupo(D, tickers, di, v0):
+def _rule(rows, m):
+    """Regras das linhas extras da Previsão (previsao.js → apAt/wAt): 'm' mensal (vale do mês indicado até a próxima; 0 encerra),
+    'u' única (no mês), 'p' por período (a cada n meses a partir do mês) -> (regular mensal ou None, extra do mês)."""
+    reg, extra = None, 0.0
+    for r in sorted(rows, key=lambda r: r["m"]):
+        t = r.get("t") or "m"
+        if t == "m" and r["m"] <= m: reg = r["v"]
+        elif t == "u" and r["m"] == m: extra += r["v"]
+        elif t == "p" and r.get("n", 0) >= 2 and m >= r["m"] and (m - r["m"]) % r["n"] == 0: extra += r["v"]
+    return reg, extra
+
+
+def sim_def(b):
+    """Definição de um Grupo simulação vinda do site/app -> (di, v0, ap mensal, extras, retiradas), validada.
+    Grupos antigos (só di e v0) ficam como estavam: sem aporte mensal nem retiradas."""
+    def rows(x):
+        out = []
+        for r in (x if isinstance(x, list) else [])[:60]:
+            try:
+                t = r.get("t") or "m"; m = int(r["m"]); v = max(0.0, float(r["v"])); n = int(r.get("n") or 0)
+                if t in ("m", "u", "p") and 1 <= m <= 1200 and r.get("ok", True) is not False: out.append({"t": t, "m": m, "v": v, "n": n})
+            except Exception: continue
+        return out
+    b = b or {}
+    try: ap = max(0.0, float(b.get("ap") or 0))
+    except Exception: ap = 0.0
+    try: v0 = max(0.0, float(b.get("v0") or 0))
+    except Exception: v0 = 0.0
+    return str(b.get("di") or "")[:7], v0, ap, rows(b.get("ex")), rows(b.get("ret"))
+
+
+def sim_flows(v0, ap, ex, ret, n):
+    """Aportes e retiradas de cada mês (mês 1 = valor inicial), a mesma regra de previsao.js → flows: mês com retirada não tem aporte."""
+    a1 = _rule(ex, 1)[1]; aps, wd = [v0 + a1], [0.0]
+    for m in range(2, n + 1):
+        wr, we = _rule(ret, m); W0 = (wr or 0.0) + we
+        ar, ae = _rule(ex, m); A = (ap if ar is None else ar) + ae
+        aps.append(0.0 if W0 > 0 else A); wd.append(W0)
+    return aps, wd
+
+
+def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
     """Grupo simulação (aba Grupos): uma carteira por modelo com as mesmas empresas e o mesmo valor inicial desde di até a última semana
     dos dados (a mesma conta de grupo(), igual ao Comparar/Previsão com data final = hoje). Recalcula do início a cada versão dos dados
     (os preços antigos são ajustados por proventos e desdobramentos) e guarda o resultado em _C."""
@@ -697,19 +749,21 @@ def simgrupo(D, tickers, di, v0):
     if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
     v0 = max(0.0, float(v0 or 0))
     if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
-    key = _simkey(D, tickers, di, v0)
+    aps, wd = sim_flows(v0, ap, list(ex), list(ret), len(me))
+    key = _simkey(D, tickers, di, aps, wd)
     if key in _C: _C.move_to_end(key); return _C[key]
     idx = _simidx(D, tickers, me)
     if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
-    aps = [v0] + [0.0] * (len(me) - 1)
-    pc = lambda v: round((v / v0 - 1) * 100, 2)
-    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "at": D["at"], "n": len(idx), "eng": ENGINE, "m": []}
+    apT = sum(aps) - sum(wd)  # valor aportado: cresce com cada aporte, cai com cada retirada; rendimento sobre ele
+    pc = lambda v: round((v / apT - 1) * 100, 2) if apT > 0 else None
+    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "ap": ap, "apT": round(apT, 2),
+           "apS": round(sum(aps), 2), "wS": round(sum(wd), 2), "at": D["at"], "n": len(idx), "eng": ENGINE, "m": []}
     for m in MODELOS:
-        v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True)
+        v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd)
         _mzput((key, m["id"]), h)  # todas as movimentações, comprimidas: páginas e histórico por empresa em simmov
         out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
                          "cash": h["cash"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"])})
-    out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": r["pct"], "ref": True} for r in _refs(D, me, aps, [0.0] * len(me), v0)]
+    out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": pc(r["v"]) if r["v"] is not None else None, "ref": True} for r in _refs(D, me, aps, wd, apT)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
     _C[key] = out
     while len(_C) > 60: _C.popitem(last=False)
@@ -720,7 +774,7 @@ MOV_SITE = 50  # Grupo simulação: movimentações que vão junto com a simula�
 _MZ = OrderedDict(); MZ_MAX = 12  # (simulação, modelo) -> movimentações e posições em JSON comprimido (~70 KB por modelo em 20 anos)
 
 
-def _simkey(D, tickers, di, v0): return repr(("sim", ENGINE, D["at"], tuple(tickers), di, float(v0)))
+def _simkey(D, tickers, di, aps, wd): return repr(("sim", ENGINE, D["at"], tuple(tickers), di, tuple(round(x, 2) for x in aps), tuple(round(x, 2) for x in wd)))
 
 
 def _simidx(D, tickers, me): return [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
@@ -731,18 +785,19 @@ def _mzput(k, h):
     while len(_MZ) > MZ_MAX: _MZ.popitem(last=False)
 
 
-def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50):
+def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50, ap=0.0, ex=(), ret=()):
     """Movimentações de um modelo do Grupo simulação (mesma conta de simgrupo), das mais recentes para as mais antigas.
     Sem tk: a página [off, off+n) e o total. Com tk: só essa empresa (todas as movimentações dela), a posição (preço médio…) e os
     proventos recebidos. Leve: guardado comprimido; se saiu da memória, refaz só esse modelo."""
     if mid not in MOD or mid not in {m["id"] for m in MODELOS}: return {"error": "Modelo desconhecido."}
     me = _span(D, di, D["fim"]); v0 = max(0.0, float(v0 or 0))
     if len(me) < 2 or v0 <= 0: return {"error": "Simulação inválida."}
-    k = (_simkey(D, tickers, di, v0), mid)
+    aps, wd = sim_flows(v0, ap, list(ex), list(ret), len(me))
+    k = (_simkey(D, tickers, di, aps, wd), mid)
     if k not in _MZ:
         idx = _simidx(D, tickers, me)
         if not idx: return {"error": "Nenhuma empresa no período."}
-        _mzput(k, grupo(D, mid, idx, me, [v0] + [0.0] * (len(me) - 1), rec=True)[4])
+        _mzput(k, grupo(D, mid, idx, me, aps, rec=True, wd=wd)[4])
     _MZ.move_to_end(k); h = json.loads(zlib.decompress(_MZ[k]))
     ev = h["mov"][::-1]
     if tk:

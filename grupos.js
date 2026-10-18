@@ -11,7 +11,7 @@
   const SKEY = 'screenerB3.simgrupo.v3';  // v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
   try { localStorage.removeItem('screenerB3.simgrupo.v1'); localStorage.removeItem('screenerB3.simgrupo.v2'); } catch (e) { }
   const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
-  const simK = (g) => g.sim.di + '|' + g.sim.v0, today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const simK = (g) => JSON.stringify([g.sim.di, g.sim.v0, g.sim.ap || 0, g.sim.ex || [], g.sim.ret || []]), today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
   const saveSim = () => { for (const k in SIM) if (!groups.some(g => g.sim && g.name === k)) delete SIM[k]; try { localStorage.setItem(SKEY, JSON.stringify(SIM)); } catch (e) { } };
   function simData(g) {
     const c = SIM[g.name], ok = c && c.k === simK(g);
@@ -33,14 +33,15 @@
     if (!c) return loaderHTML('Simulando os modelos…');
     if (!c.d) return `<p class="gt-empty">${esc(c.err || '')}</p>`;
     const d = c.d, L = full ? d.m : d.m.filter(x => !x.ref);
-    return `<p class="gt-help">Desde ${dataBR(d.d0)} · ${brl.format(d.v0)} em cada modelo · ${d.n} empresas${full ? ` · dados até ${dataBR(d.d1)}` : ''}</p>
+    const apx = d.apT != null && d.apT !== d.v0 ? ` · aportado até hoje ${brl.format(d.apT)}` : '';
+    return `<p class="gt-help">Desde ${dataBR(d.d0)} · ${brl.format(d.v0)}${d.ap > 0 ? ` + ${brl.format(d.ap)}/mês` : ''} em cada modelo${apx} · ${d.n} empresas${full ? ` · dados até ${dataBR(d.d1)}` : ''}</p>
       <table class="gtab gsim"><thead><tr><th>Modelo</th><th>Rendimento</th><th>Hoje</th></tr></thead><tbody>${L.map(x => `<tr class="${x.ref ? '' : 'tap'}"${x.ref ? '' : ` data-simm="${esc(g.name)}|${x.m}"`}><td style="white-space:normal">${esc(modN(x))}${x.ref ? '' : `<span class="gsub">${x.np} empresa(s)</span>`}</td>
       <td class="${x.pct == null ? '' : x.pct < 0 ? 'neg' : 'pos'}">${x.pct == null ? '—' : pc(x.pct)}</td><td>${x.v == null ? '—' : brl.format(x.v)}</td></tr>`).join('')}</tbody></table>`;
   }
   window.gSim = {
     has: (n) => groups.some(g => g.name === n),
     next: (n) => { let i = 2; while (groups.some(g => g.name === `${n} ${i}`)) i++; return `${n} ${i}`; },
-    create: (name, sim) => { groups = groups.filter(g => g.name !== name); delete SIM[name]; groups.push({ name, tickers: [], sim: { di: sim.di, v0: sim.v0 }, updated: new Date().toISOString() }); groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); saveSim(); },
+    create: (name, sim) => { groups = groups.filter(g => g.name !== name); delete SIM[name]; groups.push({ name, tickers: [], sim: { di: sim.di, v0: sim.v0, ap: sim.ap || 0, ex: sim.ex || [], ret: sim.ret || [] }, updated: new Date().toISOString() }); groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); saveSim(); },
   };
   let editing = null, viewing = null;
 
@@ -440,9 +441,9 @@
   // tk (widget 1.16+: toque numa empresa): janela só com essa empresa dentro do modelo (previsao.js → pvSimCompany)
   function simModal(gn, mid, tk) {
     const g = groups.find(y => y.sim && y.name === gn), c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x || !g) return false;
-    const src = { di: g.sim.di, v0: g.sim.v0, m: mid };
+    const src = Object.assign({}, g.sim, { m: mid });
     if (tk) { pvSimCompany(src, tk, `${esc(tk)} · ${esc(x.n)}`); return true; }
-    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, src }, x)) }); return true;
+    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, src }, x)) }); return true;
   }
   window.jgOpenSim = function (gn, mid, n, tk) {
     n = n || 0; const g = groups.find(x => x.sim && x.name === gn); if (!g) return;
@@ -454,7 +455,7 @@
   // App 1.15+: grupos de simulação (nome, data inicial e valor inicial) para o widget Grupo simulação, que pede /api/widget/simgrupo
   function pushSims() {
     if (!window.JGApp || !window.JGApp.setSims) return;
-    try { window.JGApp.setSims(JSON.stringify(groups.filter(g => g.sim).map(g => ({ id: g.name, n: g.name, di: g.sim.di, v0: g.sim.v0 })))); } catch (e) { }
+    try { window.JGApp.setSims(JSON.stringify(groups.filter(g => g.sim).map(g => ({ id: g.name, n: g.name, di: g.sim.di, v0: g.sim.v0, f: { ap: g.sim.ap || 0, ex: g.sim.ex || [], ret: g.sim.ret || [] } })))); } catch (e) { }
   }
   // App Android (window.JGApp): manda os grupos da aba Grupos (mesmas ações e ordem dos quadros: groupData) para o seletor do widget
   function pushGroups() {

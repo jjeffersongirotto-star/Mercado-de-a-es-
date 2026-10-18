@@ -316,6 +316,27 @@ def test_simmov_paginas_empresa_e_preco_medio():
     modelos._C.clear(); modelos._MZ.clear()
 
 
+def test_grupo_simulacao_aportes_e_retiradas():
+    """Grupo simulação com as entradas da Previsão: aporte mensal, extras e retiradas -> valor aportado, linhas no histórico, % sobre o aportado."""
+    aps, wd = modelos.sim_flows(12000, 500, [{"t": "u", "m": 3, "v": 1000, "n": 0}, {"t": "m", "m": 7, "v": 0, "n": 0}], [{"t": "u", "m": 5, "v": 2000, "n": 0}], 8)
+    assert aps == [12000, 500, 1500, 500, 0, 500, 0, 0] and wd == [0, 0, 0, 0, 2000, 0, 0, 0]  # mês com retirada não aporta; mensal 0 encerra
+    assert modelos.sim_def({"di": "2020-02", "v0": "12000", "ap": 500, "ex": [{"t": "x", "m": 1, "v": 1}, {"m": 2, "v": 5, "ok": False}], "ret": "lixo"}) == ("2020-02", 12000.0, 500.0, [], [])
+    D = modelos.build(_sim_snap(NW), cdi(0.03)); tk = D["tick"]; modelos._C.clear(); modelos._MZ.clear()
+    r0 = modelos.simgrupo(D, tk, "2020-02", 12000)
+    r = modelos.simgrupo(D, tk, "2020-02", 12000, 500, [], [{"t": "u", "m": 10, "v": 3000, "n": 0}])
+    me = modelos._span(D, "2020-02", D["fim"]); a, w = modelos.sim_flows(12000, 500, [], [{"t": "u", "m": 10, "v": 3000, "n": 0}], len(me))
+    assert r["apT"] == round(sum(a) - sum(w), 2) and r["apT"] > r0["apT"] == 12000 and r0["m"][0]["v"] != r["m"][0]["v"]
+    for x in r["m"]:
+        if x.get("ref") or x["v"] is None: continue
+        assert abs(x["pct"] - (x["v"] / r["apT"] - 1) * 100) < 0.01
+        h = modelos.grupo(D, x["m"], [0, 1, 2], me, a, rec=True, wd=w)[4]
+        assert sum(1 for e in h["mov"] if e["k"] == "aporte") == sum(1 for v in a if v > 0)
+        rt = [e for e in h["mov"] if e["k"] == "retirada"]; assert len(rt) == 1 and abs(rt[0]["v"] - 3000) < 0.01, x["m"]
+        assert abs(sum(p["v"] for p in h["pos"]) + h["cash"] - x["v"]) < 0.05
+        assert all(abs(p["pm"] * p["q"] - p["inv"]) < 0.02 * p["q"] + 0.01 for p in h["pos"])
+    modelos._C.clear(); modelos._MZ.clear()
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

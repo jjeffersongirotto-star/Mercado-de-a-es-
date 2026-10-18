@@ -12,6 +12,10 @@ public class SimDataTest {
                 + "{\"id\":\"x\",\"di\":\"2025\",\"v0\":1},{\"id\":\"y\",\"di\":\"2024-01\",\"v0\":0},{\"id\":\"Barsi 2025\",\"di\":\"2024-01\",\"v0\":5}]");
         assertEquals(1, s.size());
         assertEquals("di=2025-03&v0=12000", SimData.query(s.get(0)));
+        SimData.Sim f = SimData.sims("[{\"id\":\"G\",\"di\":\"2025-03\",\"v0\":12000,\"f\":{\"ap\":500,\"ex\":[],\"ret\":[]}}]").get(0);
+        assertTrue(SimData.query(f).startsWith("di=2025-03&v0=12000&f=%7B"));
+        assertEquals(" + R$ 500,00/mês", SimData.monthly(f)); assertEquals("", SimData.monthly(s.get(0)));  // aporte mensal vai junto (1.17+)
+        assertNotEquals(SimData.key(s.get(0)).replace("Barsi 2025", "G"), SimData.key(f));
         assertSame(s.get(0), SimData.pick("sumiu", s));  // grupo apagado: mostra o primeiro
         assertNull(SimData.pick("", SimData.sims("[]")));
         assertTrue(SimData.sims("lixo").isEmpty());
@@ -34,7 +38,9 @@ public class SimDataTest {
         assertEquals(5, it.size());
         assertEquals(SimData.Item.HEAD, it.get(1).type); assertEquals(SimData.Item.POS, it.get(2).type); assertEquals("CEBR5", it.get(2).pos.t);
         assertEquals(SimData.Item.CDB, it.get(3).type); assertEquals(SimData.Item.ROW, it.get(4).type);
-        assertEquals(2, SimData.items(r, "").size()); assertEquals("Posições atuais · 30 empresas", SimData.head(b)); assertEquals("Tudo no CDB", SimData.head(r.get(1)));
+        assertEquals(2, SimData.items(r, "").size());
+        assertEquals(56, SimData.empDp(b));  // nome curto: só o mínimo
+        b.pos.add(new SimData.Pos("TAEE11", "Transmissora Aliança de Energia", 1, 1, 1)); assertEquals(112, SimData.empDp(b));  // longo: teto (quebra em 2 linhas)
         java.util.HashSet<Long> ids = new java.util.HashSet<>(); for (SimData.Item x : it) ids.add(x.id()); assertEquals(5, ids.size());
         assertNull(r.get(1).dp); assertEquals("—", SimData.dayPct(r.get(1).dp));
         assertTrue(SimData.rows("{}").isEmpty());

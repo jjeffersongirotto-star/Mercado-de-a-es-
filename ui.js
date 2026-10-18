@@ -156,6 +156,7 @@ window.uiDateField = (inp, kind = 'date') => {
   const lbl = () => (inp.closest('label')?.querySelector('span')?.textContent || inp.closest('label')?.firstChild?.textContent || '').trim();
   const open = async () => {
     if (inp.disabled) return;
+    if (inp._udBefore && !(await inp._udBefore())) return;  // pergunta antes do calendário (ex.: Previsão → criar Grupo simulação); false = não abre
     const x = await uiCalendar(v, { min: inp.getAttribute('min') || '', max: inp.getAttribute('max') || '', kind, title: lbl(), empty: inp.dataset.empty || '' });
     if (x != null && x !== v) { inp.value = x; inp.dispatchEvent(new Event('change', { bubbles: true })); }
   };
