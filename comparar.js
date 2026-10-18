@@ -312,7 +312,7 @@
       d.t ? ['Empresas', `${d.t.length} de ${d.pedidas} (com preço no início)`] : null,
       ['Aportado', `${brl.format(d.apT)}${d.t ? ' por empresa' : ''}`],
       ['Rendimento', '(valor final − aportado) ÷ aportado'],
-      o.extra ? ['Dica', o.extra] : null, modRefNote(d) ? ['Obs.', modRefNote(d)] : null].filter(Boolean);
+      o.extra ? ['Dica', o.extra] : null, modRefNote(d) ? ['Obs.', modRefNote(d)] : null, d.aviso ? ['Base', esc(d.aviso.replace(/^Base histórica: /, ''))] : null].filter(Boolean);
     return `<dl class="pv-info">${it.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
   };
   // ---------- Modelos: todos os modelos da Previsão nas empresas escolhidas (simulação do servidor: modelos.compare) ----------

@@ -26,7 +26,10 @@ REF = [
     {"id": "cdb", "n": "CDB", "vende": False, "ref": True,
      "nota": "sem resgate no período: no resgate paga IR de 15% sobre o rendimento (aplicação acima de 2 anos)"},
     {"id": "ouro", "n": "Ouro", "vende": False, "ref": True, "nota": "ouro em reais, custo de 0,3% em cada compra; nunca vende"},
+    {"id": "ibov", "n": "Ibovespa", "vende": False, "ref": True, "nota": "pontos do índice (sem dividendos, como um fundo de índice sem reinvestir), custo de 0,3% em cada compra; nunca vende"},
 ]
+# base dos modelos = empresas listadas hoje: as que saíram da bolsa ou faliram no período não estão -> resultados longos ficam otimistas
+AVISO = "Base histórica: só entram empresas negociadas hoje; as que saíram da bolsa ou faliram no período não estão, o que deixa os resultados de períodos longos otimistas."
 MOD = {m["id"]: m for m in MODELOS + REF}
 # Método Barsi: só setores perenes (fonte única; o chat e o painel ⓘ leem daqui): subsetor do site ou segmento oficial da B3
 PERENE_RX = r"^(Bancos|Energia Elétrica|Água e Saneamento|Seguradoras|Resseguradoras|Corretoras de Seguros|Telecomunicações|Papel e Celulose|Químicos)"
@@ -75,7 +78,7 @@ _lock = threading.Lock()
 _C = OrderedDict()
 
 
-def build(snap, cdi, gold=None):
+def build(snap, cdi, gold=None, ibov=None):
     """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda dt=np.float64: np.full((N, T), np.nan, dtype=dt)
@@ -121,6 +124,10 @@ def build(snap, cdi, gold=None):
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
         G = gs.reindex(gs.index.union(wk)).ffill(limit=10).reindex(wk).to_numpy()
+    IB = np.full(T, np.nan)  # Ibovespa (pontos, fechamento mensal) em cada semana: referência com os mesmos aportes
+    if ibov and ibov.get("t"):
+        bs = pd.Series(ibov["c"], index=pd.to_datetime(ibov["t"], unit="s").normalize(), dtype="float64"); bs = bs[~bs.index.duplicated(keep="last")]
+        IB = bs.reindex(bs.index.union(wk)).ffill(limit=6).reindex(wk).to_numpy()
     # Método Barsi: preço teto = média dos proventos por ação dos últimos 5 anos completos ÷ 6% (só com proventos em 4 dos 5 anos:
     # pagamento regular)
     Y = wk.year.to_numpy(); yrs = sorted(set(Y)); DVn = np.nan_to_num(DV); DPA = np.full((N, len(yrs)), np.nan)
@@ -138,7 +145,7 @@ def build(snap, cdi, gold=None):
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
             "fp": hashlib.sha1(repr(snap.get("fetched_at")).encode() + cdb.tobytes() + np.nan_to_num(G, nan=-1.0).tobytes()).hexdigest()[:16]}
@@ -154,9 +161,11 @@ def data():
         if _D["key"] != snap.get("fetched_at") or _D["d"] is None:
             try: gold = history.gold()
             except Exception: gold = None  # sem ouro: a referência Ouro mostra "—"
+            try: ibov = history.get("IBOV", "m")
+            except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
-                _D["d"] = build(snap, history.bcb("cdi"), gold); _D["key"] = snap.get("fetched_at")
+                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov); _D["key"] = snap.get("fetched_at")
         snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
@@ -254,26 +263,21 @@ F0 = lambda x: f"{x:.0f}"
 
 
 def anual(VM, ap, wd):
-    """Rend. médio anual (%): média simples dos rendimentos de cada bloco de 12 meses a partir do início (Dietz modificado).
-    VM: valor no fim de cada mês (meses × empresas), mês 1 = aporte inicial. Bloco k: do fim do mês 12k ao fim do mês 12k+12;
-    rendimento = (valor final − valor inicial − aportes líquidos) ÷ (valor inicial + aportes líquidos × fração do bloco em que ficaram aplicados).
-    1º bloco começa com o aporte inicial (custo da primeira compra conta como perda). Sobra final menor que 12 meses não entra;
-    menos de 12 meses no período: sem valor (nan)."""
+    """TIR anual (%): a taxa que faz os aportes e retiradas de cada mês (mês 1 = valor inicial) chegarem ao valor final
+    (taxa interna de retorno, a mesma conta de um fundo com aportes). VM: valor no fim de cada mês (meses × empresas); usa só o último.
+    Menos de 12 meses no período: sem valor (nan)."""
     VM = np.asarray(VM, dtype=float)
     if VM.ndim == 1: VM = VM[:, None]
-    M = VM.shape[0]; nb = (M - 1) // 12
-    if nb < 1: return np.full(VM.shape[1], np.nan)
+    M = VM.shape[0]
+    if M < 13: return np.full(VM.shape[1], np.nan)
     f = np.array([(ap[j] if j < len(ap) else 0) - (wd[j] if j < len(wd) else 0) for j in range(M)], dtype=float)
-    out = []
-    for k in range(nb):
-        a, b = 12 * k, 12 * k + 12
-        B = np.full(VM.shape[1], f[0]) if k == 0 else VM[a]
-        F = f[a + 1:b + 1]; w = (b - np.arange(a + 1, b + 1)) / 12.0
-        den = B + (w * F).sum()
-        with np.errstate(divide="ignore", invalid="ignore"):
-            out.append(np.where(den > 0, (VM[b] - B - F.sum()) / den * 100, np.nan))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore"); return np.nanmean(np.array(out), axis=0)
+    V = VM[-1]; t = np.arange(M, dtype=float)
+    npv = lambda r: V / (1 + r) ** (M - 1) - (f[:, None] / (1 + r)[None, :] ** t[:, None]).sum(axis=0)  # valor presente líquido
+    lo, hi = np.full(V.shape, -0.99), np.full(V.shape, 1.0)  # taxa mensal entre −99% e +100%
+    for _ in range(80):  # bisseção: o valor presente cai quando a taxa sobe
+        mid = (lo + hi) / 2; up = npv(mid) > 0; lo = np.where(up, mid, lo); hi = np.where(up, hi, mid)
+    r = (lo + hi) / 2; ok = (V > 0) & np.isfinite(V) & (np.abs(npv(r)) < np.maximum(1, np.abs(f).sum()) * 1e-6)
+    return np.where(ok, ((1 + r) ** 12 - 1) * 100, np.nan)
 
 
 def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
@@ -331,15 +335,15 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
 
 def simulate_ref(D, rid, me, ap, wd, rec=False):
     """Referência (CDB ou Ouro) com os mesmos aportes e retiradas dos modelos. -> valor final (nan sem dado) e as linhas mensais."""
-    s, e = me[0], me[-1]; meset = {w: j for j, w in enumerate(me)}; G = D["G"]
-    g0 = next((i for i in range(s, e + 1) if not np.isnan(G[i])), None) if rid == "ouro" else s
+    s, e = me[0], me[-1]; meset = {w: j for j, w in enumerate(me)}; G = D["IB"] if rid == "ibov" else D["G"]; px = rid != "cdb"  # ouro/Ibovespa: compra cotas
+    g0 = next((i for i in range(s, e + 1) if not np.isnan(G[i])), None) if px else s
     if g0 is None: return {"v": float("nan"), "rows": [] if rec else None}
     # ouro sem cotação no início do período: os aportes esperam (sem rendimento) e compram na 1ª semana com preço (nota em _refs)
-    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if rid == "ouro" else G[s], 0.0; vm = []; cj = 0.0
+    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if px else G[s], 0.0; vm = []; cj = 0.0
     for i in range(s, e + 1):
         if rid == "cdb" and i > s: cj += cash * (D["cdb"][i] - 1); cash *= D["cdb"][i]
         if not np.isnan(G[i]): lastg = G[i]
-        if rid == "ouro" and i == g0 and pend > 0: q += pend * (1 - CUSTO) / lastg; c += 1; pend = 0.0
+        if px and i == g0 and pend > 0: q += pend * (1 - CUSTO) / lastg; c += 1; pend = 0.0
         j = meset.get(i)
         if j is None: continue
         a, w = (ap[j] if j < len(ap) else 0), (wd[j] if j < len(wd) else 0)
@@ -348,10 +352,10 @@ def simulate_ref(D, rid, me, ap, wd, rec=False):
         else:
             if w > 0 and q > 0: sv = min(q, w / (lastg * (1 - CUSTO))); q -= sv; n += 1
             if a > 0: q += a * (1 - CUSTO) / lastg; c += 1
-        v = cash if rid == "cdb" else q * lastg + pend; vm.append(v)
+        v = q * lastg + pend if px else cash; vm.append(v)
         if rec: rows.append({"ym": D["ym"][i], "v": float(v), "div": 0.0, "tax": 0.0, "pos": MOD[rid]["n"], "c": c, "s": n, "cdb": float(cash), "cj": float(cj)})
         cj = 0.0
-    return {"v": float(cash if rid == "cdb" else q * lastg + pend), "rows": rows if rec else None, "g0": g0, "ra": float(anual(vm, ap, wd)[0])}
+    return {"v": float(q * lastg + pend if px else cash), "rows": rows if rec else None, "g0": g0, "ra": float(anual(vm, ap, wd)[0])}
 
 
 def _refs(D, me, ap, wd, apT):
@@ -400,7 +404,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
     A = Conta(1); cur, k, pdiv, why_in = -1, 0, 0.0, None; lastp = {g: C[g, s] for g in gidx}
     per = {g: {"t": nm[g], "c": 0, "sem": 0, "n": 0, "res": 0.0, "ir": 0.0} for g in gidx}
     trocas, cdbw, tot, vm, ev = 0, 0, 0, [], []; nav, navpk, dd, vprev = 1.0, 1.0, 0.0, None
-    meset = {w: j for j, w in enumerate(me)}; A.cash += ap[0]; mg = {}  # resultado das vendas do mês por empresa (para dividir o IR)
+    meset = {w: j for j, w in enumerate(me)}; A.cash += ap[0]; mg = {}; mdc = {}  # resultado das vendas do mês por empresa (para dividir o IR)
     ev.append({"d": D["w"][s], "k": "aporte", "v": round(float(ap[0]), 2), "x": "valor inicial"})
     pct = lambda x: f"{x / 10:.1f}%".replace(".", ",")
 
@@ -431,7 +435,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
             A.cash *= D["cdb"][i]
         c0 = A.cash[0] - (ap[0] if i == s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
         if i > s and cur >= 0:
-            d = A.sh[0] * np.nan_to_num(DV[cur, i]); A.cash += d; A.mdiv += d; A.divT += d; per[cur]["res"] += d; pdiv += d
+            d = A.sh[0] * np.nan_to_num(DV[cur, i]); A.cash += d; A.mdiv += d; A.divT += d; per[cur]["res"] += d; pdiv += d; mdc[cur] = mdc.get(cur, 0) + d
             A.dtax += A.sh[0] * D["JT"][cur, i]
             if d >= 0.005: ev.append({"d": D["w"][i], "k": "provento", "t": nm[cur], "q": int(A.sh[0]), "p": round(float(lastp[cur]), 2), "v": round(float(d), 2), "x": tipo(D, cur, i)})
         if i > 0:
@@ -454,7 +458,8 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         if j is not None and i > s:
             a, w = (ap[j] if j < len(ap) else 0), (wd[j] if j < len(wd) else 0)
             ir0, mgain, t0, sh0 = A.ir[0], dict(mg), A.ir[0] + A.dtax[0], A.sh[0]
-            A.close_month(np.array([P]), np.array([a]), np.array([w]), tx)
+            if tx is None: A.mdiv[:] = sum(x for x in mdc.values() if x > 50000)  # 10% só sobre a empresa pagadora acima de R$ 50 mil
+            mdc.clear(); A.close_month(np.array([P]), np.array([a]), np.array([w]), tx)
             ir = A.ir[0] - ir0; t1 = A.ir[0] + A.dtax[0] - t0
             pos = {g: x for g, x in mgain.items() if x > 0}
             for g, x in pos.items(): per[g]["ir"] += ir * x / sum(pos.values())
@@ -549,7 +554,7 @@ def run(D, req):
                 rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ra": None if np.isnan(r["ra"][0]) else round(float(r["ra"][0]), 2), "ir": round(float(r["ir"][0]), 2), "irv": round(float(r["irv"][0]), 2),
                              "c": int(r["c"][0]), "s": int(r["s"][0]), **({"fora": True} if mid == "barsi" and fora_barsi(D, [k], me)[0] else {})})
         rows.sort(key=lambda x: (x["k"] != "g", -(x["pct"] if x["pct"] is not None else -1e9)))  # grupos; depois modelos e CDB/Ouro pelo rendimento
-        out = dict(ini, rows=rows)
+        out = dict(ini, rows=rows, aviso=AVISO)
     _C[key] = out
     while len(_C) > 60: _C.popitem(last=False)
     return out
@@ -635,7 +640,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None):
     Ações inteiras: o dinheiro destinado a cada empresa fica numa reserva dela, rendendo CDB, até dar para comprar pelo menos 1 ação;
     se a empresa sai do alvo, a reserva volta ao caixa. -> valor final, IR, compras, vendas (rec: + movimentações uma a uma e posição)."""
     idx=np.asarray(idx);n=len(idx);s,e=me[0],me[-1];mod=MOD[mid];sell=mod['vende'] and not mod.get('frac')
-    sh=np.zeros(n);basis=np.zeros(n);pend=np.zeros(n);cash=float(ap[0]);age=np.zeros(n);carry=0;msales=0;mgain=0;mdiv=0;ir=0;nb=0;ns=0
+    sh=np.zeros(n);basis=np.zeros(n);pend=np.zeros(n);cash=float(ap[0]);age=np.zeros(n);carry=0;msales=0;mgain=0;mdq=np.zeros(n);ir=0;nb=0;ns=0
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else 'abaixo da média de 200 dias'
     ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
@@ -645,7 +650,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None):
             f=D['cdb'][i];cash*=f;pend*=f
         b0=cash+pend.sum()-(ap[0] if i==s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
         if i>s:
-            dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdiv+=d;ir+=(sh*JT[idx,i]).sum();dvt+=dq  # JCP já líquido; o retido conta no IR
+            dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdq+=dq;ir+=(sh*JT[idx,i]).sum();dvt+=dq  # JCP já líquido; o retido conta no IR
             if rec:
                 for q in np.flatnonzero(dq>=0.005): ev.append({"d":W[i],"k":"provento","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(dq[q]),2),"x":tipo(D,idx[q],i)})
         w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1
@@ -662,8 +667,8 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None):
         if j is not None and i>s:
             tax=max(0,mgain-carry)*IR if msales>ISENTO else 0
             carry=carry-mgain if mgain<0 else (max(0,carry-max(0,mgain)) if msales>ISENTO else carry)
-            dt=mdiv*.10 if mdiv>50000 else 0
-            cash-=tax+dt;ir+=tax+dt;msales=mgain=mdiv=0
+            dt=float((mdq*(mdq>50000)).sum())*.10  # 10% só nos proventos de cada empresa pagadora acima de R$ 50 mil no mês
+            cash-=tax+dt;ir+=tax+dt;msales=mgain=0;mdq[:]=0
             if cash<0 and pend.sum()>0:  # imposto maior que o caixa: sai das reservas
                 tk=min(-cash,pend.sum());pend*=1-tk/pend.sum();cash+=tk
             wv=float(wd[j]) if wd is not None and j<len(wd) else 0.0
@@ -756,7 +761,7 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
     if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
     apT = sum(aps) - sum(wd)  # valor aportado: cresce com cada aporte, cai com cada retirada; rendimento sobre ele
     pc = lambda v: round((v / apT - 1) * 100, 2) if apT > 0 else None
-    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "ap": ap, "apT": round(apT, 2),
+    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "ap": ap, "apT": round(apT, 2), "aviso": AVISO,
            "apS": round(sum(aps), 2), "wS": round(sum(wd), 2), "at": D["at"], "n": len(idx), "eng": ENGINE, "m": []}
     for m in MODELOS:
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd)
@@ -860,7 +865,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     cart = [{"m": m["id"], "v": round(g[0], 2), "pct": round((g[0] / apT - 1) * 100, 2) if apT > 0 else None, "ir": round(g[1], 2), "c": g[2], "s": g[3]}
             for m, g in zip(MODELOS, G)] + [{"m": r["m"], "v": r["v"], "pct": r["pct"], "ir": 0.0, "c": None, "s": None, "ref": True} for r in refs]
     big = lambda i: -_nmean(P[i])  # ord_pts: pela média de pontos (o Método Barsi só conta nas empresas do método)
-    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)),
+    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)), "aviso": AVISO,
            "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in M], "p": J(P), "rk": rk.tolist(),
            "v": J(V), "ra": J(np.array([r["ra"] for r in R], dtype=float)), "ir": np.round(np.array([r["ir"] for r in R]), 2).tolist(), "irv": np.round(np.array([r["irv"] for r in R]), 2).tolist(),
            "c": np.array([r["c"] for r in R]).astype(int).tolist(), "s": np.array([r["s"] for r in R]).astype(int).tolist(),

@@ -110,7 +110,7 @@ def test_comparar_media_e_empresas_sem_preco():
     out = modelos.compare(D, ["AAA3", "BBB3", "XXX3"], "2020-09", "2021-12", [1000.0] + [100.0] * 15, grupos=[{"n": "G", "t": ["AAA3", "BBB3"]}])
     nm = len(modelos.MODELOS) + len(modelos.REF); fo = out["fora"]  # Barsi fora do método (sem setor perene) nas 2 empresas
     assert len(out["v"]) == nm and len(out["v"][0]) == 2 and fo == 2 and out["p"][out["m"].index("barsi")] == [None, None]
-    assert sum(r["pts"] for r in out["res"]) == 2 * sum((modelos.PONTOS + (0,) * nm)[:nm - 2])  # sem Barsi (fora) e sem Ouro (sem cotação no teste)
+    assert sum(r["pts"] for r in out["res"]) == 2 * sum((modelos.PONTOS + (0,) * nm)[:nm - 3])  # sem Barsi (fora), Ouro e Ibovespa (sem cotação no teste)
     assert {g["m"] for g in out["g"]} == {"alg1", "alg3", "tendencia"}
     assert out["t"] == ["AAA3", "BBB3"] and out["pedidas"] == 3 and len(out["p"]) == nm
     i = out["m"].index("hold"); assert abs(out["res"][i]["media"] - sum(out["p"][i]) / 2) < 0.01
@@ -153,9 +153,9 @@ def test_referencias_cdb_e_ouro():
     q = sum(a * (1 - modelos.CUSTO) / gold["v"][i] for a, i in zip(ap, me))
     assert abs(o["v"] - q * gold["v"][me[-1]]) < 1e-6
     out = modelos.compare(D, ["AAA3"], "2020-02", "2020-12", ap)
-    assert [r["m"] for r in out["ref"]] == ["cdb", "ouro"] and out["m"][-2:] == ["cdb", "ouro"] and modelos.MOD["cdb"]["n"] == "CDB"
+    assert [r["m"] for r in out["ref"]] == ["cdb", "ouro", "ibov"] and out["m"][-3:] == ["cdb", "ouro", "ibov"] and modelos.MOD["cdb"]["n"] == "CDB"
     pts = {out["m"][i]: out["res"][i]["pts"] for i in range(len(out["m"]))}
-    assert sorted(pts.values())[:2] == sorted([pts["cdb"], pts["ouro"]])  # nos Pontos, sempre as últimas colocações
+    assert sorted(pts.values())[:3] == sorted([pts["cdb"], pts["ouro"], pts["ibov"]])  # nos Pontos, sempre as últimas colocações
     t = modelos.run(D, {"di": "2020-02", "df": "2020-12", "ap": ap, "tab": {"t": "", "m": "ouro"}})["tab"]
     assert abs(t[-1]["com"] - o["v"]) < 1e-6
     sem = modelos.simulate_ref(modelos.build(snap({"AAA3": {"c": 10.0}}), cdi()), "ouro", me, ap, w)
@@ -207,16 +207,13 @@ def test_pre_calculado():
 
 
 
-def test_rend_medio_anual():
-    """Bloco de 12 meses com rendimento fixo: média anual = o rendimento do ano, com ou sem aportes; sobra < 12 meses não entra."""
-    g = 1.10 ** (1 / 12); VM = [1000 * g ** k for k in range(25)]
-    assert abs(modelos.anual(VM, [1000.0], [])[0] - 10) < 1e-9
-    ap = [1000.0] + [100.0] * 24; VM = [1000.0]
-    for k in range(1, 25): VM.append(VM[-1] * g + 100)
-    assert abs(modelos.anual(VM, ap, [])[0] - 10) < 0.2  # Dietz modificado: aproximação do rendimento com aportes
-    assert abs(modelos.anual(VM[:20], ap, [])[0] - modelos.anual(VM[:13], ap, [])[0]) < 1e-9  # 2º bloco incompleto fica fora
-    assert np.isnan(modelos.anual(VM[:12], ap, [])[0])
-
+def test_tir_anual():
+    VM = np.array([1000.0 * 1.1 ** (k / 12) for k in range(25)])  # 10% ao ano, sem aportes
+    assert abs(modelos.anual(VM, [1000.0], [])[0] - 10) < 1e-6
+    r = 1.1 ** (1 / 12) - 1; ap = [1000.0] + [100.0] * 24; v = 0.0; VM2 = []  # aportes mensais rendendo 10% ao ano: TIR = 10% exato
+    for a in ap: v = v * (1 + r) + a; VM2.append(v)
+    assert abs(modelos.anual(np.array(VM2), ap, [])[0] - 10) < 1e-6
+    assert np.isnan(modelos.anual(VM[:12], ap, [])[0])  # menos de 12 meses: sem valor
 
 def _sim_snap(nw):
     """3 empresas com preços e sinais que mudam (compra, venda e reforço), nw semanas."""
