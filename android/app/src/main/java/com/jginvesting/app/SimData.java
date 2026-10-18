@@ -121,11 +121,27 @@ public final class SimData {
     /** Nº de ações: 1.234. */
     public static String qty(long q) { return df("#,##0").format(q); }
 
-    /** Aviso embaixo das posições: "+ 12 empresas · R$ 237 no CDB". */
-    public static String rest(Row r) {
-        int more = Math.max(0, r.np - r.pos.size());
-        String a = more > 0 ? "+ " + more + (more == 1 ? " empresa" : " empresas") : "";
-        String b = r.cash >= 0.01 ? money(r.cash) + " no CDB" : "";
-        return a.isEmpty() ? b : b.isEmpty() ? a : a + " · " + b;
+    /** Uma linha da lista do widget: um modelo (ROW) e, logo abaixo do modelo aberto, o título das posições (HEAD), TODAS as empresas
+     *  (POS, rolando dentro do widget) e o caixa no CDB no fim (CDB, só se houver). */
+    public static final class Item {
+        public static final int ROW = 0, HEAD = 1, POS = 2, CDB = 3;
+        public final int type; public final Row row; public final Pos pos;
+        Item(int type, Row row, Pos pos) { this.type = type; this.row = row; this.pos = pos; }
+        public long id() { return ((long) row.m.hashCode() << 20) ^ (type == POS ? pos.t.hashCode() & 0xFFFFF : type); }
     }
+
+    public static List<Item> items(List<Row> rows, String openModel) {
+        List<Item> out = new ArrayList<>();
+        for (Row r : rows) {
+            out.add(new Item(Item.ROW, r, null));
+            if (!r.m.equals(openModel)) continue;
+            out.add(new Item(Item.HEAD, r, null));
+            for (Pos p : r.pos) out.add(new Item(Item.POS, r, p));
+            if (r.cash >= 0.01) out.add(new Item(Item.CDB, r, null));
+        }
+        return out;
+    }
+
+    /** Título do modelo aberto: "Posições atuais · 30 empresas" ou "Tudo no CDB". */
+    public static String head(Row r) { return r.np == 0 ? "Tudo no CDB" : "Posições atuais · " + r.np + (r.np == 1 ? " empresa" : " empresas"); }
 }

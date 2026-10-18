@@ -8,8 +8,8 @@
   state.selSet = new Set(); state.selMode = false; state.group = null;
   // Grupo simulação (criado na Previsão): {name, tickers: [], sim: {di, v0}}; o servidor simula todos os modelos desde di
   // (/api/modelos/simgrupo, mesma conta do Comparar). Resultado guardado no aparelho e pedido de novo só 1x por dia.
-  const SKEY = 'screenerB3.simgrupo.v2';  // v2: ações inteiras, JCP líquido e movimentações uma a uma (o resultado antigo não vale)
-  try { localStorage.removeItem('screenerB3.simgrupo.v1'); } catch (e) { }
+  const SKEY = 'screenerB3.simgrupo.v3';  // v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
+  try { localStorage.removeItem('screenerB3.simgrupo.v1'); localStorage.removeItem('screenerB3.simgrupo.v2'); } catch (e) { }
   const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
   const simK = (g) => g.sim.di + '|' + g.sim.v0, today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
   const saveSim = () => { for (const k in SIM) if (!groups.some(g => g.sim && g.name === k)) delete SIM[k]; try { localStorage.setItem(SKEY, JSON.stringify(SIM)); } catch (e) { } };
@@ -437,17 +437,20 @@
   }
 
   // movimentações de um modelo do Grupo simulação (toque na linha do quadro ou "↗ Abrir" no widget Grupo simulação do app)
-  function simModal(gn, mid) {
-    const c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x) return false;
-    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0 }, x)) }); return true;
+  // tk (widget 1.16+: toque numa empresa): janela só com essa empresa dentro do modelo (previsao.js → pvSimCompany)
+  function simModal(gn, mid, tk) {
+    const g = groups.find(y => y.sim && y.name === gn), c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x || !g) return false;
+    const src = { di: g.sim.di, v0: g.sim.v0, m: mid };
+    if (tk) { pvSimCompany(src, tk, `${esc(tk)} · ${esc(x.n)}`); return true; }
+    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, src }, x)) }); return true;
   }
-  window.jgOpenSim = function (gn, mid, n) {
+  window.jgOpenSim = function (gn, mid, n, tk) {
     n = n || 0; const g = groups.find(x => x.sim && x.name === gn); if (!g) return;
     if (n === 0) { const b = document.querySelector('[data-tab="grupos"]'); if (b) b.click(); }
-    if (simData(g) && simModal(gn, mid)) return;
-    if (n < 120) setTimeout(() => window.jgOpenSim(gn, mid, n + 1), 500);  // simulação ainda carregando
+    if (simData(g) && simModal(gn, mid, tk)) return;
+    if (n < 120) setTimeout(() => window.jgOpenSim(gn, mid, n + 1, tk), 500);  // simulação ainda carregando
   };
-  { const q = new URLSearchParams(location.search), sg = q.get('sim'); if (sg) { history.replaceState(null, '', location.pathname); setTimeout(() => window.jgOpenSim(sg, q.get('m') || 'hold'), 300); } }
+  { const q = new URLSearchParams(location.search), sg = q.get('sim'), tk = q.get('tk'); if (sg) { history.replaceState(null, '', location.pathname); setTimeout(() => window.jgOpenSim(sg, q.get('m') || 'hold', 0, tk && /^[A-Z0-9][A-Z0-9.\-]{0,11}$/.test(tk) ? tk : null), 300); } }
   // App 1.15+: grupos de simulação (nome, data inicial e valor inicial) para o widget Grupo simulação, que pede /api/widget/simgrupo
   function pushSims() {
     if (!window.JGApp || !window.JGApp.setSims) return;

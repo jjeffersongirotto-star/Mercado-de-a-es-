@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget Grupo simulação: logo (abre o app) | seletor do grupo ▾ (com mais de um grupo) | horário | ⟳ ; títulos; uma linha por modelo (SimWidget) -->
+<!-- Widget Grupo simulação: marca comprida ou logo (abre o app) | seletor do grupo ▾ | horário | ⟳ ; títulos (centralizados, 2 linhas); lista plana: modelos e, do aberto, título das posições, uma linha por empresa e o CDB (SimWidget) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
@@ -24,12 +24,21 @@
             android:contentDescription="@string/app_name"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_legacy" />
-
+        <!-- marca comprida (nome curto, como no widget Favoritos): até o seletor s_sel2, colado ao horário; nome longo: logo quadrado -->
+        <ImageView
+            android:id="@+id/s_brand"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitStart"
+            android:src="@drawable/ic_brand"
+            android:visibility="gone" />
         <FrameLayout
+            android:id="@+id/s_mid"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-
             <TextView
                 android:id="@+id/s_sel"
                 android:layout_width="wrap_content"
@@ -46,7 +55,21 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </FrameLayout>
-
+        <TextView
+            android:id="@+id/s_sel2"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/sel_chip"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingStart="12dp"
+            android:paddingEnd="10dp"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
         <TextView
             android:id="@+id/s_time"
             android:layout_width="wrap_content"
@@ -83,14 +106,16 @@
         android:orientation="horizontal"
         android:paddingStart="4dp"
         android:paddingBottom="4dp">
-        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="start" android:maxLines="1"
-            android:text="@string/sim_col_m" android:textColor="@color/c_mut" android:textSize="10.5sp" android:textStyle="bold" />
-        <TextView android:layout_width="@dimen/sim_ap" android:layout_height="wrap_content" android:gravity="end" android:maxLines="2"
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1"
+            android:text="@string/sim_col_m" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
+        <TextView android:layout_width="@dimen/sim_np" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1"
+            android:text="@string/sim_col_np" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
+        <TextView android:layout_width="@dimen/sim_ap" android:layout_height="wrap_content" android:gravity="center" android:maxLines="2" android:lineSpacingMultiplier="0.9"
             android:text="@string/sim_col_ap" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
-        <TextView android:layout_width="@dimen/sim_v" android:layout_height="wrap_content" android:gravity="end" android:maxLines="2"
+        <TextView android:layout_width="@dimen/sim_v" android:layout_height="wrap_content" android:gravity="center" android:maxLines="2" android:lineSpacingMultiplier="0.9"
             android:text="@string/sim_col_v" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
-        <TextView android:layout_width="@dimen/sim_d" android:layout_height="wrap_content" android:gravity="end" android:maxLines="2"
-            android:paddingEnd="2dp" android:text="@string/sim_col_d" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
+        <TextView android:layout_width="@dimen/sim_d" android:layout_height="wrap_content" android:gravity="center" android:maxLines="2" android:lineSpacingMultiplier="0.9"
+            android:text="@string/sim_col_d" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
     </LinearLayout>
 
     <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/bd" />

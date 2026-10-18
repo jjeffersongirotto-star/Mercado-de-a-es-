@@ -13,12 +13,13 @@ import android.widget.RemoteViews;
 
 import java.util.List;
 
-/** Widget Grupo simulação: um Grupo simulação da aba Grupos (seletor no topo quando há mais de um) com Modelo | Valor aportado |
- *  Valor atual | Variação do dia; tocar num modelo abre embaixo as posições atuais e "↗ abrir" (movimentações do modelo no app).
+/** Widget Grupo simulação: um Grupo simulação da aba Grupos (seletor no topo quando há mais de um) com Modelo | Carteira | Valor aportado |
+ *  Valor atual | Variação do dia; tocar num modelo abre embaixo TODAS as posições (rolando) e o CDB, "↗ abrir" (movimentações do modelo no app);
+ *  tocar numa empresa abre no app a janela só dela dentro do modelo.
  *  Dados: /api/widget/simgrupo (o mesmo cálculo da aba Grupos, com o preço de agora). Atualiza a cada 30 min e no ⟳. */
 public class SimWidget extends AppWidgetProvider {
     static final String ACTION_REFRESH = "com.jginvesting.app.SIM_REFRESH";
-    static final String EXTRA_SIM = "sim", EXTRA_MODEL = "model";
+    static final String EXTRA_SIM = "sim", EXTRA_MODEL = "model", EXTRA_TK = "tk";
 
     @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) { render(c); refreshAsync(c, goAsync(), 0); }
 
@@ -71,19 +72,37 @@ public class SimWidget extends AppWidgetProvider {
             String key = SimData.key(s), data = s == null ? "{}" : Store.simData(c, key);
             List<SimData.Row> rows = SimData.rows(data);
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_sim);
-            v.setTextViewText(R.id.s_sel, (s == null ? c.getString(R.string.sim_widget_name) : s.name) + (ss.size() > 1 ? "  ▾" : ""));
+            String nm = s == null ? c.getString(R.string.sim_widget_name) : s.name, selT = nm + (ss.size() > 1 ? "  ▾" : "");
+            v.setTextViewText(R.id.s_sel, selT); v.setTextViewText(R.id.s_sel2, selT);
             if (ss.size() > 1) {  // seletor só com mais de um Grupo simulação (como o dos Favoritos)
                 Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra(PickerActivity.EXTRA_SIM, true)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
                 pick.setData(Uri.parse("jg://simpick/" + id));
                 v.setOnClickPendingIntent(R.id.s_sel, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
-            } else v.setOnClickPendingIntent(R.id.s_sel, openApp(c, s, null, 600 + id));
-            v.setOnClickPendingIntent(R.id.s_logo, openApp(c, null, null, 0));
+                v.setOnClickPendingIntent(R.id.s_sel2, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
+            } else { v.setOnClickPendingIntent(R.id.s_sel, openApp(c, s, null, 600 + id)); v.setOnClickPendingIntent(R.id.s_sel2, openApp(c, s, null, 600 + id)); }
+            v.setOnClickPendingIntent(R.id.s_logo, openApp(c, null, null, 0)); v.setOnClickPendingIntent(R.id.s_brand, openApp(c, null, null, 0));
             boolean busy = System.currentTimeMillis() - Store.simLoading(c) < 90_000;
             long at = s == null ? 0 : Store.simAt(c, key);
             String up = busy ? c.getString(R.string.widget_loading) : at > 0 ? WidgetData.fetched(at, java.util.TimeZone.getDefault()) : "";
             v.setTextViewText(R.id.s_time, up);
             v.setViewVisibility(R.id.s_time, up.isEmpty() ? View.GONE : View.VISIBLE);
+            // marca comprida "JG Investing" até o seletor (como no widget Favoritos) ou, com nome de grupo longo, o logo quadrado
+            android.os.Bundle op = m.getAppWidgetOptions(id);
+            android.content.res.Configuration cf = c.getResources().getConfiguration();
+            int hw = WidgetData.widthDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
+                    cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
+            float dens = c.getResources().getDisplayMetrics().density;
+            String bn = ss.size() > 1 ? nm : nm.substring(0, Math.max(0, nm.length() - 3));  // sem ▾ o chip é ~3 letras menor
+            boolean brand = WidgetData.longLogo(bn, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
+            v.setViewVisibility(R.id.s_brand, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.s_sel2, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.s_logo, brand ? View.GONE : View.VISIBLE);
+            v.setViewVisibility(R.id.s_mid, brand ? View.GONE : View.VISIBLE);
+            if (brand) {
+                android.graphics.Bitmap bm = FavWidget.brandBitmap(c, Math.round((WidgetData.brandRoom(bn, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens));
+                if (bm != null) v.setImageViewBitmap(R.id.s_brand, bm);
+            }
             String sub = s == null ? "" : "Desde " + s.di.substring(5) + "/" + s.di.substring(0, 4) + " · " + SimData.money(s.v0) + " em cada modelo";
             v.setTextViewText(R.id.s_sub, sub);
             v.setViewVisibility(R.id.s_sub, sub.isEmpty() ? View.GONE : View.VISIBLE);
@@ -95,8 +114,8 @@ public class SimWidget extends AppWidgetProvider {
             v.setPendingIntentTemplate(R.id.s_list, PendingIntent.getActivity(c, 12, tpl, flagsMut));
             v.setEmptyView(R.id.s_list, R.id.s_empty);
             if (Build.VERSION.SDK_INT >= 31) {
-                RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
-                for (SimData.Row r : rows) b.addItem(r.m.hashCode(), row(c, s, r));
+                RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(VIEW_TYPES);
+                for (SimData.Item it : SimData.items(rows, openModel(c, s))) b.addItem(it.id(), item(c, s, it));
                 v.setRemoteAdapter(R.id.s_list, b.build());
             } else {
                 Intent svc = new Intent(c, SimWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
@@ -120,29 +139,33 @@ public class SimWidget extends AppWidgetProvider {
         return new Intent().putExtra(WidgetTap.A, a).putExtra(EXTRA_SIM, sim).putExtra(EXTRA_MODEL, mid);
     }
 
-    /** Uma linha (modelo); aberta, as posições e "↗ abrir". */
-    static RemoteViews row(Context c, SimData.Sim s, SimData.Row r) {
-        RemoteViews q = new RemoteViews(c.getPackageName(), R.layout.widget_sim_row);
-        q.setTextViewText(R.id.q_name, r.n);
-        String tot = SimData.total(r.v, r.ap);
-        q.setTextViewText(R.id.q_tot, tot.isEmpty() ? "" : tot + " desde o início");
-        q.setTextColor(R.id.q_tot, c.getColor(r.v >= r.ap ? R.color.c_pos : R.color.c_neg));
-        q.setTextViewText(R.id.q_ap, SimData.money(r.ap));
-        q.setTextViewText(R.id.q_v, SimData.money(r.v));
-        int dc = c.getColor(r.dp == null ? R.color.c_mut : r.dv >= 0 ? R.color.c_pos : R.color.c_neg);
-        q.setTextViewText(R.id.q_dp, SimData.dayPct(r.dp)); q.setTextColor(R.id.q_dp, dc);
-        q.setTextViewText(R.id.q_dv, r.dp == null ? "" : SimData.dayMoney(r.dv)); q.setTextColor(R.id.q_dv, dc);
-        String sid = s == null ? "" : s.id;
-        q.setOnClickFillInIntent(R.id.q_main, tap("sx", sid, r.m));
-        boolean open = (sid + "|" + r.m).equals(Store.simExp(c));
-        q.setViewVisibility(R.id.q_exp, open ? View.VISIBLE : View.GONE);
-        if (!open) return q;
-        q.setTextViewText(R.id.q_ph, r.np == 0 ? "Tudo no CDB" : "Posições atuais · " + r.np + (r.np == 1 ? " empresa" : " empresas"));
-        q.setOnClickFillInIntent(R.id.q_open, tap("so", sid, r.m));
-        q.removeAllViews(R.id.q_pos);
-        for (SimData.Pos p : r.pos) {
+    static final int VIEW_TYPES = 3;  // modelo, título das posições, empresa/CDB
+
+    /** Modelo aberto neste grupo ("" = nenhum). */
+    static String openModel(Context c, SimData.Sim s) {
+        String e = Store.simExp(c), p = (s == null ? "" : s.id) + "|";
+        return e != null && e.startsWith(p) ? e.substring(p.length()) : "";
+    }
+
+    /** Uma linha da lista: modelo (toque abre/fecha), título do modelo aberto com "↗ abrir", uma empresa (toque: janela dela no app) ou o CDB. */
+    static RemoteViews item(Context c, SimData.Sim s, SimData.Item it) {
+        String sid = s == null ? "" : s.id; SimData.Row r = it.row;
+        if (it.type == SimData.Item.HEAD) {
+            RemoteViews h = new RemoteViews(c.getPackageName(), R.layout.widget_sim_head);
+            h.setTextViewText(R.id.h_ph, SimData.head(r));
+            h.setOnClickFillInIntent(R.id.h_open, tap("so", sid, r.m));
+            return h;
+        }
+        if (it.type == SimData.Item.POS || it.type == SimData.Item.CDB) {
             RemoteViews pv = new RemoteViews(c.getPackageName(), R.layout.widget_sim_pos);
-            boolean nm = p.s != null && !p.s.isEmpty();
+            if (it.type == SimData.Item.CDB) {
+                pv.setTextViewText(R.id.p_name, "Caixa no CDB"); pv.setViewVisibility(R.id.p_t, View.GONE);
+                pv.setTextViewText(R.id.p_q, ""); pv.setTextViewText(R.id.p_inv, "");
+                pv.setTextViewText(R.id.p_v, SimData.money(r.cash)); pv.setTextColor(R.id.p_v, c.getColor(R.color.c_txt));
+                pv.setOnClickFillInIntent(R.id.p_row, tap("so", sid, r.m));
+                return pv;
+            }
+            SimData.Pos p = it.pos; boolean nm = p.s != null && !p.s.isEmpty();
             pv.setTextViewText(R.id.p_name, nm ? p.s : p.t);
             pv.setTextViewText(R.id.p_t, nm ? p.t : "");
             pv.setViewVisibility(R.id.p_t, nm ? View.VISIBLE : View.GONE);
@@ -150,12 +173,21 @@ public class SimWidget extends AppWidgetProvider {
             pv.setTextViewText(R.id.p_inv, SimData.money(p.inv));
             pv.setTextViewText(R.id.p_v, SimData.money(p.v));
             pv.setTextColor(R.id.p_v, c.getColor(p.v >= p.inv ? R.color.c_pos : R.color.c_neg));
-            pv.setOnClickFillInIntent(R.id.p_v, tap("so", sid, r.m));
-            q.addView(R.id.q_pos, pv);
+            pv.setOnClickFillInIntent(R.id.p_row, tap("sp", sid, r.m).putExtra(EXTRA_TK, p.t));
+            return pv;
         }
-        String rest = SimData.rest(r);
-        q.setTextViewText(R.id.q_rest, rest);
-        q.setViewVisibility(R.id.q_rest, rest.isEmpty() ? View.GONE : View.VISIBLE);
+        RemoteViews q = new RemoteViews(c.getPackageName(), R.layout.widget_sim_row);
+        q.setTextViewText(R.id.q_name, r.n);
+        String tot = SimData.total(r.v, r.ap);
+        q.setTextViewText(R.id.q_tot, tot.isEmpty() ? "" : tot + " desde o início");
+        q.setTextColor(R.id.q_tot, c.getColor(r.v >= r.ap ? R.color.c_pos : R.color.c_neg));
+        q.setTextViewText(R.id.q_np, String.valueOf(r.np));
+        q.setTextViewText(R.id.q_ap, SimData.money(r.ap));
+        q.setTextViewText(R.id.q_v, SimData.money(r.v));
+        int dc = c.getColor(r.dp == null ? R.color.c_mut : r.dv >= 0 ? R.color.c_pos : R.color.c_neg);
+        q.setTextViewText(R.id.q_dp, SimData.dayPct(r.dp)); q.setTextColor(R.id.q_dp, dc);
+        q.setTextViewText(R.id.q_dv, r.dp == null ? "" : SimData.dayMoney(r.dv)); q.setTextColor(R.id.q_dv, dc);
+        q.setOnClickFillInIntent(R.id.q_main, tap("sx", sid, r.m));
         return q;
     }
 

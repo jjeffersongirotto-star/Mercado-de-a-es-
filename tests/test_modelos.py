@@ -254,12 +254,16 @@ def test_grupo_simulacao():
     # dia seguinte (uma semana nova nos dados): as movimentações de ontem continuam iguais, só entram as novas (igual a recalcular)
     for nw in (NW - 7, NW - 3):
         D0, D1 = modelos.build(_sim_snap(nw), cdi(0.03)), modelos.build(_sim_snap(nw + 1), cdi(0.03))
-        modelos._C.clear(); r0, r1 = modelos.simgrupo(D0, tk, "2020-02", 10000), modelos.simgrupo(D1, tk, "2020-02", 10000)
-        for x0 in r0["m"]:
-            if x0.get("ref"): continue
-            x1 = next(x for x in r1["m"] if x["m"] == x0["m"])
+        modelos._C.clear(); modelos._MZ.clear()
+        for m in modelos.MODELOS:
+            def full(DD):  # todas as movimentações, em páginas
+                L, off = [], 0
+                while True:
+                    p = modelos.simmov(DD, tk, "2020-02", 10000, m["id"], off=off, n=200); L += p["mov"]; off += 200
+                    if off >= p["nmov"]: return L[::-1]
             trade = lambda L: [x for x in L if x["k"] in ("compra", "venda")]
-            assert trade(x1["mov"])[:len(trade(x0["mov"]))] == trade(x0["mov"]), x0["m"]
+            t0, t1 = trade(full(D0)), trade(full(D1))
+            assert t1[:len(t0)] == t0, m["id"]
     assert "error" in modelos.simgrupo(D, tk, "2020-02", 0)
     modelos._C.clear()
 
@@ -278,6 +282,38 @@ def test_acoes_inteiras_reserva_e_jcp():
     q = next(x["q"] for x in h["mov"] if x["k"] == "compra" and x["t"] == "BBB3" and x["d"] <= W[40])
     assert pv and pv[0]["t"] == "BBB3" and "JCP" in pv[0]["x"] and abs(D["DV"][1, 40] - .85) < 1e-9 and ir > 0
     assert {x["k"] for x in h["mov"]} >= {"aporte", "compra", "provento", "cdi_ap"} and q >= 1
+
+
+def test_simmov_paginas_empresa_e_preco_medio():
+    """Movimentações em páginas = todas (nenhuma escondida); por empresa: só as dela, preço médio e proventos recebidos batem com elas."""
+    D = modelos.build(_sim_snap(NW), cdi(0.03)); tk = D["tick"]; modelos._C.clear(); modelos._MZ.clear()
+    r = modelos.simgrupo(D, tk, "2016-02", 10000)
+    me = modelos._span(D, "2016-02", D["fim"]); ap = [10000.0] + [0.0] * (len(me) - 1)
+    for x in r["m"]:
+        if x.get("ref"): continue
+        h = modelos.grupo(D, x["m"], [0, 1, 2], me, ap, rec=True)[4]
+        assert x["nmov"] == len(h["mov"]) and x["mov"] == h["mov"][-modelos.MOV_SITE:] and len(x["pos"]) == x["np"]
+        pg, off = [], 0
+        while True:
+            p = modelos.simmov(D, tk, "2016-02", 10000, x["m"], off=off, n=7); pg += p["mov"]; off += 7  # páginas pequenas: várias por modelo
+            assert p["nmov"] == len(h["mov"])
+            if off >= p["nmov"]: break
+        assert pg == h["mov"][::-1], x["m"]  # todas, das mais recentes à primeira (aporte inicial)
+        modelos._MZ.clear()  # fora da memória: refaz só o modelo e dá o mesmo
+        assert modelos.simmov(D, tk, "2016-02", 10000, x["m"], off=7, n=7)["mov"] == pg[7:14]
+        for t in tk:
+            e = modelos.simmov(D, tk, "2016-02", 10000, x["m"], tk=t)
+            assert all(y["t"] == t for y in e["mov"]) and e["nmov"] == sum(1 for y in h["mov"] if y.get("t") == t)
+            assert abs(e["dv"] - sum(y["v"] for y in e["mov"] if y["k"] == "provento")) < 0.05
+            assert all(y["p"] > 0 and y["q"] > 0 for y in e["mov"] if y["k"] == "provento")
+            cost = q = 0
+            for y in e["mov"][::-1]:  # preço médio: compras ponderadas com custos; venda (total) zera
+                if y["k"] == "compra": cost += y["v"]; q += y["q"]
+                elif y["k"] == "venda": cost = q = 0
+            if e["pos"]: assert e["pos"]["q"] == q and abs(e["pos"]["pm"] - cost / q) < 0.01 and abs(e["pos"]["pct"] - (e["pos"]["p"] / (cost / q) - 1) * 100) < 0.1
+            else: assert q == 0
+    assert "error" in modelos.simmov(D, tk, "2016-02", 10000, "ibov")
+    modelos._C.clear(); modelos._MZ.clear()
 
 
 if __name__ == "__main__":

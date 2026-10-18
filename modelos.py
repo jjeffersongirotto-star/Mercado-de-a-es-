@@ -4,7 +4,7 @@ Cada semana usa o sinal da semana anterior (decide com o fechamento de sexta e o
 Aportes e retiradas entram no último pregão de cada mês (mês 1 = valor inicial), como na tabela da Previsão.
 Imposto: 15% do lucro líquido das vendas do mês quando as vendas passam de R$ 20 mil; prejuízo compensa os meses seguintes.
 Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de R$ 50 mil, ou o % escolhido)."""
-import gc, hashlib, threading, time, warnings
+import gc, hashlib, json, threading, time, warnings, zlib
 from collections import OrderedDict
 import numpy as np
 
@@ -52,7 +52,7 @@ def set_setores(D, rows, cad=None):
     bs = {r["ticker"] for r in rows if perene(r, cad)}
     if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 2        # versão das contas (ações inteiras, JCP líquido, movimentações uma a uma): invalida resultados guardados
+ENGINE = 3        # versão das contas (3: preço médio, proventos por empresa, preço da ação no provento): invalida resultados guardados
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -433,7 +433,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         if i > s and cur >= 0:
             d = A.sh[0] * np.nan_to_num(DV[cur, i]); A.cash += d; A.mdiv += d; A.divT += d; per[cur]["res"] += d; pdiv += d
             A.dtax += A.sh[0] * D["JT"][cur, i]
-            if d >= 0.005: ev.append({"d": D["w"][i], "k": "provento", "t": nm[cur], "v": round(float(d), 2), "x": tipo(D, cur, i)})
+            if d >= 0.005: ev.append({"d": D["w"][i], "k": "provento", "t": nm[cur], "q": int(A.sh[0]), "p": round(float(lastp[cur]), 2), "v": round(float(d), 2), "x": tipo(D, cur, i)})
         if i > 0:
             # só entra numa empresa em bom momento (sinal forte); senão o dinheiro espera no CDB
             cand = [(score(g, i - 1)[0], g) for g in gidx if not np.isnan(C[g, i]) and score(g, i - 1)[1] and not np.isnan(score(g, i - 1)[0]) and strong(g, i - 1)]
@@ -638,16 +638,16 @@ def grupo(D, mid, idx, me, ap, rec=False):
     sh=np.zeros(n);basis=np.zeros(n);pend=np.zeros(n);cash=float(ap[0]);age=np.zeros(n);carry=0;msales=0;mgain=0;mdiv=0;ir=0;nb=0;ns=0
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else 'abaixo da média de 200 dias'
-    ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None
+    ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
         if i>s:
             f=D['cdb'][i];cash*=f;pend*=f
         b0=cash+pend.sum()-(ap[0] if i==s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
         if i>s:
-            dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdiv+=d;ir+=(sh*JT[idx,i]).sum()  # JCP já líquido; o retido conta no IR
+            dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdiv+=d;ir+=(sh*JT[idx,i]).sum();dvt+=dq  # JCP já líquido; o retido conta no IR
             if rec:
-                for q in np.flatnonzero(dq>=0.005): ev.append({"d":W[i],"k":"provento","t":nm[idx[q]],"v":round(float(dq[q]),2),"x":tipo(D,idx[q],i)})
+                for q in np.flatnonzero(dq>=0.005): ev.append({"d":W[i],"k":"provento","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(dq[q]),2),"x":tipo(D,idx[q],i)})
         w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1
         rel=(w==0)&(pend>0)
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa
@@ -682,10 +682,11 @@ def grupo(D, mid, idx, me, ap, rec=False):
         if rec: _cdi(ev,W[i],cash+pend.sum()-b0)
     L=np.nan_to_num(lastp);res=cash+pend.sum();v=float((sh*L).sum()+res)
     if not rec: return v, float(ir), int(nb), int(ns)
-    pos=[{"t":nm[idx[q]],"q":int(sh[q]),"p":round(float(L[q]),2),"v":round(float(sh[q]*L[q]),2),"inv":round(float(basis[q]),2),
-          "pct":round(float(sh[q]*L[q]/basis[q]*100-100),2) if basis[q]>0 else None} for q in np.flatnonzero(sh>0)]
+    # preço médio = total pago (com custos) ÷ ações, ponderado pelas compras; vendas não mudam (como na corretora); resultado = preço de agora × preço médio
+    pos=[{"t":nm[idx[q]],"q":int(sh[q]),"p":round(float(L[q]),2),"pm":round(float(basis[q]/sh[q]),2),"v":round(float(sh[q]*L[q]),2),"inv":round(float(basis[q]),2),
+          "pct":round(float(sh[q]*L[q]/basis[q]*100-100),2) if basis[q]>0 else None,"dv":round(float(dvt[q]),2)} for q in np.flatnonzero(sh>0)]
     pos.sort(key=lambda x:-x["v"])
-    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev}
+    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
 
 
 def simgrupo(D, tickers, di, v0):
@@ -696,23 +697,59 @@ def simgrupo(D, tickers, di, v0):
     if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
     v0 = max(0.0, float(v0 or 0))
     if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
-    key = repr(("sim", ENGINE, D["at"], tuple(tickers), di, v0))
+    key = _simkey(D, tickers, di, v0)
     if key in _C: _C.move_to_end(key); return _C[key]
-    idx = [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
+    idx = _simidx(D, tickers, me)
     if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
     aps = [v0] + [0.0] * (len(me) - 1)
     pc = lambda v: round((v / v0 - 1) * 100, 2)
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "at": D["at"], "n": len(idx), "eng": ENGINE, "m": []}
     for m in MODELOS:
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True)
+        _mzput((key, m["id"]), h)  # todas as movimentações, comprimidas: páginas e histórico por empresa em simmov
         out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
-                         "cash": h["cash"], "pos": h["pos"][:30], "mov": _ult(h["mov"]), "nmov": len(h["mov"]),
-                         "pa": [[p["t"], p["q"], p["inv"], p["p"]] for p in h["pos"]]})  # todas as posições (widget do app; o site não recebe)
+                         "cash": h["cash"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"])})
     out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": r["pct"], "ref": True} for r in _refs(D, me, aps, [0.0] * len(me), v0)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
     _C[key] = out
     while len(_C) > 60: _C.popitem(last=False)
     return out
+
+
+MOV_SITE = 50  # Grupo simulação: movimentações que vão junto com a simulação (as mais recentes); as outras vêm em páginas de simmov
+_MZ = OrderedDict(); MZ_MAX = 12  # (simulação, modelo) -> movimentações e posições em JSON comprimido (~70 KB por modelo em 20 anos)
+
+
+def _simkey(D, tickers, di, v0): return repr(("sim", ENGINE, D["at"], tuple(tickers), di, float(v0)))
+
+
+def _simidx(D, tickers, me): return [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
+
+
+def _mzput(k, h):
+    _MZ[k] = zlib.compress(json.dumps(h, separators=(",", ":")).encode(), 6); _MZ.move_to_end(k)
+    while len(_MZ) > MZ_MAX: _MZ.popitem(last=False)
+
+
+def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50):
+    """Movimentações de um modelo do Grupo simulação (mesma conta de simgrupo), das mais recentes para as mais antigas.
+    Sem tk: a página [off, off+n) e o total. Com tk: só essa empresa (todas as movimentações dela), a posição (preço médio…) e os
+    proventos recebidos. Leve: guardado comprimido; se saiu da memória, refaz só esse modelo."""
+    if mid not in MOD or mid not in {m["id"] for m in MODELOS}: return {"error": "Modelo desconhecido."}
+    me = _span(D, di, D["fim"]); v0 = max(0.0, float(v0 or 0))
+    if len(me) < 2 or v0 <= 0: return {"error": "Simulação inválida."}
+    k = (_simkey(D, tickers, di, v0), mid)
+    if k not in _MZ:
+        idx = _simidx(D, tickers, me)
+        if not idx: return {"error": "Nenhuma empresa no período."}
+        _mzput(k, grupo(D, mid, idx, me, [v0] + [0.0] * (len(me) - 1), rec=True)[4])
+    _MZ.move_to_end(k); h = json.loads(zlib.decompress(_MZ[k]))
+    ev = h["mov"][::-1]
+    if tk:
+        L = [x for x in ev if x.get("t") == tk]
+        return {"t": tk, "pos": next((p for p in h["pos"] if p["t"] == tk), None), "dv": h.get("dvt", {}).get(tk, 0.0), "mov": L, "nmov": len(L)}
+    off = max(0, int(off or 0)); n = min(200, max(1, int(n or 50)))
+    return {"off": off, "mov": ev[off:off + n], "nmov": len(ev)}
 
 
 def fora_barsi(D, idx, me):

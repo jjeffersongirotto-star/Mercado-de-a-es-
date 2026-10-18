@@ -29,7 +29,13 @@ public class SimDataTest {
         assertEquals("R$ 12.000", SimData.money(b.ap)); assertEquals("R$ 17.162", SimData.money(b.v)); assertEquals("R$ 950,40", SimData.money(950.4));
         assertEquals("▼ 0,21%", SimData.dayPct(b.dp)); assertEquals("−R$ 36,95", SimData.dayMoney(b.dv));
         assertEquals("+43,0%", SimData.total(b.v, b.ap));
-        assertEquals("+ 29 empresas · R$ 236,99 no CDB", SimData.rest(b));
+        // lista plana: só o modelo aberto mostra título, TODAS as empresas (sem "+ N empresas") e o CDB no fim
+        List<SimData.Item> it = SimData.items(r, "barsi");
+        assertEquals(5, it.size());
+        assertEquals(SimData.Item.HEAD, it.get(1).type); assertEquals(SimData.Item.POS, it.get(2).type); assertEquals("CEBR5", it.get(2).pos.t);
+        assertEquals(SimData.Item.CDB, it.get(3).type); assertEquals(SimData.Item.ROW, it.get(4).type);
+        assertEquals(2, SimData.items(r, "").size()); assertEquals("Posições atuais · 30 empresas", SimData.head(b)); assertEquals("Tudo no CDB", SimData.head(r.get(1)));
+        java.util.HashSet<Long> ids = new java.util.HashSet<>(); for (SimData.Item x : it) ids.add(x.id()); assertEquals(5, ids.size());
         assertNull(r.get(1).dp); assertEquals("—", SimData.dayPct(r.get(1).dp));
         assertTrue(SimData.rows("{}").isEmpty());
     }

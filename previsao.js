@@ -557,40 +557,84 @@ if (typeof document !== 'undefined') {
   // movimentações (rodízio e Grupo simulação): uma linha por evento (compra, venda, aporte, provento, aplicação/resgate do CDI,
   // retirada, imposto), mais recentes primeiro; mostra MOV_PG por vez ("Mostrar mais" acrescenta sem redesenhar o resto)
   window.pvGroupHtml = groupHtml;
-  const MOV_PG = 60, movStore = {}; let movSeq = 0;
-  const MOV_N = { compra: 'Compra', venda: 'Venda', aporte: 'Aporte', provento: 'Provento', cdi_ap: 'Aplicação no CDI', cdi_res: 'Resgate do CDI', retirada: 'Retirada', imposto: 'Imposto (IR)' };
+  const MOV_PG = 50, movStore = {}; let movSeq = 0;
+  // Tipo | Origem/destino (ticker; CDI na aplicação/resgate) | Valor ação (preço na hora; — sem ação) | Qtd. de ações | Valor
+  const MOV_N = { compra: 'Compra', venda: 'Venda', aporte: 'Aporte', provento: 'Provento', cdi_ap: 'Aplicação', cdi_res: 'Resgate', retirada: 'Retirada', imposto: 'Imposto' };
+  const MOV_H = '<thead><tr><th>Data</th><th>Tipo</th><th>Origem/<br>destino</th><th>Valor<br>ação</th><th>Qtd. de<br>ações</th><th>Valor</th></tr></thead>';
   const movRow = (x) => {
-    const sub = [x.p != null ? brl.format(x.p) + '/ação' : '', x.x || ''].filter(Boolean).join(' · ');
-    const neg = x.k === 'compra' || x.k === 'retirada' || x.k === 'imposto';
-    return `<tr class="mv-${x.k}"><td>${dataBR(x.d)}</td><td style="white-space:normal;text-align:left">${MOV_N[x.k] || esc(x.k)}${x.t ? ` <b>${esc(x.t)}</b>` : ''}${sub ? `<br><span class="pvd-note">${esc(sub)}</span>` : ''}</td>` +
-      `<td>${x.q != null ? F0.format(x.q) : ''}</td><td class="${neg ? '' : x.k === 'cdi_ap' || x.k === 'cdi_res' ? '' : 'up'}">${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`;
+    const cdi = x.k === 'cdi_ap' || x.k === 'cdi_res', neg = x.k === 'compra' || x.k === 'retirada' || x.k === 'imposto';
+    const org = x.t ? `<b>${esc(x.t)}</b>` : cdi ? 'CDI' : '—', det = x.x ? `<br><span class="pvd-note">${esc(x.x)}</span>` : '';
+    const px = x.p != null && !cdi && x.k !== 'imposto' && x.k !== 'aporte' ? brl.format(x.p) : '—';
+    return `<tr class="mv-${x.k}"><td>${dataBR(x.d).replace(/\/(\d\d)(\d\d)$/, '/$2')}</td><td>${MOV_N[x.k] || esc(x.k)}</td><td class="mv-o">${org}${det}</td><td>${px}</td>` +
+      `<td>${x.q != null ? F0.format(x.q) : '—'}</td><td class="${neg || cdi ? '' : 'up'}">${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`;
   };
-  function movHtml(mov, nmov) {
-    const L = (mov || []).slice().reverse(), id = 'm' + (++movSeq); movStore[id] = L;
-    for (const k of Object.keys(movStore)) if (k !== id && Object.keys(movStore).length > 8) delete movStore[k];  // só os últimos modais
-    const more = L.length > MOV_PG ? `<button type="button" class="btn mv-more" data-movmore="${id}" data-n="${MOV_PG}">Mostrar mais (${L.length - MOV_PG})</button>` : '';
-    return `<table class="gtab mvtab"><thead><tr><th>Data</th><th>Movimentação</th><th>Qtd. de ações</th><th>Valor</th></tr></thead><tbody id="${id}">${L.slice(0, MOV_PG).map(movRow).join('') || '<tr><td colspan="4">Nenhuma movimentação.</td></tr>'}</tbody></table>${more}` +
-      (nmov > L.length ? `<p class="pvd-note">Mostrando as ${L.length - 1} últimas de ${nmov} movimentações e o aporte inicial.</p>` : '');
+  // mov: as que vieram (mais antigas primeiro); nmov: total; src {di, v0, m}: o resto vem do servidor em páginas (/api/modelos/simmov)
+  const movInfo = (o) => `Mostrando ${F0.format(o.n)} de ${F0.format(o.N)} movimentaç${o.N === 1 ? 'ão' : 'ões'}`;
+  function movHtml(mov, nmov, src) {
+    const L = (mov || []).slice().reverse(), id = 'm' + (++movSeq), N = Math.max(nmov || 0, L.length), o = { L, N, n: Math.min(MOV_PG, L.length), src };
+    movStore[id] = o; for (const k of Object.keys(movStore)) if (k !== id && Object.keys(movStore).length > 8) delete movStore[k];  // só os últimos modais
+    const more = o.n < N && (src || o.n < L.length) ? `<button type="button" class="btn mv-more" data-movmore="${id}">Mostrar mais ${Math.min(MOV_PG, N - o.n)}</button>` : '';
+    return `<div class="mvwrap"><table class="gtab mvtab">${MOV_H}<tbody id="${id}">${L.slice(0, o.n).map(movRow).join('') || '<tr><td colspan="6">Nenhuma movimentação.</td></tr>'}</tbody></table></div>` +
+      `<p class="pvd-note" id="${id}i">${movInfo(o)}${!src && N > L.length ? ` (as ${F0.format(L.length - 1)} mais recentes e o aporte inicial)` : ''}</p>${more}`;
   }
-  document.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-movmore]'); if (!b) return;
-    const L = movStore[b.dataset.movmore], n = +b.dataset.n, tb = document.getElementById(b.dataset.movmore); if (!L || !tb) return;
-    tb.insertAdjacentHTML('beforeend', L.slice(n, n + MOV_PG).map(movRow).join('')); b.dataset.n = n + MOV_PG;
-    if (n + MOV_PG >= L.length) b.remove(); else b.textContent = `Mostrar mais (${L.length - n - MOV_PG})`;
+  window.pvMovHtml = movHtml; window.pvMovRow = movRow; window.pvMovHead = MOV_H;
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-movmore]'); if (!b || b.disabled) return;
+    const id = b.dataset.movmore, o = movStore[id], tb = document.getElementById(id); if (!o || !tb) return;
+    if (o.n + MOV_PG > o.L.length && o.src && o.L.length < o.N) {  // busca a próxima página no servidor
+      b.disabled = true; b.textContent = 'Carregando…';
+      try {
+        const r = await fetch('/api/modelos/simmov', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ off: o.L.length, n: MOV_PG * 2 }, o.src)) });
+        const d = await r.json(); if (!r.ok || !d.mov) throw new Error(d.error || 'erro');
+        o.L.push(...d.mov); o.N = d.nmov;
+      } catch (err) { b.disabled = false; b.textContent = 'Tentar de novo'; return; }
+      b.disabled = false;
+    }
+    const k = Math.min(o.L.length, o.n + MOV_PG); tb.insertAdjacentHTML('beforeend', o.L.slice(o.n, k).map(movRow).join('')); o.n = k;
+    const inf = document.getElementById(id + 'i'); if (inf) inf.textContent = movInfo(o);
+    if (o.n >= o.N || (!o.src && o.n >= o.L.length)) b.remove(); else b.textContent = `Mostrar mais ${Math.min(MOV_PG, o.N - o.n)}`;
   });
   // blocos do resumo: [rótulo, valor, detalhe, classe] (classe: 'big up'/'big dn' para o rendimento, 'w2' ocupa a linha no celular)
   const tiles = (L) => `<div class="sumg">${L.filter(Boolean).map(([l, v, d, c = '']) => `<div class="sumt${/w2/.test(c) ? ' w2' : ''}"><span class="l">${l}</span><span class="v ${c.replace('w2', '')}">${v}</span>${d ? `<span class="s">${d}</span>` : ''}</div>`).join('')}</div>`;
   const pclr = (x) => x == null ? '' : x < 0 ? 'dn' : 'up';
+  // posição: preço médio (total pago com custos ÷ ações; vendas não mudam) e resultado = preço de agora × preço médio; toque abre o histórico da empresa
+  const SIM_POS = 30;
+  const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b></td><td>${F0.format(x.q)}</td><td>${brl.format(x.pm != null ? x.pm : x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
   function simHtml(r) {
-    const qf = (q) => F0.format(q);
-    const pos = r.pos.map(x => `<tr><td><b>${esc(x.t)}</b></td><td>${qf(x.q)}</td><td>${brl.format(x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`).join('');
+    const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('');
     return tiles([['Investido', brl.format(r.v0), 'desde ' + dataBR(r.d0)], ['Hoje', brl.format(r.v), `<span class="pct ${pclr(r.pct)}">${pc(r.pct)}</span>`],
         ['Compras / vendas', `${F0.format(r.c)} <span class="s2">/</span> ${F0.format(r.s)}`], ['Imposto', brl.format(r.ir)],
         ['Posição', `${r.np} empresa${r.np === 1 ? '' : 's'}`, `+ ${brl.format(r.cash)} no CDB`, 'w2']]) + `<p class="sumd">dados até ${dataBR(r.d1)}</p>
-      ${r.np > r.pos.length ? `<p class="pvd-note">As ${r.pos.length} maiores posições:</p>` : ''}
-      <table class="gtab"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Preço</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="5">Tudo no CDB.</td></tr>'}</tbody></table>
-      ${movHtml(r.mov, r.nmov)}`;
+      <p class="pvd-note">Toque numa empresa para ver as compras, vendas e proventos dela.</p>
+      <table class="gtab simpos"><thead><tr><th>Ativo</th><th>Ações</th><th>Preço<br>médio</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="5">Tudo no CDB.</td></tr>'}</tbody></table>
+      ${r.pos.length > SIM_POS ? `<button type="button" class="btn mv-more" data-simall="1">Mostrar todas (${r.pos.length})</button>` : ''}
+      ${movHtml(r.mov, r.nmov, src)}`;
   }
+  // uma empresa dentro de um modelo do Grupo simulação (/api/modelos/simmov com tk): resumo e o histórico dela (compras, vendas, proventos)
+  async function simCoLoad(src, tk) {
+    const r = await fetch('/api/modelos/simmov', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ tk }, src)) });
+    const d = await r.json(); if (!r.ok || !d.mov) throw new Error(d.error || 'Não foi possível carregar agora.'); return d;
+  }
+  function simCoHtml(d) {
+    const p = d.pos;
+    return tiles(p ? [['Ações', F0.format(p.q)], ['Preço médio', brl.format(p.pm), 'pago com custos ÷ ações'], ['Investido', brl.format(p.inv)], ['Valor atual', brl.format(p.v), `${brl.format(p.p)}/ação`],
+        ['Resultado', `<span class="pct ${pclr(p.pct)}">${p.pct == null ? '—' : pc(p.pct)}</span>`, brl.format(p.v - p.inv)], ['Proventos recebidos', brl.format(d.dv), 'líquidos']]
+      : [['Ações', '0', 'vendida (fora da carteira)'], ['Proventos recebidos', brl.format(d.dv), 'líquidos']]) + movHtml(d.mov.slice().reverse(), d.nmov);
+  }
+  window.pvSimCompany = async (src, tk, title) => {
+    uiAlert('', { title, html: `<div id="simCo">${typeof loaderHTML === 'function' ? loaderHTML('Carregando…') : 'Carregando…'}</div>` });
+    try { const d = await simCoLoad(src, tk), b = document.getElementById('simCo'); if (b) b.innerHTML = simCoHtml(d); }
+    catch (e) { const b = document.getElementById('simCo'); if (b) b.textContent = e.message; }
+  };
+  document.addEventListener('click', async (e) => {
+    const all = e.target.closest('[data-simall]');
+    if (all) { const t = all.previousElementSibling && all.parentElement.querySelector('table.simpos'); if (t) t.querySelectorAll('tr.hidden').forEach(x => x.classList.remove('hidden')); all.remove(); return; }
+    const tr = e.target.closest('tr[data-simpos]'); if (!tr || !tr.dataset.src) return;
+    const nx = tr.nextElementSibling; if (nx && nx.classList.contains('simdet')) { nx.remove(); tr.classList.remove('sel'); return; }  // 2º toque fecha
+    tr.classList.add('sel'); tr.insertAdjacentHTML('afterend', '<tr class="gdet simdet"><td colspan="5"><p class="pvd-note">Carregando…</p></td></tr>');
+    const td = tr.nextElementSibling.firstElementChild;
+    try { td.innerHTML = simCoHtml(await simCoLoad(JSON.parse(tr.dataset.src), tr.dataset.simpos)); } catch (err) { td.innerHTML = `<p class="pvd-note">${esc(err.message)}</p>`; }
+  });
   function groupHtml(r) {
     if (r.sim) return simHtml(r);
     const h = r.hist, sem = (x) => `${F0.format(x)} sem. (~${F0.format(x / 4.35)} meses)`;

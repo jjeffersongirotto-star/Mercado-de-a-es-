@@ -9,8 +9,10 @@
     <!-- marca comprida do topo do widget: 28dp de altura × proporção de static/brand/jg-investing-widget.png (405 × 126) -->
     <dimen name="brand_w">90dp</dimen>
     <!-- widget Grupo simulação: Modelo | Valor aportado | Valor atual | Variação do dia; posições: Empresa | Ações | Investido | Atual -->
-    <dimen name="sim_ap">70dp</dimen>
-    <dimen name="sim_v">78dp</dimen>
-    <dimen name="sim_d">66dp</dimen>
+    <dimen name="sim_np">46dp</dimen>
+    <dimen name="sim_ap">62dp</dimen>
+    <dimen name="sim_v">70dp</dimen>
+    <dimen name="sim_pv">76dp</dimen>
+    <dimen name="sim_d">60dp</dimen>
     <dimen name="sim_q">50dp</dimen>
 </resources>

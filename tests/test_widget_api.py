@@ -76,8 +76,8 @@ def test_widget_simgrupo_live_values():
     import modelos
     setup()
     sg = {"d0": "2025-03", "d1": "2026-10", "v0": 1000.0, "m": [
-        {"m": "barsi", "n": "Barsi", "cash": 100.0, "pa": [["PETR4", 10, 250.0, 28.0], ["ZZZZ3", 5, 50.0, 12.0]]},
-        {"m": "ibov", "n": "Ibovespa", "ref": 1, "cash": 0, "pa": []}]}
+        {"m": "barsi", "n": "Barsi", "cash": 100.0, "pos": [{"t": "PETR4", "q": 10, "inv": 250.0, "p": 28.0}, {"t": "ZZZZ3", "q": 5, "inv": 50.0, "p": 12.0}]},
+        {"m": "ibov", "n": "Ibovespa", "ref": 1, "cash": 0, "pos": []}]}
     od, os_, oss, ou = modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe
     modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; modelos.simgrupo = lambda *a: sg; server.universe.universe = lambda rows: rows
     try:

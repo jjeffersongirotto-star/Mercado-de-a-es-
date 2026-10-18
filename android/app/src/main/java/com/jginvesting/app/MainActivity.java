@@ -97,19 +97,20 @@ public class MainActivity extends Activity {
     /** Widget Grupo simulação: ?sim=<grupo>&m=<modelo> abre as movimentações do modelo (grupos.js → jgOpenSim). */
     private static String simName(Intent i) { String s = i == null ? null : i.getStringExtra(SimWidget.EXTRA_SIM); return s != null && !s.isEmpty() && s.length() <= 80 ? s : null; }
     private static String simModel(Intent i) { String m = i == null ? null : i.getStringExtra(SimWidget.EXTRA_MODEL); return SimData.validModel(m) ? m : null; }
+    private static String simTk(Intent i) { String t = i == null ? null : i.getStringExtra(SimWidget.EXTRA_TK); return t != null && WidgetData.validTicker(t) ? t : null; }
     private static String startQuery(Intent i) {
-        String s = simName(i), m = simModel(i);
+        String s = simName(i), m = simModel(i), t = simTk(i);
         if (s == null) return acaoQuery(i);
-        try { return "?sim=" + java.net.URLEncoder.encode(s, "UTF-8") + (m != null ? "&m=" + m : ""); } catch (Exception e) { return ""; }
+        try { return "?sim=" + java.net.URLEncoder.encode(s, "UTF-8") + (m != null ? "&m=" + m : "") + (t != null ? "&tk=" + java.net.URLEncoder.encode(t, "UTF-8") : ""); } catch (Exception e) { return ""; }
     }
 
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
         if (i.getBooleanExtra(FavWidget.EXTRA_UPDATE, false)) updater.forceOffer();  // onResume vem em seguida
-        String sn = simName(i), sm = simModel(i);
-        if (sn != null) {  // nome vai como JSON (aspas e acentos escapados)
-            String js = org.json.JSONObject.quote(sn), mj = sm == null ? "null" : "'" + sm + "'";
-            web.evaluateJavascript("window.jgOpenSim ? jgOpenSim(" + js + "," + mj + ") : location.assign('/" + startQuery(i).replace("'", "%27") + "')", null);
+        String sn = simName(i), sm = simModel(i), st = simTk(i);
+        if (sn != null) {  // nome vai como JSON (aspas e acentos escapados); tk = janela só com a empresa (widget 1.16+)
+            String js = org.json.JSONObject.quote(sn), mj = sm == null ? "null" : "'" + sm + "'", tj = st == null ? "null" : org.json.JSONObject.quote(st);
+            web.evaluateJavascript("window.jgOpenSim ? jgOpenSim(" + js + "," + mj + ",0," + tj + ") : location.assign('/" + startQuery(i).replace("'", "%27") + "')", null);
             return;
         }
         String t = ticker(i);

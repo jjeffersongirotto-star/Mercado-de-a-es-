@@ -19,9 +19,10 @@
     <string name="sim_empty">Crie um Grupo simulação na Previsão (Todos + Data inicial) e abra o app</string>
     <string name="sim_wait">Abra o app ou toque em ⟳ para carregar</string>
     <string name="sim_col_m">Modelo</string>
-    <string name="sim_col_ap">Valor aportado</string>
-    <string name="sim_col_v">Valor atual</string>
-    <string name="sim_col_d">Variação do dia</string>
+    <string name="sim_col_np">Carteira</string>
+    <string name="sim_col_ap">Valor\naportado</string>
+    <string name="sim_col_v">Valor\natual</string>
+    <string name="sim_col_d">Variação\ndo dia</string>
     <string name="sim_pos_t">Empresa</string>
     <string name="sim_pos_q">Ações</string>
     <string name="sim_pos_inv">Investido</string>

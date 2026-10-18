@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- uma posição do modelo aberto: nome popular (ticker embaixo) | nº de ações | valor investido | valor atual -->
+<!-- uma posição do modelo aberto (toque: janela só com essa empresa no app) ou a linha final do CDB: nome popular (ticker embaixo) | nº de ações | valor investido | valor atual -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/p_row"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal"
+    android:background="@color/bg_sec"
+    android:paddingStart="6dp"
+    android:paddingEnd="4dp"
     android:paddingTop="2dp"
     android:paddingBottom="2dp">
     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
@@ -15,8 +19,8 @@
     </LinearLayout>
     <TextView android:id="@+id/p_q" android:layout_width="@dimen/sim_q" android:layout_height="wrap_content" android:gravity="end"
         android:maxLines="1" android:textColor="@color/c_txt" android:textSize="11.5sp" />
-    <TextView android:id="@+id/p_inv" android:layout_width="@dimen/sim_v" android:layout_height="wrap_content" android:gravity="end"
+    <TextView android:id="@+id/p_inv" android:layout_width="@dimen/sim_pv" android:layout_height="wrap_content" android:gravity="end"
         android:maxLines="1" android:textColor="@color/c_dim" android:textSize="11.5sp" />
-    <TextView android:id="@+id/p_v" android:layout_width="@dimen/sim_v" android:layout_height="wrap_content" android:gravity="end"
+    <TextView android:id="@+id/p_v" android:layout_width="@dimen/sim_pv" android:layout_height="wrap_content" android:gravity="end"
         android:maxLines="1" android:paddingEnd="2dp" android:textSize="11.5sp" android:textStyle="bold" />
 </LinearLayout>
