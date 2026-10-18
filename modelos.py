@@ -54,8 +54,23 @@ def set_setores(D, rows, cad=None):
     """Marca as empresas de setor perene nas matrizes (fora delas o Método Barsi fica "fora do método")."""
     bs = {r["ticker"] for r in rows if perene(r, cad)}
     if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
+    sec = {r["ticker"]: r.get("subsetor") or r.get("setor") or "" for r in rows}
+    if D.get("_sec") != sec and "FM" in D:  # crise do setor: ≥ VENDA['setor_crise'] das empresas do setor com prejuízo no último balanço
+        FM = D["FM"]; CRI = np.zeros_like(FM["PREJ"]); key = np.array([sec.get(t, "") for t in D["tick"]])
+        for g in set(key) - {""}:
+            m = key == g
+            if m.sum() < 3: continue
+            n = FM["TEM"][m].sum(axis=0); sh = np.where(n >= 3, FM["PREJ"][m].sum(axis=0) / np.maximum(n, 1), 0)
+            CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
+        D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 4        # versão das contas (4: aportes mensais/extras e retiradas no Grupo simulação): invalida resultados guardados
+ENGINE = 5        # versão das contas (5: regras de carteira REGRAS no modo Grupo): invalida resultados guardados
+# Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
+# ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
+# comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
+# modelos de segurar (venda_motivo). Explicação no painel ⓘ → Modelos da Previsão.
+REGRAS = {"max": 30, "liq": 1e6, "conc": 3, "min_compra": 100.0, "venda": True}
+VENDA = {"pl_prej": .15, "setor_crise": .40, "hist_anos": 10, "hist_lucro": .8, "posse": 52, "sem_recompra": 52, "queda": .30}
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
 IR, ISENTO = 0.15, 20000.0
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
@@ -78,17 +93,43 @@ _lock = threading.Lock()
 _C = OrderedDict()
 
 
-def build(snap, cdi, gold=None, ibov=None):
+def _fund_mats(tick, wk, fund):
+    """Balanços anuais (fund.json, DFP da CVM) em cada semana, só os já publicados (ano Y vale a partir de 1º/maio de Y+1):
+    PREJ2 = prejuízo nos 2 últimos balanços; GRANDE = os 2 prejuízos somam mais de VENDA['pl_prej'] do patrimônio de antes deles
+    (ou patrimônio negativo); FORTE = lucro em ≥ VENDA['hist_lucro'] dos VENDA['hist_anos'] anos antes do último balanço
+    (ou antes da sequência atual de prejuízos; mínimo 4 anos com balanço);
+    PREJ = prejuízo no último balanço (base da crise do setor, em set_setores)."""
+    N, T = len(tick), len(wk); z = lambda: np.zeros((N, T), bool)
+    PREJ2, GRANDE, FORTE, PREJ, TEM = z(), z(), z(), z(), z()
+    for k, t in enumerate(tick):
+        f = (fund or {}).get(t)
+        if not f or not f.get("y"): continue
+        av = np.array([np.datetime64(f"{y + 1}-05-01") for y in f["y"]]); jl = np.searchsorted(av, wk.values.astype("datetime64[D]"), side="right") - 1
+        ni = np.array([np.nan if x in (None, 0) else x for x in f.get("ni") or []], float); eq = np.array([np.nan if x is None else x for x in f.get("eq") or []], float)
+        if len(ni) != len(f["y"]): continue
+        for i in np.flatnonzero(jl >= 0):
+            j = jl[i]; TEM[k, i] = not np.isnan(ni[j]); PREJ[k, i] = ni[j] < 0
+            e = j  # histórico antes da sequência atual de prejuízos (Petrobras 2014–15 é julgada pelos anos bons de antes)
+            while e >= 0 and ni[e] < 0: e -= 1
+            h = ni[max(0, e + 1 - VENDA["hist_anos"]):e + 1] if e < j else ni[max(0, j - VENDA["hist_anos"]):j]; h = h[~np.isnan(h)]
+            FORTE[k, i] = len(h) >= 4 and (h > 0).mean() >= VENDA["hist_lucro"]
+            if j >= 1 and ni[j] < 0 and ni[j - 1] < 0:
+                PREJ2[k, i] = True; e0 = eq[j - 2] if j >= 2 else np.nan
+                GRANDE[k, i] = (eq[j] <= 0) or (e0 > 0 and -(ni[j] + ni[j - 1]) > VENDA["pl_prej"] * e0)
+    return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM}
+
+
+def build(snap, cdi, gold=None, ibov=None, fund=None):
     """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda dt=np.float64: np.full((N, T), np.nan, dtype=dt)
     # preço e proventos em float64 (dinheiro); sinais em float32 (só comparações): metade da memória
     C, DV = arr(), arr()
-    SI, M2, R12, P1, P3 = (arr(np.float32) for _ in range(5))
+    SI, M2, R12, P1, P3, VL = (arr(np.float32) for _ in range(6))  # VL: volume médio diário de 60 pregões (R$ mil; build_modelos → vl)
     LP = np.ones((N, T), bool); JC = np.zeros((N, T)); DT = {}  # JC: JCP por ação na semana; DT: tipos (J, D, R, K) dos proventos da B3
     for k, t in enumerate(tick):
         a = snap["a"][t]; i0 = a["i0"]
-        for M, key in ((C, "c"), (SI, "si"), (M2, "m2"), (R12, "r12"), (P1, "p1"), (P3, "p3")):
+        for M, key in ((C, "c"), (SI, "si"), (M2, "m2"), (R12, "r12"), (P1, "p1"), (P3, "p3"), (VL, "vl")):
             v = a.get(key) or []
             M[k, i0:i0 + len(v)] = [np.nan if x is None else x for x in v]
         DV[k, i0:] = 0
@@ -145,7 +186,7 @@ def build(snap, cdi, gold=None, ibov=None):
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float), "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": _fund_mats(tick, wk, fund), "CRI": np.zeros((N, T), bool),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
             "fp": hashlib.sha1(repr(snap.get("fetched_at")).encode() + cdb.tobytes() + np.nan_to_num(G, nan=-1.0).tobytes()).hexdigest()[:16]}
@@ -163,9 +204,10 @@ def data():
             except Exception: gold = None  # sem ouro: a referência Ouro mostra "—"
             try: ibov = history.get("IBOV", "m")
             except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
+            fund = ((snapshots.load("fund")[0]) or {}).get("a") or {}  # balanços anuais: venda ocasional (REGRAS)
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
-                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov); _D["key"] = snap.get("fetched_at")
+                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund); _D["key"] = snap.get("fetched_at")
         snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
@@ -635,11 +677,54 @@ def _gtargets(D, mid, idx, i):
         top=np.argsort(-sc)[:GRUPO_K]; w=np.zeros(n); w[top[np.isfinite(sc[top])]]=1
     else: w=(_signals(D,mid,idx,i)&ok).astype(float)
     s=w.sum(); return (w/s if s>0 else w)
-def grupo(D, mid, idx, me, ap, rec=False, wd=None):
+def _regras_w(D, mid, idx, i, w, sh, pend, RG, ban):
+    """Alvos do modelo com as regras de carteira (REGRAS): sem liquidez da época não compra; recém-vendida fica de fora;
+    no máximo RG['max'] empresas — quem já está na carteira mantém a vaga, as novas pelo sinal do modelo (pesos diferentes:
+    Barsi, Híbrido) ou pelo maior volume (modelos de peso igual)."""
+    vol = D["VL"][idx, max(0, i - 1)] if "VL" in D else np.full(len(idx), np.nan)
+    if RG.get("liq"): w = np.where(np.isnan(vol) | (vol >= RG["liq"]), w, 0)  # sem volume no snapshot antigo: regra não se aplica
+    w = np.where(ban > 0, 0, w)
+    if RG.get("max"):
+        held = (sh > 0) | (pend > 0); cand = (w > 0) & ~held; room = max(0, RG["max"] - int(held.sum()))
+        keep = held.copy()
+        if room and cand.any():
+            c = np.flatnonzero(cand); crit = w[c] if np.ptp(w[c]) > 1e-12 else np.nan_to_num(vol[c])
+            keep[c[np.argsort(-crit, kind="stable")[:room]]] = True
+        w = np.where(keep, w, 0)
+    t = w.sum(); return w / t if t > 0 else w
+
+
+def _venda(D, mid, idx, i, sh, basis, P, ok, age):
+    """Venda ocasional dos modelos de segurar (REGRAS['venda']) -> motivo por empresa ('' = mantém). Só com ≥ VENDA['posse'] semanas.
+    1) prejuízo nos 2 últimos balanços, grande (GRANDE), sem crise do setor e sem histórico forte de lucro;
+    2) sem proventos há 2 anos e 30% abaixo do preço médio, sem crise do setor e sem histórico forte;
+    3) Método Barsi: corte forte de dividendos (mediana de 2 anos < metade da de 5) e rendimento sobre o custo (12 meses ÷ preço médio) < 6%,
+       e a empresa piorou (prejuízo no último balanço, sem crise do setor) sem histórico forte."""
+    n = len(idx); out = np.full(n, "", dtype=object); FM = D.get("FM")
+    held = (sh > 0) & ok & (age >= VENDA["posse"])
+    if not held.any(): return out
+    j = max(0, i - 1); DVn = np.nan_to_num(D["DV"][idx, max(0, i - 104):i]); pm = np.where(sh > 0, basis / np.where(sh > 0, sh, 1), 0)
+    cri = D["CRI"][idx, j]; forte = FM["FORTE"][idx, j] if FM else np.zeros(n, bool)
+    if FM is not None:
+        r1 = FM["PREJ2"][idx, j] & FM["GRANDE"][idx, j] & ~cri & ~forte
+        out[held & r1] = "prejuízo grande em 2 balanços seguidos"
+    r2 = (DVn.sum(axis=1) <= 0) & (P < (1 - VENDA["queda"]) * pm) & ~cri & ~forte  # crise do setor ou histórico forte: segura
+    out[held & r2 & (out == "")] = "sem proventos há 2 anos e 30% abaixo do preço médio"
+    if mid == "barsi":
+        med5 = D["TETO"][idx, j] * BARSI_DY
+        corte = np.nan_to_num(DVn.sum(axis=1) / 2) < 0.5 * np.nan_to_num(med5, nan=0)
+        yoc = np.where(pm > 0, DVn[:, -52:].sum(axis=1) / np.where(pm > 0, pm, 1), 0)
+        pior = (FM["PREJ"][idx, j] if FM is not None else np.zeros(n, bool)) & ~cri  # piorou de verdade: prejuízo no último balanço, sem crise do setor
+        r3 = corte & ~np.isnan(med5) & (yoc < .06) & pior & ~forte
+        out[held & r3 & (out == "")] = "corte de dividendos (rendimento sobre o custo abaixo de 6%)"
+    return out
+
+
+def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     """Modo Grupo (Comparar e Grupo simulação): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
     Ações inteiras: o dinheiro destinado a cada empresa fica numa reserva dela, rendendo CDB, até dar para comprar pelo menos 1 ação;
     se a empresa sai do alvo, a reserva volta ao caixa. -> valor final, IR, compras, vendas (rec: + movimentações uma a uma e posição)."""
-    idx=np.asarray(idx);n=len(idx);s,e=me[0],me[-1];mod=MOD[mid];sell=mod['vende'] and not mod.get('frac')
+    idx=np.asarray(idx);n=len(idx);s,e=me[0],me[-1];mod=MOD[mid];sell=mod['vende'] and not mod.get('frac');RG=REGRAS if RG is None else RG;ban=np.zeros(n)
     sh=np.zeros(n);basis=np.zeros(n);pend=np.zeros(n);cash=float(ap[0]);age=np.zeros(n);carry=0;msales=0;mgain=0;mdq=np.zeros(n);ir=0;nb=0;ns=0
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else 'abaixo da média de 200 dias'
@@ -653,7 +738,8 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None):
             dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdq+=dq;ir+=(sh*JT[idx,i]).sum();dvt+=dq  # JCP já líquido; o retido conta no IR
             if rec:
                 for q in np.flatnonzero(dq>=0.005): ev.append({"d":W[i],"k":"provento","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(dq[q]),2),"x":tipo(D,idx[q],i)})
-        w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1
+        w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1; ban-=1
+        if RG: w=_regras_w(D,mid,idx,i,w,sh,pend,RG,ban)
         rel=(w==0)&(pend>0)
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa
         if sell and i>s:
@@ -663,6 +749,16 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None):
                 for q in np.flatnonzero(out): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":motivo})
             cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
             sh=np.where(out,0,sh);basis=np.where(out,0,basis)
+        if RG.get('venda') and not sell and i>s:  # venda ocasional dos modelos de segurar
+            mo=_venda(D,mid,idx,i,sh,basis,P,ok,age);out=mo!=""
+            if out.any():
+                v=sh*P*(1-CUSTO);g=np.where(out,v-basis,0)
+                if rec:
+                    for q in np.flatnonzero(out): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":mo[q]})
+                cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
+                sh=np.where(out,0,sh);basis=np.where(out,0,basis);ban=np.where(out,VENDA["sem_recompra"],ban)
+                rel=out&(pend>0)
+                if rel.any(): cash+=pend[rel].sum();pend[rel]=0
         j=meset.get(i)
         if j is not None and i>s:
             tax=max(0,mgain-carry)*IR if msales>ISENTO else 0
@@ -685,7 +781,13 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None):
             a=ap[j] if j<len(ap) else 0;cash+=a
             if rec and tax+dt>=0.005: ev.append({"d":W[i],"k":"imposto","v":round(float(tax+dt),2)})
             if rec and a>0: ev.append({"d":W[i],"k":"aporte","v":round(float(a),2),"x":"aporte do mês"})
-        if cash>0.005 and w.sum()>0:
+        if cash>0.005 and w.sum()>0 and RG.get('conc'):
+            if j is not None:  # aporte do mês para até RG['conc'] empresas mais abaixo da meta (compra mínima RG['min_compra']); a sobra fica no CDB
+                tv=(sh*P).sum()+pend.sum()+cash;gap=np.where(w>0,w*tv-sh*P-pend,0);top=np.argsort(-gap,kind="stable")[:RG['conc']];top=top[gap[top]>0]
+                if len(top):
+                    al=np.zeros(n);gs=gap[top].sum();al[top]=gap[top]*min(1.0,cash/gs);al=np.where(al>=RG.get('min_compra',0),al,0)
+                    if al.sum()>0: pend+=al;cash-=al.sum()
+        elif cash>0.005 and w.sum()>0:
             pend+=cash*w;cash=0.0
         m=ok&(P>0)&(pend>0)
         if m.any():

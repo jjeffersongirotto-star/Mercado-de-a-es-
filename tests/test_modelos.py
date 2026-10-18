@@ -183,11 +183,12 @@ def test_metodo_barsi():
 def test_modo_grupo():
     D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 20.0}}), cdi())
     me = months(D, "2020-02", "2020-12"); ap = [1000.0] + [100.0] * (len(me) - 1)
-    v, ir, nb, ns = modelos.grupo(D, "hold", [0, 1], me, ap)
+    v, ir, nb, ns = modelos.grupo(D, "hold", [0, 1], me, ap, RG={})  # sem as regras de carteira
     # divide cada aporte entre as duas (reserva de cada uma até dar 1 ação inteira); preço parado: só o custo das compras
     assert sum(ap) * (1 - modelos.CUSTO) - 1e-6 <= v <= sum(ap) and ns == 0 and nb >= len(me)
+    v2 = modelos.grupo(D, "hold", [0, 1], me, ap)[0]  # com as regras (REGRAS): o Comparar usa as mesmas
     out = modelos.compare(D, ["AAA3", "BBB3"], "2020-02", "2020-12", ap)
-    c = {x["m"]: x for x in out["cart"]}; assert abs(c["hold"]["v"] - v) < 0.01 and c["cdb"].get("ref")
+    c = {x["m"]: x for x in out["cart"]}; assert abs(c["hold"]["v"] - v2) < 0.01 and c["cdb"].get("ref")
 
 
 
@@ -332,6 +333,33 @@ def test_grupo_simulacao_aportes_e_retiradas():
         assert abs(sum(p["v"] for p in h["pos"]) + h["cash"] - x["v"]) < 0.05
         assert all(abs(p["pm"] * p["q"] - p["inv"]) < 0.02 * p["q"] + 0.01 for p in h["pos"])
     modelos._C.clear(); modelos._MZ.clear()
+
+
+def test_regras_de_carteira():
+    # 40 empresas iguais: no máximo 30 na carteira; aporte do mês em até 3; sem volume mínimo não compra
+    a = {f"A{k:02d}3": {"c": 10.0} for k in range(40)}
+    D = modelos.build(snap(a), cdi()); me = months(D, "2020-02", "2021-06"); ap = [30000.0] + [3000.0] * (len(me) - 1)
+    v, ir, nb, ns, h = modelos.grupo(D, "hold", list(range(40)), me, ap, rec=True)
+    assert len(h["pos"]) <= 30
+    comp = [e for e in h["mov"] if e["k"] == "compra"]; por_mes = {}
+    for e in comp: por_mes.setdefault(e["d"][:7], set()).add(e["t"])
+    assert max(len(x) for k, x in por_mes.items() if k > "2020-02") <= 3  # depois do 1º mês, cada aporte vai para até 3
+    D["VL"][:] = 500e3; D["VL"][5] = 2e6  # só A053 tem R$ 1 mi por dia
+    h = modelos.grupo(D, "hold", list(range(40)), me, ap, rec=True)[4]
+    assert {x["t"] for x in h["pos"]} == {"A053"}
+
+
+def test_venda_ocasional_olha_tamanho_setor_e_historico():
+    anos = list(range(2008, 2020))
+    def fund(hist):  # lucro (hist) até 2017, prejuízo grande em 2018 e 2019 (40 sobre patrimônio de 100)
+        return {"y": anos, "ni": [hist] * 10 + [-20.0, -20.0], "eq": [100.0] * 10 + [80.0, 60.0], "rev": [1.0] * 12}
+    for hist, vende in ((5.0, False), (-1.0, True)):  # histórico forte (lucro em 10 de 10 anos) segura; fraco vende
+        D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(), fund={"AAA3": fund(hist)})
+        me = months(D, "2020-02", "2021-12"); ap = [1000.0] + [0.0] * (len(me) - 1)
+        h = modelos.grupo(D, "hold", [0], me, ap, rec=True)[4]
+        vs = [e for e in h["mov"] if e["k"] == "venda"]
+        assert bool(vs) == vende and all(e["d"] >= "2021-02" for e in vs), (hist, vs)  # só depois de 1 ano com a ação
+        if vende: assert "prejuízo grande" in vs[0]["x"]
 
 
 if __name__ == "__main__":
