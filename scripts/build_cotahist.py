@@ -223,8 +223,10 @@ def split_adj(keys, days):
         if c[i - 1] <= 0 or c[i] <= 0: continue
         r = c[i] / c[i - 1]
         if abs(math.log(r)) < math.log(1.8): continue
+        if abs(math.log(r)) > math.log(20): k *= r; continue  # 20× num pregão não é mercado: troca de unidade/grupamento (fator exato)
         m = min([x for x in SPL] + [1 / x for x in SPL], key=lambda x: abs(math.log(r / x)))
         if abs(math.log(r / m)) > 0.08: continue
+        if abs(math.log(r)) >= math.log(4.5): k *= m; continue  # fator redondo grande: desdobramento/grupamento mesmo sem o volume
         qa, qb = sorted(q[i:i + 10])[len(q[i:i + 10]) // 2], sorted(q[max(0, i - 10):i])[len(q[max(0, i - 10):i]) // 2]
         if qa > 0 and qb > 0 and abs(math.log(qa / qb * m)) < math.log(3): k *= m  # ações negociadas mudam no sentido inverso
     f[0] = k
@@ -235,8 +237,8 @@ from modelos import REGRAS  # noqa: E402  (liquidez mínima dos modelos: só ent
 sd = os.path.join(OUT, "history4_saiu"); shutil.rmtree(sd, ignore_errors=True); os.makedirs(sd)
 ns = 0
 for t, days in fora_b3.items():
-    keys = sorted(days)
-    if not keys or keys[-1] >= lim: continue  # ainda negociada (fora do universo do site): não saiu
+    keys = sorted(d for d in days if days[d][0] >= 0.01)  # cotação abaixo de 1 centavo: registro sem valor (lote antigo/erro)
+    if not keys or max(days) >= lim: continue  # ainda negociada (fora do universo do site): não saiu
     emis = days[keys[-1]][3][2:6]; keys = [d for d in keys if days[d][3][2:6] == emis]  # mesmo emissor do último pregão (código reaproveitado)
     if len(keys) < 250: continue
     vol = [days[d][2] for d in keys]
