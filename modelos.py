@@ -230,7 +230,7 @@ def noticias_itens(fatos=None, noticias=None):
     return out
 
 
-def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idiv=None):
+def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idiv=None, consome=False):
     """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda dt=np.float64: np.full((N, T), np.nan, dtype=dt)
@@ -239,7 +239,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     SI, M2, R12, P1, P3, VL = (arr(np.float32) for _ in range(6))  # VL: volume médio diário de 60 pregões (R$ mil; build_modelos → vl)
     LP = np.ones((N, T), bool); JC = np.zeros((N, T)); DT = {}  # JC: JCP por ação na semana; DT: tipos (J, D, R, K) dos proventos da B3
     for k, t in enumerate(tick):
-        a = snap["a"][t]; i0 = a["i0"]
+        a = snap["a"].pop(t) if consome else snap["a"][t]; i0 = a["i0"]  # consome: solta as listas do JSON enquanto monta (data())
         for M, key in ((C, "c"), (SI, "si"), (M2, "m2"), (R12, "r12"), (P1, "p1"), (P3, "p3"), (VL, "vl")):
             v = a.get(key) or []
             M[k, i0:i0 + len(v)] = [np.nan if x is None else x for x in v]
@@ -266,12 +266,13 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     Cf = pd.DataFrame(C.T).ffill().to_numpy().T
     rs = np.zeros((N, T)); rs[:, 1:] = np.nan_to_num((Cf[:, 1:] + np.nan_to_num(DV[:, 1:])) / Cf[:, :-1] - 1)
     X = np.stack([np.ones((N, T)), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0]).astype(float)
-    lr = np.zeros_like(X); lr[:, :, 1:] = np.log1p(X[:, :, :-1] * rs[None, :, 1:] + (1 - X[:, :, :-1]) * (cdb[1:] - 1)[None, None, :])
-    cs = np.cumsum(lr, axis=2); perf = cs.copy(); perf[:, :, HIB_SEM:] -= cs[:, :, :-HIB_SEM]
-    wt = np.exp(HIB_ETA * (perf - perf.max(axis=0, keepdims=True))); wt /= wt.sum(axis=0, keepdims=True)
+    # mesma conta de antes, nos mesmos arrays (pico de memória menor no plano gratuito): retorno log -> soma acumulada -> janela -> pesos
+    wt = np.zeros_like(X); wt[:, :, 1:] = np.log1p(X[:, :, :-1] * rs[None, :, 1:] + (1 - X[:, :, :-1]) * (cdb[1:] - 1)[None, None, :]); del rs
+    np.cumsum(wt, axis=2, out=wt); tmp = wt[:, :, :-HIB_SEM].copy(); wt[:, :, HIB_SEM:] -= tmp; del tmp
+    wt -= wt.max(axis=0, keepdims=True); wt *= HIB_ETA; np.exp(wt, out=wt); wt /= wt.sum(axis=0, keepdims=True)
     HX = np.round((wt * X).sum(axis=0) * 4) / 4
     HW = np.round(wt * 100).astype(np.int16)  # peso de cada especialista (%): a tabela mostra quem o híbrido está seguindo
-    del X, lr, cs, perf, wt, rs  # temporários grandes (4 × ações × semanas): libera antes de seguir
+    del X, wt  # temporários grandes (4 × ações × semanas): libera antes de seguir
     G = np.full(T, np.nan)  # ouro (R$) no último dia com preço de cada semana
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
@@ -307,7 +308,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     del FM["QY"], FM["QW"]
     NT, NX = _news_mats(tick, wk, news)
     # empresas que saíram da bolsa (snapshot modelos → saiu: último pregão): SAI = semana do último preço (-1 = negociada hoje)
-    sa = {t: d for t, d in (snap.get("saiu") or {}).items() if t in snap["a"]}; SAI = np.full(N, -1)
+    sa = {t: d for t, d in (snap.get("saiu") or {}).items() if t in tick}; SAI = np.full(N, -1)
     for t, d in sa.items():
         k = tick.index(t); SAI[k] = min(T - 1, int(np.searchsorted(wk.values.astype("datetime64[D]"), np.datetime64(d), side="left")))
         C[k, SAI[k] + 1:] = np.nan
@@ -345,7 +346,7 @@ def data():
             news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0])  # Fatos Relevantes da CVM + notícias com tickers
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
-                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news, fj.get("saida"), idiv); _D["key"] = snap.get("fetched_at")
+                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news, fj.get("saida"), idiv, consome=True); _D["key"] = snap.get("fetched_at")
         snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
