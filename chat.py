@@ -929,6 +929,9 @@ def define(P):
     term = (m.group(1) if m else nq).strip(" ?")
     term = re.sub(r"\b(no site|aqui|na tela|no app)\b", "", term).strip()
     if not term: return None
+    if re.search(r"\balertas? de preco|\bfavorit", term):  # alerta de preço dos Favoritos ≠ Alertas (⚠️) do Barato/Caro (Glossário)
+        h = howto(dict(P, nq=term))
+        if h: return h
     G = glossary()
     t = GLOSS_SYN.get(term, term)
     if t in G: return G[t]

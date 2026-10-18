@@ -524,7 +524,7 @@ if (typeof document !== 'undefined') {
     // paginação numa linha só, no fim da tabela
     const pager = `<div class="pv-pg"><span class="pv-pgi">Linhas por página <select class="sel" data-pgs>${[240, 500, 1000, 2000, 5000].map(n => `<option${n === st.pgs ? ' selected' : ''}>${n}</option>`).join('')}</select></span>
       <span class="pv-pgi"><button type="button" class="gbtn" data-pg="-1"${pg ? '' : ' disabled'} aria-label="Página anterior">‹</button><span>${pg + 1} de ${np}</span><button type="button" class="gbtn" data-pg="1"${pg < np - 1 ? '' : ' disabled'} aria-label="Próxima página">›</button></span></div>`;
-    el('pvDes').innerHTML = `<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], [`Rend. médio anual ${glossBtn('Rend. médio anual')}`, 'ra'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['IR vendas', 'irv'], ['IR proventos', 'ird'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
+    el('pvDes').innerHTML = `<div class="pv-scroll"><table class="gtab"><thead><tr>${[['Ativo', 't'], ['Modelo', 'n'], [`TIR anual ${glossBtn('TIR anual')}`, 'ra'], ['Rendimento', 'pct'], ['Valor final', 'v'], ['IR vendas', 'irv'], ['IR proventos', 'ird'], ['Compras / vendas', 'c']].map(([l, k]) => thSort(l, k, dsk, dsd)).join('')}</tr></thead>
       <tbody>${rows.map(r => r.ref ? refRows([r], 1) : `<tr class="tap" data-pvsel="${esc(r.t)}|${r.m}"><td><b>${esc(r.t)}</b></td><td>${esc(r.n)}</td><td>${pcl(r.ra)}</td><td>${pcl(r.pct)}</td><td>${brl.format(r.v)}</td><td>${brl.format(r.irv)}</td><td>${brl.format(r.ird)}</td><td>${r.c} / ${r.s}</td></tr>`).join('')}</tbody></table></div>${pager}${note(`${F0.format(L.length)} linhas; toque numa linha para ver o mês a mês ${glossBtn('Desempenho (melhores casos)')}`)}`;
   }
   // abre uma empresa com um modelo (mês a mês na aba Tabela)
@@ -544,7 +544,7 @@ if (typeof document !== 'undefined') {
         : `<b>${esc(r.t)}</b><span class="pvd-m">${esc(modName(r.m))}${r.fora ? ' · fora do método (setor não perene ou sem dividendos regulares)' : ''}</span>`;
       return `<tr class="${g ? 'pvd-g' : 'tap'}${on ? ' sel' : ''}" ${g ? '' : `data-pvsel="${esc(r.t)}|${esc(r.m)}"`}><td data-v="${esc(r.n || r.t)}">${nm}</td><td data-v="${r.ra ?? -1e9}">${pcl(r.ra)}</td><td data-v="${r.pct ?? -1e9}">${pcl(r.pct)}</td><td data-v="${r.v}">${brl.format(r.v)}</td><td data-v="${r.irv ?? 0}">${brl.format(r.irv ?? 0)}</td><td data-v="${r.ir - (r.irv ?? 0)}">${brl.format(r.ir - (r.irv ?? 0))}</td><td data-v="${r.c}">${r.c} / ${r.s}</td></tr>`;
     }).join('');
-    return `<div class="pv-scroll"><table class="gtab" data-srt><thead><tr>${thSort('Ativo', 'a')}${thSort(`Rend. médio anual ${glossBtn('Rend. médio anual')}`, 'ra')}${thSort('Rendimento', 'p')}${thSort('Valor final', 'v')}${thSort('IR vendas', 'i')}${thSort('IR proventos', 'j')}${thSort('Compras / vendas', 'c')}</tr></thead><tbody>${tr}</tbody></table></div>
+    return `<div class="pv-scroll"><table class="gtab" data-srt><thead><tr>${thSort('Ativo', 'a')}${thSort(`TIR anual ${glossBtn('TIR anual')}`, 'ra')}${thSort('Rendimento', 'p')}${thSort('Valor final', 'v')}${thSort('IR vendas', 'i')}${thSort('IR proventos', 'j')}${thSort('Compras / vendas', 'c')}</tr></thead><tbody>${tr}</tbody></table></div>
       ${modInfo(d, { extra: 'toque numa linha para ver o mês a mês' })}`;
   }
   el('pvDes').addEventListener('change', (e) => { if (e.target.matches('[data-pgs]')) { st.pgs = +e.target.value; pg = 0; save(); drawDes(); } });
