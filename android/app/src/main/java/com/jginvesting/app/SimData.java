@@ -146,6 +146,28 @@ public final class SimData {
         return out;
     }
 
+    /** Linha de baixo do título (10,5sp): altura fixa no Android 12+ para a conta das linhas inteiras fechar. */
+    public static float subDp(float fontScale) { return 14 * Math.max(1f, fontScale); }
+
+    /** Cabeçalho até a lista (dp): 8 em cima + barra 36 + linha "Desde…" + 4 + títulos (2 linhas, WidgetData.colsDp) + divisor 1 + 6 embaixo. */
+    public static float headerDp(float fontScale, boolean sub) { return 8 + 36 + (sub ? subDp(fontScale) : 0) + 4 + WidgetData.colsDp(fontScale) + 1 + 6; }
+
+    /** Altura de cada linha de modelo (px) para mostrar só linhas inteiras (como o Favoritos 1.12, WidgetData.rows): com todos fechados,
+     *  N linhas que cabem esticadas até a borda (o resto rolando); com um modelo aberto, linha base (a lista rola até as posições). 0 = altura desconhecida. */
+    public static int rowPx(int hDp, float density, float fontScale, boolean sub, int models, boolean anyOpen) {
+        if (hDp <= 0) return 0;
+        int listPx = Math.round((hDp - headerDp(fontScale, sub)) * density);
+        int[] r = WidgetData.rows(listPx, density, fontScale, anyOpen ? 0 : models);
+        return anyOpen ? Math.round(WidgetData.rowBaseDp(fontScale) * density) : r[1];
+    }
+
+    /** Nome do arquivo da planilha: "Grupo simulação 2026-10-18.xlsx" (sem / \\ : * ? " < > |). */
+    public static String fileName(String name, String day) {
+        String n = name == null ? "" : name.replaceAll("[\\\\/:*?\"<>|]", "-").trim();
+        if (n.length() > 60) n = n.substring(0, 60).trim();
+        return (n.isEmpty() ? "Grupo simulação" : n) + " " + day + ".xlsx";
+    }
+
     /** " + R$ 500/mês" quando o grupo tem aporte mensal (1.17+), senão "". */
     public static String monthly(Sim s) {
         try { double ap = s.f.isEmpty() ? 0 : new JSONObject(s.f).optDouble("ap", 0); return ap > 0 ? " + " + money(ap) + "/mês" : ""; } catch (Exception e) { return ""; }

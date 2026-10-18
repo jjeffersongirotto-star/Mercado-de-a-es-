@@ -89,6 +89,29 @@ def test_widget_simgrupo_live_values():
     assert b["v"] == 100 + 10 * 30.0 + 5 * 12.0 and b["np"] == 2 and b["ap"] == 1000.0  # PETR4 ao vivo (30), ZZZZ3 sem cotação: preço da simulação
     assert abs(b["dv"] - 300 * 1.2 / 101.2) < 0.01 and b["pos"][0] == {"t": "PETR4", "q": 10, "inv": 250.0, "v": 300.0, "s": "Petrobras"}
 
+
+def test_widget_simgrupo_xlsx():
+    """Planilha do ⬇ do widget: Resumo com todos os modelos, uma aba por modelo com resumo, posições (preço médio) e TODAS as movimentações."""
+    import io, modelos, openpyxl
+    setup()
+    sg = {"d0": "2025-03-28", "d1": "2026-10-15", "v0": 1000.0, "apT": 1500.0, "m": [
+        {"m": "barsi", "n": "Método Barsi", "cash": 100.0, "ir": 5.0, "c": 2, "s": 0, "pos": [{"t": "PETR4", "q": 10, "inv": 250.0, "p": 28.0, "pm": 25.0}]}]}
+    mov = [{"d": "2025-03-28", "k": "aporte", "v": 1000.0, "x": "valor inicial"}] + [{"d": "2025-04-04", "k": "compra", "t": "PETR4", "q": 1, "p": 25.0, "v": 25.08}] * 300
+    od, os_, oss, oh, ou = modelos.data, modelos.set_setores, modelos.simgrupo, modelos.sim_hist, server.universe.universe
+    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; modelos.simgrupo = lambda *a: sg; modelos.sim_hist = lambda *a: {"mov": mov}; server.universe.universe = lambda rows: rows
+    try:
+        r = server.api_widget_simgrupo_xlsx("2025-03", 1000, '{"ap":500}', "Meu/grupo")
+    finally:
+        modelos.data, modelos.set_setores, modelos.simgrupo, modelos.sim_hist, server.universe.universe = od, os_, oss, oh, ou
+    assert r.status_code == 200 and "Meu-grupo" in r.headers["content-disposition"]
+    wb = openpyxl.load_workbook(io.BytesIO(r.body))
+    assert wb.sheetnames == ["Resumo", "Método Barsi"]
+    R = wb["Resumo"]; assert [c.value for c in R[3]][:3] == ["Modelo", "Carteira", "Valor aportado"] and R["C4"].value == 1500 and R.freeze_panes == "A4"
+    assert R["D4"].value == 400.0 and abs(R["G4"].value - (400 / 1500 - 1)) < 1e-9 and "R$" in R["D4"].number_format and "%" in R["G4"].number_format
+    M = wb["Método Barsi"]; rows = [[c.value for c in r] for r in M.iter_rows()]
+    i = next(k for k, x in enumerate(rows) if x[0] == "Empresa"); assert rows[i + 1][:4] == ["Petrobras", "PETR4", 10, 25.0]
+    j = next(k for k, x in enumerate(rows) if x[0] == "Data"); assert len(rows) - j - 1 == 301 and rows[-1][1] == "Aporte" and rows[j + 1][2] == "PETR4"
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):

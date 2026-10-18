@@ -18,12 +18,13 @@ import java.util.List;
  *  tocar numa empresa abre no app a janela só dela dentro do modelo.
  *  Dados: /api/widget/simgrupo (o mesmo cálculo da aba Grupos, com o preço de agora). Atualiza a cada 30 min e no ⟳. */
 public class SimWidget extends AppWidgetProvider {
-    static final String ACTION_REFRESH = "com.jginvesting.app.SIM_REFRESH";
+    static final String ACTION_REFRESH = "com.jginvesting.app.SIM_REFRESH", ACTION_XLSX = "com.jginvesting.app.SIM_XLSX";
     static final String EXTRA_SIM = "sim", EXTRA_MODEL = "model", EXTRA_TK = "tk";
 
     @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) { render(c); refreshAsync(c, goAsync(), 0); }
 
     @Override public void onReceive(Context c, Intent i) {
+        if (ACTION_XLSX.equals(i.getAction())) { download(c, i.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0)); return; }
         if (ACTION_REFRESH.equals(i.getAction())) {  // ⟳ e troca de grupo: "Atualizando…" e busca na hora
             long tk = System.currentTimeMillis(); Store.setSimLoading(c, tk); render(c);
             refreshAsync(c, goAsync(), tk); return;
@@ -32,6 +33,26 @@ public class SimWidget extends AppWidgetProvider {
     }
 
     @Override public void onAppWidgetOptionsChanged(Context c, AppWidgetManager m, int id, android.os.Bundle o) { render(c); }
+
+    /** ⬇: planilha do grupo do widget id (/api/widget/simgrupo.xlsx, gerada no servidor) pelo DownloadManager, em Downloads (Android 10+;
+     *  antes, na pasta de downloads do sistema), com a notificação do sistema que abre o arquivo ao terminar. */
+    static void download(Context c, int id) {
+        SimData.Sim s = simOf(c, id, SimData.sims(Store.sims(c)));
+        if (s == null) return;
+        try {
+            String file = SimData.fileName(s.name, new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date()));
+            android.app.DownloadManager.Request r = new android.app.DownloadManager.Request(Uri.parse(BuildConfig.SITE + "/api/widget/simgrupo.xlsx?" + SimData.query(s)
+                    + "&n=" + java.net.URLEncoder.encode(s.name, "UTF-8")))
+                    .setTitle(file).setDescription(c.getString(R.string.sim_dl))
+                    .setMimeType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    .setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            if (Build.VERSION.SDK_INT >= 29) r.setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, file);
+            ((android.app.DownloadManager) c.getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(r);
+            android.widget.Toast.makeText(c, "Baixando a planilha… (aparece nas notificações)", android.widget.Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            android.widget.Toast.makeText(c, "Não foi possível baixar a planilha.", android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
 
     static int[] ids(Context c) { return AppWidgetManager.getInstance(c).getAppWidgetIds(new ComponentName(c, SimWidget.class)); }
 
@@ -109,13 +130,27 @@ public class SimWidget extends AppWidgetProvider {
             v.setTextViewText(R.id.s_empty, c.getString(s == null ? R.string.sim_empty : R.string.sim_wait));
             Intent rf = new Intent(c, SimWidget.class).setAction(ACTION_REFRESH);
             v.setOnClickPendingIntent(R.id.s_refresh, PendingIntent.getBroadcast(c, 11, rf, flagsImm));
+            Intent dl = new Intent(c, SimWidget.class).setAction(ACTION_XLSX).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+            v.setOnClickPendingIntent(R.id.s_dl, PendingIntent.getBroadcast(c, 700 + id, dl, flagsImm));
+            v.setViewVisibility(R.id.s_dl, s == null ? View.GONE : View.VISIBLE);
             Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
                     | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
             v.setPendingIntentTemplate(R.id.s_list, PendingIntent.getActivity(c, 12, tpl, flagsMut));
             v.setEmptyView(R.id.s_list, R.id.s_empty);
             if (Build.VERSION.SDK_INT >= 31) {
+                // linhas inteiras: títulos e "Desde…" com altura fixa; com tudo fechado as linhas que cabem esticam até a borda
+                int hDp = WidgetData.heightDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0),
+                        cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
+                v.setViewLayoutHeight(R.id.s_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                if (!sub.isEmpty()) v.setViewLayoutHeight(R.id.s_sub, SimData.subDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                String om = openModel(c, s); boolean anyOpen = false; for (SimData.Row r : rows) if (r.m.equals(om)) anyOpen = true;
+                int rp = SimData.rowPx(hDp, dens, cf.fontScale, !sub.isEmpty(), rows.size(), anyOpen);
                 RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(VIEW_TYPES);
-                for (SimData.Item it : SimData.items(rows, openModel(c, s))) b.addItem(it.id(), item(c, s, it));
+                for (SimData.Item it : SimData.items(rows, om)) {
+                    RemoteViews iv = item(c, s, it);
+                    if (rp > 0 && it.type == SimData.Item.ROW) iv.setViewLayoutHeight(R.id.q_main, rp, android.util.TypedValue.COMPLEX_UNIT_PX);
+                    b.addItem(it.id(), iv);
+                }
                 v.setRemoteAdapter(R.id.s_list, b.build());
             } else {
                 Intent svc = new Intent(c, SimWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);

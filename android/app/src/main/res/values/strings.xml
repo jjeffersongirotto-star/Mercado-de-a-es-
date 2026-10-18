@@ -27,5 +27,6 @@
     <string name="sim_pos_q">Ações</string>
     <string name="sim_pos_inv">Investido</string>
     <string name="sim_pos_v">Atual</string>
+    <string name="sim_dl">Baixar planilha do grupo</string>
     <string name="sim_sel">Grupo simulação  ▾</string>
 </resources>

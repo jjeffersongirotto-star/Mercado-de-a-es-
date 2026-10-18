@@ -1172,23 +1172,22 @@ def api_modelos_simmov(body: dict):
         log.exception("modelos: movimentações do grupo simulação"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
-@app.get("/api/widget/simgrupo")
-def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = ""):
-    """Widget Grupo simulação do app: por modelo, valor aportado, valor atual (posições do modelos.simgrupo — mesmo cálculo e cache
-    da aba Grupos — com o preço de agora de /api/data) e variação do dia; e todas as posições (nº de ações, investido, atual).
-    Leve: o simgrupo fica em memória por versão dos dados; o resto é soma sobre as linhas já carregadas."""
+def _simw(di, v0, f):
+    """Grupo simulação com o preço de agora (widget e planilha): -> (resposta de erro ou None, dados do widget, contexto p/ movimentações).
+    Valor atual = caixa + ações × preço de agora de /api/data; variação do dia pelo var; posições com preço médio (do simgrupo)."""
     import modelos
     rows = universe.universe((cache.data or {}).get("rows") or [])
-    if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
+    if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"}), None, None
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
         try: fx = json.loads(f) if f and len(f) <= 8000 else {}  # app 1.17+: aporte mensal, extras e retiradas do grupo ({ap, ex, ret})
         except Exception: fx = {}
         _, v0, ap, ex, ret = modelos.sim_def(dict(fx if isinstance(fx, dict) else {}, di=di, v0=v0))
-        sg = modelos.simgrupo(D, [r["ticker"] for r in rows], str(di or "")[:7], v0, ap, ex, ret)
+        tk = [r["ticker"] for r in rows]; di = str(di or "")[:7]
+        sg = modelos.simgrupo(D, tk, di, v0, ap, ex, ret)
     except Exception:
-        log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
-    if sg.get("error"): return JSONResponse(sg, status_code=400, headers={"Cache-Control": "no-store"})
+        log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502), None, None
+    if sg.get("error"): return JSONResponse(sg, status_code=400, headers={"Cache-Control": "no-store"}), None, None
     d = cache.data or {}; by = {r["ticker"]: r for r in d.get("rows") or []}
     def live(t, pw):  # preço de agora e variação do dia (%); sem cotação: o da última semana da simulação, sem variação
         r = by.get(t) or {}; p = (r.get("v") or {}).get("preco")
@@ -1200,13 +1199,43 @@ def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = ""):
         for y in x.get("pos") or []:
             t, q, inv = y["t"], y["q"], y["inv"]; p, var = live(t, y["p"]); val = q * p; tot += val
             if var is not None and var > -100: dia += val * var / (100 + var)
-            pos.append({"t": t, "q": q, "inv": inv, "v": round(val, 2)})
+            pos.append({"t": t, "q": q, "inv": inv, "v": round(val, 2), "pm": y.get("pm")})
         pos.sort(key=lambda y: -y["v"])
         for y in pos: y["s"] = snapshots.nome_popular(y["t"], (by.get(y["t"]) or {}).get("nome"))
         out.append({"m": x["m"], "n": x["n"], "ap": sg.get("apT", sg["v0"]), "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
-                    "cash": x["cash"], "np": len(pos), "pos": pos})
+                    "cash": x["cash"], "np": len(pos), "pos": pos, "ir": x.get("ir"), "c": x.get("c"), "s": x.get("s")})
     out.sort(key=lambda y: -y["v"])
-    return JSONResponse({"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out}, headers={"Cache-Control": "no-store"})
+    return None, {"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out}, (D, tk, di, v0, ap, ex, ret, sg)
+
+@app.get("/api/widget/simgrupo")
+def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = ""):
+    """Widget Grupo simulação do app: por modelo, valor aportado, valor atual (mesmo cálculo e cache da aba Grupos, com o preço de
+    agora) e variação do dia; e todas as posições (nº de ações, investido, atual). Leve: o simgrupo fica em memória por versão dos dados."""
+    err, w, _ = _simw(di, v0, f)
+    if err is not None: return err
+    for x in w["r"]:
+        x.pop("ir", None); x.pop("c", None); x.pop("s", None)
+        for y in x["pos"]: y.pop("pm", None)
+    return JSONResponse(w, headers={"Cache-Control": "no-store"})
+
+@app.get("/api/widget/simgrupo.xlsx")
+def api_widget_simgrupo_xlsx(di: str = "", v0: float = 0, f: str = "", n: str = ""):
+    """Planilha do Grupo simulação (⬇ do widget, app 1.18+): Resumo com todos os modelos e uma aba por modelo (resumo, posições atuais e
+    TODAS as movimentações). Mesmo cálculo e cache do widget; movimentações de modelos.sim_hist (comprimidas em memória); xlsx em modo
+    streaming (simxlsx.py, openpyxl write_only) para gastar pouca memória."""
+    import modelos, simxlsx
+    err, w, ctx = _simw(di, v0, f)
+    if err is not None: return err
+    D, tk, di, v0, ap, ex, ret, sg = ctx
+    name = re.sub(r"[^\w \-]", "", str(n or "Grupo simulação").replace("/", "-"), flags=re.U).strip()[:60] or "Grupo simulação"
+    try:
+        data = simxlsx.build(name, w, sg, lambda m: modelos.sim_hist(D, tk, di, v0, m, ap, ex, ret)["mov"])
+    except Exception:
+        log.exception("modelos: planilha do grupo simulação"); return JSONResponse({"error": "Não foi possível gerar a planilha agora."}, status_code=502)
+    from urllib.parse import quote
+    fn = f"{name} {datetime.now(TZ).strftime('%Y-%m-%d')}.xlsx"
+    return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename=\"grupo-simulacao.xlsx\"; filename*=UTF-8''{quote(fn)}", "Cache-Control": "no-store"})
 
 @app.get("/api/indices/{name}")
 def api_indices(name: str):

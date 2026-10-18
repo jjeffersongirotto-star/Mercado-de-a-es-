@@ -77,6 +77,16 @@
             android:textColor="@color/c_mut"
             android:textSize="11sp" />
 
+        <!-- ⬇ planilha .xlsx do grupo (Resumo + uma aba por modelo) em Downloads, pelo DownloadManager (SimWidget.download) -->
+        <TextView
+            android:id="@+id/s_dl"
+            android:layout_width="30dp"
+            android:layout_height="34dp"
+            android:contentDescription="@string/sim_dl"
+            android:gravity="center"
+            android:text="⬇"
+            android:textColor="@color/c_txt"
+            android:textSize="16sp" />
         <TextView
             android:id="@+id/s_refresh"
             android:layout_width="34dp"
@@ -99,6 +109,7 @@
         android:textSize="10.5sp" />
 
     <LinearLayout
+        android:id="@+id/s_cols"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"

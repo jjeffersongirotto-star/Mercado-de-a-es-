@@ -785,10 +785,9 @@ def _mzput(k, h):
     while len(_MZ) > MZ_MAX: _MZ.popitem(last=False)
 
 
-def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50, ap=0.0, ex=(), ret=()):
-    """Movimentações de um modelo do Grupo simulação (mesma conta de simgrupo), das mais recentes para as mais antigas.
-    Sem tk: a página [off, off+n) e o total. Com tk: só essa empresa (todas as movimentações dela), a posição (preço médio…) e os
-    proventos recebidos. Leve: guardado comprimido; se saiu da memória, refaz só esse modelo."""
+def sim_hist(D, tickers, di, v0, mid, ap=0.0, ex=(), ret=()):
+    """Histórico completo de um modelo do Grupo simulação (movimentações das mais antigas às mais recentes, posições, proventos por
+    empresa), do cache comprimido _MZ; se saiu da memória, refaz só esse modelo."""
     if mid not in MOD or mid not in {m["id"] for m in MODELOS}: return {"error": "Modelo desconhecido."}
     me = _span(D, di, D["fim"]); v0 = max(0.0, float(v0 or 0))
     if len(me) < 2 or v0 <= 0: return {"error": "Simulação inválida."}
@@ -798,7 +797,15 @@ def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50, ap=0.0, ex=(), ret=())
         idx = _simidx(D, tickers, me)
         if not idx: return {"error": "Nenhuma empresa no período."}
         _mzput(k, grupo(D, mid, idx, me, aps, rec=True, wd=wd)[4])
-    _MZ.move_to_end(k); h = json.loads(zlib.decompress(_MZ[k]))
+    _MZ.move_to_end(k); return json.loads(zlib.decompress(_MZ[k]))
+
+
+def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50, ap=0.0, ex=(), ret=()):
+    """Movimentações de um modelo do Grupo simulação (mesma conta de simgrupo), das mais recentes para as mais antigas.
+    Sem tk: a página [off, off+n) e o total. Com tk: só essa empresa (todas as movimentações dela), a posição (preço médio…) e os
+    proventos recebidos. Leve: guardado comprimido; se saiu da memória, refaz só esse modelo."""
+    h = sim_hist(D, tickers, di, v0, mid, ap, ex, ret)
+    if h.get("error"): return h
     ev = h["mov"][::-1]
     if tk:
         L = [x for x in ev if x.get("t") == tk]

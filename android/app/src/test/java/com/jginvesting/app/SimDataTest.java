@@ -14,7 +14,19 @@ public class SimDataTest {
         assertEquals("di=2025-03&v0=12000", SimData.query(s.get(0)));
         SimData.Sim f = SimData.sims("[{\"id\":\"G\",\"di\":\"2025-03\",\"v0\":12000,\"f\":{\"ap\":500,\"ex\":[],\"ret\":[]}}]").get(0);
         assertTrue(SimData.query(f).startsWith("di=2025-03&v0=12000&f=%7B"));
-        assertEquals(" + R$ 500,00/mês", SimData.monthly(f)); assertEquals("", SimData.monthly(s.get(0)));  // aporte mensal vai junto (1.17+)
+        assertEquals(" + R$ 500,00/mês", SimData.monthly(f));
+        assertEquals("Simulação 03-2025 2026-10-18.xlsx", SimData.fileName("Simulação 03/2025", "2026-10-18"));  // planilha do ⬇
+        assertEquals("Grupo simulação 2026-10-18.xlsx", SimData.fileName("  ", "2026-10-18"));
+        // linhas inteiras ao diminuir o widget: N linhas de modelo esticadas até a borda (nunca meia linha); aberto = linha base
+        float d = 2.75f; float hdr = SimData.headerDp(1f, true);
+        for (int hDp = 150; hDp <= 600; hDp += 7) {
+            int listPx = Math.round((hDp - hdr) * d), rp = SimData.rowPx(hDp, d, 1f, true, 9, false), div = Math.round(d);
+            int n = Math.max(1, (listPx + div) / (Math.round(46 * d) + div));
+            assertTrue(rp >= Math.round(46 * d));
+            if (n < 9 && listPx >= Math.round(46 * d)) assertTrue("h=" + hDp, Math.abs(n * rp + (n - 1) * div - listPx) <= n || rp == Math.round(Math.round(46 * d) * 1.6f));  // termina rente à borda (ou no teto de 1,6×, com espaço vazio — nunca meia linha)
+        }
+        assertEquals(Math.round(46 * d), SimData.rowPx(400, d, 1f, true, 9, true));
+        assertEquals(0, SimData.rowPx(0, d, 1f, true, 9, false)); assertEquals("", SimData.monthly(s.get(0)));  // aporte mensal vai junto (1.17+)
         assertNotEquals(SimData.key(s.get(0)).replace("Barsi 2025", "G"), SimData.key(f));
         assertSame(s.get(0), SimData.pick("sumiu", s));  // grupo apagado: mostra o primeiro
         assertNull(SimData.pick("", SimData.sims("[]")));
