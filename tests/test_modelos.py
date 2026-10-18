@@ -352,14 +352,32 @@ def test_regras_de_carteira():
 def test_venda_ocasional_olha_tamanho_setor_e_historico():
     anos = list(range(2008, 2020))
     def fund(hist):  # lucro (hist) até 2017, prejuízo grande em 2018 e 2019 (40 sobre patrimônio de 100)
-        return {"y": anos, "ni": [hist] * 10 + [-20.0, -20.0], "eq": [100.0] * 10 + [80.0, 60.0], "rev": [1.0] * 12}
-    for hist, vende in ((5.0, False), (-1.0, True)):  # histórico forte (lucro em 10 de 10 anos) segura; fraco vende
+        return {"y": anos, "ni": hist + [-20.0, -20.0], "eq": [100.0] * 10 + [80.0, 60.0], "rev": [1.0] * 12}
+    for hist, vende in (([5.0] * 10, False), ([5.0, -1.0] * 5, True)):  # histórico forte (lucro em 10 de 10 anos) segura; fraco vende
         D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(), fund={"AAA3": fund(hist)})
         me = months(D, "2020-02", "2021-12"); ap = [1000.0] + [0.0] * (len(me) - 1)
         h = modelos.grupo(D, "hold", [0], me, ap, rec=True)[4]
         vs = [e for e in h["mov"] if e["k"] == "venda"]
         assert bool(vs) == vende and all(e["d"] >= "2021-02" for e in vs), (hist, vs)  # só depois de 1 ano com a ação
-        if vende: assert "prejuízo grande" in vs[0]["x"]
+        if vende:
+            assert "prejuízo grande" in vs[0]["x"] and "nota" in vs[0]["x"]
+            assert not [e for e in h["mov"] if e["k"] == "compra" and e["d"] >= vs[0]["d"]]  # sem recompra depois da venda
+    # só prejuízos: nota 0, nem entra na carteira
+    D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(), fund={"AAA3": fund([-1.0] * 10)})
+    me = months(D, "2020-02", "2021-12")
+    assert D["FM"]["Q"][0, -1] < modelos.NOTA["min_compra"]
+    assert not [e for e in modelos.grupo(D, "hold", [0], me, [1000.0] + [0.0] * (len(me) - 1), rec=True)[4]["mov"] if e["k"] == "compra"]
+
+
+def test_nota_de_qualidade_e_porte():
+    anos = list(range(2008, 2020)); N = 12
+    fund = {f"A{k:02d}3": {"y": anos, "ni": [float(k + 1)] * 12, "eq": [100.0] * 12, "rev": [10.0 * (k + 1)] * 12} for k in range(N)}
+    D = modelos.build(snap({t: {"c": 10.0} for t in fund}), cdi(), fund=fund)
+    Q, PO = D["FM"]["Q"][:, -1], D["FM"]["PORTE"][:, -1]
+    assert PO[-1] == 3 and PO[0] == 0 and Q[-1] > Q[0], (Q, PO)  # maior receita = gigante, nota maior (porte e ROE)
+    me = months(D, "2020-02", "2020-06")
+    h = modelos.grupo(D, "hold", list(range(N)), me, [1000.0] + [0.0] * (len(me) - 1), rec=True)[4]
+    assert all("nota" in e.get("x", "") for e in h["mov"] if e["k"] == "compra")
 
 
 if __name__ == "__main__":
