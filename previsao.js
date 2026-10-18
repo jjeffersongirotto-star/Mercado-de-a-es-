@@ -216,7 +216,7 @@ if (typeof document !== 'undefined') {
       hist = null; histT = t; const M = await modMeta(); if (!M) { compute(); return; }
       for (const id of ['pvDi', 'pvDf']) { el(id).min = M.ini; el(id).max = M.fim; }
       if (!st.di || st.di < M.ini || st.di > M.fim) st.di = M.ini;
-      if (!st.df || st.df > M.fim || st.df < st.di) st.df = M.fim;
+      if (st.df && (st.df > M.fim || st.df < st.di)) st.df = M.fim;  // vazia = Hoje (em andamento)
       el('pvDi').value = st.di; el('pvDf').value = st.df; el('pvOldest').dataset.tip = `Modelos com dados de ${dataBR(M.ini)} a ${dataBR(M.fim)}.`;
       el('pvStatus').textContent = ''; compute(); save(); return;
     }
@@ -232,7 +232,7 @@ if (typeof document !== 'undefined') {
       const lo = hist.ym[0], hi = hist.ym[hist.ym.length - 1];
       for (const id of ['pvDi', 'pvDf']) { el(id).min = lo; el(id).max = hi; }
       if (!st.di || st.di < lo || st.di > hi) st.di = lo;
-      if (!st.df || st.df > hi || st.df < st.di) st.df = hi;
+      if (st.df && (st.df > hi || st.df < st.di)) st.df = hi;  // vazia = Hoje (em andamento)
       el('pvDi').value = st.di; el('pvDf').value = st.df;
       el('pvOldest').dataset.tip = `Data mais antiga disponível para ${t}: ${dataBR(lo)} (fonte: ${d.source})`;
       el('pvStatus').textContent = '';
@@ -293,6 +293,7 @@ if (typeof document !== 'undefined') {
   });
   // Grupo simulação: uma carteira por modelo desde a data inicial, com o Valor inicial; continua sozinho até hoje (aba Grupos)
   async function askSim() {
+    if (document.querySelector('.umod')) return;  // já há um diálogo aberto
     if (!(st.ini > 0)) { uiAlert('Para criar o Grupo simulação, preencha o Valor inicial.'); return; }
     if (!(await uiConfirm(`Cada modelo começa com ${brl.format(st.ini)} em ${dataBR(st.di)} e segue as próprias regras até hoje, atualizando sozinho. O grupo fica na aba Grupos.`,
       { title: 'Criar grupo de simulação?', ok: 'Criar', cancel: 'Agora não' }))) return;

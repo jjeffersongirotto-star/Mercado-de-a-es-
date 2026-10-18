@@ -101,14 +101,15 @@ window.uiReorder = (title, items) => new Promise((res) => {
 // Calendário do site (substitui o do navegador, igual em todo aparelho): uiCalendar abre o diálogo; uiDateField liga um campo a ele.
 // kind 'date' -> AAAA-MM-DD (grade de dias) · 'month' -> AAAA-MM (grade de meses). Tocar no mês/ano do título abre a lista de anos.
 const UI_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-window.uiCalendar = (value, { min = '', max = '', kind = 'date', title = '' } = {}) => new Promise((res) => {
+// empty: rótulo da opção sem data (ex.: Data final "Hoje (em andamento)"); escolhida devolve '' (null = cancelou)
+window.uiCalendar = (value, { min = '', max = '', kind = 'date', title = '', empty = '' } = {}) => new Promise((res) => {
   const pad = (n) => String(n).padStart(2, '0'), iso = (y, m, d) => kind === 'month' ? `${y}-${pad(m + 1)}` : `${y}-${pad(m + 1)}-${pad(d)}`;
   const now = new Date(), clamp = (v) => (min && v < min.slice(0, v.length) ? min.slice(0, v.length) : max && v > max.slice(0, v.length) ? max.slice(0, v.length) : v);
   let sel = value || '', base = sel || clamp(iso(now.getFullYear(), now.getMonth(), now.getDate()));
   let vy = +base.slice(0, 4), vm = +base.slice(5, 7) - 1, years = false;
   const out = (v) => (min && v < min.slice(0, v.length)) || (max && v > max.slice(0, v.length));
   const w = document.createElement('div'); w.className = 'umod';
-  w.innerHTML = `<div class="umod-box ucal" role="dialog" aria-modal="true" aria-label="${title || 'Calendário'}">${title ? `<h3>${title}</h3>` : ''}<div class="ucal-hd"></div><div class="ucal-g"></div>
+  w.innerHTML = `<div class="umod-box ucal" role="dialog" aria-modal="true" aria-label="${title || 'Calendário'}">${title ? `<h3>${title}</h3>` : ''}${empty ? `<button type="button" class="ucal-none${value ? '' : ' on'}">${empty}</button>` : ''}<div class="ucal-hd"></div><div class="ucal-g"></div>
     <div class="umod-btns"><button type="button" class="umod-c">Cancelar</button><button type="button" class="ucal-today">Hoje</button><button type="button" class="umod-ok">OK</button></div></div>`;
   const hd = w.querySelector('.ucal-hd'), g = w.querySelector('.ucal-g');
   function draw() {
@@ -135,6 +136,7 @@ window.uiCalendar = (value, { min = '', max = '', kind = 'date', title = '' } = 
     else if (b.dataset.y) { vy = +b.dataset.y; years = false; }
     else if (b.dataset.v) sel = b.dataset.v;
     else if (b.classList.contains('ucal-today')) { sel = clamp(iso(now.getFullYear(), now.getMonth(), now.getDate())); vy = +sel.slice(0, 4); vm = +sel.slice(5, 7) - 1; years = false; }
+    else if (b.classList.contains('ucal-none')) return done('');
     else if (b.classList.contains('umod-c')) return done(null);
     else if (b.classList.contains('umod-ok')) return done(sel || null);
     draw();
@@ -154,7 +156,7 @@ window.uiDateField = (inp, kind = 'date') => {
   const lbl = () => (inp.closest('label')?.querySelector('span')?.textContent || inp.closest('label')?.firstChild?.textContent || '').trim();
   const open = async () => {
     if (inp.disabled) return;
-    const x = await uiCalendar(v, { min: inp.getAttribute('min') || '', max: inp.getAttribute('max') || '', kind, title: lbl() });
+    const x = await uiCalendar(v, { min: inp.getAttribute('min') || '', max: inp.getAttribute('max') || '', kind, title: lbl(), empty: inp.dataset.empty || '' });
     if (x != null && x !== v) { inp.value = x; inp.dispatchEvent(new Event('change', { bubbles: true })); }
   };
   inp.addEventListener('click', open);
