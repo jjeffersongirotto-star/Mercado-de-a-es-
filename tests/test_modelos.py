@@ -380,6 +380,22 @@ def test_nota_de_qualidade_e_porte():
     assert all("nota" in e.get("x", "") for e in h["mov"] if e["k"] == "compra")
 
 
+def test_divida_na_nota_e_na_venda():
+    anos = list(range(2008, 2020))
+    def fund(dl, eb):  # lucro constante; dívida líquida e EBITDA de cada ano
+        return {"y": anos, "ni": [5.0] * 12, "eq": [100.0] * 12, "rev": [50.0] * 12, "dl": dl, "eb": eb}
+    D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}, "CCC3": {"c": 10.0}}), cdi(),
+                      fund={"AAA3": fund([-10.0] * 12, [20.0] * 12), "BBB3": fund([40.0] * 11 + [200.0], [20.0] * 12),
+                            "CCC3": {"y": anos, "ni": [5.0] * 12, "eq": [100.0] * 12, "rev": [50.0] * 12}})
+    Q = D["FM"]["Q"][:, -1]; lim = modelos.valor_justo.FAIR["al_dlebitda"]
+    assert Q[0] > Q[1], Q  # caixa líquido vale mais que dívida de 2× (2018) e 10× (2019)
+    assert D["FM"]["DIV"][1, -1] and D["FM"]["DLX"][1, -1] > lim and not D["FM"]["DIV"][0, -1]
+    assert not D["FM"]["DIV"][2].any()  # sem dívida no fund (banco/seguradora): parte de fora
+    i = D["w"].index(next(w for w in D["w"] if w >= "2020-06"))
+    q, txt = modelos._venda(D, "hold", np.array([1]), i, np.array([10.0]), np.array([100.0]), np.array([10.0]), np.array([True]), np.array([60]))[0], None
+    assert q == ""  # só a dívida (1 ponto) não vende uma empresa de nota boa e histórico forte
+
+
 def test_noticias_fato_e_suposicao():
     assert modelos.tom_noticia("Pedido de Recuperação Judicial") == (-2.0, False)
     assert modelos.tom_noticia("Encerramento da recuperação judicial")[0] > 0  # frase longa vale sobre a curta
