@@ -18,6 +18,9 @@ final class Api {
         catch (Exception e) { return null; }
     }
 
+    /** Widget Grupo simulação: por modelo, aportado, valor atual, variação do dia e maiores posições (/api/widget/simgrupo). */
+    static String simgrupo(SimData.Sim s, int timeoutMs) { return get("/api/widget/simgrupo?" + SimData.query(s), timeoutMs); }
+
     /** Gráfico de 5 anos de uma ação (/api/widget/chart). */
     static String chart(String t, int timeoutMs) { try { return get("/api/widget/chart?t=" + URLEncoder.encode(t, "UTF-8"), timeoutMs); } catch (java.io.UnsupportedEncodingException e) { return null; } }
 

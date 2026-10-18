@@ -53,6 +53,24 @@
                 android:resource="@xml/widget_info" />
         </receiver>
 
+        <!-- widget Grupo simulação (modelos de um Grupo simulação da aba Grupos) -->
+        <receiver
+            android:name=".SimWidget"
+            android:exported="false"
+            android:label="@string/sim_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sim_info" />
+        </receiver>
+
+        <service
+            android:name=".SimWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
         <provider
             android:name=".ApkProvider"
             android:authorities="com.jginvesting.app.apk"

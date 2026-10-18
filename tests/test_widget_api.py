@@ -71,6 +71,24 @@ def test_popular_names_by_country():
     assert S.nome_popular("PETR4", "PETROLEO BRASILEIRO") == "Petrobras" and "magazine luiza" in S.nome_busca("MGLU3")
     assert S.nome_popular("PCAR", "Paccar Inc", "us") == "Paccar" and S.nome_popular("PCAR3", "CIA BRASILEIRA DE DISTRIBUICAO") == "GPA"
 
+def test_widget_simgrupo_live_values():
+    """Widget Grupo simulação: valor atual = caixa + ações × preço de agora; variação do dia só das ações com cotação."""
+    import modelos
+    setup()
+    sg = {"d0": "2025-03", "d1": "2026-10", "v0": 1000.0, "m": [
+        {"m": "barsi", "n": "Barsi", "cash": 100.0, "pa": [["PETR4", 10, 250.0, 28.0], ["ZZZZ3", 5, 50.0, 12.0]]},
+        {"m": "ibov", "n": "Ibovespa", "ref": 1, "cash": 0, "pa": []}]}
+    od, os_, oss, ou = modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe
+    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; modelos.simgrupo = lambda *a: sg; server.universe.universe = lambda rows: rows
+    try:
+        r = json.loads(server.api_widget_simgrupo("2025-03", 1000).body)
+    finally:
+        modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe = od, os_, oss, ou
+    assert [x["m"] for x in r["r"]] == ["barsi"] and r["v0"] == 1000.0  # referência (ibov) fora
+    b = r["r"][0]
+    assert b["v"] == 100 + 10 * 30.0 + 5 * 12.0 and b["np"] == 2 and b["ap"] == 1000.0  # PETR4 ao vivo (30), ZZZZ3 sem cotação: preço da simulação
+    assert abs(b["dv"] - 300 * 1.2 / 101.2) < 0.01 and b["pos"][0] == {"t": "PETR4", "q": 10, "inv": 250.0, "v": 300.0, "s": "Petrobras"}
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):

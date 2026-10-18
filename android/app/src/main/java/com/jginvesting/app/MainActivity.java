@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
         if (getIntent().getBooleanExtra(FavWidget.EXTRA_UPDATE, false)) updater.forceOffer();
         FavWidget.render(getApplicationContext());  // depois de atualizar o app: tira o aviso do widget
         if (saved != null) web.restoreState(saved);
-        else web.loadUrl(BuildConfig.SITE + "/" + acaoQuery(getIntent()));
+        else web.loadUrl(BuildConfig.SITE + "/" + startQuery(getIntent()));
     }
 
     /** Toque numa ação do widget: ?acao=TICKER (WidgetData.TICKER: letras, dígitos, ponto e hífen). */
@@ -94,9 +94,24 @@ public class MainActivity extends Activity {
     }
     private static String acaoQuery(Intent i) { String t = ticker(i); return t == null ? "" : "?acao=" + t; }
 
+    /** Widget Grupo simulação: ?sim=<grupo>&m=<modelo> abre as movimentações do modelo (grupos.js → jgOpenSim). */
+    private static String simName(Intent i) { String s = i == null ? null : i.getStringExtra(SimWidget.EXTRA_SIM); return s != null && !s.isEmpty() && s.length() <= 80 ? s : null; }
+    private static String simModel(Intent i) { String m = i == null ? null : i.getStringExtra(SimWidget.EXTRA_MODEL); return SimData.validModel(m) ? m : null; }
+    private static String startQuery(Intent i) {
+        String s = simName(i), m = simModel(i);
+        if (s == null) return acaoQuery(i);
+        try { return "?sim=" + java.net.URLEncoder.encode(s, "UTF-8") + (m != null ? "&m=" + m : ""); } catch (Exception e) { return ""; }
+    }
+
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
         if (i.getBooleanExtra(FavWidget.EXTRA_UPDATE, false)) updater.forceOffer();  // onResume vem em seguida
+        String sn = simName(i), sm = simModel(i);
+        if (sn != null) {  // nome vai como JSON (aspas e acentos escapados)
+            String js = org.json.JSONObject.quote(sn), mj = sm == null ? "null" : "'" + sm + "'";
+            web.evaluateJavascript("window.jgOpenSim ? jgOpenSim(" + js + "," + mj + ") : location.assign('/" + startQuery(i).replace("'", "%27") + "')", null);
+            return;
+        }
         String t = ticker(i);
         if (t != null) web.evaluateJavascript("window.jgOpen ? jgOpen('" + t + "') : location.assign('/?acao=" + t + "')", null);
     }
@@ -138,6 +153,18 @@ public class MainActivity extends Activity {
             if (Store.setGroups(MainActivity.this, json)) {
                 FavWidget.render(getApplicationContext());
                 FavWidget.refreshAsync(getApplicationContext(), null);
+            }
+        }
+
+        /** O site terminou de carregar/atualizar os dados (app.js → load: ⟳, recarga automática, abertura): confere a versão também. */
+        @JavascriptInterface public void dataRefreshed() { Updater.dataCheckAsync(getApplicationContext()); }
+
+        /** Grupos de simulação da aba Grupos (grupos.js → pushSims) para o widget Grupo simulação. */
+        @JavascriptInterface public void setSims(String json) {
+            if (json == null || json.length() > 20000) return;
+            if (Store.setSims(MainActivity.this, json)) {
+                SimWidget.render(getApplicationContext());
+                SimWidget.refreshAsync(getApplicationContext(), null, 0);
             }
         }
 

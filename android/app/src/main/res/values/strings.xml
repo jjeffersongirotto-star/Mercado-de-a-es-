@@ -14,4 +14,17 @@
     <string name="fav_sel">Favoritos  ▾</string>
     <string name="widget_empty_group">Abra o app para atualizar este grupo</string>
     <string name="widget_update">⬆  Atualização disponível (%1$s) · tocar para instalar</string>
+    <string name="sim_widget_name">Grupo simulação</string>
+    <string name="sim_widget_desc">Valor aportado, valor atual e variação do dia de cada modelo de um Grupo simulação; toque num modelo para ver as posições</string>
+    <string name="sim_empty">Crie um Grupo simulação na Previsão (Todos + Data inicial) e abra o app</string>
+    <string name="sim_wait">Abra o app ou toque em ⟳ para carregar</string>
+    <string name="sim_col_m">Modelo</string>
+    <string name="sim_col_ap">Valor aportado</string>
+    <string name="sim_col_v">Valor atual</string>
+    <string name="sim_col_d">Variação do dia</string>
+    <string name="sim_pos_t">Empresa</string>
+    <string name="sim_pos_q">Ações</string>
+    <string name="sim_pos_inv">Investido</string>
+    <string name="sim_pos_v">Atual</string>
+    <string name="sim_sel">Grupo simulação  ▾</string>
 </resources>

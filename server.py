@@ -1152,7 +1152,43 @@ def api_modelos_simgrupo(body: dict):
         out = modelos.simgrupo(D, [r["ticker"] for r in rows], str(b.get("di") or "")[:7], b.get("v0"))
     except Exception:
         log.exception("modelos: grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
+    if not out.get("error"): out = dict(out, m=[{k: v for k, v in x.items() if k != "pa"} for x in out["m"]])  # "pa" só para o widget
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
+
+SIMW_POS = 15  # widget Grupo simulação: posições mostradas ao abrir um modelo (as maiores)
+
+@app.get("/api/widget/simgrupo")
+def api_widget_simgrupo(di: str = "", v0: float = 0):
+    """Widget Grupo simulação do app: por modelo, valor aportado, valor atual (posições do modelos.simgrupo — mesmo cálculo e cache
+    da aba Grupos — com o preço de agora de /api/data) e variação do dia; e as maiores posições (nº de ações, investido, atual).
+    Leve: o simgrupo fica em memória por versão dos dados; o resto é soma sobre as linhas já carregadas."""
+    import modelos
+    rows = universe.universe((cache.data or {}).get("rows") or [])
+    if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
+    try:
+        D = modelos.data(); modelos.set_setores(D, rows, _cad())
+        sg = modelos.simgrupo(D, [r["ticker"] for r in rows], str(di or "")[:7], v0)
+    except Exception:
+        log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
+    if sg.get("error"): return JSONResponse(sg, status_code=400, headers={"Cache-Control": "no-store"})
+    d = cache.data or {}; by = {r["ticker"]: r for r in d.get("rows") or []}
+    def live(t, pw):  # preço de agora e variação do dia (%); sem cotação: o da última semana da simulação, sem variação
+        r = by.get(t) or {}; p = (r.get("v") or {}).get("preco")
+        return (p, r.get("var")) if p else (pw, None)
+    out = []
+    for x in sg["m"]:
+        if x.get("ref"): continue
+        tot, dia, pos = x["cash"], 0.0, []
+        for t, q, inv, pw in x.get("pa") or []:
+            p, var = live(t, pw); val = q * p; tot += val
+            if var is not None and var > -100: dia += val * var / (100 + var)
+            pos.append({"t": t, "q": q, "inv": inv, "v": round(val, 2)})
+        pos.sort(key=lambda y: -y["v"])
+        for y in pos[:SIMW_POS]: y["s"] = snapshots.nome_popular(y["t"], (by.get(y["t"]) or {}).get("nome"))
+        out.append({"m": x["m"], "n": x["n"], "ap": sg["v0"], "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
+                    "cash": x["cash"], "np": len(pos), "pos": pos[:SIMW_POS]})
+    out.sort(key=lambda y: -y["v"])
+    return JSONResponse({"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out}, headers={"Cache-Control": "no-store"})
 
 @app.get("/api/indices/{name}")
 def api_indices(name: str):

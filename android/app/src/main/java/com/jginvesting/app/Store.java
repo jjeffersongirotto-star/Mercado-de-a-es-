@@ -57,4 +57,36 @@ final class Store {
         for (String k : sp(c).getAll().keySet()) if (k.startsWith("ch_") || k.startsWith("cht_")) e.remove(k);  // só o da ação aberta
         e.putString("ch_" + t, json).putLong("cht_" + t, System.currentTimeMillis()).apply();
     }
+
+    // ---------- widget Grupo simulação (SimWidget) ----------
+    /** Grupos de simulação enviados pelo site (grupos.js → pushSims): [{id, n, di, v0}]. -> true se mudaram. */
+    static String sims(Context c) { return sp(c).getString("sims", "[]"); }
+    static boolean setSims(Context c, String json) {
+        if (json.equals(sims(c))) return false;
+        sp(c).edit().putString("sims", json).apply();
+        return true;
+    }
+    /** Grupo escolhido em cada widget Grupo simulação ("" = o primeiro). */
+    static String simSel(Context c, int id) { return sp(c).getString("ssel_" + id, ""); }
+    static void setSimSel(Context c, int id, String sel) { sp(c).edit().putString("ssel_" + id, sel).putString("sexp", "").commit(); }
+    /** Última resposta de /api/widget/simgrupo por grupo (SimData.key) e quando chegou. */
+    static String simData(Context c, String key) { return sp(c).getString("sd_" + key, "{}"); }
+    static long simAt(Context c, String key) { return sp(c).getLong("sdt_" + key, 0); }
+    static void setSimData(Context c, String key, String json) {
+        SharedPreferences.Editor e = sp(c).edit();
+        e.putString("sd_" + key, json).putLong("sdt_" + key, System.currentTimeMillis()).commit();
+    }
+    /** Respostas de grupos que não existem mais saem do aparelho. */
+    static void pruneSims(Context c, java.util.Set<String> keep) {
+        SharedPreferences.Editor e = sp(c).edit(); boolean ch = false;
+        for (String k : sp(c).getAll().keySet())
+            if ((k.startsWith("sd_") && !keep.contains(k.substring(3))) || (k.startsWith("sdt_") && !keep.contains(k.substring(4)))) { e.remove(k); ch = true; }
+        if (ch) e.apply();
+    }
+    /** Modelo aberto (lista de posições) no widget Grupo simulação: "grupo|modelo" ou "". */
+    static String simExp(Context c) { return sp(c).getString("sexp", ""); }
+    static void setSimExp(Context c, String v) { sp(c).edit().putString("sexp", v).commit(); }
+    /** "Atualizando…" do widget Grupo simulação. */
+    static long simLoading(Context c) { return sp(c).getLong("sload", 0); }
+    static void setSimLoading(Context c, long t) { sp(c).edit().putLong("sload", t).commit(); }
 }

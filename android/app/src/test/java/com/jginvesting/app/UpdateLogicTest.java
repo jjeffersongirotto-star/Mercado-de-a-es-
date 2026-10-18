@@ -2,6 +2,7 @@ package com.jginvesting.app;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -117,5 +118,24 @@ public class UpdateLogicTest {
         assertTrue(UpdateLogic.shouldCheck(now - UpdateLogic.CHECK_EVERY, now));
         assertTrue(UpdateLogic.shouldCheck(now + 60_000L, now));   // relógio voltou
         assertEquals("00ff10", UpdateLogic.hex(new byte[]{0, (byte) 0xff, 0x10}));
+    }
+
+    @Test public void conferenciaAcompanhaCadaAtualizacaoDeDados() {
+        // 1.15: cada atualização de dados (widget, ⟳, recarga do site) confere a versão; só junta as que vêm em menos de OPEN_GAP
+        long t = 1_000_000L;
+        assertTrue(UpdateLogic.dataCheck(0, t));
+        assertFalse(UpdateLogic.dataCheck(t, t + 5_000));
+        assertTrue(UpdateLogic.dataCheck(t, t + UpdateLogic.OPEN_GAP));
+        assertTrue(UpdateLogic.dataCheck(t, t + 30 * 60_000L));  // widget a cada 30 min: sem a trava antiga de 10 min contando o widget
+        assertTrue(UpdateLogic.dataCheck(t, t - 1));            // relógio voltou
+        // endereço muda a cada conferência (sem cache em CDN/proxy/WebView)
+        assertNotEquals(UpdateLogic.url("https://x", t), UpdateLogic.url("https://x", t + 1));
+        // "Depois" = 10 min só para a versão adiada; versão mais nova aparece mesmo adiada
+        UpdateLogic.Info v16 = UpdateLogic.parse("{\"versionCode\":16,\"versionName\":\"1.15\",\"apk\":\"/app.apk\",\"sha256\":\"" + "a".repeat(64) + "\"}");
+        UpdateLogic.Info v17 = UpdateLogic.parse("{\"versionCode\":17,\"versionName\":\"1.16\",\"apk\":\"/app.apk\",\"sha256\":\"" + "a".repeat(64) + "\"}");
+        assertFalse(UpdateLogic.offer(v16, 15, "1.14", 16, t + UpdateLogic.SNOOZE, t + 60_000));
+        assertTrue(UpdateLogic.offer(v16, 15, "1.14", 16, t + UpdateLogic.SNOOZE, t + UpdateLogic.SNOOZE));
+        assertTrue(UpdateLogic.offer(v17, 15, "1.14", 16, t + UpdateLogic.SNOOZE, t + 60_000));
+        assertEquals(10 * 60_000L, UpdateLogic.SNOOZE);
     }
 }

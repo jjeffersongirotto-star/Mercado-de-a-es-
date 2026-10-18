@@ -778,6 +778,7 @@ async function load() {
     renderSource();
     computeFilters(); apply();
     document.dispatchEvent(new CustomEvent('dataload'));  // outras abas (Grupos) se refazem com o país/dados novos
+    try { if (window.JGApp && window.JGApp.dataRefreshed) window.JGApp.dataRefreshed(); } catch (e) { }  // app 1.15+: cada atualização de dados confere também a versão do app
     if (d.refreshing) setTimeout(load, 3000);
   } catch (e) { if (seq === loadSeq) { $('#updated').textContent = 'Erro ao carregar: ' + e; setTimeout(load, 5000); } }
 }

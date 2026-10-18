@@ -7,7 +7,9 @@ import org.json.JSONObject;
  *  1.4–1.13: conferia ao abrir e ao voltar ao app no máximo a cada 10 min, contando também as conferências do widget (30 min e cada ⟳),
  *  e "Depois" valia 24 h (gravado): aberto logo depois de uma conferência (por exemplo durante a publicação), o app não oferecia nada.
  *  1.14: o app confere SEMPRE ao abrir e ao voltar (só junta aberturas seguidas em OPEN_GAP), sem cache, e "Depois" vale só enquanto
- *  o app fica aberto (SNOOZE, na memória). O widget continua no máximo a cada 10 min. */
+ *  o app fica aberto (SNOOZE, na memória). O widget continua no máximo a cada 10 min.
+ *  1.15: a conferência também acompanha cada atualização de dados (widget a cada 30 min e no ⟳, ⟳ e recarga automática do site no
+ *  app) e, com o app aberto, oferece na hora; a thread da abertura não morre mais se o redesenho do widget falhar (ver Updater). */
 public final class UpdateLogic {
     private UpdateLogic() { }
     public static final long CHECK_EVERY = 10 * 60_000L;     // depois de uma conferência que deu certo
@@ -67,6 +69,9 @@ public final class UpdateLogic {
 
     /** Ao abrir/voltar ao app: confere sempre (só junta aberturas a menos de OPEN_GAP da última tentativa). */
     public static boolean openCheck(long lastTry, long now) { return lastTry <= 0 || now - lastTry >= OPEN_GAP || now < lastTry; }
+
+    /** 1.15: conferência junto com cada atualização de dados (widget, ⟳ e recarga do site): só junta as que vêm a menos de OPEN_GAP. */
+    public static boolean dataCheck(long last, long now) { return openCheck(last, now); }
 
     /** Endereço sem cache no caminho (CDN/proxy): ?t= muda a cada conferência. */
     public static String url(String site, long now) { return site + "/app/version.json?t=" + now; }

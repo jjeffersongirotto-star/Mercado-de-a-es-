@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- widget Grupo simulação (SimWidget); updatePeriodMillis: 30 min (o mínimo do Android) -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/sim_widget_desc"
+    android:initialLayout="@layout/widget_sim"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="250dp"
+    android:minResizeHeight="70dp"
+    android:previewImage="@drawable/ic_fg"
+    android:previewLayout="@layout/widget_sim_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="3"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget Grupo simulação: logo (abre o app) | seletor do grupo ▾ (com mais de um grupo) | horário | ⟳ ; títulos; uma linha por modelo (SimWidget) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:paddingStart="10dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="6dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/s_logo"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_legacy" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/s_sel"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_gravity="center"
+                android:background="@drawable/sel_chip"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:paddingStart="12dp"
+                android:paddingEnd="10dp"
+                android:text="@string/sim_sel"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/s_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/c_mut"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/s_refresh"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:contentDescription="@string/widget_refresh"
+            android:gravity="center"
+            android:text="⟳"
+            android:textColor="@color/c_txt"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/s_sub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:paddingStart="4dp"
+        android:textColor="@color/c_mut"
+        android:textSize="10.5sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingBottom="4dp">
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="start" android:maxLines="1"
+            android:text="@string/sim_col_m" android:textColor="@color/c_mut" android:textSize="10.5sp" android:textStyle="bold" />
+        <TextView android:layout_width="@dimen/sim_ap" android:layout_height="wrap_content" android:gravity="end" android:maxLines="2"
+            android:text="@string/sim_col_ap" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
+        <TextView android:layout_width="@dimen/sim_v" android:layout_height="wrap_content" android:gravity="end" android:maxLines="2"
+            android:text="@string/sim_col_v" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
+        <TextView android:layout_width="@dimen/sim_d" android:layout_height="wrap_content" android:gravity="end" android:maxLines="2"
+            android:paddingEnd="2dp" android:text="@string/sim_col_d" android:textColor="@color/c_mut" android:textSize="10sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/bd" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ListView
+            android:id="@+id/s_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@drawable/divider"
+            android:dividerHeight="1dp" />
+
+        <TextView
+            android:id="@+id/s_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:padding="8dp"
+            android:text="@string/sim_empty"
+            android:textColor="@color/c_mut"
+            android:textSize="12sp" />
+    </FrameLayout>
+</LinearLayout>

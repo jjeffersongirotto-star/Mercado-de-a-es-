@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="10dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sim_widget_name"
+        android:textColor="@color/c_amber" android:textSize="14sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp"
+        android:text="Método Barsi   R$ 12.000   R$ 17.161   ▲ 0,21%" android:textColor="@color/c_txt" android:textSize="12sp" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+        android:text="Tendência   R$ 12.000   R$ 24.740   ▲ 1,31%" android:textColor="@color/c_txt" android:textSize="12sp" />
+</LinearLayout>

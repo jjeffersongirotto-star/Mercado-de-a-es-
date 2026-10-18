@@ -378,10 +378,7 @@
     if (e.target.closest('[data-alr]')) return;
     if (favReord && e.target.closest('.gt-fav') && !e.target.closest('[data-favord]')) return;  // reorganizando: toque não abre card nem destaca
     const sm = e.target.closest('[data-simm]');
-    if (sm) {
-      const [gn, mid] = sm.dataset.simm.split('|'), c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x) return;
-      uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0 }, x)) }); return;
-    }
+    if (sm) { const [gn, mid] = sm.dataset.simm.split('|'); simModal(gn, mid); return; }
     const tr = e.target.closest('tr.tap[data-row]');
     if (tr) {
       const nx = tr.nextElementSibling; if (nx && nx.classList.contains('gdet')) { nx.remove(); tr.classList.remove('sel'); return; }
@@ -439,8 +436,26 @@
     e.target.value = '';
   }
 
+  // movimentações de um modelo do Grupo simulação (toque na linha do quadro ou "↗ Abrir" no widget Grupo simulação do app)
+  function simModal(gn, mid) {
+    const c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x) return false;
+    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0 }, x)) }); return true;
+  }
+  window.jgOpenSim = function (gn, mid, n) {
+    n = n || 0; const g = groups.find(x => x.sim && x.name === gn); if (!g) return;
+    if (n === 0) { const b = document.querySelector('[data-tab="grupos"]'); if (b) b.click(); }
+    if (simData(g) && simModal(gn, mid)) return;
+    if (n < 120) setTimeout(() => window.jgOpenSim(gn, mid, n + 1), 500);  // simulação ainda carregando
+  };
+  { const q = new URLSearchParams(location.search), sg = q.get('sim'); if (sg) { history.replaceState(null, '', location.pathname); setTimeout(() => window.jgOpenSim(sg, q.get('m') || 'hold'), 300); } }
+  // App 1.15+: grupos de simulação (nome, data inicial e valor inicial) para o widget Grupo simulação, que pede /api/widget/simgrupo
+  function pushSims() {
+    if (!window.JGApp || !window.JGApp.setSims) return;
+    try { window.JGApp.setSims(JSON.stringify(groups.filter(g => g.sim).map(g => ({ id: g.name, n: g.name, di: g.sim.di, v0: g.sim.v0 })))); } catch (e) { }
+  }
   // App Android (window.JGApp): manda os grupos da aba Grupos (mesmas ações e ordem dos quadros: groupData) para o seletor do widget
   function pushGroups() {
+    pushSims();
     if (!window.JGApp || !window.JGApp.setGroups || state.country !== 'br' || !state.data || !METRICS) return;
     try {
       const out = tileIds().filter(id => id !== 'fav').map(id => { const d = groupData(id); return d && { id, n: d.title, t: (d.rows || []).map(x => x[0].ticker) }; }).filter(x => x && x.t.length);

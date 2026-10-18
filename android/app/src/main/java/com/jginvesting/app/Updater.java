@@ -25,7 +25,10 @@ final class Updater {
     private boolean busy, checking, resumed, force;
     private AlertDialog dialog;
 
-    Updater(Activity a) { this.a = a; }
+    /** App aberto (para mostrar a oferta quando uma conferência de fora da abertura acha versão nova). */
+    private static java.lang.ref.WeakReference<Updater> live = new java.lang.ref.WeakReference<>(null);
+
+    Updater(Activity a) { this.a = a; live = new java.lang.ref.WeakReference<>(this); }
     static SharedPreferences sp(Context c) { return c.getSharedPreferences("upd", Context.MODE_PRIVATE); }
     private SharedPreferences sp() { return sp(a); }
 
@@ -47,12 +50,26 @@ final class Updater {
         return i;
     }
 
-    /** Widget (a cada 30 min e no ⟳): conferência leve, no máximo a cada 10 min. true = mudou o aviso. */
+    private static long lastData;
+
+    /** 1.15: a cada atualização de dados (widget a cada 30 min e no ⟳, ⟳ e recarga automática do site dentro do app) também confere
+     *  a versão, sem cache (?t= + no-cache; só junta conferências a menos de OPEN_GAP). Achou versão nova: aviso no widget e, com o app
+     *  aberto na tela, a oferta (Atualizar / Depois) na hora. true = mudou o aviso. Fora da thread principal. */
     static boolean quietCheck(Context c, int timeoutMs) {
-        if (!UpdateLogic.shouldCheck(sp(c).getLong("ok", 0), System.currentTimeMillis())) return false;
+        long now = System.currentTimeMillis();
+        if (!UpdateLogic.dataCheck(lastData, now)) return false;
+        lastData = now;
         boolean before = available(c);
-        fetch(c, timeoutMs, 1);
+        UpdateLogic.Info i = fetch(c, timeoutMs, 1);
+        Updater u = live.get();
+        if (u != null && i != null) u.a.runOnUiThread(() -> u.maybeAsk(i));
         return before != available(c);
+    }
+
+    /** Mesmo que quietCheck, em segundo plano (ponte do site: JGApp.dataRefreshed); redesenha o widget se o aviso mudou. */
+    static void dataCheckAsync(Context ctx) {
+        final Context c = ctx.getApplicationContext();
+        new Thread(() -> { try { if (quietCheck(c, 15000)) FavWidget.render(c); } catch (RuntimeException e) { /* widget não redesenhou: a oferta já foi */ } }).start();
     }
 
     /** Ao abrir e ao voltar ao app. Se a permissão acabou de ser dada, segue com a atualização. */
@@ -64,10 +81,17 @@ final class Updater {
         if (busy || checking || !(force || UpdateLogic.openCheck(lastTry, now))) return;  // sem a trava de 10 min do widget
         checking = true; lastTry = now;
         new Thread(() -> {
-            boolean before = available(a);
-            UpdateLogic.Info i = fetch(a, 20000, UpdateLogic.RETRY_MS.length);
-            if (before != available(a)) FavWidget.render(a.getApplicationContext());
-            a.runOnUiThread(() -> { checking = false; maybeAsk(i); });
+            UpdateLogic.Info i = null;
+            try {
+                boolean before = available(a);
+                i = fetch(a, 20000, UpdateLogic.RETRY_MS.length);
+                // 1.14 redesenhava o widget aqui sem proteção: um erro do widget (ex.: bitmaps grandes demais para o launcher) matava a
+                // thread antes da oferta e deixava "checking" preso — nenhuma conferência mais até fechar o app
+                if (before != available(a)) try { FavWidget.render(a.getApplicationContext()); SimWidget.render(a.getApplicationContext()); } catch (RuntimeException e) { /* segue para a oferta */ }
+            } finally {
+                final UpdateLogic.Info got = i != null ? i : known(a);  // sem resposta agora: a última versão vista (widget ou antes)
+                a.runOnUiThread(() -> { checking = false; maybeAsk(got); });
+            }
         }).start();
     }
 

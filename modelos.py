@@ -706,7 +706,8 @@ def simgrupo(D, tickers, di, v0):
     for m in MODELOS:
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True)
         out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
-                         "cash": h["cash"], "pos": h["pos"][:30], "mov": _ult(h["mov"]), "nmov": len(h["mov"])})
+                         "cash": h["cash"], "pos": h["pos"][:30], "mov": _ult(h["mov"]), "nmov": len(h["mov"]),
+                         "pa": [[p["t"], p["q"], p["inv"], p["p"]] for p in h["pos"]]})  # todas as posições (widget do app; o site não recebe)
     out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": r["pct"], "ref": True} for r in _refs(D, me, aps, [0.0] * len(me), v0)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
     _C[key] = out
