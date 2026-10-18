@@ -22,8 +22,9 @@ BLOCK2="b3indices b3cad b3btb vol30 cotahist history metrics fg fund modelos mod
 BLOCK3="investidor10 dadosdemercado"                                                             # lentos (~1 h): por último
 STEPS="${ONLY:-$BLOCK1 $BLOCK2 $BLOCK3}"
 # Log persistente do dia (lista as etapas que falharam no fim)
-mkdir -p /workspace/scratch
-LOG="${SNAP_LOG:-/workspace/scratch/snapshot-$(date +%Y%m%d).log}"
+# (no GitHub Actions /workspace não pode ser criado: usa a pasta temporária do runner)
+LOGDIR=/workspace/scratch; mkdir -p "$LOGDIR" 2>/dev/null || { LOGDIR="${RUNNER_TEMP:-/tmp}/snapshot-log"; mkdir -p "$LOGDIR"; }
+LOG="${SNAP_LOG:-$LOGDIR/snapshot-$(date +%Y%m%d).log}"
 exec > >(tee -a "$LOG") 2>&1
 echo "######## Snapshot $(date '+%Y-%m-%d %H:%M:%S') — etapas: $STEPS"
 FAIL=(); DONE=()
