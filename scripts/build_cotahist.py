@@ -6,8 +6,10 @@
 - Preço por ação = PREULT / FATCOT. Ajuste por desdobramento/grupamento/bonificação com os eventos oficiais da B3
   (GetListedSupplementCompany → stockDividends): preços antes da data-com são divididos pelo fator acumulado.
 - Proventos: B3 (últimos ~12 meses, com tipo: dividendo/JCP/rendimento) + Yahoo para datas anteriores (valores já ajustados).
+- Ações que saíram da bolsa (sem pregão nos últimos 90 dias) desde 1998, com volume relevante em algum momento: OUT/history4_saiu/
+  (só para os modelos da Previsão; desdobramentos/grupamentos deduzidos do salto de preço com o número de ações negociadas; sem proventos).
 Uso: build_cotahist.py DIR_ZIPS OUT_DIR   (grava OUT_DIR/history4/{TICKER}.json.gz)  DATA_JSON = /api/data salvo."""
-import base64, calendar, gzip, io, json, os, sys, time, zipfile
+import base64, calendar, gzip, io, json, math, os, re, shutil, sys, time, zipfile
 from datetime import datetime, timezone, timedelta
 import requests
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -52,6 +54,7 @@ want = {v: k for k, v in isin.items()}
 print("tickers", len(TICK), "com ISIN no arquivo atual", len(isin), file=sys.stderr)
 data = {t: {} for t in isin}
 last_day = "00000000"
+fora_b3, SAIU0, ACAO = {}, "19980101", re.compile(r"^[A-Z]{4}(3|4|5|6|11)$")  # empresas que saíram: desde o treino dos modelos
 for y in years:
     if y < 1994:
         continue
@@ -60,6 +63,9 @@ for y in years:
             continue
         t = want.get(l[230:242]) or (l[12:24].strip() if l[12:24].strip() in data else None)  # ISIN atual ou mesmo código (ISIN muda em grupamentos)
         if not t:
+            if l[10:12] == "02" and l[2:10] >= SAIU0 and ACAO.match(l[12:24].strip()):  # candidata a empresa que saiu da bolsa
+                r = rec(l); o = fora_b3.setdefault(r["cod"], {}); pv = o.get(r["d"])
+                if pv is None or r["vol"] > pv[2]: o[r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"])
             continue
         r = rec(l)
         if r["d"] < "19940701":
@@ -206,3 +212,39 @@ for t, days in data.items():
         f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
     ok += 1
 print(f"COTAHIST: {ok} tickers gravados; último pregão {max(max(v) for v in data.values() if v)}")
+
+SPL = [2, 3, 4, 5, 8, 10, 20, 25, 50, 100, 1000]
+def split_adj(keys, days):
+    """Preços ajustados de uma ação que saiu (sem a lista de eventos da B3): salto de preço do tamanho de um desdobramento/grupamento
+    comum, confirmado pela mudança inversa no número de ações negociadas (mediana de 10 pregões antes e depois)."""
+    c = [days[d][0] for d in keys]; q = [days[d][1] for d in keys]; f = [1.0] * len(c); k = 1.0
+    for i in range(len(c) - 1, 0, -1):
+        f[i] = k
+        if c[i - 1] <= 0 or c[i] <= 0: continue
+        r = c[i] / c[i - 1]
+        if abs(math.log(r)) < math.log(1.8): continue
+        m = min([x for x in SPL] + [1 / x for x in SPL], key=lambda x: abs(math.log(r / x)))
+        if abs(math.log(r / m)) > 0.08: continue
+        qa, qb = sorted(q[i:i + 10])[len(q[i:i + 10]) // 2], sorted(q[max(0, i - 10):i])[len(q[max(0, i - 10):i]) // 2]
+        if qa > 0 and qb > 0 and abs(math.log(qa / qb * m)) < math.log(3): k *= m  # ações negociadas mudam no sentido inverso
+    f[0] = k
+    return [round(x * y, 4) for x, y in zip(c, f)]
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modelos import REGRAS  # noqa: E402  (liquidez mínima dos modelos: só entram as que já tiveram esse volume)
+sd = os.path.join(OUT, "history4_saiu"); shutil.rmtree(sd, ignore_errors=True); os.makedirs(sd)
+ns = 0
+for t, days in fora_b3.items():
+    keys = sorted(days)
+    if not keys or keys[-1] >= lim: continue  # ainda negociada (fora do universo do site): não saiu
+    emis = days[keys[-1]][3][2:6]; keys = [d for d in keys if days[d][3][2:6] == emis]  # mesmo emissor do último pregão (código reaproveitado)
+    if len(keys) < 250: continue
+    vol = [days[d][2] for d in keys]
+    if max(sum(vol[i:i + 60]) / 60 for i in range(0, max(1, len(vol) - 59), 20)) < REGRAS["liq"]: continue
+    tt = [ts_of(d) for d in keys]; adj = split_adj(keys, days)
+    pay = {"d": {"t": tt, "c": adj, "vol": [round(v) for v in vol], "source": "B3 (COTAHIST)"}, "divs": [], "isin": days[keys[-1]][3],
+           "saiu": f"{keys[-1][:4]}-{keys[-1][4:6]}-{keys[-1][6:]}"}
+    with open(os.path.join(sd, t + ".json.gz"), "wb") as f:
+        f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
+    ns += 1
+print(f"COTAHIST: {ns} ações que saíram da bolsa gravadas em history4_saiu")

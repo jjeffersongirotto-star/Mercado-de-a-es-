@@ -127,6 +127,16 @@ def dividends_declared(z, year):
         out.update(acc)
     return out
 
+CAD = "https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv"
+
+def cancelamentos():
+    """CNPJ -> motivo do cancelamento do registro na CVM (falência, incorporação, OPA…), do cadastro de companhias abertas."""
+    r = requests.get(CAD, timeout=120)
+    if r.status_code != 200: return {}
+    df = pd.read_csv(io.BytesIO(r.content), sep=";", encoding="latin1", dtype=str)
+    df = df[df["SIT"].fillna("").str.upper().str.startswith("CANCEL")]
+    return {c: str(m).strip() for c, m in zip(df["CNPJ_CIA"], df["MOTIVO_CANCEL"]) if m == m and str(m).strip()}
+
 def nao_fin(ds305):
     """Empresa não financeira: a conta 3.05 da DRE é "Resultado Antes do Resultado Financeiro…" (banco/seguradora usa outra)."""
     return "Financeiro" in (ds305 or "")
@@ -141,11 +151,12 @@ def pivot(df, flt):
 
 FCA_ANOS = 5  # o FCA é entregue só quando muda: junta os últimos anos (a entrega mais recente de cada empresa vale)
 
-def tickers(cache, year):
+def tickers(cache, year, anos=FCA_ANOS, ativos=True):
     """Ticker negociado hoje -> CNPJ da companhia. Fonte única: cadastro FCA da CVM (valor mobiliário).
+    ativos=False: também os códigos que deixaram de ser negociados (empresas que saíram da bolsa; anos = quantos FCA anuais ler).
     Usado também por build_fund.py."""
     out, seen = {}, set()
-    for y in range(year, year - FCA_ANOS, -1):  # do mais novo ao mais velho
+    for y in range(year, year - anos, -1):  # do mais novo ao mais velho
         z = get_zip(cache, "FCA", y)
         if not z: continue
         vm = read(z, f"fca_cia_aberta_valor_mobiliario_{y}.csv")
@@ -154,7 +165,7 @@ def tickers(cache, year):
         vm = vm[vm["Versao"].astype(int) == vm.groupby("CNPJ_Companhia")["Versao"].transform(lambda v: v.astype(int).max())]
         for t, c, fim in zip(vm["Codigo_Negociacao"], vm["CNPJ_Companhia"], vm["Data_Fim_Negociacao"]):
             t = str(t).strip().upper()
-            if t != "NAN" and 4 < len(t) <= 7 and fim != fim and t not in out: out[t] = c
+            if t != "NAN" and 4 < len(t) <= 7 and (fim != fim or not ativos) and t not in out: out[t] = c
         seen |= set(vm["CNPJ_Companhia"])
     # algumas empresas informam só parte dos códigos (ex.: só a unit): as outras classes da mesma raiz (4 letras)
     # são da mesma companhia quando a raiz aponta para um único CNPJ no FCA

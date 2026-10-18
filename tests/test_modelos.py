@@ -396,6 +396,23 @@ def test_divida_na_nota_e_na_venda():
     assert q == ""  # só a dívida (1 ponto) não vende uma empresa de nota boa e histórico forte
 
 
+def test_empresa_que_saiu_da_bolsa():
+    k = W.index(next(w for w in W if w >= "2021-03"))  # último pregão da BBB3 em 2021-03 (falência: preço caiu a 1)
+    c = [10.0] * (k - 20) + [1.0] * 21 + [None] * (NW - k - 1)
+    sn = snap({"AAA3": {"c": 10.0}, "BBB3": {"c": c}}); sn["saiu"] = {"BBB3": W[k]}
+    D = modelos.build(sn, cdi(), saida={"BBB3": "Falência"})
+    assert D["saiu"] == ["BBB3"] and modelos.todas(D, [{"ticker": "AAA3"}]) == ["AAA3", "BBB3"]
+    me = months(D, "2020-02", "2021-12"); ap = [2000.0] + [100.0] * (len(me) - 1)
+    h = modelos.grupo(D, "hold", [0, 1], me, ap, rec=True, RG={})[4]  # sem as regras: só a saída da bolsa vende
+    vs = [e for e in h["mov"] if e["k"] == "venda" and e["t"] == "BBB3"]
+    assert len(vs) == 1 and vs[0]["d"] > W[k] and vs[0]["p"] == 1.0 and "falência" in vs[0]["x"], vs  # perda entra de verdade
+    assert not [e for e in h["mov"] if e["k"] == "compra" and e["t"] == "BBB3" and e["d"] >= W[k]]
+    assert [p["t"] for p in h["pos"]] == ["AAA3"]
+    r = modelos.simulate(D, "hold", [1], me, ap, [0.0] * len(me))
+    assert r["s"][0] == 1  # cada empresa sozinha: também vende ao sair
+    assert modelos.compare(D, ["BBB3"], "2022-01", "2022-12", [1000.0] * 12).get("error")  # sem preço no início: fica de fora
+
+
 def test_noticias_fato_e_suposicao():
     assert modelos.tom_noticia("Pedido de Recuperação Judicial") == (-2.0, False)
     assert modelos.tom_noticia("Encerramento da recuperação judicial")[0] > 0  # frase longa vale sobre a curta

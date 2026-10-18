@@ -30,7 +30,7 @@ REF = [
     {"id": "ibov", "n": "Ibovespa", "vende": False, "ref": True, "nota": "pontos do índice (sem dividendos, como um fundo de índice sem reinvestir), custo de 0,3% em cada compra; nunca vende"},
 ]
 # base dos modelos = empresas listadas hoje: as que saíram da bolsa ou faliram no período não estão -> resultados longos ficam otimistas
-AVISO = "Base histórica: só entram empresas negociadas hoje; as que saíram da bolsa ou faliram no período não estão, o que deixa os resultados de períodos longos otimistas."
+AVISO = "Base histórica: em Todas entram também as empresas que saíram da bolsa desde 1998 (vendidas pelo último preço); elas ficam sem proventos e, antes de 2010, sem balanços, o que pode deixar os resultados um pouco diferentes do real."
 MOD = {m["id"]: m for m in MODELOS + REF}
 # Método Barsi: só setores perenes (fonte única; o chat e o painel ⓘ leem daqui): subsetor do site ou segmento oficial da B3
 PERENE_RX = r"^(Bancos|Energia Elétrica|Água e Saneamento|Seguradoras|Resseguradoras|Corretoras de Seguros|Telecomunicações|Papel e Celulose|Químicos)"
@@ -65,7 +65,7 @@ def set_setores(D, rows, cad=None):
             CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 8        # versão das contas (8: dívida líquida na nota e na venda): invalida resultados guardados
+ENGINE = 9        # versão das contas (9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -228,7 +228,7 @@ def noticias_itens(fatos=None, noticias=None):
     return out
 
 
-def build(snap, cdi, gold=None, ibov=None, fund=None, news=None):
+def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None):
     """snapshot `modelos` + CDI diário {d, v (% ao dia)} + ouro em reais {d, v} (history.gold) -> matrizes ações × semanas (numpy)."""
     W = snap["w"]; T = len(W); tick = sorted(snap["a"]); N = len(tick)
     arr = lambda dt=np.float64: np.full((N, T), np.nan, dtype=dt)
@@ -300,6 +300,11 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None):
         FM["Q"] = np.where(FM["QW"] >= NOTA["min_qw"], 100 * (FM["QY"] + np.nan_to_num(PAG) * wp) / qw, np.nan).astype(np.float32)
     del FM["QY"], FM["QW"]
     NT, NX = _news_mats(tick, wk, news)
+    # empresas que saíram da bolsa (snapshot modelos → saiu: último pregão): SAI = semana do último preço (-1 = negociada hoje)
+    sa = {t: d for t, d in (snap.get("saiu") or {}).items() if t in snap["a"]}; SAI = np.full(N, -1)
+    for t, d in sa.items():
+        k = tick.index(t); SAI[k] = min(T - 1, int(np.searchsorted(wk.values.astype("datetime64[D]"), np.datetime64(d), side="left")))
+        C[k, SAI[k] + 1:] = np.nan
     # crise no mercado: Ibovespa ≥ VENDA['crise_dd'] abaixo do maior valor dos últimos VENDA['crise_anos'] anos, ou Medo extremo na média de 8 semanas
     MI = np.array([np.nan if x is None else x for x in snap["mi"]], dtype=float)
     ibm = pd.Series(IB).rolling(52 * VENDA["crise_anos"], min_periods=1).max().to_numpy()
@@ -311,6 +316,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None):
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
             "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
+            "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
             "fp": hashlib.sha1(repr(snap.get("fetched_at")).encode() + cdb.tobytes() + np.nan_to_num(G, nan=-1.0).tobytes()).hexdigest()[:16]}
@@ -328,14 +334,31 @@ def data():
             except Exception: gold = None  # sem ouro: a referência Ouro mostra "—"
             try: ibov = history.get("IBOV", "m")
             except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
-            fund = ((snapshots.load("fund")[0]) or {}).get("a") or {}  # balanços anuais: venda ocasional (REGRAS)
+            fj = (snapshots.load("fund")[0]) or {}; fund = fj.get("a") or {}  # balanços anuais: venda ocasional (REGRAS); saida: motivo da saída da bolsa
             news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0])  # Fatos Relevantes da CVM + notícias com tickers
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
-                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news); _D["key"] = snap.get("fetched_at")
+                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news, fj.get("saida")); _D["key"] = snap.get("fetched_at")
         snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
+
+
+def todas(D, rows):
+    """Universo "Todas" dos modelos: as empresas de hoje (1 ticker por empresa) + as que saíram da bolsa (só entram nas datas em que eram
+    negociadas: sem preço no início, ficam de fora). Fonte única para Comparar → Todas, Grupo simulação, widget e o pré-cálculo."""
+    return [r["ticker"] for r in rows] + [t for t in D.get("saiu", []) if t not in {r["ticker"] for r in rows}]
+
+
+def _saiu(D, idx, i):
+    """empresas que saíram da bolsa antes da semana i (a posição é vendida pelo último preço)."""
+    if "SAI" not in D: return np.zeros(len(idx), bool)
+    a = D["SAI"][idx]; return (a >= 0) & (i > a)
+
+
+def _saiu_txt(D, k):
+    m = D.get("SAIX", {}).get(k) or ""
+    return f"saiu da bolsa ({m.lower()})" if m else "deixou de ser negociada (saída da bolsa ou troca de código)"
 
 
 def ready_groups(rows):
@@ -463,6 +486,8 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             cj += A.cash * (D["cdb"][i] - 1); A.cash *= D["cdb"][i]
             if divs:
                 d = A.sh * np.nan_to_num(DV[idx, i]); A.cash += d; A.mdiv += d; A.divT += d; A.dtax += A.sh * D["JT"][idx, i]
+        gone = _saiu(D, idx, i) & (A.sh > 0)
+        if gone.any(): A.sell(gone, P)  # saiu da bolsa: vende pelo último preço; o dinheiro fica no CDB
         sig = _signals(D, mid, idx, i - 1) if i > s else sig0
         sig = np.nan_to_num(sig, nan=0).astype(bool)
         if mod.get("frac"):  # híbrido: ajusta a parte na ação à exposição alvo (vende ou compra só a diferença)
@@ -905,7 +930,17 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdq+=dq;ir+=(sh*JT[idx,i]).sum();dvt+=dq  # JCP já líquido; o retido conta no IR
             if rec:
                 for q in np.flatnonzero(dq>=0.005): ev.append({"d":W[i],"k":"provento","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(dq[q]),2),"x":tipo(D,idx[q],i)})
+        gone=_saiu(D,idx,i)&(sh>0)
+        if gone.any():  # saiu da bolsa: vende pelo último preço (OPA/incorporação ≈ valor pago; falência ≈ quase zero)
+            v=sh*P*(1-CUSTO);g=np.where(gone,v-basis,0)
+            if rec:
+                for q in np.flatnonzero(gone): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":_saiu_txt(D,idx[q])})
+            cash+=(v*gone).sum();msales+=(sh*P*gone).sum();mgain+=g.sum();ns+=gone.sum()
+            sh=np.where(gone,0,sh);basis=np.where(gone,0,basis)
+        rel=_saiu(D,idx,i)&(pend>0)
+        if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # reserva de quem saiu volta ao caixa
         w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1; ban-=1
+        if "SAI" in D: w=np.where(_saiu(D,idx,i+1),0,w);tw=w.sum();w=w/tw if tw>0 else w  # na semana do último pregão em diante: não recebe aporte
         if RG: w=_regras_w(D,mid,idx,i,w,sh,pend,RG,ban)
         rel=(w==0)&(pend>0)
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa

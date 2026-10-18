@@ -26,10 +26,10 @@ TIPO = (("J", "JRS CAP PROPRIO"), ("D", "DIVIDENDO"), ("R", "RENDIMENTO"), ("K",
 TC = [c for c, _ in TIPO]
 
 
-def divs(out, t, idx):
+def divs(out, t, idx, sub="history4"):
     """Proventos por pregão (data ex) do arquivo history4 da ação: total (dv) e quanto de cada tipo da B3 (J = JCP, D = dividendo,
     R = rendimento, K = restituição de capital; datas antigas vêm do Yahoo sem tipo)."""
-    h = json.loads(gzip.decompress(open(os.path.join(out, "history4", f"{t}.json.gz"), "rb").read()))
+    h = json.loads(gzip.decompress(open(os.path.join(out, sub, f"{t}.json.gz"), "rb").read()))
     M = np.zeros((len(idx), 1 + len(TIPO)))
     for x in h.get("divs") or []:
         j = idx.searchsorted(pd.Timestamp(x[0], unit="s").normalize())
@@ -121,24 +121,32 @@ def main(out):
     fg = json.load(open(os.path.join(out, "fg.json")))
     mi = pd.Series(fg["v"], index=pd.to_datetime(fg["d"]), dtype="float64")
     C, V, liq = C[C.index >= TRAIN0], V[V.index >= TRAIN0], liq[liq.index >= TRAIN0]
+    # empresas que saíram da bolsa (build_cotahist.py → history4_saiu): entram nos modelos até o último pregão; o "mercado" não muda
+    Cs, Vs = load_hist(out, "history4_saiu") if os.path.isdir(os.path.join(out, "history4_saiu")) else (pd.DataFrame(), pd.DataFrame())
+    Cs, Vs = Cs[Cs.index >= TRAIN0], Vs[Vs.index >= TRAIN0]
+    SAI = {t: Cs[t].last_valid_index() for t in Cs.columns}
+    v60 = V.rolling(60, min_periods=20).mean().shift(1).to_numpy()  # entre as 150 mais líquidas do dia (mesma regra de market) também treina
+    thr = pd.Series(-np.sort(-np.nan_to_num(v60, nan=-1.0), axis=1)[:, min(149, v60.shape[1] - 1)], index=V.index)
     weeks = C.index.to_series().groupby(C.index.to_period("W-FRI")).max()  # último pregão de cada semana
     weeks = weeks[weeks >= pd.Timestamp(START)]
     W = pd.DatetimeIndex(weeks.values)
     try: FD = json.load(open(os.path.join(out, "fund.json")))["a"]  # fundamentos anuais (scripts/build_fund.py)
     except Exception as e: FD = {}; print("modelos: sem fundamentos (fund.json):", e)
     rows, series = [], {}
-    for t in C.columns:
-        c = C[t].dropna()
-        if len(c) < 260: continue
-        v, dd = V[t].reindex(c.index), divs(out, t, c.index); dv = dd["dv"]
+    for t, CC, VV, sub in [(t, C, V, "history4") for t in C.columns] + [(t, Cs, Vs, "history4_saiu") for t in Cs.columns]:
+        c = CC[t].dropna()
+        if len(c) < 260 or (sub != "history4" and t in C.columns): continue
+        v, dd = VV[t].reindex(c.index), divs(out, t, c.index, sub); dv = dd["dv"]
         X = features(c, v, dv, mi, mk)
-        X["liq"] = liq[t].reindex(c.index).fillna(False).astype(bool)
+        X["liq"] = (liq[t].reindex(c.index).fillna(False).astype(bool) if t in liq.columns else
+                    (v.rolling(60, min_periods=20).mean().shift(1) >= thr.reindex(c.index)).fillna(False))  # as que saíram também treinam
         X["vl"] = v.rolling(60, min_periods=20).mean() / 1000  # volume médio diário de 60 pregões (R$ mil): liquidez da época (modelos.REGRAS)
         wd = X.index[X.index.isin(C.index.to_series().groupby(C.index.to_period("W-FRI")).transform("max"))]
         Xw = X.loc[wd]; Xw.index = pd.MultiIndex.from_arrays([Xw.index, [t] * len(Xw)])
         rows.append(Xw)
         # séries semanais da simulação (a partir da 1ª semana com preço)
         cw = c.reindex(W, method="ffill", limit=10)
+        if t in SAI: cw[W > SAI[t]] = np.nan  # depois do último pregão: sem preço (o modelo vende pelo último preço; modelos.build → SAI)
         if cw.notna().sum() < 2: continue
         dw = dd.groupby(dd.index.to_period("W-FRI")).sum()
         dw.index = dw.index.map(lambda p: weeks.get(p, pd.NaT)); dw = dw[dw.index.notna()].reindex(W).fillna(0)
@@ -167,6 +175,7 @@ def main(out):
     res = {"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "fonte": "B3 (COTAHIST e proventos), índice de Medo e Ganância do site; cálculo do site",
            "acerto": {"p1": acerto[20], "p3": acerto[60]},
+           "saiu": {t: d.strftime("%Y-%m-%d") for t, d in SAI.items() if t in A},  # empresas que saíram: último pregão
            "w": [d.strftime("%Y-%m-%d") for d in W], "mi": [None if x != x else int(x) for x in mi.reindex(W, method="ffill")], "a": A}
     json.dump(res, open(os.path.join(out, "modelos.json"), "w"), separators=(",", ":"))
     print(f"modelos: {len(A)} ações, {len(W)} semanas ({res['w'][0]} a {res['w'][-1]}), acerto {res['acerto']}, "
