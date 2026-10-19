@@ -39,6 +39,11 @@ if (typeof document !== 'undefined') {
   const st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })() ||
     { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
   if (!Array.isArray(st.ex)) st.ex = [];
+  // Data inicial e final com dia (AAAA-MM-DD); estado antigo só com mês: começo no dia 1, fim no último dia do mês
+  const ymOf = (s) => s ? String(s).slice(0, 7) : s, hoje = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const fimMes = (ym) => { const [y, m] = ym.split('-').map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`; };
+  if (st.di && st.di.length === 7) st.di += '-01';
+  if (st.df && st.df.length === 7) st.df = fimMes(st.df);
   if (!(st.tx >= 0)) st.tx = 0; st.txc = !!st.txc; // txc=false: automático (10% só em meses com dividendo > R$ 50 mil)
   if (typeof st.mod !== 'string') st.mod = ''; if (st.pvt !== 'des') st.pvt = 'tab';
   // várias empresas: '*' = Todas · 'top5' = 5 maiores de cada setor
@@ -214,9 +219,10 @@ if (typeof document !== 'undefined') {
     if (!t) { hist = null; histT = ''; compute(); return; }
     if (multi()) {  // Todos / 5 maiores de cada setor: período = meses com dados dos modelos
       hist = null; histT = t; const M = await modMeta(); if (!M) { compute(); return; }
-      for (const id of ['pvDi', 'pvDf']) { el(id).min = M.ini; el(id).max = M.fim; }
-      if (!st.di || st.di < M.ini || st.di > M.fim) st.di = M.ini;
-      if (st.df && (st.df > M.fim || st.df < st.di)) st.df = M.fim;  // vazia = Hoje (em andamento)
+      // datas com dia (AAAA-MM-DD): começo depois dos dados vale (Grupo simulação começa a operar na 1ª semana a partir dele)
+      for (const id of ['pvDi', 'pvDf']) { el(id).min = M.ini + '-01'; el(id).max = hoje(); }
+      if (!st.di || ymOf(st.di) < M.ini) st.di = M.ini + '-01';
+      if (st.df && st.df < st.di) st.df = st.di;  // vazia = Hoje (em andamento)
       el('pvDi').value = st.di; el('pvDf').value = st.df; el('pvOldest').dataset.tip = `Modelos com dados de ${dataBR(M.ini)} a ${dataBR(M.fim)}.`;
       el('pvStatus').textContent = ''; compute(); save(); return;
     }
@@ -230,9 +236,9 @@ if (typeof document !== 'undefined') {
       hist.ym = d.t.map(ym); hist.divm = {}; hist.jcpm = {};  // JCP identificado pela B3 (últimos ~12 meses): 15% retido na fonte
       for (const [ts, v, lb] of d.div || []) { const k = ym(ts); hist.divm[k] = (hist.divm[k] || 0) + v; if (/JRS|JUROS|JCP/i.test(lb || '')) hist.jcpm[k] = (hist.jcpm[k] || 0) + v; }
       const lo = hist.ym[0], hi = hist.ym[hist.ym.length - 1];
-      for (const id of ['pvDi', 'pvDf']) { el(id).min = lo; el(id).max = hi; }
-      if (!st.di || st.di < lo || st.di > hi) st.di = lo;
-      if (st.df && (st.df > hi || st.df < st.di)) st.df = hi;  // vazia = Hoje (em andamento)
+      for (const id of ['pvDi', 'pvDf']) { el(id).min = lo + '-01'; el(id).max = hoje(); }
+      if (!st.di || ymOf(st.di) < lo || ymOf(st.di) > hi) st.di = lo + '-01';
+      if (st.df && (ymOf(st.df) > hi || st.df < st.di)) st.df = '';  // vazia = Hoje (em andamento)
       el('pvDi').value = st.di; el('pvDf').value = st.df;
       el('pvOldest').dataset.tip = `Data mais antiga disponível para ${t}: ${dataBR(lo)} (fonte: ${d.source})`;
       el('pvStatus').textContent = '';
@@ -332,7 +338,7 @@ if (typeof document !== 'undefined') {
     let steps = null; // [{r, d, label}]
     if (st.proj && !projS) { renderAll(); return; }
     if (!st.proj && st.ticker && hist) {
-      const i0 = Math.max(0, hist.ym.indexOf(st.di)), i1e = hist.ym.indexOf(st.df), i1 = i1e < 0 ? hist.ym.length - 1 : i1e;
+      const i0 = Math.max(0, hist.ym.indexOf(ymOf(st.di))), i1e = hist.ym.indexOf(ymOf(st.df)), i1 = i1e < 0 ? hist.ym.length - 1 : i1e;  // tabela mensal: mês da data
       steps = [];
       for (let i = i0 + 1; i <= i1; i++) { const dv = hist.divm[hist.ym[i]] || 0; steps.push({ r: hist.c[i] / hist.c[i - 1] - 1, d: dv / hist.c[i - 1], j: dv ? (hist.jcpm[hist.ym[i]] || 0) / dv : 0, ym: hist.ym[i] }); }
       steps.unshift({ ym: hist.ym[i0] });
@@ -493,17 +499,17 @@ if (typeof document !== 'undefined') {
   const perDi = (df) => { if (!st.mper) return MM.ini; const [y, m] = df.split('-').map(Number); const d = `${y - st.mper}-${String(m).padStart(2, '0')}`; return d > MM.ini ? d : MM.ini; };
   // chip temporário com as datas do "E se eu tivesse investido?" (ex.: 03/2025 a hoje): aparece quando a Data inicial é posterior à
   // mais antiga ou há Data final; fica marcado ao mudar as datas (st.mperC) e filtra exatamente esse intervalo; some quando as datas voltam ao padrão
-  const perC = () => !!MM && (!!st.df || (!!st.di && st.di > (el('pvDi').min || MM.ini)));
+  const perC = () => !!MM && (!!st.df || (!!st.di && st.di > (el('pvDi').min || MM.ini + '-01')));
   const perCOn = () => perC() && st.mperC !== false;
   function perHtml(d) {
     const info = d ? `<span class="pv-per-i">${dataBR(d.ini)} a ${dataBR(d.fim)} · aportado ${brl.format(d.apT)}${isAll() ? ' por empresa' : ''}</span>` : '';
-    const c = perC() ? `<button type="button" data-mper="c" class="pv-per-c${perCOn() ? ' on' : ''}">${dataBR(st.di > MM.ini ? st.di : MM.ini)} a ${st.df ? dataBR(st.df) : 'hoje'}</button>` : '';
+    const c = perC() ? `<button type="button" data-mper="c" class="pv-per-c${perCOn() ? ' on' : ''}">${dataBR(ymOf(st.di) >= MM.ini ? st.di : MM.ini)} a ${st.df ? dataBR(st.df) : 'hoje'}</button>` : '';
     el('pvPer').innerHTML = `<span class="pv-per-l">Período</span>${c}${PER.map(n => `<button type="button" data-mper="${n}" class="${n === st.mper && !perCOn() ? 'on' : ''}">${n ? n + ' anos' : 'Todo período'}</button>`).join('')}${info}`;
   }
   el('pvPer').addEventListener('click', (e) => { const b = e.target.closest('[data-mper]'); if (!b) return; if (b.dataset.mper === 'c') st.mperC = true; else { st.mper = +b.dataset.mper; st.mperC = false; } save(); perHtml(null); runModels(); });
   function modBody() {
-    let df = st.df && st.df < MM.fim ? st.df : MM.fim, di = perDi(df);
-    if (perCOn()) { di = st.di > MM.ini ? st.di : MM.ini; if (di > df) di = df; }  // chip das datas: exatamente o intervalo escolhido
+    let df = st.df && ymOf(st.df) <= MM.fim ? st.df : MM.fim, di = perDi(ymOf(df));
+    if (perCOn()) { di = ymOf(st.di) >= MM.ini ? st.di : MM.ini; if (ymOf(di) > ymOf(df)) di = df; }  // chip das datas: exatamente o intervalo escolhido (com o dia)
     const f = flows(Math.max(2, months(di, df).length));
     return { di, df, ap: f.ap, w: f.w, tx: st.txc ? st.tx : null };
   }

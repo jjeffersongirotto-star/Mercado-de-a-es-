@@ -1172,7 +1172,7 @@ def api_modelos_comparar(body: dict):
         history.pin([t for g in (grupos or []) for t in g["t"]] + [str(t) for t in (b.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
         D = modelos.data(); modelos.set_setores(D, rows, _cad()); _pre()
         if u == "all": tick = modelos.todas(D, rows)  # + as que saíram da bolsa
-        out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
+        out = modelos.compare(D, tick, str(b.get("di") or "")[:10], str(b.get("df") or "")[:10], aps, wd, tx, grupos)
         if not out.get("error"): out = dict(out, nm=_nomes(out.get("t") or []))  # cópia: a resposta fica no cache de modelos
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
@@ -1237,7 +1237,7 @@ def _simw(di, v0, f):
         try: fx = json.loads(f) if f and len(f) <= 8000 else {}  # app 1.17+: aporte mensal, extras e retiradas do grupo ({ap, ex, ret})
         except Exception: fx = {}
         _, v0, ap, ex, ret = modelos.sim_def(dict(fx if isinstance(fx, dict) else {}, di=di, v0=v0))
-        tk = modelos.todas(D, rows); di = str(di or "")[:7]
+        tk = modelos.todas(D, rows); di = str(di or "")[:10]
         sg = modelos.simgrupo(D, tk, di, v0, ap, ex, ret)
     except Exception:
         log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502), None, None
