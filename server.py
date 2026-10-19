@@ -889,6 +889,12 @@ def api_noticias():
     d, _ = snapshots.load("noticias", max_mem_age=3 * 3600)
     return JSONResponse(d or {"itens": []}, headers={"Cache-Control": "public, max-age=1800"})
 
+@app.get("/api/etfs")
+def api_etfs():
+    """Aba Mercado → ETFs: repassa o snapshot etfs (scripts/fetch_b3_etfs.py: lista da B3 + preços do COTAHIST); nada é buscado por visita."""
+    d, _ = snapshots.load("etfs", max_mem_age=3 * 3600)
+    return JSONResponse(d or {"e": {}}, headers={"Cache-Control": "public, max-age=1800"})
+
 @app.get("/api/fg")
 def api_fg(full: int = 0):
     """Índice de Medo e Ganância da B3 (snapshot fg, scripts/build_fg.py). Sem full: só os últimos 30 pregões."""

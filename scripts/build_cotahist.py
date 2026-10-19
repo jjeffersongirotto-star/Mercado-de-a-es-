@@ -17,12 +17,19 @@ import universe
 from snaputil import APP_API
 
 ZD, OUT = sys.argv[1], sys.argv[2]
-os.makedirs(os.path.join(OUT, "history4"), exist_ok=True)
+os.makedirs(os.path.join(OUT, "history4"), exist_ok=True); os.makedirs(os.path.join(OUT, "history4_etf"), exist_ok=True)  # ETFs: pasta própria (fora do "mercado" e dos modelos)
 rows = json.load(open(os.environ["DATA_JSON"]))["rows"] if os.environ.get("DATA_JSON") else \
     requests.get(APP_API, timeout=120).json()["rows"]
 kept = universe.tradable(rows)  # todas as classes negociadas
 TICK = [r["ticker"] for r in kept]
+try:  # ETFs da lista da B3 (fetch_b3_etfs.py lista, etapa anterior): mesmo histórico; no COTAHIST são BDI 14 ("CI")
+    ETF = set(json.load(open(os.path.join(OUT, "etfs.json")))["e"])
+except Exception:
+    ETF = set()
+TICK += sorted(ETF - set(TICK))
 if os.environ.get("COTA_ONLY"): TICK = [t for t in TICK if t in os.environ["COTA_ONLY"].split(",")]
+FORA_BDI = ("96", "10", "14", "22")
+ok_bdi = lambda l: l[10:12] not in FORA_BDI or (l[10:12] == "14" and l[12:24].strip() in ETF)  # BDI 14 só para os ETFs
 UA = {"User-Agent": "Mozilla/5.0"}
 
 def lines(path):
@@ -59,7 +66,7 @@ for y in years:
     if y < 1994:
         continue
     for l in lines(os.path.join(ZD, f"COTAHIST_A{y}.ZIP")):
-        if l[24:27] != "010" or l[10:12] in ("96", "10", "14", "22"):  # à vista: lote padrão e também papéis em recuperação judicial/situação especial (BDI 08 etc.); fora fracionário e direitos
+        if l[24:27] != "010" or not ok_bdi(l):  # à vista: lote padrão e também papéis em recuperação judicial/situação especial (BDI 08 etc.); fora fracionário e direitos
             continue
         t = want.get(l[230:242]) or (l[12:24].strip() if l[12:24].strip() in data else None)  # ISIN atual ou mesmo código (ISIN muda em grupamentos)
         if not t:
@@ -85,7 +92,7 @@ while d0.date() <= datetime.now().date():
                 p = os.path.join(ZD, f"COTAHIST_D{d0:%d%m%Y}.ZIP"); open(p, "wb").write(rr.content)
                 for l in lines(p):
                     tk = want.get(l[230:242]) or (l[12:24].strip() if l[12:24].strip() in data else None)
-                    if l[24:27] == "010" and l[10:12] not in ("96", "10", "14", "22") and tk:
+                    if l[24:27] == "010" and ok_bdi(l) and tk:
                         r = rec(l); data[tk][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"], r["fat"])
         except Exception as e:
             print("diário", d0.date(), e, file=sys.stderr)
@@ -112,7 +119,7 @@ evcache = {}
 for t, days in data.items():
     if not days:
         continue
-    if os.environ.get("SKIP_NEWER") and os.path.exists(os.path.join(OUT, "history4", t + ".json.gz")) and os.path.getmtime(os.path.join(OUT, "history4", t + ".json.gz")) > float(os.environ["SKIP_NEWER"]):
+    if os.environ.get("SKIP_NEWER") and os.path.exists(os.path.join(OUT, "history4_etf" if t in ETF else "history4", t + ".json.gz")) and os.path.getmtime(os.path.join(OUT, "history4_etf" if t in ETF else "history4", t + ".json.gz")) > float(os.environ["SKIP_NEWER"]):
         ok += 1; continue
     code4 = t[:4]
     ev = evcache.get(code4) or evcache.setdefault(code4, b3_events(code4)); time.sleep(0.4)
@@ -208,7 +215,7 @@ for t, days in data.items():
            "m": {"t": [mm[k_][0] for k_ in mk], "c": [mm[k_][1] for k_ in mk], "div": [[a, b] for a, b, _ in divs], "source": src, "at": at},
            "divs": divs, "splits": [[ts_of(dc), m, lab] for dc, m, lab in spl], "isin": my,
            "flags": [[ts_of(d), r] for d, r in flags]}
-    with open(os.path.join(OUT, "history4", t + ".json.gz"), "wb") as f:
+    with open(os.path.join(OUT, "history4_etf" if t in ETF else "history4", t + ".json.gz"), "wb") as f:
         f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
     ok += 1
 print(f"COTAHIST: {ok} tickers gravados; último pregão {max(max(v) for v in data.values() if v)}")
