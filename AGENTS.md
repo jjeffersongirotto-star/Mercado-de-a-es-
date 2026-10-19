@@ -46,6 +46,7 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Fontes de dados (id, nome, logo, países) | `server.py` → `SOURCES` | seletor de fonte, contagens, status |
 | Países e moedas | `tradingview.py` → `COUNTRIES` | `/api/countries`, seletor de país |
 | Regras de consenso entre fontes | `consensus.py` | cores/selos dos cards (`st`, `cm`, `ag` de cada linha) |
+| Selo "% concordam" do card (peso de cada indicador `cw`: ½ nos de EBIT e DY, 0 em cotação/valor de mercado/patrimônio/volume) | `server.py` → `FIELD_EXTRA` (`cw`); conta em `app.js` → `conf` (normal 1, laranja ½, vermelho 0) | card, CSV, Ordenar (`conf`); explicação no ⓘ **Confiança das fontes** |
 | Histórico, proventos e métricas por período (valorização 1–5 anos, DY médio, proventos do ano, 1º pregão) | snapshot `metrics` (`/api/metrics`, gerado por `scripts/build_metrics.py` a partir da B3) | Grupos, rankings do chat |
 | Volume financeiro por período (dia, 10 pregões, 1–12 meses) | Brasil em "Todos": snapshot `metrics` → `vol` (B3, `scripts/build_metrics.py`; prioridade B3) · fonte escolhida: o valor dela (`S`) · exterior: TradingView | filtro Volume (grupo `vol`), cards, Só líquidas (`liq2m`), Grupos, chat |
 | Crescimento de receita e lucro (1–5 anos) | 5 anos: consenso das fontes · 1–4 anos: só CVM (`scripts/build_cvm.py` → `cresc{n}a`, `lucro{n}a`) · exterior: TradingView (só 5 anos) | filtro Crescimento (grupo `cres`), cards, Grupos, chat |

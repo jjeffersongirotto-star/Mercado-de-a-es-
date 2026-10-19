@@ -230,20 +230,21 @@ function updateSortDir() {  // no celular só o ícone (o nome fica no aria-labe
   $('#sortDir').innerHTML = sortIc(up ? 1 : -1);  // só as setas; o sentido fica no título/aria-label
   $('#sortDir').setAttribute('aria-label', t); $('#sortDir').title = t + ' (toque para inverter)';
 }
-// Confiança do consenso: N = fontes com dados da empresa; A = fontes que concordam com a maioria em todos os indicadores.
-// Fica de fora quem diverge da maioria (âmbar) ou tem valor num indicador sem maioria (vermelho: as fontes discordam). Bancos não contam.
+// Confiança do consenso: % dos indicadores em que as fontes concordam, cada indicador com o peso cw de /api/data → fields (server.py →
+// FIELD_EXTRA; sem cw = 1): normal = 100%, laranja (maioria com divergência) = metade, vermelho (sem maioria) = 0. Fora da conta: sem valor,
+// fonte única no indicador e indicadores de banco. N = fontes com dados da empresa.
 function conf(r) {
   if (r._cf) return r._cf;
-  const S = r.S || {}, ids = Object.keys(S), bad = new Set(), bk = new Set(r.bk || []);
-  for (const [k, st] of Object.entries(r.st || {})) {
-    if ((st !== 'amb' && st !== 'red') || bk.has(k)) continue;
-    const ag = st === 'red' ? [] : (r.ag || {})[k] || [], xv = (r.xv || {})[k] || [];
-    for (const id of ids) if (S[id] && S[id][k] != null && !ag.includes(id) && !xv.includes(id)) bad.add(id);
+  const S = r.S || {}, ids = Object.keys(S), bk = new Set(r.bk || []), st = r.st || {}; let w = 0, a = 0;
+  for (const f of state.data.fields) {
+    const k = f.key, cw = f.cw ?? 1;
+    if (!cw || bk.has(k) || ids.filter(id => S[id] && S[id][k] != null).length < 2) continue;
+    w += cw; a += cw * (st[k] === 'red' ? 0 : st[k] === 'amb' ? .5 : 1);
   }
-  return (r._cf = { A: ids.length - bad.size, N: ids.length });
+  return (r._cf = { p: w ? Math.round(a / w * 100) : null, N: ids.length });
 }
-const confTxt = (r) => { const c = conf(r); return c.N < 2 ? `${c.N} fonte` : `${c.A}/${c.N} concordam`; };
-const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : k === 'var' ? r.var : k === 'conf' ? (c => c.N ? c.A / c.N + c.N / 1000 : null)(conf(r)) : k === 'fair' ? (f => f.why ? null : f.pct)(fairOf(r)) : val(r, k);
+const confTxt = (r) => { const c = conf(r); return c.N < 2 || c.p == null ? `${c.N} fonte${c.N === 1 ? '' : 's'}` : `${c.p}% concordam`; };
+const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : k === 'var' ? r.var : k === 'conf' ? (c => c.p == null ? null : c.p + c.N / 1000)(conf(r)) : k === 'fair' ? (f => f.why ? null : f.pct)(fairOf(r)) : val(r, k);
 
 // Ordem das buscas: 0 ticker começa com · 1 ticker contém · 2 nome · 3 setor · 4 descrição/atividade · 9 sem relação
 function searchRank(r, q) { return ((typeof FAVS !== 'undefined' && FAVS.has(r.ticker)) ? 0 : 100) + searchRank0(r, q); }
@@ -445,7 +446,7 @@ function blockHtml(r) {
                  (nRes ? `<span class="hb hb-res" title="${nRes} indicador(es) com maioria, mas alguma fonte discorda">maioria ${nRes}</span>` : '') +
                  (nBank ? `<span class="hb hb-bank" title="${nBank} indicador(es) baseados em EBIT/receita não comparáveis (banco/seguradora)">banco ${nBank}</span>` : '') +
                  (nAdj ? `<span class="hb hb-adj" title="${nAdj} indicador(es) em que CVM/Dados de Mercado concordam com o Fundamentus via EBIT ajustado">aj ${nAdj}</span>` : '');
-  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag tap ${conf(r).A === conf(r).N ? 'ctag-ok' : 'ctag-dv'}" data-cores role="button" title="Fontes que concordam com a maioria em todos os indicadores / fontes com dados (indicador sem maioria = fontes discordam)">${confTxt(r)}</span>` : '');
+  const tags = (r.tags || []).map(t => `<span class="ctag">${t}</span>`).join('') + (r.S && Object.keys(r.S).length ? `<span class="ctag tap ${conf(r).p == null || conf(r).p === 100 ? 'ctag-ok' : 'ctag-dv'}" data-cores role="button" title="Indicadores em que as fontes concordam (laranja conta metade, vermelho zero; regra em Cores)">${confTxt(r)}</span>` : '');
   return `<article class="blk rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden${open ? ' open' : ''}" data-ticker="${r.ticker}">
     <div class="blk-head relative px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-800/90 to-slate-900/60 cursor-pointer select-none">
       <div class="flex items-center gap-2">
@@ -482,7 +483,7 @@ function setBlockOpen(art, open) {
   btn.firstElementChild.textContent = open ? '−' : '+';
 }
 document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-cores]')) { e.stopPropagation(); infoSection('Cores'); return; }  // selo "A/N concordam": legenda das cores
+  if (e.target.closest('[data-cores]')) { e.stopPropagation(); infoSection('Cores'); return; }  // selo "% concordam": legenda das cores
   const co = e.target.closest('[data-co]');  // ⓘ da empresa
   if (co) { const r = state.rowMap[co.dataset.co]; if (r) uiAlert('', { title: `${esc(r.ticker)} · ${esc(r.nome || '')}`, html: aboutHtml(r) }); return; }
   const head = e.target.closest('.blk-head'); if (!head || e.target.closest('.gsel') || e.target.closest('[data-gl]')) return;

@@ -104,6 +104,10 @@ GLOSS_TERM = {"dy": "DY", "mbruta": "Margem bruta", "mebit": "Margem EBIT", "mli
               "dlpl": "Dív.Líq/PL", "patrliq": "Patrimônio líquido", "valmerc": "Valor de mercado",
               **{k: "Volume (média diária)" for k in VOL_PER}, **{k: "CAGR" for k in GROWTH_KEYS}}
 for _k, _g in GLOSS_TERM.items(): FIELD_EXTRA.setdefault(_k, {})["gl"] = _g
+# Peso de cada indicador no selo "% concordam" do card (app.js → conf; sem cw = 1). ½: as fontes divergem com frequência por definição
+# (EBIT contábil × ajustado, EV, janela e JCP do DY), não por erro; 0: sempre concordam (só inflariam a porcentagem)
+for _k in ("roic", "evebit", "pebit", "evebitda", "mebit", "dy", "dlebit"): FIELD_EXTRA.setdefault(_k, {})["cw"] = 0.5
+for _k in ("preco", "valmerc", "patrliq", *VOL_PER): FIELD_EXTRA.setdefault(_k, {})["cw"] = 0
 REL_THR = 0.30  # 30%
 
 def divergente(a, b, abs_thr):
