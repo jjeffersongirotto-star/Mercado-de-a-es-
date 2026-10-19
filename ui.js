@@ -255,6 +255,17 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   // App até a 1.13 (JGInvestingApp/x no user agent): a oferta nativa podia não aparecer (trava de 10 min, "Depois" de 24 h).
   // O site confere /app/version.json ao abrir e ao voltar e oferece baixar pelo navegador (dl: mesmo APK fora deste endereço).
   const av = (navigator.userAgent.match(/JGInvestingApp\/([\d.]+)/) || [])[1];
+  // dentro do app: topo do ⓘ diz a versão instalada e se é a mais recente (o Baixar APK do site mostra sempre a publicada)
+  const appVer = async () => {
+    const el = document.getElementById('appVer'); if (!el || !av) return;
+    try {
+      const v = await (await fetch('/app/version.json?t=' + Date.now(), { cache: 'no-store' })).json();
+      const nova = v && v.versionName && window.verCmp(v.versionName, av) > 0;
+      el.textContent = `App instalado: versão ${av}` + (nova ? ` · nova versão ${v.versionName} disponível: feche e abra o app para atualizar` : ' · é a mais recente');
+      el.classList.remove('hidden');
+    } catch (e) { }
+  };
+  window.appVer = appVer;  // app.js → infoOpen
   if (av && window.verCmp(av, '1.14') < 0) {
     let asked = '';
     const check = async () => {
