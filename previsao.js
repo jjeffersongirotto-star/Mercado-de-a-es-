@@ -619,9 +619,11 @@ if (typeof document !== 'undefined') {
   // Tipo | Origem/destino (ticker; CDI na aplicação/resgate) | Valor ação (preço na hora; — sem ação) | Qtd. de ações | Valor
   const MOV_N = { compra: 'Compra', venda: 'Venda', aporte: 'Aporte', provento: 'Provento', cdi_ap: 'Aplicação', cdi_res: 'Resgate', retirada: 'Retirada', imposto: 'Imposto' };
   const MOV_H = '<thead><tr><th>Data</th><th>Tipo</th><th>Origem/<br>destino</th><th>Valor<br>ação</th><th>Qtd. de<br>ações</th><th>Valor</th></tr></thead>';
+  // nome popular de cada ticker (Grupo simulação: /api/modelos/simgrupo e simmov → nm, o mesmo do widget); sem nome = ticker
+  const TN = {}, nmAdd = (m) => Object.assign(TN, m || {}), nmOf = (t) => TN[t] || t;
   const movRow = (x) => {
     const cdi = x.k === 'cdi_ap' || x.k === 'cdi_res', neg = x.k === 'compra' || x.k === 'retirada' || x.k === 'imposto';
-    const org = x.t ? `<b>${esc(x.t)}</b>` : cdi ? 'CDI' : '—', det = x.x ? `<br><span class="pvd-note">${esc(x.x)}</span>` : '';
+    const org = x.t ? `<b>${esc(nmOf(x.t))}</b>` : cdi ? 'CDI' : '—', det = x.x ? `<br><span class="pvd-note">${esc(x.x)}</span>` : '';
     const px = x.p != null && !cdi && x.k !== 'imposto' && x.k !== 'aporte' ? brl.format(x.p) : '—';
     return `<tr class="mv-${x.k}"><td>${dataBR(x.d).replace(/\/(\d\d)(\d\d)$/, '/$2')}</td><td>${MOV_N[x.k] || esc(x.k)}</td><td class="mv-o">${org}${det}</td><td>${px}</td>` +
       `<td>${x.q != null ? F0.format(x.q) : '—'}</td><td class="${neg || cdi ? '' : 'up'}">${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`;
@@ -644,7 +646,7 @@ if (typeof document !== 'undefined') {
       try {
         const r = await fetch('/api/modelos/simmov', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ off: o.L.length, n: MOV_PG * 2 }, o.src)) });
         const d = await r.json(); if (!r.ok || !d.mov) throw new Error(d.error || 'erro');
-        o.L.push(...d.mov); o.N = d.nmov;
+        nmAdd(d.nm); o.L.push(...d.mov); o.N = d.nmov;
       } catch (err) { b.disabled = false; b.textContent = 'Tentar de novo'; return; }
       b.disabled = false;
     }
@@ -657,21 +659,23 @@ if (typeof document !== 'undefined') {
   const pclr = (x) => x == null ? '' : x < 0 ? 'dn' : 'up';
   // posição: preço médio (total pago com custos ÷ ações; vendas não mudam) e resultado = preço de agora × preço médio; toque abre o histórico da empresa
   const SIM_POS = 30;
-  const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b></td><td>${F0.format(x.q)}</td><td>${brl.format(x.pm != null ? x.pm : x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
+  const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b>${TN[x.t] ? `<span class="gsub">${esc(TN[x.t])}</span>` : ''}</td><td>${F0.format(x.q)}</td><td>${brl.format(x.pm != null ? x.pm : x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
   function simHtml(r) {
-    const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('');
+    nmAdd(r.nm);
+    // linha CDI (caixa no CDB) no fim: quanto está aplicado em ações e quanto está parado no CDB
+    const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('') + (r.cash > 0 ? `<tr class="simcdi"><td><b>CDI</b><span class="gsub">caixa no CDB</span></td><td>—</td><td>—</td><td>${brl.format(r.cash)}</td><td>—</td></tr>` : '');
     return tiles([['Aportado', brl.format(r.apT != null ? r.apT : r.v0), r.apT != null && r.apT !== r.v0 ? `${brl.format(r.v0)} iniciais${r.ap > 0 ? ` + ${brl.format(r.ap)}/mês` : ''}${r.wS > 0 ? ` − ${brl.format(r.wS)} retirados` : ''}` : 'desde ' + dataBR(r.d0)], ['Hoje', brl.format(r.v), `<span class="pct ${pclr(r.pct)}">${pc(r.pct)}</span>`],
         ['Compras / vendas', `${F0.format(r.c)} <span class="s2">/</span> ${F0.format(r.s)}`], ['Imposto', brl.format(r.ir)],
         ['Posição', `${r.np} empresa${r.np === 1 ? '' : 's'}`, `+ ${brl.format(r.cash)} no CDB`, 'w2']]) + `<p class="sumd">dados até ${dataBR(r.d1)}</p>
       <p class="pvd-note">Toque numa empresa para ver as compras, vendas e proventos dela.</p>
-      <table class="gtab simpos"><thead><tr><th>Ativo</th><th>Ações</th><th>Preço<br>médio</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="5">Tudo no CDB.</td></tr>'}</tbody></table>
+      <table class="gtab simpos"><thead><tr><th>Ativo</th><th>Ações</th><th>Preço<br>médio</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="5">Nada aplicado.</td></tr>'}</tbody></table>
       ${r.pos.length > SIM_POS ? `<button type="button" class="btn mv-more" data-simall="1">Mostrar todas (${r.pos.length})</button>` : ''}
       ${movHtml(r.mov, r.nmov, src)}`;
   }
   // uma empresa dentro de um modelo do Grupo simulação (/api/modelos/simmov com tk): resumo e o histórico dela (compras, vendas, proventos)
   async function simCoLoad(src, tk) {
     const r = await fetch('/api/modelos/simmov', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ tk }, src)) });
-    const d = await r.json(); if (!r.ok || !d.mov) throw new Error(d.error || 'Não foi possível carregar agora.'); return d;
+    const d = await r.json(); if (!r.ok || !d.mov) throw new Error(d.error || 'Não foi possível carregar agora.'); nmAdd(d.nm); return d;
   }
   function simCoHtml(d) {
     const p = d.pos;
