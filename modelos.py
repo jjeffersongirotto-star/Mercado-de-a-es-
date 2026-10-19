@@ -45,6 +45,9 @@ PERENE_TXT = "bancos, energia elétrica, saneamento, seguros, telecomunicações
 # teto = média dos proventos por ação dos 5 anos completos anteriores ÷ 6% (pagou em pelo menos 4 deles); compra com todo o caixa
 # só com o preço no teto ou abaixo; acima, aporte e proventos esperam no CDB
 BARSI_DY, BARSI_ANOS = .06, 5
+# caixa máximo no CDB (fração do patrimônio): acima disso e sem empresa no teto ou abaixo, compra a menos esticada (menor prêmio sobre o
+# teto); com empresa no teto, o excedente vai para elas (Método Barsi, simulação de uma empresa e modo Grupo)
+BARSI_CAIXA = .10
 
 
 def perene(r, cad=None):
@@ -163,7 +166,7 @@ def set_setores(D, rows, cad=None):
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
     set_metodos(D, rows)
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 11       # versão das contas (11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 12       # versão das contas (12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -548,7 +551,7 @@ FICHA_COMUM = (("CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "
                ("_signals", "_signal", "motivo", "simulate", "Conta", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
 FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
          "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
-         "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")), "barsi": (("BARSI_DY", "BARSI_ANOS", "PERENE_TXT"), ("perene", "build")),
+         "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")), "barsi": (("BARSI_DY", "BARSI_ANOS", "BARSI_CAIXA", "PERENE_TXT"), ("perene", "build", "_barsi_caixa")),
          **{m: (("METODO",), ("set_metodos", "_fund_mats")) for m in ("value", "growth", "garp", "fatores")}}
 
 
@@ -737,6 +740,9 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             A.buy(ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P, falta)  # só compra quando a diferença para o alvo é relevante
         else:
             A.buy(buy & ok, P)
+            if mid == "barsi" and i > 0:  # caixa acima de BARSI_CAIXA: compra mesmo acima do teto (a empresa tem teto e lucro)
+                ex = A.cash - BARSI_CAIXA * (A.sh * P + A.cash)
+                with np.errstate(invalid="ignore"): A.buy(ok & ~buy & np.isfinite(D["TETO"][idx, i - 1]) & D["LP"][idx, i - 1] & (ex > np.maximum(P, 100)), P, ex)
         log(sh0, i, P, lambda q: "compra: " + motivo(D, mid, idx[q], i - 1))
         if j is not None: vm.append(A.sh * P + A.cash)
         if rec and j is not None:
@@ -1147,6 +1153,21 @@ def _venda(D, mid, idx, i, sh, basis, P, ok, age):
     return out
 
 
+def _barsi_caixa(D, idx, i, w, sh, P, ok, cash, pend, RG, ban):
+    """Método Barsi no modo Grupo: caixa acima de BARSI_CAIXA do patrimônio -> o excedente vai para as empresas no teto ou abaixo (pelos pesos
+    do alvo) ou, sem nenhuma, para a menos esticada (menor prêmio sobre o teto) entre as do método que passam nas regras de carteira."""
+    tv = (sh * P).sum() + pend.sum() + cash; ex = cash - BARSI_CAIXA * tv
+    if ex < max(RG.get("min_compra", 0) if RG else 0, 1): return cash, pend
+    if w.sum() > 0: pend = pend + ex * w / w.sum(); return cash - ex, pend
+    T = D["TETO"][idx, i - 1]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        el = ok & D["BS"][idx] & D["LP"][idx, i - 1] & np.isfinite(T) & (P > 0); wc = np.where(el, T / np.where(P > 0, P, 1), 0)
+    if RG and wc.sum() > 0: wc = _regras_w(D, "barsi", idx, i, wc / wc.sum(), sh, pend, RG, ban)
+    if not (wc > 0).any(): return cash, pend
+    k = int(np.argmax(wc)); pend = pend.copy(); pend[k] += ex  # maior teto ÷ preço = menor prêmio sobre o teto
+    return cash - ex, pend
+
+
 def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     """Modo Grupo (Comparar e Grupo simulação): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
     Ações inteiras: o dinheiro destinado a cada empresa fica numa reserva dela, rendendo CDB, até dar para comprar pelo menos 1 ação;
@@ -1227,6 +1248,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                     if al.sum()>0: pend+=al;cash-=al.sum()
         elif cash>0.005 and w.sum()>0:
             pend+=cash*w;cash=0.0
+        if mid=='barsi' and j is not None and i>s: cash,pend=_barsi_caixa(D,idx,i,w,sh,P,ok,cash,pend,RG,ban)
         m=ok&(P>0)&(pend>0)
         if m.any():
             q=np.where(m,np.floor(pend*(1-CUSTO)/np.where(m,P,np.inf)+1e-9),0.0);m=q>=1
