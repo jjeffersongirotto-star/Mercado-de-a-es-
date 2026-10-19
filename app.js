@@ -814,6 +814,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#inf
 $('#btnExpandAll').addEventListener('click', () => expandAll(true));
 $('#btnCollapseAll').addEventListener('click', () => expandAll(false));
 $('#btnRefresh').addEventListener('click', async () => {
+  if (window.siteCheck && await window.siteCheck(true)) { window.siteReload(); return; }  // versão nova do site: recarrega já com tudo novo
   $('#btnRefresh').disabled = true; if (!document.querySelector('#results > .ldr')) $('#results').insertAdjacentHTML('afterbegin', loaderHTML('Atualizando…')); $('#btnRefresh').classList.add('spin'); if (!$('#updated').textContent.includes('atualizando')) $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
   await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; $('#btnRefresh').classList.remove('spin'); }, 2500);
 });
