@@ -1,14 +1,163 @@
 {
- "fetched_at": "2026-10-16T22:14:50+00:00",
- "tema": "Luiz Barsi",
+ "fetched_at": "2026-10-19T00:46:52+00:00",
+ "temas": {
+  "mercado": "Mercado",
+  "barsi": "Luiz Barsi"
+ },
+ "fontes": [
+  "Agência Brasil",
+  "Exame",
+  "InfoMoney",
+  "Reuters (Investing.com Brasil)",
+  "Valor Econômico"
+ ],
  "itens": [
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic planeja transferir parte de suas ações para um novo fundo voltado ao 'bem público'",
+   "data": "2026-10-18",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A Anthropic PBC informou que planeja destinar 5% de suas ações a um novo fundo que, segundo a empresa de inteligência artificial, permitirá a realização de doações voltadas ao “bem público” — incluindo ações para…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/18/anthropic-planeja-transferir-parte-de-suas-acoes-para-um-novo-fundo-voltado-ao-bem-publico.ghtml",
+   "img": "https://s2-valor.glbimg.com/CcuWv5okwXgBmo6_0dS--wIb_aI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/s/u/qFuQ4dQKmTx4Xvss30GA/401142144.jpg",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Temor de virada de Lula faz proteção contra alta do dólar saltar à máxima desde 2011",
+   "data": "2026-10-18",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A euforia do mercado com a vantagem do senador Flávio Bolsonaro (PL-RJ) no primeiro turno ficou para trás. Pelo menos é isso o que indica o mercado de opções de câmbio. Matéria exclusiva para assinantes. Para ter…",
+   "url": "https://valor.globo.com/financas/intraday/post/2026/10/temor-de-virada-de-lula-faz-protecao-contra-alta-do-dolar-saltar-a-maxima-desde-2011.ghtml",
+   "img": "https://s2-valor.glbimg.com/NKd8b0Ic86Aydq1hkb8R_5PpBO8=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/X/D/E1nXusTma0Xmjm6rryEQ/notas-moedas-dolar9.jpg",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Agenda de mercados: IPCA-15 e reta final das eleições são destaque",
+   "data": "2026-10-18",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A reta final da eleição presidencial no Brasil deve ser acompanhada de perto pelos investidores na semana de 19 a 23 de outubro. Nos próximos dias, pesquisas de intenção de voto devem continuar a fazer preço e a…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/18/agenda-de-mercados-ipca-15-e-reta-final-das-eleicoes-sao-destaque.ghtml",
+   "img": "https://s2-valor.glbimg.com/k_2vOOO6n0ED4hXTvOKAc7doodQ=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/Q/0/RQKdX2TT6zXYwiFsLhLw/rbr2547.jpg",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "TSE libera atos com mote de democracia no Rio, em Salvador e Porto Alegre, e rejeita vetar shows",
+   "data": "2026-10-18",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> O ministro Ricardo Villas Bôas Cueva, corregedor-geral eleitoral do TSE (Tribunal Superior Eleitoral), liberou os atos previstos para este domingo (18) chamados com mote de defesa da democracia. Na mesma decisão, o…",
+   "url": "https://valor.globo.com/politica/noticia/2026/10/17/tse-libera-atos-com-mote-de-democracia-no-rio-em-salvador-e-porto-alegre-e-rejeita-vetar-shows.ghtml",
+   "img": "https://s2-valor.glbimg.com/26j9VZy4YBY9bb75vlyQwOXFp54=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/w/w/L8ZgjtT0OmZ0IYCqFT1A/55582157937-6d040c4716-o.jpg",
+   "t": [
+    "PSSA3"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic destinará 5% de ações a fundo voltado ao alívio do impacto da IA",
+   "data": "2026-10-18",
+   "fonte": "InfoMoney",
+   "resumo": "O logotipo da Anthropic pode ser visto nesta ilustração criada em 20 de maio de 2024. REUTERS/Dado Ruvic/Ilustração/Foto de arquivo \"…",
+   "url": "https://www.infomoney.com.br/mercados/anthropic-destinara-5-de-acoes-a-fundo-voltado-ao-alivio-do-impacto-da-ia/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/5WWIA5MXEJOR5CZTTNGXYY3UP4.jpg?fit=1200%2C745&quality=70&strip=all",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Calendário econômico: segundo turno das eleições e IPCA-15 têm as atenções da semana",
+   "data": "2026-10-18",
+   "fonte": "InfoMoney",
+   "resumo": "Consumidora faz compras nos EUA; crescimento econômico estava mais lento já no fim de 2025 (Foto: Hiroko Masuike/The New York Times) \"…",
+   "url": "https://www.infomoney.com.br/mercados/calendario-economico-segundo-turno-das-eleicoes-e-ipca-15-tem-as-atencoes-da-semana/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/ECON-INFLATION_b.jpg",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "BB recebe até 31 de outubro inscrições para projetos de impacto social",
+   "data": "2026-10-18",
+   "fonte": "Agência Brasil",
+   "resumo": "Projetos de impacto social podem se inscrever até 31 de outubro para receber recursos do Banco do Brasil (BB). A instituição financeira abriu edital de 2026 do Programa Mãos Dadas, que também inclui projetos de saúde e,…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/bb-recebe-ate-31-de-outubro-inscricoes-para-projetos-de-impacto-social",
+   "img": "https://imagens.ebc.com.br/L5EQpoecgNp8Lhd3jZir8Bx6y6k=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/_mg_8408.jpg?itok=_MswIMeg",
+   "t": [
+    "BBAS3"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Governo envia comitiva de ministros ao Amazonas para acompanhar incêndios florestais",
+   "data": "2026-10-17",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> O governo federal enviará no domingo (18) uma comitiva de ministros e técnicos ao Amazonas para acompanhar a situação dos incêndios florestais e coordenar novas ações de combate às chamas. Desde o início do mês, o…",
+   "url": "https://valor.globo.com/brasil/noticia/2026/10/17/governo-envia-comitiva-de-ministros-ao-amazonas-para-acompanhar-incndios-florestais.ghtml",
+   "img": "https://s2-valor.glbimg.com/oiCSqyGrV18Jl0qiAPUueqsY1iE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/l/h/1HKBIASdinXijsF0Soqw/agentes-do-ibama-combatem-fogo-em-area-de-floresta-ibama-divulgacao.jpg",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Justiça federal manda Meta restabelecer contas bloqueadas de entidades estudantis no RS",
+   "data": "2026-10-17",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A 1ª Vara Federal de Porto Alegre determinou nesta sexta-feira (16) que o Facebook e a Meta restabeleçam em dois dias as contas de entidades estudantis ligadas à UFRGS (Universidade Federal do Rio Grande do Sul) e à…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/17/justia-federal-manda-meta-restabelecer-contas-bloqueadas-de-entidades-estudantis-no-rs.ghtml",
+   "img": "https://s2-valor.glbimg.com/euPD9hl1QGpK93nDlt2qDlbj5ms=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/S/o/AzPRiEQNKBAJ7faxY9qg/465797507-1-.jpg",
+   "t": [
+    "PSSA3"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Queda em indústria e serviços e varejo estável marcam economia em agosto",
+   "data": "2026-10-17",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A prévia do Produto Interno Bruto (PIB) voltou a crescer em agosto, mas outros indicadores econômicos do mês reforçam a expectativa de uma desaceleração da economia brasileira no terceiro trimestre, avaliam…",
+   "url": "https://valor.globo.com/brasil/artigo/queda-em-industria-e-servicos-e-varejo-estavel-marcam-economia-em-agosto.ghtml",
+   "img": "https://s2-valor.glbimg.com/830sELAKNZM1Q7ngjO8rxzW_HQM=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/w/p/xV8VreQ9281EBob4GuBg/tarja-agosto.jpg",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Fim da escala 6x1 assusta mercado e provoca disparada de prêmios de inflação",
+   "data": "2026-10-17",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> O estresse dos mercados de renda fixa ao longo da semana se espalhou, também, para as medidas de inflação de mercado, que voltaram a incorporar prêmios mais elevados nos últimos dias. Por trás da nova reprecificação…",
+   "url": "https://valor.globo.com/financas/intraday/post/2026/10/fim-da-escala-6x1-assusta-mercado-e-provoca-disparada-de-premios-de-inflacao.ghtml",
+   "img": "https://s2-valor.glbimg.com/wTS5aeTABTMDX2fDG3o4QFKufEg=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/m/e/o7ca5NQ16vNGYHAlLRJw/baran.png",
+   "t": []
+  },
+  {
+   "tema": "mercado",
+   "titulo": "No último fim de semana antes do segundo turno, Lula foca em debate e Flávio, na Avenida Paulista",
+   "data": "2026-10-17",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> Flávio Bolsonaro em ato de campanha em Porto Alegre (RS) e Lula, em Juiz de Fora (MG) Fotos: Reuters/Diego Vara e Pilar Olivares No último final de semana antes do segundo turno, os dois candidatos ao Palácio do…",
+   "url": "https://valor.globo.com/politica/eleicoes-2026/noticia/2026/10/17/no-ultimo-fim-de-semana-antes-do-segundo-turno-lula-foca-em-debate-e-flavio-na-avenida-paulista.ghtml",
+   "img": "https://s2-valor.glbimg.com/GFHo56iUcwcCsu0aIzjl9Z7YIgQ=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/W/L/P0u1YxRHAwrkhAjusCkg/montagem-1792191858933.jpg",
+   "t": [
+    "PSSA3"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "FIP Shine conclui leilão de OPA da Braskem e abre prazo superveniente",
+   "data": "2026-10-17",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A Braskem divulgou Fato Relevante nesta sexta-feira (16) detalhando o resultado do leilão da Oferta Pública de Aquisição de Ações (OPA) realizado pelo Shine I Fundo de Investimento em Participações (gerido pela…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/16/fip-shine-conclui-leilo-de-opa-da-braskem-e-abre-prazo-superveniente.ghtml",
+   "img": "https://s2-valor.glbimg.com/gjnD0AxynPthN4Fl1E9KR64WH4U=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/u/A/YPR6qHTZyCXAbU4aVUVA/foto06emp-101-braskem-b6.jpg",
+   "t": []
+  },
   {
    "titulo": "Louise Barsi mantém PETR4 e explica o que ainda vê na Petrobras",
    "data": "2026-10-14",
    "fonte": "O Petróleo",
    "resumo": "Louise mantém boa parte da posição em Petrobras pela geração de caixa e dividendos, mas trata o papel como oportunista e pode vender mais se subir forte.",
    "url": "https://opetroleo.com.br/louise-barsi-mantem-petr4-e-explica-o-que-ainda-ve-na-petrobras/",
-   "img": "https://opetroleo.com.br/wp-content/uploads/2026/10/e7e3204c-ba66-4ac0-af00-9d99d529c02c-1024x618.png"
+   "img": "https://opetroleo.com.br/wp-content/uploads/2026/10/e7e3204c-ba66-4ac0-af00-9d99d529c02c-1024x618.png",
+   "tema": "barsi"
   },
   {
    "titulo": "Luiz Barsi faz alerta sobre ação do Banco do Brasil (BBAS3); veja prós e contras",
@@ -16,7 +165,17 @@
    "fonte": "Estadão E-Investidor",
    "resumo": "Barsi diz que não aumentaria a posição no Banco do Brasil no cenário atual, apesar de a ação negociar abaixo do valor patrimonial.",
    "url": "https://www.estadao.com.br/einvestidor/onde-investir/luiz-barsi-faz-alerta-sobre-banco-do-brasil-veja-os-pros-e-contras-de-investir-em-bbas3/",
-   "img": "https://www.estadao.com.br/resizer/v2/GWJUH7FS2NKJNMYPLYKXGCGMZI.jpg?quality=80&auth=c7438cf31a6609776632e1bfe3b69d08fd773d17e4a6a98c0ef177b8901ae8bc&width=1200&height=630&smart=true"
+   "img": "https://www.estadao.com.br/resizer/v2/GWJUH7FS2NKJNMYPLYKXGCGMZI.jpg?quality=80&auth=c7438cf31a6609776632e1bfe3b69d08fd773d17e4a6a98c0ef177b8901ae8bc&width=1200&height=630&smart=true",
+   "tema": "barsi"
+  },
+  {
+   "tema": "barsi",
+   "titulo": "Luiz Barsi faz alerta sobre Banco do Brasil; veja os prós e contras de investir em BBAS3",
+   "data": "2026-09-01",
+   "fonte": "msn.com",
+   "resumo": "Quer se manter informado, ter acesso a mais de 60 colunistas e reportagens exclusivas?Assine o Estadão aqui! Um dos investidores mais prestigiados do Brasil, Luiz Barsi mantém há décadas uma relação ...",
+   "url": "https://www.msn.com/pt-br/dinheiro/other/luiz-barsi-faz-alerta-sobre-banco-do-brasil-veja-os-pr�s-e-contras-de-investir-em-bbas3/ar-AA2bl2zK",
+   "img": null
   },
   {
    "titulo": "Banco do Brasil (BBAS3): bancos e corretoras sinalizam cautela para o papel",
@@ -24,7 +183,8 @@
    "fonte": "Estadão E-Investidor",
    "resumo": "Analistas ficam majoritariamente neutros com o BB; no setor financeiro, Barsi cita BMG e Banrisul como opções mais atrativas.",
    "url": "https://www.estadao.com.br/einvestidor/cenarios-e-mercado/banco-do-brasil-bancos-e-corretoras-sinalizam-cautela-para-o-papel-veja-recomendacoes/",
-   "img": "https://www.estadao.com.br/resizer/v2/ONH4EU4WUFKXHECKSHXWSX4N4Y.png?quality=80&auth=9ae457a1001ce52c66de8cd2897deca17adf3f88d150bf6a3149cacfea194595&width=1200&height=630&smart=true"
+   "img": "https://www.estadao.com.br/resizer/v2/ONH4EU4WUFKXHECKSHXWSX4N4Y.png?quality=80&auth=9ae457a1001ce52c66de8cd2897deca17adf3f88d150bf6a3149cacfea194595&width=1200&height=630&smart=true",
+   "tema": "barsi"
   },
   {
    "titulo": "A ação queridinha de Luiz Barsi entra na cobertura do BTG — mas a recomendação não é a esperada",
@@ -32,7 +192,8 @@
    "fonte": "Seu Dinheiro",
    "resumo": "O BTG passou a cobrir a Unipar (UNIP6), onde Barsi tem cerca de 24% das preferenciais, com recomendação neutra e preço-alvo de R$ 68.",
    "url": "https://www.seudinheiro.com/2026/empresas/a-acao-queridinha-de-luiz-barsi-entra-na-cobertura-do-btg-mas-recomendacao-nao-e-o-que-se-espera-mlim/",
-   "img": "https://www.seudinheiro.com/uploads/2019/08/1454812_395074280595941_774888993_n-e1686049877408.jpg"
+   "img": "https://www.seudinheiro.com/uploads/2019/08/1454812_395074280595941_774888993_n-e1686049877408.jpg",
+   "tema": "barsi"
   },
   {
    "titulo": "Barsi: “O dono não vende as ações dele. Por que eu vou vender?”",
@@ -40,7 +201,50 @@
    "fonte": "Seu Dinheiro",
    "resumo": "Resumo da filosofia da carteira de previdência: poucas empresas, compradas em quedas e mantidas por décadas, com reserva de emergência fora da bolsa.",
    "url": "https://www.seudinheiro.com/2026/economia/barsi-sobre-investimentos-em-acoes-isca/",
-   "img": "https://www.seudinheiro.com/uploads/2024/10/O-megainvestidor-Luiz-Barsi-Filho.-Foto-Luiza-CamejoDivulgacao.jpg"
+   "img": "https://www.seudinheiro.com/uploads/2024/10/O-megainvestidor-Luiz-Barsi-Filho.-Foto-Luiza-CamejoDivulgacao.jpg",
+   "tema": "barsi"
+  },
+  {
+   "data": "2026-02-24",
+   "titulo": "Ibovespa rompe os 191 mil pontos e faz o 13º recorde de 2026",
+   "fonte": "Suno",
+   "resumo": "Bancos e Petrobras puxaram a alta; janeiro teve a maior alta mensal desde novembro de 2020.",
+   "url": "https://www.suno.com.br/noticias/ibovespa-rompe-191-mil-pontos-13-recorde-2026-mt/",
+   "tema": "mercado",
+   "marco": true,
+   "t": [
+    "PETR4"
+   ]
+  },
+  {
+   "data": "2025-12-30",
+   "titulo": "Ibovespa sobe 34% em 2025, melhor ano desde 2016, com 32 recordes de fechamento",
+   "fonte": "Forbes Brasil",
+   "resumo": "Retrospectiva: o fluxo de investidores estrangeiros puxou a alta; a Selic chegou a 15% e o ciclo de alta dos juros terminou no meio do ano.",
+   "url": "https://forbes.com.br/forbes-money/2026/01/retrospectiva-2025-como-os-investidores-internacionais-coroaram-o-ano-de-ouro-da-bolsa-brasileira/",
+   "tema": "mercado",
+   "marco": true,
+   "t": []
+  },
+  {
+   "data": "2025-07-30",
+   "titulo": "Bolsa e dólar sobem após lista de exceções à tarifa de 50% dos EUA sobre o Brasil",
+   "fonte": "CNN Brasil",
+   "resumo": "A tarifa sobre produtos brasileiros subiu para 50%; a Casa Branca isentou itens como petróleo, suco de laranja, celulose e aviões.",
+   "url": "https://www.cnnbrasil.com.br/economia/money/mercado/mercado-financeiro-ibovespa-dolar-30-julho-2025/",
+   "tema": "mercado",
+   "marco": true,
+   "t": []
+  },
+  {
+   "data": "2025-04-02",
+   "titulo": "Tarifa de 10% dos EUA sobre produtos do Brasil no \"Liberation Day\"; Ibovespa fecha quase estável",
+   "fonte": "Reuters (Investing.com Brasil)",
+   "resumo": "O governo Trump anunciou tarifa básica de 10% sobre importações, valor aplicado ao Brasil; a bolsa brasileira terminou o dia perto da estabilidade.",
+   "url": "https://br.investing.com/news/stock-market-news/ibovespa-fecha-quase-estavel-apos-tarifas-de-trump-1509694",
+   "tema": "mercado",
+   "marco": true,
+   "t": []
   },
   {
    "titulo": "O método do bilionário Luiz Barsi para se aposentar investindo só em ações",
@@ -48,7 +252,8 @@
    "fonte": "Exame",
    "resumo": "Barsi explica a carteira de renda mensal: empresas perenes, reinvestimento dos dividendos nas mesmas ações e uma parte menor em oportunidades.",
    "url": "https://exame.com/invest/minhas-financas/o-metodo-do-bilionario-luiz-barsi-para-se-aposentar-investindo-so-em-acoes/",
-   "img": "https://classic.exame.com/wp-content/uploads/2020/02/dsc5064-e1581290270144.jpg"
+   "img": "https://classic.exame.com/wp-content/uploads/2020/02/dsc5064-e1581290270144.jpg",
+   "tema": "barsi"
   },
   {
    "titulo": "As estratégias de Luiz e Louise Barsi para uma carteira de aposentadoria",
@@ -56,7 +261,8 @@
    "fonte": "Estadão E-Investidor",
    "resumo": "Por que os Barsi preferem ações de setores estáveis (seguros, energia, bancos) a renda fixa para formar renda mensal de longo prazo.",
    "url": "https://www.estadao.com.br/einvestidor/onde-investir/sem-renda-fixa-estrategias-luiz-louise-barsi-carteira-aposentadoria/",
-   "img": "https://www.estadao.com.br/resizer/v2/GHJOOAROBNOOXLSXQ5SS56LZMU.png?quality=80&auth=e9cbdf2e093efa50418f093dd7fa0e57473b06ed00830c57359f77b3c1eff04b&width=1200&height=630&smart=true"
+   "img": "https://www.estadao.com.br/resizer/v2/GHJOOAROBNOOXLSXQ5SS56LZMU.png?quality=80&auth=e9cbdf2e093efa50418f093dd7fa0e57473b06ed00830c57359f77b3c1eff04b&width=1200&height=630&smart=true",
+   "tema": "barsi"
   },
   {
    "titulo": "Preço-teto: até quanto pagar pelas maiores pagadoras para ter 6% de dividendos ao ano",
@@ -64,7 +270,8 @@
    "fonte": "InfoMoney",
    "resumo": "Como funciona o preço-teto (média dos proventos ÷ 6%) e os critérios de Barsi Neto: setores perenes, pagamento todo ano, liquidez e dívida controlada.",
    "url": "https://www.infomoney.com.br/onde-investir/preco-teto-ate-quanto-gastar-com-as-acoes-das-maiores-pagadoras-para-garantir-dividendos-de-6-ao-ano/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2020/07/GettyImages-1053290578.jpg?fit=2121%2C1414&quality=70&strip=all"
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2020/07/GettyImages-1053290578.jpg?fit=2121%2C1414&quality=70&strip=all",
+   "tema": "barsi"
   }
  ]
 }
