@@ -499,6 +499,21 @@ def test_etf_so_modelos_de_preco():
     assert {x["m"] for x in modelos.run(D, dict(req, ticker="BOVA11", modelo="*"))["rows"] if x["k"] == "a"} == set(modelos.ETF_MOD["acoes"])
 
 
+def test_adaptativo_aprende_sem_olhar_o_futuro():
+    # Adaptativo: aprende pesos por cenário semana a semana; mudar o futuro não muda as decisões do passado
+    up = [10.0 * 1.01 ** k for k in range(NW)]; dn = [10.0 * 0.99 ** k for k in range(NW)]
+    mk = lambda c: modelos.build(snap({"AAA3": {"c": c, "m2": [10] * NW}, "BBB3": {"c": dn, "m2": [-10] * NW}}), cdi(0.01))
+    rows = [{"ticker": "AAA3", "subsetor": "Varejo"}, {"ticker": "BBB3", "subsetor": "Bancos"}]
+    D = mk(up); modelos.set_setores(D, rows); modelos._C.clear()
+    assert D["AX"].shape == D["C"].shape and set(np.unique(D["AX"])) <= {0, .25, .5, .75, 1}
+    assert D["AX"][1, -1] < D["AX"][0, -1]  # em queda (abaixo da média) aprendeu a ficar mais no CDB
+    me = months(D, "2020-03", "2022-03"); ap = [1000.0] + [100.0] * (len(me) - 1)
+    r = modelos.simulate(D, "adapt", [0, 1], me, ap, [0.0] * len(me), rec=True)
+    assert r["v"][0] > r["v"][1] and "segue" in modelos.motivo(D, "adapt", 0, 60) and D["ADPS"]["ctx"]
+    fut = up[:80] + [1.0] * (NW - 80); D2 = mk(fut); modelos.set_setores(D2, rows)
+    assert np.array_equal(D["AX"][:, :80], D2["AX"][:, :80]) and np.array_equal(D["AA"][:, :80], D2["AA"][:, :80])
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

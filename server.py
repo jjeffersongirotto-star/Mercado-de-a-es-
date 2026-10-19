@@ -932,6 +932,17 @@ def api_fgcmp(t: str, di: str, df: str):
         log.warning("fgcmp %s: %s", t, e)
         return JSONResponse({"error": "Sem dados para esta análise agora."}, status_code=502)
 
+@app.get("/api/modelos/aprendeu")
+def api_modelos_aprendeu():
+    """Adaptativo (aprende): o que aprendeu até a última semana dos dados (pesos por cenário e acerto das notícias ruins; modelos._adapt)."""
+    import modelos
+    rows = universe.universe((cache.data or {}).get("rows") or [])
+    if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
+    try: D = modelos.data(); modelos.set_setores(D, rows, _cad())
+    except Exception:
+        log.exception("modelos: aprendeu"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
+    return JSONResponse(dict(D.get("ADPS") or {}, at=D["w"][-1]), headers={"Cache-Control": "no-store"})
+
 @app.get("/api/modelos/ficha")
 def api_modelos_ficha(m: str = "*"):
     """Arquivo do modelo (Previsão → ⬇ → Modelo (regras e código)): explicação do ⓘ → Modelos da Previsão (só os itens do modelo e os

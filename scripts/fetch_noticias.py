@@ -32,6 +32,7 @@ MERCADO_RX = re.compile(r"\b(ibovespa|bolsa|b3|a[cç][aãoõ]es|a[cç][aã]o|sel
                         r"balan[cç]o|lucro|preju[ií]zo|trimestre|ipo|opa|recompra|fato relevante|cvm|mercado financeiro)\b", re.I)
 VOC = json.load(open(os.path.join(os.path.dirname(HERE), "vocabulario.json"), encoding="utf-8"))["noticias"]
 AMBIGUOS = set(VOC["nomes_ambiguos"])  # nomes que também são palavras comuns
+import snapshots  # noqa: E402  (arquivo de notícias: começa da cópia da branch data)
 import tradingview  # noqa: E402  (países do site: nome, índice e bolsa de cada um — sinais do mercado de fora)
 PAISES = [c for c in tradingview.COUNTRIES if c != "br"]
 SINAIS = {c: [tradingview.COUNTRIES[c][1].lower(), tradingview.YAHOO[c][2].lower(), *[b.lower() for b in tradingview.BOLSA[c].split("/")],
@@ -147,6 +148,24 @@ def marcar(texto, tk, nomes):
     return sorted(achou)
 
 
+def arquivo(out, merc):
+    """Arquivo de notícias que só cresce (OUT/noticias_arq.json; a aba guarda só DIAS dias): as de mercado ficam para sempre, no formato
+    curto que os modelos leem (modelos.noticias_itens: data, empresas da B3 `t`, mercados `m`, texto). O Adaptativo aprende mais com o tempo."""
+    p = os.path.join(out, "noticias_arq.json")
+    try: A = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        try: A = snapshots.load("noticias_arq")[0] or {}
+        except Exception: A = {}
+    L = A.get("itens") or []; vistos = {i["u"] for i in L}; n0 = len(L)
+    for it in merc:
+        if it.get("marco") or it["url"] in vistos: continue
+        L.append({"d": it["data"], "t": it.get("t") or [], "m": it.get("m") or ["br"], "x": curto(f"{it['titulo']}. {it.get('resumo') or ''}", 300), "u": it["url"]})
+        vistos.add(it["url"])
+    L.sort(key=lambda i: i["d"])
+    json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "itens": L}, open(p, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    print(f"noticias_arq: {len(L)} no arquivo ({len(L) - n0} novas)")
+
+
 def main(out):
     p = os.path.join(out, "noticias.json")
     try: old = json.load(open(p, encoding="utf-8"))
@@ -219,6 +238,7 @@ def main(out):
     data = {"fetched_at": agora.isoformat(timespec="seconds"), "temas": {"mercado": "Mercado", "barsi": "Luiz Barsi"},
             "fontes": sorted(ok_fonte), "itens": itens}
     json.dump(data, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    arquivo(out, merc)
     print(f"noticias: {len(itens)} itens (Barsi {nb} novos; mercado {len(novos)} novos: {por_fonte}; fontes que responderam: {sorted(ok_fonte)})")
     return 0 if itens else 1
 
