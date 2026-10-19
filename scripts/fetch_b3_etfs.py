@@ -78,7 +78,9 @@ def dados(out):
     p = os.path.join(out, "etfs.json"); J = json.load(open(p)); E = J["e"]; ok = 0
     for t, x in E.items():
         f = os.path.join(out, "history4_etf", f"{t}.json.gz")
+        x["il"] = 1  # sem histórico no COTAHIST (ex.: os de renda fixa não aparecem nele): fora com "Só líquidos"
         if not os.path.exists(f): continue
+        x.pop("il")
         h = json.loads(gzip.decompress(open(f, "rb").read())); d = h.get("d") or {}
         ts, c, v = d.get("t") or [], d.get("c") or [], d.get("vol") or []
         if len(c) < 2: continue

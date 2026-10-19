@@ -186,10 +186,13 @@ def _cota_day(d):
             return None
 
 def _h4file(t):
-    """Arquivo completo do histórico B3 de uma ação (branch data): diário desde 1995, mensal, proventos."""
-    r = requests.get(f"{RAW}/history4/{t}.json.gz", timeout=(6, 30))
-    r.raise_for_status()
-    return json.loads(gzip.decompress(r.content))
+    """Arquivo completo do histórico B3 de uma ação (branch data): diário desde 1995, mensal, proventos.
+    ETFs (aba Mercado → ETFs) ficam em history4_etf (fora do "mercado" e dos modelos): gráficos, Comparar e Carteira usam o mesmo caminho."""
+    for sub in ("history4", "history4_etf"):
+        r = requests.get(f"{RAW}/{sub}/{t}.json.gz", timeout=(6, 30))
+        if r.status_code == 404 and sub == "history4": continue
+        r.raise_for_status()
+        return json.loads(gzip.decompress(r.content))
 
 _h4f = {}
 

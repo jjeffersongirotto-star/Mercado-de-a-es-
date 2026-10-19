@@ -16,7 +16,7 @@
     for (const c of pane.children) if (c !== seg && c !== root) c.classList.toggle('etf-off', etf);
     root.classList.toggle('hidden', !etf);
     seg.querySelectorAll('[data-mk]').forEach(b => b.classList.toggle('on', b.dataset.mk === (etf ? 'etf' : 'acoes')));
-    if (etf) D ? draw() : load();
+    if (etf && !D) load();  // já desenhado: a recarga de dados das ações (dataload) não refaz a lista nem fecha os gráficos abertos
   }
   async function load() {
     if (loading) return; loading = true; root.innerHTML = loaderHTML('Carregando ETFs…');
@@ -24,12 +24,12 @@
     catch (e) { root.innerHTML = `<p class="pvd-note">Não foi possível carregar os ETFs: ${esc(e.message)}</p>`; }
     loading = false;
   }
-  const card = (t, x) => `<div class="etf-c"><div class="etf-h"><b>${esc(t)}</b><span class="gchip">${esc((D.tipos || {})[x.k] || '')}</span></div>
+  const card = (t, x) => `<div class="etf-c" data-et="${esc(t)}"><div class="etf-h"><b>${esc(t)}</b><span class="gchip">${esc((D.tipos || {})[x.k] || '')}</span></div>
     <p class="etf-n">${esc(x.n || '')}</p><p class="etf-i">Índice: ${esc(x.i || '—')}</p>
     <div class="etf-p"><span class="text-lg font-bold">${x.p == null ? '—' : brl.format(x.p)}</span><span class="${cor(x.v)}">${P(x.v)}</span></div>
     <div class="etf-g"><span>Volume médio<b>${x.vm == null ? '—' : fmtMoneyBig(x.vm)}</b></span><span>Proventos 12 m<b>${x.dy == null ? '—' : F2.format(x.dy) + '%'}</b></span>
       <span>1 ano<b class="${cor(x.r1)}">${P(x.r1)}</b></span><span>3 anos<b class="${cor(x.r3)}">${P(x.r3)}</b></span><span>5 anos<b class="${cor(x.r5)}">${P(x.r5)}</b></span></div>
-    <p class="etf-u">${x.u ? 'Fechamento de ' + dataBR(x.u) : 'Sem negócios no COTAHIST'}</p></div>`;
+    <p class="etf-u">${x.u ? 'Fechamento de ' + dataBR(x.u) + ' · toque para ver o gráfico' : 'Sem negócios no COTAHIST'}</p></div>`;
   function draw() {
     const E = (D && D.e) || {}, nq = norm(q);
     let L = Object.entries(E).filter(([t, x]) => (fil === 'todos' || x.k === fil) && (!liq || !x.il) && (!nq || norm(t + ' ' + (x.n || '') + ' ' + (x.f || '')).includes(nq)));
@@ -48,7 +48,11 @@
   seg.addEventListener('click', (e) => { const b = e.target.closest('[data-mk]'); if (!b) return; modo = b.dataset.mk; save(); apply(); });
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-ef]'); if (b) { fil = b.dataset.ef; save(); draw(); return; }
-    if (e.target.closest('#etfDir')) { dir = -dir; save(); draw(); }
+    if (e.target.closest('#etfDir')) { dir = -dir; save(); draw(); return; }
+    const c = e.target.closest('[data-et]');  // toque no card: gráfico do histórico (grafico.js, o mesmo das ações); 2º toque fecha
+    if (c && !e.target.closest('.gchart') && D.e[c.dataset.et] && D.e[c.dataset.et].u) {
+      const g = c.querySelector('.gchart'); if (g) g.remove(); else c.insertAdjacentHTML('beforeend', `<div class="gchart" data-gt="${esc(c.dataset.et)}"></div>`);
+    }
   });
   root.addEventListener('change', (e) => {
     if (e.target.id === 'etfOrd') { ord = e.target.value; save(); draw(); }
