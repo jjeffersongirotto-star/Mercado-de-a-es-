@@ -73,7 +73,7 @@ def dados(out):
         x["p"] = c[-1]; x["v"] = round((c[-1] / c[-2] - 1) * 100, 2) if c[-2] else None; x["u"] = datetime.fromtimestamp(ts[-1], timezone.utc).strftime("%Y-%m-%d")
         x["vm"] = round(sum(v[-30:]) / len(v[-30:])) if v else None  # volume médio diário de 30 pregões (R$)
         if universe.illiquid(x["vm"]): x["il"] = 1  # mesma regra das ações: some com "Só líquidos"
-        dv = [b for a, b in (h.get("divs") or []) if a >= ts[-1] - 365 * 86400]
+        dv = [x[1] for x in (h.get("divs") or []) if x[0] >= ts[-1] - 365 * 86400]  # [data, valor, tipo]
         x["dy"] = round(sum(dv) / c[-1] * 100, 2) if dv and c[-1] else 0.0  # proventos de 12 meses ÷ preço (%)
         for n in range(1, 6):  # rendimento só de preço em n anos (proventos à parte, em dy)
             alvo = ts[-1] - n * 365.25 * 86400; j = next((i for i, a in enumerate(ts) if a >= alvo), None)
