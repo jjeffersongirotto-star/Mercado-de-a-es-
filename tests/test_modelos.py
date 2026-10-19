@@ -85,7 +85,7 @@ def test_rodizio_troca_com_motivo_e_vai_para_cdb():
 def test_hibrido_nunca_vende_e_segue_quem_acerta():
     c = [10.0 * 1.01 ** k for k in range(NW)]  # ação subindo sempre: o especialista "comprar e segurar" ganha peso
     D = modelos.build(snap({"AAA3": {"c": c, "p1": 400, "p3": 400, "m2": -10}}), cdi(0.01))
-    assert D["HX"][0, 60] == 1 and D["HW"][:, 0, 60].argmax() == 0  # 100% na ação, seguindo Buy and Hold
+    assert D["HX"][0, 60] == 1 and D["HA"][0, 60] == 0  # 100% na ação, seguindo Buy and Hold
     me = months(D, "2020-09", "2021-12")
     r = modelos.simulate(D, "hibrido", [0], me, [1000.0] + [100.0] * (len(me) - 1), [0.0] * len(me), rec=True)
     assert r["s"][0] == 0 and r["ir"][0] == 0 and "Buy and Hold" in r["rows"][0][-1]["pos"]
@@ -451,7 +451,7 @@ def test_metodos_value_e_hibrido():
     assert "VAL" not in D and not modelos._signal(D, "value", [0, 1], 60).any()  # sem set_metodos: fora (dinheiro no CDB)
     modelos.set_metodos(D, [{"ticker": "AAA3", "v": {"valmerc": 50.0}}, {"ticker": "BBB3", "v": {"valmerc": 1000.0}}])
     assert list(modelos._signal(D, "value", [0, 1], 60)) == [True, False]
-    assert D["HW"].shape[0] == len(modelos.HIB)  # híbrido estuda também os modelos de método
+    assert D.get("_mk") and "segue" in modelos.motivo(D, "hibrido", 0, 60)  # híbrido refeito com os modelos de método
 
 
 def test_metodos_acoes_da_epoca():
