@@ -482,6 +482,22 @@ def test_ficha_e_movimentacoes():
     cp = [e for e in r["mov"][0] if e["k"] == "compra"]
     assert len(cp) == len(me) and cp[0]["q"] == 99 and cp[0]["p"] == 10.0 and cp[0]["x"].startswith("compra:") and r["sh"][0] == sum(e["q"] for e in cp)
 
+def test_etf_so_modelos_de_preco():
+    # ETF de ações: só os modelos de preço (ETF_MOD); renda fixa: só Buy and Hold; sem venda por pontos; Comparar deixa os outros em branco
+    sn = snap({"AAA3": {"c": [10.0 + k * .1 for k in range(NW)]}, "BOVA11": {"c": 10.0}, "IMAB11": {"c": 10.0}})
+    sn["etf"] = {"BOVA11": "br", "IMAB11": "rf"}
+    D = modelos.build(sn, cdi()); modelos._C.clear()
+    assert list(modelos.pode(D, "value", [0, 1, 2])) == [True, False, False] and list(modelos.pode(D, "media200", [0, 1, 2])) == [True, True, False]
+    out = modelos.compare(D, ["AAA3", "BOVA11", "IMAB11"], "2020-09", "2021-12", [1000.0] + [100.0] * 15)
+    p = {m: out["p"][i] for i, m in enumerate(out["m"])}
+    assert p["hold"][1] is not None and p["hold"][2] is not None and p["value"][1] is None and p["alg1"][1] is not None and p["alg1"][2] is None
+    req = {"di": "2020-09", "df": "2021-12", "ap": [1000.0] + [100.0] * 15}
+    r = modelos.run(D, dict(req, ticker="IMAB11", modelo="*"))
+    assert {x["m"] for x in r["rows"] if x["k"] == "a"} == {"hold"}
+    assert "error" in modelos.run(D, dict(req, ticker="BOVA11", modelo="barsi"))
+    assert {x["m"] for x in modelos.run(D, dict(req, ticker="BOVA11", modelo="*"))["rows"] if x["k"] == "a"} == set(modelos.ETF_MOD["acoes"])
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

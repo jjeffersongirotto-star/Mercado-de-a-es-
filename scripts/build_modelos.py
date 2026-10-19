@@ -116,6 +116,7 @@ def walk_forward(P, H):
         p = 1 / (1 + np.exp(-(Z(te[F].to_numpy(float)) @ w + b)))
         out.loc[te.index] = p
         f = te[f"f{H}"].to_numpy(); m = ~np.isnan(f)
+        m &= ~te.etf.to_numpy(bool)  # acerto só nas ações (ETFs recebem a previsão, não contam)
         hits += list((p[m] > 0.5) == (f[m] > 0))
     return out, (round(float(np.mean(hits)) * 100, 1) if hits else None)
 
@@ -140,13 +141,21 @@ def main(out):
     try: FJ = json.load(open(os.path.join(out, "fund.json"))); FD = FJ["a"]  # fundamentos anuais (scripts/build_fund.py)
     except Exception as e: FJ, FD = {}, {}; print("modelos: sem fundamentos (fund.json):", e)
     TROCA = FJ.get("troca") or {}  # código antigo da mesma companhia de hoje (troca de código/classe): não é saída da bolsa
+    # ETFs líquidos (fetch_b3_etfs.py → etfs.json, históricos em history4_etf): só os modelos de preço (modelos.ETF_MOD); fora do "mercado",
+    # do treino do algoritmo (liq falso) e do acerto
+    try: EJ = {t: x["k"] for t, x in json.load(open(os.path.join(out, "etfs.json")))["e"].items() if not x.get("il")}
+    except Exception as e: EJ = {}; print("modelos: sem ETFs (etfs.json):", e)
+    Ce, Ve = load_hist(out, "history4_etf") if EJ and os.path.isdir(os.path.join(out, "history4_etf")) else (pd.DataFrame(), pd.DataFrame())
+    Ce = Ce[[t for t in Ce.columns if t in EJ]]; Ce, Ve = Ce[Ce.index >= TRAIN0], Ve.reindex(columns=Ce.columns)[Ve.index >= TRAIN0]
     rows, series = [], {}
-    for t, CC, VV, sub in [(t, C, V, "history4") for t in C.columns] + [(t, Cs, Vs, "history4_saiu") for t in Cs.columns]:
+    for t, CC, VV, sub in ([(t, C, V, "history4") for t in C.columns] + [(t, Cs, Vs, "history4_saiu") for t in Cs.columns]
+                           + [(t, Ce, Ve, "history4_etf") for t in Ce.columns]):
         c = CC[t].dropna()
-        if len(c) < 260 or (sub != "history4" and (t in C.columns or t in TROCA)): continue
+        if len(c) < 260 or (sub == "history4_saiu" and (t in C.columns or t in TROCA)): continue
         v, dd = VV[t].reindex(c.index), divs(out, t, c.index, sub); dv = dd["dv"]
         X = features(c, v, dv, mi, mk)
-        X["liq"] = (liq[t].reindex(c.index).fillna(False).astype(bool) if t in liq.columns else
+        etf = sub == "history4_etf"; X["etf"] = etf
+        X["liq"] = False if etf else (liq[t].reindex(c.index).fillna(False).astype(bool) if t in liq.columns else
                     (v.rolling(60, min_periods=20).mean().shift(1) >= thr.reindex(c.index)).fillna(False))  # as que saíram também treinam
         X["vl"] = v.rolling(60, min_periods=20).mean() / 1000  # volume médio diário de 60 pregões (R$ mil): liquidez da época (modelos.REGRAS)
         wd = X.index[X.index.isin(C.index.to_series().groupby(C.index.to_period("W-FRI")).transform("max"))]
@@ -184,6 +193,7 @@ def main(out):
     res = {"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "fonte": "B3 (COTAHIST e proventos), índice de Medo e Ganância do site; cálculo do site",
            "acerto": {"p1": acerto[20], "p3": acerto[60]},
+           "etf": {t: EJ[t] for t in A if t in EJ},  # ETFs nos modelos: tipo (br, ext, rf, com; modelos.ETF_MOD)
            "saiu": {t: d.strftime("%Y-%m-%d") for t, d in SAI.items() if t in A},  # empresas que saíram: último pregão
            "w": [d.strftime("%Y-%m-%d") for d in W], "mi": [None if x != x else int(x) for x in mi.reindex(W, method="ffill")], "a": A}
     json.dump(res, open(os.path.join(out, "modelos.json"), "w"), separators=(",", ":"))
