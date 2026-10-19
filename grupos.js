@@ -28,15 +28,34 @@
     return ok ? c : null;
   }
   const modN = (m) => m.n;
+  // ao vivo: valor de cada modelo com o preço de agora e a variação do dia (o mesmo /api/widget/simgrupo do widget: server._simw);
+  // pede de novo a cada 2 min com a aba aberta (as decisões continuam as da simulação)
+  const LIVE = {};
+  function simLive(g) {
+    const L = LIVE[g.name], k = simK(g);
+    if (!L || L.k !== k || (Date.now() - L.at > 120000 && !L.busy)) {
+      LIVE[g.name] = Object.assign(L && L.k === k ? L : { k, m: null }, { busy: true, at: Date.now() });
+      const q = new URLSearchParams({ di: g.sim.di, v0: g.sim.v0, f: JSON.stringify({ ap: g.sim.ap || 0, ex: g.sim.ex || [], ret: g.sim.ret || [] }) });
+      fetch('/api/widget/simgrupo?' + q).then(r => r.ok ? r.json() : null).then(w => {
+        const o = LIVE[g.name]; if (!o || o.k !== k) return; o.busy = false;
+        if (w && w.r) { o.m = Object.fromEntries(w.r.map(x => [x.m, x])); o.u = w.u; window.gruposRefresh && gruposRefresh(); }
+      }).catch(() => { const o = LIVE[g.name]; if (o) o.busy = false; });
+    }
+    return L && L.k === k ? L.m : null;
+  }
+  window.gSimLive = (gn, mid) => { const L = LIVE[gn]; return L && L.m ? L.m[mid] : null; };
   function simBody(g, full) {
     const c = simData(g);
     if (!c) return loaderHTML('Simulando os modelos…');
     if (!c.d) return `<p class="gt-empty">${esc(c.err || '')}</p>`;
-    const d = c.d, L = full ? d.m : d.m.filter(x => !x.ref);
+    const lv = simLive(g) || {}, apT = c.d.apT != null ? c.d.apT : c.d.v0;
+    const d = Object.assign({}, c.d, { m: c.d.m.map(x => lv[x.m] ? Object.assign({}, x, { v: lv[x.m].v, pct: apT > 0 ? (lv[x.m].v / apT - 1) * 100 : null, dp: lv[x.m].dp }) : x) });
+    const L = full ? d.m : d.m.filter(x => !x.ref);
     const apx = d.apT != null && d.apT !== d.v0 ? ` · aportado até hoje ${brl.format(d.apT)}` : '';
     return `<p class="gt-help">Desde ${dataBR(d.d0)} · ${brl.format(d.v0)}${d.ap > 0 ? ` + ${brl.format(d.ap)}/mês` : ''} em cada modelo${apx} · ${d.n} empresas${full ? ` · dados até ${dataBR(d.d1)}` : ''}</p>
-      <table class="gtab gsim"><thead><tr><th>Modelo</th><th>Rendimento</th><th>Hoje</th></tr></thead><tbody>${L.map(x => `<tr class="${x.ref ? '' : 'tap'}"${x.ref ? '' : ` data-simm="${esc(g.name)}|${x.m}"`}><td style="white-space:normal">${esc(modN(x))}${x.ref ? '' : `<span class="gsub">${x.np} empresa(s)</span>`}</td>
-      <td class="${x.pct == null ? '' : x.pct < 0 ? 'neg' : 'pos'}">${x.pct == null ? '—' : pc(x.pct)}</td><td>${x.v == null ? '—' : brl.format(x.v)}</td></tr>`).join('')}</tbody></table>`;
+      <table class="gtab gsim"><thead><tr><th>Modelo</th><th>Rendimento</th><th>Hoje</th><th>Dia</th></tr></thead><tbody>${L.map(x => `<tr class="${x.ref ? '' : 'tap'}"${x.ref ? '' : ` data-simm="${esc(g.name)}|${x.m}"`}><td style="white-space:normal">${esc(modN(x))}${x.ref ? '' : `<span class="gsub">${x.np} empresa(s)</span>`}</td>
+      <td class="${x.pct == null ? '' : x.pct < 0 ? 'neg' : 'pos'}">${x.pct == null ? '—' : pc(x.pct)}</td><td>${x.v == null ? '—' : brl.format(x.v)}</td><td class="${x.dp == null ? '' : x.dp < 0 ? 'neg' : 'pos'}">${x.dp == null ? '—' : pc(x.dp)}</td></tr>`).join('')}</tbody></table>
+      ${Object.keys(lv).length ? `<p class="gt-help">Hoje e Dia: preço de agora (${esc((LIVE[g.name] || {}).u || '')}); as compras e vendas são as da simulação, até ${dataBR(c.d.d1)}.</p>` : ''}`;
   }
   window.gSim = {
     has: (n) => groups.some(g => g.name === n),
@@ -447,7 +466,9 @@
     const g = groups.find(y => y.sim && y.name === gn), c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x || !g) return false;
     const src = Object.assign({}, g.sim, { m: mid });
     if (tk) { pvSimCompany(src, tk, `${esc((c.d.nm || {})[tk] || tk)} · ${esc(x.n)}`); return true; }
-    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, nm: c.d.nm, src }, x)) }); return true;
+    const lv = window.gSimLive(gn, mid), apT = c.d.apT != null ? c.d.apT : c.d.v0;  // Hoje ao vivo (preço de agora), como no quadro
+    const xl = lv ? Object.assign({}, x, { v: lv.v, pct: apT > 0 ? (lv.v / apT - 1) * 100 : x.pct }) : x;
+    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, nm: c.d.nm, src }, xl)) }); return true;
   }
   window.jgOpenSim = function (gn, mid, n, tk) {
     n = n || 0; const g = groups.find(x => x.sim && x.name === gn); if (!g) return;
