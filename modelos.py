@@ -1486,7 +1486,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     oa=[]
     for O,ld in ((Oc,"c"),(Ov,"v"),(Ov2,"v")):
         for q in np.flatnonzero(~np.isnan(O.ref)):
-            dd=float(D[O.dk][idx[q],e]);lim=O.ref[q]*((1-dd) if ld=="c" else (1+dd))
+            dd=float(D[O.dk][idx[q],me[-1]]);lim=O.ref[q]*((1-dd) if ld=="c" else (1+dd))
             if np.isfinite(lim): oa.append({"t":nm[idx[q]],"lado":ld,"lim":round(float(lim),2),"sem":int(O.sem[q]),**({"r":round(float(pend[q]),2)} if ld=="c" else {"q":int(sh[q])})})
     return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev,"ord":oa,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
 
