@@ -15,12 +15,18 @@ import universe  # noqa: E402  (mesma regra de ilíquido do site)
 
 UA = {"User-Agent": "Mozilla/5.0"}
 URL = "https://sistemaswebb3-listados.b3.com.br/fundsListedProxy/Search/GetListFunds/"
-# tipo pelo nome do fundo (sem acento, maiúsculas); a ordem importa: o primeiro que casa vale
-FORA = [("cripto", r"BITCOIN|CRIPTO|ETHEREUM|ETHER\b|BLOCKCHAIN|SOLANA|\bXRP\b|HASHDEX|WEB3|DEFI\b|NCI\b"),
+# tipo pelo nome do fundo (sem acento, maiúsculas), nesta ordem: fora (cripto, FII) -> commodities e moedas -> renda fixa ->
+# marca de Brasil (vence "S&P"/"MSCI": S&P Dividendos Brasil, MSCI Brazil) -> marca de fora -> ações do Brasil
+FORA = [("cripto", r"BITCOIN|CRIPTO|ETHEREUM|\bETHER\b|BLOCKCHAIN|SOLANA|\bXRP\b|HASHDEX|WEB3|\bDEFI\b|\bNCI\b|DIGITAL ASSETS|COINBASE"),
         ("fii", r"IFIX|IMOBILIARI|FUNDOS? IMOB|REAL ESTATE|\bREIT")]
-TIPOS = [("rf", r"RENDA FIXA|\bIMA[- ]?B|\bIMAB|\bIRF[- ]?M|\bIDKA|TESOURO|DEBENTURE|\bCDI\b|\bDI\b|INFLACAO|\bIPCA|PREFIXAD|TITULOS PUBLICOS|CREDITO PRIVADO|\bIDA\b|JUROS"),
-         ("ext", r"S&P|SP ?500|NASDAQ|MSCI|\bEUA\b|ESTADOS UNIDOS|EUROPA|EUROPE|CHINA|ASIA|GLOBAL|DOW JONES|WORLD|\bACWI|EMERG|JAPAO|JAPAN|INDIA|ALEMANHA|INTERNACIONAL|\bUSA?\b|\bUS\b|HANG SENG|RUSSELL|FTSE|STOXX|NYSE|AMERICAN|TREASURY|\bOURO\b|GOLD|ESG GLOBAL|ARK|INNOVATION|SEMICONDUT|NIKKEI")]
-TIPO_N = {"br": "Ações Brasil", "ext": "Ações de fora", "rf": "Renda fixa"}
+TIPOS = [("com", r"\bOURO\b|\bGOLD\b|PRATA|SILVER|\bDOLAR\b|CAMBIAL|BOI GORDO|MILHO|REALBRL|^(?!.*ACOES).*COMMODIT"),
+         ("rf", r"RENDA FIXA|\bIMA[- ]?B|\bIMAB|\bIRF[- ]?M|\bIDKA|TESOURO|DEBENTURE|\bCDI\b|\bDI\b|INFLACAO|\bIPCA|PREFIXAD|TITULOS PUBLICOS|CREDITO PRIVADO|\bIDA\b|T-BILL|TREASURY BILL"),
+         ("br", r"BRASIL|BRAZIL|IBOV|IBRX|\bSMLL|\bIDIV|BOVESPA|\bB3 BR"),
+         ("ext", r"S&P|SP ?500|NASDAQ|MSCI|\bEUA\b|ESTADOS UNIDOS|EUROP|CHINA|CHINEXT|CSI 300|ASIA|GLOBAL|WORLD|ALL[- ]COUNTRIES|\bACWI|EMERG|JAPAO|JAPAN|INDIA|"
+                 r"ALEMANHA|INTERNA[CT]IONAL|\bUSA?\b|\bUS\b|U\.S\.|HANG SENG|RUSSELL|FTSE|STOXX|NYSE|AMERICAN|ARGENTINA|URANIUM|NUCLEAR|SEMICOND|VIDEO GAMING|"
+                 r"INGENIUS|BLOOMBERG US|RARE EARTH|OIL SERVICES|BUSINESS DEVELOPMENT|HIGH INCOME|BILLIONAIRES|ALTERNATIVE ASSET|NIKKEI|\bARK\b")]
+TIPO_N = {"br": "Ações Brasil", "ext": "Ações de fora", "rf": "Renda fixa", "com": "Commodities e moedas"}
+TIPOS_B3 = ("ETF", "ETF-RF", "ETFRF", "ETF RF", "ETF_RF", "RF", "RENDA FIXA", "ETF RENDA FIXA")  # B3 separa os de renda fixa
 
 
 def b64(o): return base64.b64encode(json.dumps(o).encode()).decode()
@@ -41,19 +47,25 @@ def indice(nome):
 
 
 def lista(out):
-    res, pg = [], 1
-    while True:
-        d = requests.get(URL + b64({"language": "pt-br", "typeFund": "ETF", "pageNumber": pg, "pageSize": 120}), headers=UA, timeout=60).json()
-        res += d.get("results") or []
-        if pg >= (d.get("page") or {}).get("totalPages", 1): break
-        pg += 1; time.sleep(0.3)
+    res, por = [], {}
+    for tf in TIPOS_B3:
+        pg, n = 1, 0
+        while True:
+            try: d = requests.get(URL + b64({"language": "pt-br", "typeFund": tf, "pageNumber": pg, "pageSize": 120}), headers=UA, timeout=60).json()
+            except Exception: break
+            r_ = d.get("results") or []; n += len(r_); res += [dict(x, _tf=tf) for x in r_]
+            if pg >= (d.get("page") or {}).get("totalPages", 1): break
+            pg += 1; time.sleep(0.3)
+        por[tf] = n
+    print("ETFs: resultados por tipo na B3:", por)
     if len(res) < 30: print("ETFs: lista da B3 veio curta:", len(res), file=sys.stderr); return 1
     E, fora = {}, {}
     for r in res:
         ac = (r.get("acronym") or "").strip().upper(); nome = (r.get("fundName") or "").strip()
         if not re.fullmatch(r"[A-Z0-9]{4}", ac): continue
-        k = tipo(nome)
+        k = "rf" if r.get("_tf") != "ETF" and tipo(nome) not in ("cripto", "fii") else tipo(nome)
         if k in ("cripto", "fii"): fora[ac + "11"] = k; continue
+        if ac + "11" in E: continue
         E[ac + "11"] = {"n": r.get("tradingName") or ac, "f": nome, "i": indice(nome), "k": k}
     json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "fonte": "B3 (fundos de índice listados)",
                "tipos": TIPO_N, "e": E, "fora": fora}, open(os.path.join(out, "etfs.json"), "w"), ensure_ascii=False, separators=(",", ":"))

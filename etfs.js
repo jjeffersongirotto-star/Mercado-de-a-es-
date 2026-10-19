@@ -43,7 +43,7 @@
         <button id="etfDir" type="button" class="px-2.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm" aria-label="Inverter ordem">${sortIc(dir)}</button></div></section>
       <p class="text-xs text-slate-400"><span class="text-base font-bold text-slate-100">${L.length}</span> ETFs ${glossBtn('ETF')}</p>
       ${L.length ? `<div class="etf-grid">${L.map(([t, x]) => card(t, x)).join('')}</div>` : '<p class="pvd-note">Nenhum ETF com esses filtros.</p>'}
-      <p class="pvd-note">Lista oficial da B3 (fundos de índice; cripto e fundos imobiliários ficam de fora); preço e volume do COTAHIST da B3. ETF não tem balanço: sem P/L, ROE, dívida ou Barato/Caro. Para estudo, não é recomendação.</p>`;
+      <p class="pvd-note">Lista oficial da B3 (fundos de índice; cripto e fundos imobiliários ficam de fora; tipo pelo índice no nome do fundo); preço e volume do COTAHIST da B3. ETF não tem balanço: sem P/L, ROE, dívida ou Barato/Caro. Para estudo, não é recomendação.</p>`;
   }
   seg.addEventListener('click', (e) => { const b = e.target.closest('[data-mk]'); if (!b) return; modo = b.dataset.mk; save(); apply(); });
   root.addEventListener('click', (e) => {
