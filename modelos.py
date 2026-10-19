@@ -23,7 +23,8 @@ MODELOS = [
     {"id": "growth", "n": "Growth (O'Neil)", "vende": True, "min": 4, "sig": "GRO", "sc": "GROS", "mg": .10},
     {"id": "garp", "n": "GARP (PEG)", "vende": True, "min": 4, "sig": "GARP", "sc": "GARPS", "mg": .20},
     {"id": "fatores", "n": "Fatores", "vende": True, "min": 4, "sig": "FAT", "sc": "FATS", "mg": .10},
-    {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
+    {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True, "x": "HX"},
+    {"id": "adapt", "n": "Adaptativo (aprende)", "vende": False, "frac": True, "x": "AX"},
     {"id": "barsi", "n": "Método Barsi", "vende": False, "lucro": True},
 ]
 # referências fora das empresas: mesmo dinheiro, mesmos aportes e retiradas; entram nas tabelas pelo rendimento e nos Pontos ficam
@@ -37,7 +38,7 @@ REF = [
 ]
 # ETFs (snapshot modelos → etf: tipo br/ext/rf/com): sem balanço nem proventos regulares -> só os modelos de preço; renda fixa: só Buy and Hold
 # (comparado com o CDB, que já entra como referência). Sem nota de qualidade e sem venda por pontos (_venda)
-ETF_MOD = {"acoes": ("hold", "medo_mercado", "medo_acao", "media200", "alg1", "alg3", "tendencia", "hibrido"), "rf": ("hold",)}
+ETF_MOD = {"acoes": ("hold", "medo_mercado", "medo_acao", "media200", "alg1", "alg3", "tendencia", "hibrido", "adapt"), "rf": ("hold",)}
 REF_SERIE = {"ouro": "G", "ibov": "IB", "idiv": "IV"}  # série de preço de cada referência que compra cotas (CDB: rende o CDI)
 # base dos modelos = empresas listadas hoje: as que saíram da bolsa ou faliram no período não estão -> resultados longos ficam otimistas
 AVISO = "Base histórica: em Todas entram também as empresas que saíram da bolsa desde 1998 (vendidas pelo último preço); elas ficam sem proventos e, antes de 2010, sem balanços, o que pode deixar os resultados um pouco diferentes do real."
@@ -161,6 +162,70 @@ def set_metodos(D, rows):
     D["_mk"] = key; _C.clear()
 
 
+def _adp_x(D, i, NTc):
+    """Exposição (0/1) de cada especialista de ADP na semana i, só com dados até a semana i -> matriz K × N."""
+    N = D["C"].shape[0]; z = np.zeros(N, bool); g = lambda k: D[k][:, i] if k in D else z; LP = D["LP"][:, i]
+    with np.errstate(invalid="ignore"):
+        Q = D["FM"]["Q"][:, i] if "FM" in D and "Q" in D["FM"] else np.full(N, np.nan)
+        nt = NTc[:, i] - (NTc[:, i - NOTICIA["semanas"]] if i >= NOTICIA["semanas"] else 0)
+        X = [np.ones(N, bool), np.full(N, bool(D["MI"][i] < MEDO)), D["SI"][:, i] < MEDO, np.nan_to_num(D["M2"][:, i]) > 0,
+             D["FAV"]["p1"][:, i], D["FAV"]["p3"][:, i] & LP, (np.nan_to_num(D["M2"][:, i]) > 0) & LP, g("VAL"), g("GRO"), g("GARP"), g("FAT"),
+             D["HX"][:, i], (D["Cf"][:, i] <= D["TETO"][:, i]) & D["BS"] & LP, nt > NOTICIA["ruim"], np.nan_to_num(Q) >= ADP_NOTA]
+    return np.array([np.asarray(x, np.float32) for x in X])
+
+
+def _adapt(D):
+    """Adaptativo (aprende): a cada semana mede o resultado de cada especialista (ação + proventos quando dentro, CDB quando fora) em
+    todas as empresas de cada cenário (ADP_CTX) e soma com memória que decai (ADP_MEIA); o peso de cada especialista no cenário é
+    exp(ADP_ETA × soma). Exposição da semana = média das exposições dos especialistas pesada pelos pesos aprendidos ATÉ a semana (vale
+    na seguinte); ETF só com os especialistas de preço. -> D["AX"] (0–100% em passos de 25), "AA" (especialista de maior peso), "AP"
+    (peso em %), "ADPS" (o que aprendeu: pesos por cenário e acerto das notícias ruins)."""
+    import pandas as pd
+    C, Cf, N, T = D["C"], D["Cf"], *D["C"].shape; K = len(ADP); dec = .5 ** (1 / ADP_MEIA)
+    ib = pd.Series(D["IB"]); queda = ~(ib > ib.rolling(40, min_periods=20).mean()).to_numpy()
+    sec = D.get("SEC3", np.full(N, 2)); EK = D["EK"] != "" if "EK" in D else np.zeros(N, bool)
+    setor = np.where(D["BS"], 0, np.where(sec == 1, 1, 2))
+    NTc = np.cumsum(D["NT"], axis=1, dtype=np.float32) if "NT" in D else np.zeros((N, T), np.float32)
+    DVg = np.nan_to_num(D["DV"]) + np.nan_to_num(D["JT"])
+    S = np.zeros((len(ADP_CTX), K)); AX = np.zeros((N, T), np.float32); AA = np.zeros((N, T), np.uint8); AP = np.zeros((N, T), np.uint8)
+    from collections import deque
+    nb = nh = 0; Xp = None; pre = np.arange(K) < ADP_PRECO; kn = ADP.index("noticias"); hn = deque(maxlen=5)
+    for i in range(T):
+        mi = D["MI"][i]; m = 0 if mi < MEDO else 2 if mi > 55 else 1
+        ctx = (m * 2 + int(bool(queda[i]))) * 3 + setor
+        X = _adp_x(D, i, NTc)
+        if Xp is not None:  # aprende com a semana que acabou: exposições da semana anterior × resultado desta
+            with np.errstate(invalid="ignore", divide="ignore"): r = (Cf[:, i] + DVg[:, i]) / Cf[:, i - 1] - 1
+            ok = ~np.isnan(C[:, i]) & ~np.isnan(C[:, i - 1]) & np.isfinite(r) & ~EK; c = D["cdb"][i] - 1
+            if ok.any():
+                rr = np.clip(r[ok], -.5, 1.0); g = np.log1p(Xp[:, ok] * rr + (1 - Xp[:, ok]) * c); cx = ctxp[ok]
+                cnt = np.bincount(cx, minlength=len(ADP_CTX)); G = np.array([np.bincount(cx, weights=g[k], minlength=len(ADP_CTX)) for k in range(K)]).T
+                S *= dec; S += np.where(cnt[:, None] > 0, G / np.maximum(cnt, 1)[:, None], 0)
+        W = np.exp(ADP_ETA * (S - S.max(axis=1, keepdims=True)))  # pesos aprendidos até agora (por cenário)
+        Wq = W[ctx]; Wq = np.where(EK[:, None], Wq * pre[None, :], Wq)  # N × K (ETF: só os de preço)
+        AX[:, i] = np.round(4 * (Wq * X.T).sum(axis=1) / Wq.sum(axis=1)) / 4
+        AA[:, i] = Wq.argmax(axis=1); AP[:, i] = np.round(100 * Wq.max(axis=1) / Wq.sum(axis=1))
+        Xp, ctxp = X, ctx
+        hn.append(X[kn])  # acerto das notícias ruins: a ação foi pior que a mediana nas 4 semanas seguintes? (só o que já aconteceu)
+        if len(hn) == 5:
+            with np.errstate(invalid="ignore", divide="ignore"): f = Cf[:, i] / Cf[:, i - 4] - 1
+            v = np.isfinite(f) & ~EK; b = (hn[0] == 0) & v
+            if b.any(): nb += int(b.sum()); nh += int((f[b] < np.median(f[v])).sum())
+    W = np.exp(ADP_ETA * (S - S.max(axis=1, keepdims=True))); W /= W.sum(axis=1, keepdims=True)
+    D["AX"], D["AA"], D["AP"] = AX, AA, AP
+    D["ADPS"] = {"ctx": [{"c": ADP_CTX[c], "top": [[_adp_nome(ADP[k]), round(100 * float(W[c, k]))] for k in np.argsort(-W[c])[:3]]} for c in range(len(ADP_CTX))],
+                 "news": {"n": nb, "acerto": round(100 * nh / nb, 1) if nb else None}}
+
+
+def _adp_nome(k): return ADP_N.get(k) or MOD[k]["n"]
+
+
+def _segue(D, mid, k, i):
+    """(especialista de maior peso, peso %) de um modelo de exposição (Híbrido ou Adaptativo) na ação k, semana i."""
+    if mid == "adapt": return _adp_nome(ADP[int(D["AA"][k, i])]), int(D["AP"][k, i])
+    return MOD[HIB[int(D["HA"][k, i])]]["n"], int(D["HP"][k, i])
+
+
 def set_setores(D, rows, cad=None):
     """Marca as empresas de setor perene nas matrizes (fora delas o Método Barsi fica "fora do método")."""
     bs = {r["ticker"] for r in rows if perene(r, cad)}
@@ -174,9 +239,12 @@ def set_setores(D, rows, cad=None):
             n = FM["TEM"][m].sum(axis=0); sh = np.where(n >= 3, FM["PREJ"][m].sum(axis=0) / np.maximum(n, 1), 0)
             CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
+        D["SEC3"] = np.array([1 if str(sec.get(t, "")).startswith("Bancos") else 2 for t in D["tick"]])  # Adaptativo: banco × outros
     set_metodos(D, rows)
+    ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
+    if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 13       # versão das contas (13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 14       # versão das contas (14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -218,6 +286,15 @@ METODO = {"v_entra": .25, "v_nota": 50, "g_ano": .20, "g_3a": .15, "g_max": .15,
 # Ajusta a parte na ação com aportes e proventos (compra só até a exposição alvo; o resto espera no CDB) e não vende:
 # no teste com IR e custos, vender (mesmo em parte ou dentro da isenção) sempre rendeu menos que manter.
 HIB_SEM, HIB_ETA = 52, 5  # janela do acerto recente (semanas) e o quanto o melhor recebe mais peso
+# Adaptativo (aprende): especialistas = os modelos + notícias + qualidade; peso de cada um aprendido semana a semana desde a 1ª semana
+# dos dados (antes da data inicial da simulação também), separado por cenário (mercado × tendência × tipo de setor); nunca usa o futuro
+ADP = ("hold", "medo_mercado", "medo_acao", "media200", "alg1", "alg3", "tendencia", "value", "growth", "garp", "fatores", "hibrido", "barsi", "noticias", "qualidade")
+ADP_N = {"noticias": "Notícias (sem fato ruim recente)", "qualidade": "Nota de qualidade alta"}  # especialistas que não são modelos
+ADP_PRECO = 7     # os 7 primeiros especialistas só usam preço (os únicos para ETF)
+ADP_MEIA = 104    # meia-vida da memória do aprendizado (semanas): acertos antigos pesam menos, mas nunca somem
+ADP_ETA = 200.0   # o quanto o especialista que mais acertou no cenário ganha peso sobre os outros (testado: 8, 30, 80, 200; 200 rendeu mais)
+ADP_NOTA = 60     # especialista Qualidade: fica na ação com nota de qualidade a partir disto
+ADP_CTX = [f"{m} · {t} · {s}" for m in ("medo", "neutro", "ganância") for t in ("Ibovespa em alta", "Ibovespa em queda") for s in ("setor perene", "banco", "outros setores")]
 HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
 FORTE_R12 = 100   # Análise técnica: entrada no rodízio só com alta de pelo menos 10% em 12 meses (×1000)
 # "lucro": só compra se o último balanço anual publicado teve lucro (fund.json); no teste 2006–2026 ajudou só estes dois modelos
@@ -355,7 +432,7 @@ def _news_mats(tick, wk, news):
     return NT + np.clip(SP, -NOTICIA["sup_max"], NOTICIA["sup_max"]), {k: v[0] for k, v in NX.items()}
 
 
-def noticias_itens(fatos=None, noticias=None):
+def noticias_itens(fatos=None, noticias=None, arquivo=None):
     """Itens dos snapshots no formato dos modelos {d, t, x, o}: Fatos Relevantes da CVM (snapshot `fatos`, oficiais) e notícias
     da coleta diária (snapshot `noticias`, itens com a lista de tickers da B3 `t` e do mercado "br" em `m`; os outros ficam de fora)."""
     out = []
@@ -363,8 +440,11 @@ def noticias_itens(fatos=None, noticias=None):
     for t, c in (f.get("t") or {}).items(): tc.setdefault(c, []).append(t)  # todas as classes da mesma companhia
     for c, L in (f.get("c") or {}).items():
         for d, x in L: out.append({"d": d, "t": tc.get(c, []), "x": x, "o": True})
+    vistas = set()
     for it in (noticias or {}).get("itens") or []:  # só as do mercado brasileiro (B3); as de fora ("m" sem "br") ficam para modelos de lá
-        if it.get("t") and "br" in (it.get("m") or ["br"]): out.append({"d": it.get("data"), "t": it["t"], "x": f"{it.get('titulo') or ''}. {it.get('resumo') or ''}", "o": bool(it.get("oficial"))})
+        if it.get("t") and "br" in (it.get("m") or ["br"]): out.append({"d": it.get("data"), "t": it["t"], "x": f"{it.get('titulo') or ''}. {it.get('resumo') or ''}", "o": bool(it.get("oficial"))}); vistas.add(it.get("url"))
+    for it in (arquivo or {}).get("itens") or []:  # arquivo que só cresce (scripts/fetch_noticias.py → noticias_arq): as antigas também
+        if it.get("t") and "br" in (it.get("m") or ["br"]) and it.get("u") not in vistas: out.append({"d": it["d"], "t": it["t"], "x": it["x"], "o": False})
     return out
 
 
@@ -455,7 +535,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
             "EK": EK, "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -472,7 +552,7 @@ def entradas():
     except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
     fj = (snapshots.load("fund")[0]) or {}  # balanços anuais: venda ocasional (REGRAS); saida: motivo da saída da bolsa
     idiv = (((snapshots.load("b3_idx_hist")[0]) or {}).get("s") or {}).get("IDIV")  # referência IDIV (série da B3)
-    news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0])  # Fatos Relevantes da CVM + notícias com tickers
+    news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0], snapshots.load("noticias_arq")[0])  # Fatos Relevantes da CVM + notícias com tickers (+ arquivo)
     return {"gold": gold, "ibov": ibov, "fund": fj.get("a") or {}, "news": news, "saida": fj.get("saida"), "idiv": idiv}
 
 
@@ -575,7 +655,7 @@ def _signal(D, mid, idx, i):
     if mid == "medo_acao": return D["SI"][idx, i] < MEDO
     if mid in ("media200", "tendencia"): return D["M2"][idx, i] > 0
     if MOD[mid].get("sig"): M = D.get(MOD[mid]["sig"]); return M[idx, i] if M is not None else np.zeros(n, bool)  # sem set_metodos: fora
-    if mid == "hibrido": return D["HX"][idx, i] > 0  # (só para o 1º sinal; a simulação usa a exposição HX)
+    if MOD[mid].get("frac"): return D[MOD[mid]["x"]][idx, i] > 0  # Híbrido/Adaptativo (só o 1º sinal; a simulação usa a exposição)
     if mid == "barsi":  # compra só no teto ou abaixo; acima ou sem teto: espera no CDB (nunca vende)
         with np.errstate(invalid="ignore"): return D["Cf"][idx, i] <= D["TETO"][idx, i]
     return D["FAV"][MOD[mid]["p"]][idx, i]
@@ -587,7 +667,8 @@ FICHA_COMUM = (("CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "
                ("_signals", "_signal", "motivo", "simulate", "Conta", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
 FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
          "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
-         "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")), "barsi": (("BARSI_DY", "BARSI_ANOS", "BARSI_CAIXA", "PERENE_TXT"), ("perene", "build", "_barsi_caixa")),
+         "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")),
+         "adapt": (("ADP", "ADP_N", "ADP_PRECO", "ADP_MEIA", "ADP_ETA", "ADP_NOTA", "HIB_COMPRA"), ("_adp_x", "_adapt")), "barsi": (("BARSI_DY", "BARSI_ANOS", "BARSI_CAIXA", "PERENE_TXT"), ("perene", "build", "_barsi_caixa")),
          **{m: (("METODO",), ("set_metodos", "_fund_mats")) for m in ("value", "growth", "garp", "fatores")}}
 
 
@@ -635,8 +716,10 @@ def motivo(D, mid, k, i):
     if mid in ("media200", "tendencia"): return ("preço acima" if D["M2"][k, i] > 0 else "preço abaixo") + f" da média de 200 dias · alta em 12 meses {br(D['R12'][k, i] / 10)}%" + lucro
     if MOD[mid].get("p"): pk = MOD[mid]["p"]; return f"chance de alta {br(D['P'][pk][k, i] / 10)}% (mediana do último ano {br(D['MED'][pk][k, i] / 10)}%)" + lucro
     if mid == "barsi": return f"preço R$ {br(D['Cf'][k, i], 2)} · preço teto R$ {br(D['TETO'][k, i], 2)}" + lucro
-    if mid == "hibrido":
-        return f"exposição-alvo {br(100 * D['HX'][k, i], 0)}% · segue {MOD[HIB[int(D['HA'][k, i])]]['n']} (peso {int(D['HP'][k, i])}%)"
+    if MOD[mid].get("frac"):
+        sn, sp = _segue(D, mid, k, i)
+        nt = " · notícia ruim recente pesou contra" if mid == "adapt" and "NT" in D and D["NT"][k, max(0, i - NOTICIA["semanas"] + 1):i + 1].sum() <= NOTICIA["ruim"] else ""
+        return f"exposição-alvo {br(100 * D[MOD[mid]['x']][k, i], 0)}% · segue {sn} (peso {sp}%{' neste cenário' if mid == 'adapt' else ''})" + nt
     sc = MOD[mid].get("sc")
     if sc in D:
         v = float(D[sc][k, i]); FM = D["FM"]
@@ -757,7 +840,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         else:
             want, buy = np.ones(n, bool), sig
         if mod.get("frac"):
-            e = D["HX"][idx, i - 1] if i > 0 else np.ones(n)
+            e = D[mod["x"]][idx, i - 1] if i > 0 else np.ones(n)
         elif i > s:
             sh0 = A.sh.copy(); A.sell(~want & (A.sh > 0) & ok, P); log(sh0, i, P, lambda q: "venda: " + motivo(D, mid, idx[q], i - 1))
         tax = 0
@@ -785,7 +868,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             v = A.sh * P + A.cash
             for q in range(n):
                 rows[q].append({"ym": D["ym"][i], "v": float(v[q]), "div": float(A.divT[q]), "tax": float(A.ir[q] + A.dtax[q]),
-                                "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {MOD[HIB[int(D['HA'][idx[q], i - 1])]]['n']}"
+                                "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {_segue(D, mid, idx[q], i - 1)[0]}"
                                         if mod.get("frac") and v[q] > 0 else
                                         "Ação" if A.sh[q] > 0 and A.cash[q] < max(1, P[q]) else "CDB" if A.sh[q] <= 0 else "Ação + CDB"),
                                 "c": int(A.compras[q]), "s": int(A.vendas[q]), "cdb": float(A.cash[q]), "cj": float(cj[q])})
@@ -1055,7 +1138,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 6  # 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 7  # 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -1094,7 +1177,7 @@ def _gtargets(D, mid, idx, i):
     """pesos alvo (soma 1, ou 0 = espera no CDB) e 'quer manter' de cada empresa, com dados da semana i."""
     n=len(idx); ok=~np.isnan(D['C'][idx,i])
     if mid=='hold': w=ok.astype(float)
-    elif mid=='hibrido': w=np.nan_to_num(D['HX'][idx,i])*ok
+    elif MOD[mid].get('frac'): w=np.nan_to_num(D[MOD[mid]['x']][idx,i])*ok  # Híbrido/Adaptativo: exposição alvo
     elif mid=='barsi':
         T=D['TETO'][idx,i]; P=D['Cf'][idx,i]
         with np.errstate(invalid='ignore'): z=ok&D['BS'][idx]&(P<=T)&D['LP'][idx,i]

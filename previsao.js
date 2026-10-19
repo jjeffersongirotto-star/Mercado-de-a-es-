@@ -620,6 +620,16 @@ if (typeof document !== 'undefined') {
   });
   // movimentações (rodízio e Grupo simulação): uma linha por evento (compra, venda, aporte, provento, aplicação/resgate do CDI,
   // retirada, imposto), mais recentes primeiro; mostra MOV_PG por vez ("Mostrar mais" acrescenta sem redesenhar o resto)
+  // ⓘ → Modelos da Previsão → Adaptativo: "Ver o que ele aprendeu" (/api/modelos/aprendeu ← modelos._adapt)
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-adp]'); if (!b) return; const box = document.getElementById('adpLearn'); if (!box) return;
+    box.innerHTML = loaderHTML('Carregando…');
+    try {
+      const d = await getRetry('/api/modelos/aprendeu');
+      box.innerHTML = `<p class="pvd-note">Até ${dataBR(d.at)}. Notícias ruins: em ${d.news && d.news.acerto != null ? F2.format(d.news.acerto) + '%' : '—'} das ${F0.format((d.news || {}).n || 0)} vezes a ação rendeu menos que a mediana nas 4 semanas seguintes.</p>
+        <div class="pv-scroll"><table class="gtab"><thead><tr><th>Cenário</th><th>1º</th><th>2º</th><th>3º</th></tr></thead><tbody>${(d.ctx || []).map(c => `<tr><td>${esc(c.c)}</td>${c.top.map(([n, p]) => `<td>${esc(n)}<span class="gsub">peso ${p}%</span></td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    } catch (err) { box.innerHTML = `<p class="pvd-note">${esc(err.message)}</p>`; }
+  });
   window.pvGroupHtml = groupHtml;
   const MOV_PG = 50, movStore = {}; let movSeq = 0;
   // Tipo | Origem/destino (ticker; CDI na aplicação/resgate) | Valor ação (preço na hora; — sem ação) | Qtd. de ações | Valor
