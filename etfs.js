@@ -29,7 +29,7 @@
     <div class="etf-p"><span class="text-lg font-bold">${x.p == null ? '—' : brl.format(x.p)}</span><span class="${cor(x.v)}">${P(x.v)}</span></div>
     <div class="etf-g"><span>Volume médio<b>${x.vm == null ? '—' : fmtMoneyBig(x.vm)}</b></span><span>Proventos 12 m<b>${x.dy == null ? '—' : F2.format(x.dy) + '%'}</b></span>
       <span>1 ano<b class="${cor(x.r1)}">${P(x.r1)}</b></span><span>3 anos<b class="${cor(x.r3)}">${P(x.r3)}</b></span><span>5 anos<b class="${cor(x.r5)}">${P(x.r5)}</b></span></div>
-    <p class="etf-u">${x.u ? 'Fechamento de ' + dataBR(x.u) + ' · toque para ver o gráfico' : 'Sem negócios no COTAHIST'}</p></div>`;
+    <p class="etf-u">${x.u ? 'Fechamento de ' + dataBR(x.u) + (x.src === 'Yahoo' ? ' (Yahoo)' : '') + ' · toque para ver o gráfico' : 'Sem negócios no período'}</p></div>`;
   function draw() {
     const E = (D && D.e) || {}, nq = norm(q);
     let L = Object.entries(E).filter(([t, x]) => (fil === 'todos' || x.k === fil) && (!liq || !x.il) && (!nq || norm(t + ' ' + (x.n || '') + ' ' + (x.f || '')).includes(nq)));
@@ -43,7 +43,7 @@
         <button id="etfDir" type="button" class="px-2.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm" aria-label="Inverter ordem">${sortIc(dir)}</button></div></section>
       <p class="text-xs text-slate-400"><span class="text-base font-bold text-slate-100">${L.length}</span> ETFs ${glossBtn('ETF')}</p>
       ${L.length ? `<div class="etf-grid">${L.map(([t, x]) => card(t, x)).join('')}</div>` : '<p class="pvd-note">Nenhum ETF com esses filtros.</p>'}
-      <p class="pvd-note">Lista oficial da B3 (fundos de índice; cripto e fundos imobiliários ficam de fora; tipo pelo índice no nome do fundo); preço e volume do COTAHIST da B3. ETF não tem balanço: sem P/L, ROE, dívida ou Barato/Caro. Para estudo, não é recomendação.</p>`;
+      <p class="pvd-note">Lista oficial da B3 (fundos de índice; cripto e fundos imobiliários ficam de fora; tipo pelo índice no nome do fundo); preço e volume do COTAHIST da B3 (os de renda fixa, que a B3 não traz nessa base, do Yahoo). ETF não tem balanço: sem P/L, ROE, dívida ou Barato/Caro. Para estudo, não é recomendação.</p>`;
   }
   seg.addEventListener('click', (e) => { const b = e.target.closest('[data-mk]'); if (!b) return; modo = b.dataset.mk; save(); apply(); });
   root.addEventListener('click', (e) => {
