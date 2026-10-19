@@ -4,9 +4,9 @@ Dois temas, cada item com "tema":
 - "barsi": matérias sobre Luiz Barsi (RSS do Bing Notícias, título com "Barsi"), até MAX_BARSI, com imagem de capa (og:image) e
   resumo da própria página; links que deixam de abrir (HTTP 404/410) saem.
 - "mercado": notícias de mercado em português das FONTES (RSS de cada uma; a que não responder fica de fora nesse dia; Bing
-  Notícias em português é a reserva), só as que citam empresas da B3 ou palavras de mercado (MERCADO_RX). Cada item ganha "t"
-  (tickers citados: código escrito no texto ou nome popular de nomes_populares.json), que os modelos da Previsão usam
-  (modelos.noticias_itens). Ficam as dos últimos DIAS dias, até MAX_MERCADO; marcos escolhidos à mão em noticias_marcos.json
+  Notícias em português é a reserva), só as que citam empresas ou palavras de mercado (MERCADO_RX). Cada item ganha "t"
+  (tickers da B3 citados: código escrito no texto ou nome popular de nomes_populares.json), "tf" (empresas de fora citadas, "us:META")
+  e "m" (mercados: "br" e/ou países de fora — classificar); os modelos da Previsão (B3) usam só as do mercado "br" (modelos.noticias_itens). Ficam as dos últimos DIAS dias, até MAX_MERCADO; marcos escolhidos à mão em noticias_marcos.json
   (fatos importantes antes da coleta diária) entram sempre.
 Uso: fetch_noticias.py OUT_DIR   (rotina diária, bloco rápido; ~60 pedidos por execução)"""
 import html, json, os, re, sys, time, unicodedata
@@ -30,7 +30,12 @@ FONTES_RSS = {
 RSS_RESERVA = "https://www.bing.com/news/search?q=Ibovespa+OR+%22a%C3%A7%C3%B5es%22+OR+B3&format=rss&setlang=pt-BR&cc=BR"
 MERCADO_RX = re.compile(r"\b(ibovespa|bolsa|b3|a[cç][aãoõ]es|a[cç][aã]o|selic|copom|d[oó]lar|infla[cç][aã]o|ipca|juros|dividendo|provento|jcp|"
                         r"balan[cç]o|lucro|preju[ií]zo|trimestre|ipo|opa|recompra|fato relevante|cvm|mercado financeiro)\b", re.I)
-AMBIGUOS = set(json.load(open(os.path.join(os.path.dirname(HERE), "vocabulario.json"), encoding="utf-8"))["noticias"]["nomes_ambiguos"])  # nomes = palavras comuns
+VOC = json.load(open(os.path.join(os.path.dirname(HERE), "vocabulario.json"), encoding="utf-8"))["noticias"]
+AMBIGUOS = set(VOC["nomes_ambiguos"])  # nomes que também são palavras comuns
+import tradingview  # noqa: E402  (países do site: nome, índice e bolsa de cada um — sinais do mercado de fora)
+PAISES = [c for c in tradingview.COUNTRIES if c != "br"]
+SINAIS = {c: [tradingview.COUNTRIES[c][1].lower(), tradingview.YAHOO[c][2].lower(), *[b.lower() for b in tradingview.BOLSA[c].split("/")],
+              *VOC["exterior"].get(c, [])] for c in PAISES}  # palavras de cada mercado de fora; Brasil: VOC["brasil"]
 TICKER_RX = re.compile(r"\b([A-Z]{4}(?:3|4|5|6|11))\b")
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36", "Accept-Language": "pt-BR,pt;q=0.9"}
 FONTES = {"estadao.com.br": "Estadão", "seudinheiro.com": "Seu Dinheiro", "infomoney.com.br": "InfoMoney", "exame.com": "Exame",
@@ -105,6 +110,34 @@ def empresas(rows, pop):
     return tk, nomes
 
 
+def empresas_fora(pop, raizes_b3):
+    """[(nome, "país:ticker", exato)] das empresas de fora de nomes_populares.json (EUA sem prefixo ou "us:", outros com o prefixo do país)."""
+    out = []
+    for k, e in pop.items():
+        if k.startswith("_"): continue
+        c, t = k.split(":", 1) if ":" in k else ("us", k)
+        if c not in PAISES or (":" not in k and (k in raizes_b3 or re.search(r"\d", k))): continue  # sem prefixo: raiz da B3 ou de BDR (M1TA, B3SA) não é de fora
+        for n in [e] if isinstance(e, str) else [e.get("n")] + list(e.get("aliases") or []):
+            if n and n not in AMBIGUOS: out.append((n, f"{c}:{t}", len(n) <= 4))
+    out.sort(key=lambda x: -len(x[0]))
+    return out
+
+
+def _tem(low, palavra):
+    return re.search(r"(?<![\w&])" + re.escape(palavra) + r"(?![\w&])", low) is not None
+
+
+def classificar(texto, tk, nomes, fora):
+    """-> {t: tickers da B3, tf: empresas de fora ("us:META"), m: mercados ("br", "us", "jp"…)}. Fora = empresa de fora citada ou palavra do
+    mercado de lá (país, índice, bolsa, VOC["exterior"]); Brasil = empresa da B3, palavra do Brasil (VOC["brasil"]) ou nenhum sinal de fora."""
+    t = marcar(texto, tk, nomes); low = (texto or "").lower(); tf = set()
+    for n, x, exato in fora:
+        if re.search(r"(?<![\w])" + re.escape(n if exato else n.lower()) + r"(?![\w])", texto if exato else low): tf.add(x)
+    m = {x.split(":")[0] for x in tf} | {c for c, ws in SINAIS.items() if any(_tem(low, w) for w in ws)}
+    if t or any(_tem(low, w) for w in VOC["brasil"]) or not m: m.add("br")
+    return {"t": t, "tf": sorted(tf), "m": sorted(m, key=lambda c: (c != "br", c))}
+
+
 def marcar(texto, tk, nomes):
     """tickers da B3 citados no texto: código escrito (PETR4) ou nome popular (Petrobras, Itaú…), sem diferenciar maiúsculas."""
     achou = {m for m in TICKER_RX.findall(texto or "") if m in tk}
@@ -128,7 +161,8 @@ def main(out):
     except Exception as e:
         rows = []; print("noticias: sem /api/data (notícias ficam sem empresas):", type(e).__name__)
     pop = json.load(open(os.path.join(os.path.dirname(HERE), "nomes_populares.json"), encoding="utf-8"))
-    tk, nomes = empresas(rows, pop)
+    tk, nomes = empresas(rows, pop); fora = empresas_fora(pop, {t[:4] for t in tk})
+    cl = lambda it: classificar(f"{it['titulo']}. {it.get('resumo') or ''}", tk, nomes, fora)
     # Barsi: como antes (link morto sai)
     barsi = []
     for it in [i for i in velhos if i["tema"] == "barsi"]:
@@ -159,10 +193,11 @@ def main(out):
         ok_fonte.add(nome); n0 = len(novos)
         for tit, url, dt, desc, img in itens_rss(r.text):
             if (agora - dt).days > DIAS or url in vistos or chave(tit) in vistos: continue
-            texto = f"{tit}. {desc}"; t = marcar(texto, tk, nomes)
-            if not t and not MERCADO_RX.search(texto): continue  # fora do assunto mercado
-            novos.append({"tema": "mercado", "titulo": tit, "data": dt.date().isoformat(), "fonte": fonte(url) if nome == "Bing Notícias" else nome,
-                          "resumo": desc, "url": url, "img": img if img and img.startswith("https://") else None, "t": t})
+            it = {"tema": "mercado", "titulo": tit, "data": dt.date().isoformat(), "fonte": fonte(url) if nome == "Bing Notícias" else nome,
+                  "resumo": desc, "url": url, "img": img if img and img.startswith("https://") else None}
+            it.update(cl(it))
+            if not it["t"] and not it["tf"] and not MERCADO_RX.search(f"{tit}. {desc}"): continue  # fora do assunto mercado
+            novos.append(it)
             vistos |= {url, chave(tit)}
         por_fonte[nome] = len(novos) - n0
     for it in novos:  # imagem e resumo da própria página, quando o RSS não traz (limite por execução)
@@ -172,11 +207,13 @@ def main(out):
             img = meta(pg.text, "og:image"); it["img"] = img if img and img.startswith("https://") else None
             it["resumo"] = it["resumo"] or curto(meta(pg.text, "og:description"))
         time.sleep(0.5)
+    for it in merc: it.update(cl(it))  # as já guardadas também: mesma regra de hoje (mercado e empresas)
     merc = sorted(merc + novos, key=lambda i: i["data"], reverse=True)[:MAX_MERCADO]
     try: marcos = json.load(open(os.path.join(HERE, "noticias_marcos.json"), encoding="utf-8"))["itens"]
     except Exception as e: marcos = []; print("noticias: sem marcos:", e)
     for m in marcos:
-        m.update({"tema": "mercado", "marco": True}); m.setdefault("t", marcar(f"{m['titulo']}. {m.get('resumo', '')}", tk, nomes))
+        m.update({"tema": "mercado", "marco": True}); m.update(cl(m))
+    for it in barsi: it.update({"m": ["br"], "tf": []}); it.setdefault("t", [])
     itens = sorted(barsi, key=lambda i: i.get("data") or "", reverse=True)[:MAX_BARSI] + merc + marcos
     itens.sort(key=lambda i: i.get("data") or "0000", reverse=True)
     data = {"fetched_at": agora.isoformat(timespec="seconds"), "temas": {"mercado": "Mercado", "barsi": "Luiz Barsi"},

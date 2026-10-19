@@ -418,6 +418,12 @@ def test_empresa_que_saiu_da_bolsa():
     assert modelos.compare(D, ["BBB3"], "2022-01", "2022-12", [1000.0] * 12).get("error")  # sem preço no início: fica de fora
 
 
+def test_noticias_so_do_mercado_brasileiro():
+    it = lambda m: {"itens": [{"data": "2021-06-02", "t": ["AAA3"], "titulo": "Pedido de recuperação judicial", **({"m": m} if m else {})}]}
+    assert len(modelos.noticias_itens(noticias=it(["br", "us"]))) == 1 and len(modelos.noticias_itens(noticias=it(None))) == 1
+    assert modelos.noticias_itens(noticias=it(["us"])) == []  # notícia de outro mercado: fica para modelos de lá
+
+
 def test_noticias_fato_e_suposicao():
     assert modelos.tom_noticia("Pedido de Recuperação Judicial") == (-2.0, False)
     assert modelos.tom_noticia("Encerramento da recuperação judicial")[0] > 0  # frase longa vale sobre a curta
@@ -426,6 +432,7 @@ def test_noticias_fato_e_suposicao():
     fatos = {"t": {"AAA3": "1"}, "c": {"1": [["2021-06-02", "Pedido de Recuperação Judicial"]]}}
     for news, vende in ((modelos.noticias_itens(fatos), True),
                         ([{"d": "2021-06-02", "t": ["AAA3"], "x": "Empresa pode pedir recuperação judicial, dizem analistas"}], False),
+
                         ([], False)):
         D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi(), news=news)
         me = months(D, "2020-02", "2021-12")
