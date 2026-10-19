@@ -219,14 +219,14 @@ def _news_mats(tick, wk, news):
 
 def noticias_itens(fatos=None, noticias=None):
     """Itens dos snapshots no formato dos modelos {d, t, x, o}: Fatos Relevantes da CVM (snapshot `fatos`, oficiais) e notícias
-    da coleta diária (snapshot `noticias`, itens com a lista de tickers `t`; os sem `t` ficam de fora)."""
+    da coleta diária (snapshot `noticias`, itens com a lista de tickers da B3 `t` e do mercado "br" em `m`; os outros ficam de fora)."""
     out = []
     f = fatos or {}; tc = {}
     for t, c in (f.get("t") or {}).items(): tc.setdefault(c, []).append(t)  # todas as classes da mesma companhia
     for c, L in (f.get("c") or {}).items():
         for d, x in L: out.append({"d": d, "t": tc.get(c, []), "x": x, "o": True})
-    for it in (noticias or {}).get("itens") or []:
-        if it.get("t"): out.append({"d": it.get("data"), "t": it["t"], "x": f"{it.get('titulo') or ''}. {it.get('resumo') or ''}", "o": bool(it.get("oficial"))})
+    for it in (noticias or {}).get("itens") or []:  # só as do mercado brasileiro (B3); as de fora ("m" sem "br") ficam para modelos de lá
+        if it.get("t") and "br" in (it.get("m") or ["br"]): out.append({"d": it.get("data"), "t": it["t"], "x": f"{it.get('titulo') or ''}. {it.get('resumo') or ''}", "o": bool(it.get("oficial"))})
     return out
 
 

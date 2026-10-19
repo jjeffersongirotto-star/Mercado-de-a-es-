@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import fetch_noticias as F
 
 ROWS = [{"ticker": "PSSA3", "k1": 1}, {"ticker": "PETR4", "k1": 1}, {"ticker": "PETR3"}, {"ticker": "VALE3", "k1": 1}, {"ticker": "ITUB4", "k1": 1}, {"ticker": "WEGE3", "k1": 1}]
-POP = {"PSSA": {"n": "Porto", "aliases": ["porto seguro"]}, "PETR": "Petrobras", "VALE": "Vale", "ITUB": {"n": "Itaú", "aliases": ["itau unibanco"]}, "WEGE": "WEG"}
+POP = {"META": "Meta", "M1TA": "Meta", "B3SA": "B3", "AAPL": {"n": "Apple", "aliases": ["iphone"]}, "jp:7203": "Toyota", "PSSA": {"n": "Porto", "aliases": ["porto seguro"]}, "PETR": "Petrobras", "VALE": "Vale", "ITUB": {"n": "Itaú", "aliases": ["itau unibanco"]}, "WEGE": "WEG"}
 
 
 def test_empresas_citadas():
@@ -15,6 +15,17 @@ def test_empresas_citadas():
     assert m("Itaú tem lucro recorde") == ["ITUB4"] and m("o itaú caiu") == []  # nome curto: grafia exata
     assert m("Atos em Porto Alegre") == [] and m("Porto Seguro tem lucro") == ["PSSA3"]  # "Porto" sozinho é palavra comum
     assert m("WEG e Petrobras sobem") == ["PETR4", "WEGE3"] and m("PETR3 sobe") == ["PETR3"]
+
+
+def test_mercado_de_cada_noticia():
+    tk, nomes = F.empresas(ROWS, POP); fora = F.empresas_fora(POP, {t[:4] for t in tk})
+    c = lambda s: F.classificar(s, tk, nomes, fora)
+    assert c("Petrobras anuncia recompra") == {"t": ["PETR4"], "tf": [], "m": ["br"]}
+    assert c("Apple sobe em Wall Street") == {"t": [], "tf": ["us:AAPL"], "m": ["us"]}  # de fora: nunca vira ticker da B3
+    assert c("Toyota cai com o iene forte") == {"t": [], "tf": ["jp:7203"], "m": ["jp"]}
+    assert c("Tarifa dos EUA sobre o Brasil derruba o Ibovespa")["m"] == ["br", "us"]
+    assert c("Meta sobe")["tf"] == ["us:META"]  # raiz de BDR (M1TA) e da B3 (B3SA) não viram empresa dos EUA
+    assert c("Dólar fecha em queda")["m"] == ["br"]  # sem sinal de fora: Brasil
 
 
 def test_rss():
