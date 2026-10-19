@@ -34,6 +34,15 @@ for path in ("fundsProxy/fundsCall/GetDetailFundSIG", "fundsProxy/fundsCall/GetD
         q = {"language": "pt-br", "typeFund": tf, "identifierFund": "BOVA"}
         probe[f"detalhe {path} tipo {tf} BOVA"] = get(f"{B3}/{path}/{b64(q)}", 6000)
 
+# 1b) outras variações da B3 (2ª rodada)
+for path in ("fundsProxy/fundsCall/GetListedFundsSIG", "fundsListedProxy/Search/GetListFunds"):
+    for q in ({"typeFund": 20, "pageNumber": 1, "pageSize": 20}, {"language": "pt-br", "typeFund": "ETF", "pageNumber": 1, "pageSize": 20},
+              {"typeFund": 20, "pageNumber": 1, "pageSize": 20, "keyword": "BOVA"}, {"language": "pt-br", "typeFund": 1, "pageNumber": 1, "pageSize": 20}):
+        probe[f"lista2 {path} {q}"] = get(f"{B3}/{path}/{b64(q)}", 1500)
+for q in ({"typeFund": 20, "identifierFund": "BOVA"}, {"language": "pt-br", "typeFund": 20, "identifierFund": "BOVA11"}, {"typeFund": 20, "cnpj": "10406511000161", "identifierFund": "BOVA"}):
+    probe[f"detalhe2 {q}"] = get(f"{B3}/fundsProxy/fundsCall/GetDetailFundSIG/{b64(q)}", 4000)
+probe["etf-page"] = get("https://sistemaswebb3-listados.b3.com.br/fundsListedProxy/Search/GetListedFundsETF/" + b64({"language": "pt-br", "pageNumber": 1, "pageSize": 20}), 1500)
+
 # 2) COTAHIST: como os ETFs aparecem (BDI, especificação, nome) no arquivo do ano mais recente
 if ZD and os.path.isdir(ZD):
     anos = sorted(f for f in os.listdir(ZD) if f.startswith("COTAHIST_A"))
@@ -59,6 +68,9 @@ for u in ("https://dados.cvm.gov.br/dados/FI/CAD/DADOS/cad_fi.csv", "https://dad
                 for nm in z.namelist():
                     t = z.read(nm).decode("latin1"); L = t.splitlines()
                     info[nm] = {"cabecalho": L[0][:800], "etf": [l[:600] for l in L if "NDICE" in l.upper() and ("BOVA" in l.upper() or "ISHARES" in l.upper())][:5], "linhas": len(L)}
+                    if nm == "registro_classe.csv":  # todos os fundos de índice em funcionamento (nome, CNPJ, patrimônio)
+                        info["fiim"] = [l.split(";")[2] + " | " + l.split(";")[8] + " | " + l.split(";")[22] for l in L[1:] if "FIIM" in l and "Funcionamento" in l]
+                    if nm == "registro_subclasse.csv": info["amostra"] = L[1:4]
             else:
                 t = r.content.decode("latin1"); L = t.splitlines()
                 info["cabecalho"] = L[0][:800]; info["linhas"] = len(L)
