@@ -25,7 +25,7 @@ COLS = ["name", "description", "type", "sector", "industry", "close", "change", 
         "return_on_invested_capital", "return_on_assets", "gross_margin", "operating_margin", "net_margin", "current_ratio",
         "net_debt", "total_equity_fq", "total_revenue_cagr_5y", "net_income_cagr_5y", "book_value_per_share_fq",
         "earnings_per_share_diluted_ttm", "volume", "Value.Traded", "average_volume_10d_calc",
-        "average_volume_30d_calc", "average_volume_90d_calc", "ipo_offer_date"]
+        "average_volume_30d_calc", "average_volume_90d_calc", "ipo_offer_date", "high", "low"]  # high/low: máxima e mínima do dia (ordens ao vivo)
 
 def _n(x):
     try:
@@ -71,6 +71,7 @@ def to_vals(d):
     v = {k: (round(x, 4) if isinstance(x, float) else x) for k, x in v.items() if x is not None}
     meta = {"nome": d.get("description"), "setor": d.get("sector"), "subsetor": d.get("industry"),
             "var": round(_n(d["change"]), 2) if _n(d["change"]) is not None else None, "cur": cur,
+            "dh": _n(d.get("high")), "dl": _n(d.get("low")),
             "ipo": __import__("time").strftime("%Y-%m-%d", __import__("time").gmtime(d["ipo_offer_date"])) if _n(d.get("ipo_offer_date")) else None}
     return v, meta
 

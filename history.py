@@ -245,7 +245,7 @@ def b3get(t, kind):
     h = b3hist(t)
     if kind == "i":  # sem intradiário oficial gratuito: último pregão vs anterior
         d = h["d"]; return {"t": d["t"][-2:], "c": d["c"][-2:], "div": [], "source": "B3 (COTAHIST) · fechamento", "daily": True}
-    x = dict(h[kind]); x["source"] = "B3 (COTAHIST, " + h["d"].get("at", "") + ")"
+    x = {k: v for k, v in h[kind].items() if k not in ("h", "l")}; x["source"] = "B3 (COTAHIST, " + h["d"].get("at", "") + ")"  # máx./mín. do dia: só os modelos usam
     lab = {d[0]: d[2] for d in h.get("divs") or [] if len(d) > 2}  # tipo do provento (dividendo/JCP) quando a B3 informa
     if lab: x["div"] = [[d[0], d[1], lab[d[0]]] if d[0] in lab else d for d in x.get("div") or []]
     return x
