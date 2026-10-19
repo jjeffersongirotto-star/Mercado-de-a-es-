@@ -467,7 +467,9 @@
     const src = Object.assign({}, g.sim, { m: mid });
     if (tk) { pvSimCompany(src, tk, `${esc((c.d.nm || {})[tk] || tk)} · ${esc(x.n)}`); return true; }
     const lv = window.gSimLive(gn, mid), apT = c.d.apT != null ? c.d.apT : c.d.v0;  // Hoje ao vivo (preço de agora), como no quadro
-    const xl = lv ? Object.assign({}, x, { v: lv.v, pct: apT > 0 ? (lv.v / apT - 1) * 100 : x.pct }) : x;
+    // ordens executadas hoje ao vivo (server._simw → prov): entram no topo das movimentações, marcadas como provisórias, com a hora
+    const pv = (lv && lv.prov || []).map(p => Object.assign({}, p, { x: `${p.h} · ${p.x}` }));
+    const xl = lv ? Object.assign({}, x, { v: lv.v, pct: apT > 0 ? (lv.v / apT - 1) * 100 : x.pct, mov: (x.mov || []).concat(pv), nmov: (x.nmov || 0) + pv.length }) : x;
     uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, nm: c.d.nm, src }, xl)) }); return true;
   }
   window.jgOpenSim = function (gn, mid, n, tk) {

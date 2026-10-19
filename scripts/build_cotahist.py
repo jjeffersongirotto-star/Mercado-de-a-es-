@@ -41,7 +41,7 @@ def lines(path):
 
 def rec(l):
     return {"d": l[2:10], "bdi": l[10:12], "cod": l[12:24].strip(), "tp": l[24:27], "c": int(l[108:121]) / 100,
-            "o": int(l[56:69]) / 100, "q": int(l[152:170]), "vol": int(l[170:188]) / 100, "fat": int(l[210:217]) or 1, "isin": l[230:242]}
+            "o": int(l[56:69]) / 100, "h": int(l[69:82]) / 100, "lo": int(l[82:95]) / 100, "q": int(l[152:170]), "vol": int(l[170:188]) / 100, "fat": int(l[210:217]) or 1, "isin": l[230:242]}
 
 years = sorted(int(f[10:14]) for f in os.listdir(ZD) if f.startswith("COTAHIST_A"))
 # ISIN atual de cada ticker (arquivo mais recente)
@@ -81,8 +81,8 @@ for y in years:
         if r["d"] < "19940701":
             continue
         prev = data[t].get(r["d"])
-        if prev is None or r["vol"] > prev[2]:
-            data[t][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"], r["fat"])
+        if prev is None or r["vol"] > prev[2]:  # máxima e mínima do dia: ordens com preço limite dos modelos (modelos.py → LO/HI)
+            data[t][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"], r["fat"], r["h"] / r["fat"], r["lo"] / r["fat"])
         last_day = max(last_day, r["d"])
 # dias depois do arquivo anual (arquivos diários)
 d0 = datetime.strptime(last_day, "%Y%m%d") + timedelta(days=1)
@@ -96,7 +96,7 @@ while d0.date() <= datetime.now().date():
                 for l in lines(p):
                     tk = want.get(l[230:242]) or (l[12:24].strip() if l[12:24].strip() in data else None)
                     if l[24:27] == "010" and ok_bdi(l) and tk:
-                        r = rec(l); data[tk][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"], r["fat"])
+                        r = rec(l); data[tk][r["d"]] = (r["c"] / r["fat"], r["q"], r["vol"], r["isin"], r["fat"], r["h"] / r["fat"], r["lo"] / r["fat"])
         except Exception as e:
             print("diário", d0.date(), e, file=sys.stderr)
     d0 += timedelta(days=1)
@@ -180,13 +180,14 @@ for t, days in data.items():
         n = min(NICE, key=lambda x: abs(math.log(max(r, 1 / r) / x)))
         if abs(math.log(max(r, 1 / r) / n)) > 0.25: continue
         spl.append((a, n if r > 1 else 1 / n, "TROCA DE ISIN" if days[a][3] != days[b][3] else "TROCA DE FATOR DE COTAÇÃO")); spl.sort()
-    adj = []
+    adj, hi, lo = [], [], []
     for d in keys:
         k = 1.0
         for dc, m, _ in spl:
             if d <= dc:
                 k *= m
         adj.append(round(days[d][0] / k, 4))
+        v = days[d]; hi.append(round(v[5] / k, 4) if len(v) > 6 and v[5] else adj[-1]); lo.append(round(v[6] / k, 4) if len(v) > 6 and v[6] else adj[-1])
     # proventos: B3 (recentes, ajustados por eventos posteriores) + Yahoo (anteriores)
     # conferência: salto diário > 50% sem evento correspondente
     flags = [(keys[i], round(adj[i] / adj[i - 1], 3)) for i in range(1, len(adj)) if adj[i - 1] > 0 and adj[i] > 0 and abs(math.log(adj[i] / adj[i - 1])) > math.log(1.5)]
@@ -214,7 +215,7 @@ for t, days in data.items():
     mk = sorted(mm)
     at = datetime.now().strftime("%d/%m/%Y")
     src = "B3 (COTAHIST)"
-    pay = {"d": {"t": tt, "c": adj, "vol": [round(days[d][2]) for d in keys], "div": [[a, b] for a, b, _ in divs], "source": src, "at": at},
+    pay = {"d": {"t": tt, "c": adj, "h": hi, "l": lo, "vol": [round(days[d][2]) for d in keys], "div": [[a, b] for a, b, _ in divs], "source": src, "at": at},
            "m": {"t": [mm[k_][0] for k_ in mk], "c": [mm[k_][1] for k_ in mk], "div": [[a, b] for a, b, _ in divs], "source": src, "at": at},
            "divs": divs, "splits": [[ts_of(dc), m, lab] for dc, m, lab in spl], "isin": my,
            "flags": [[ts_of(d), r] for d, r in flags]}

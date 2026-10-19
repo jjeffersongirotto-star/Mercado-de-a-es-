@@ -514,6 +514,21 @@ def test_adaptativo_aprende_sem_olhar_o_futuro():
     assert np.array_equal(D["AX"][:, :80], D2["AX"][:, :80]) and np.array_equal(D["AA"][:, :80], D2["AA"][:, :80])
 
 
+def test_ordem_com_preco_limite():
+    # compra com limite abaixo do preço: executa na semana em que a mínima toca, pelo limite; sem tocar, executa no fim do prazo (ORD_SEM)
+    sn = snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}})
+    lo = [0] * NW; lo[30] = -100  # AAA3: na semana 30 a mínima foi 10% abaixo do fechamento
+    sn["a"]["AAA3"].update(lo=lo, hi=[0] * NW, ol=[2] * NW, oh=[0] * NW); sn["a"]["BBB3"].update(lo=[0] * NW, hi=[0] * NW, ol=[0] * NW, oh=[0] * NW)
+    D = modelos.build(sn, cdi()); D["ODI"][:] = .05; modelos.ORD_ON = True  # limite 5% abaixo
+    i29 = 29; me = [i29, i29 + 8]; r = modelos.simulate(D, "hold", [0, 1], me, [1000.0, 0.0], [0.0, 0.0], rec=True)
+    cA = [m for m in r["mov"][0] if m["k"] == "compra"]; cB = [m for m in r["mov"][1] if m["k"] == "compra"]
+    assert cA[0]["p"] == 9.5 and cA[0]["d"] < D["w"][30] and "preço limite" in cA[0]["x"]  # dia da mínima, pelo limite
+    assert cB[0]["p"] == 10.0 and cB[0]["d"] == D["w"][i29 + modelos.ORD_SEM - 1]  # não tocou: fechamento na última semana do prazo
+    assert r["c"].tolist() == [1, 1]  # mesmas compras, só preço e dia mudam
+    modelos.ORD_ON = False; r0 = modelos.simulate(D, "hold", [0, 1], me, [1000.0, 0.0], [0.0, 0.0], rec=True); modelos.ORD_ON = True
+    assert [m["p"] for m in r0["mov"][0] if m["k"] == "compra"][0] == 10.0  # desligadas: no fechamento, como antes
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

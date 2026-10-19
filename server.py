@@ -341,12 +341,15 @@ def build():
             nm = {"nome": s.get("NOME"), "setor": s.get("SETOR")}
         if not nm.get("nome") and t in tv:
             nm = {"nome": tv[t]["m"].get("nome"), "setor": tv[t]["m"].get("setor"), "subsetor": tv[t]["m"].get("subsetor")}
-        if px_tv: var = (tv.get(t) or {}).get("m", {}).get("var")
+        dhl = {}
+        if px_tv:
+            tm = (tv.get(t) or {}).get("m", {}); var = tm.get("var")
+            dhl = {k: tm[k] for k in ("dh", "dl") if tm.get(k) is not None}  # máxima/mínima do dia (TradingView): ordens ao vivo dos modelos
         else:
             var = names.get(t, {}).get("var")
             if var is None and t in tv: var = tv[t]["m"].get("var")
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
-                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, **lucro_pl(fda.get(t)), **ex})
+                     "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, **lucro_pl(fda.get(t)), **ex, **dhl})
     rows.sort(key=lambda r: -((r["S"].get("tv") or {}).get("liq2m") or 0))
     now = datetime.now(timezone.utc)
     return {
@@ -390,7 +393,7 @@ def finalize(base, yf_store=None):
         if yf_store is not None:
             y = yf_store.get(r["ticker"])
             if y: S["yf"] = {k: x for k, x in y.items() if x is not None}
-        nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur")}
+        nr = {k: r.get(k) for k in ("ticker", "nome", "setor", "subsetor", "var", "cur", "dh", "dl") if k in r or k in ("ticker", "nome", "setor", "subsetor", "var", "cur")}
         if not isbr and r.get("ipo"): nr["ipo"] = r["ipo"]  # data de listagem no exterior (TradingView); no Brasil vem da B3 (metrics.ftd)
         nr["S"] = S
         if r.get("A"): nr["A"] = r["A"]
@@ -1237,6 +1240,7 @@ def api_modelos_simmov(body: dict):
         log.exception("modelos: movimentações do grupo simulação"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
+_PROV = {}  # (simulação, modelo, ticker, lado, dia) -> hora em que a execução ao vivo foi vista pela primeira vez
 def _simw(di, v0, f):
     """Grupo simulação com o preço de agora (widget e planilha): -> (resposta de erro ou None, dados do widget, contexto p/ movimentações).
     Valor atual = caixa + ações × preço de agora de /api/data; variação do dia pelo var; posições com preço médio (do simgrupo)."""
@@ -1257,18 +1261,36 @@ def _simw(di, v0, f):
     def live(t, pw):  # preço de agora e variação do dia (%); sem cotação: o da última semana da simulação, sem variação
         r = by.get(t) or {}; p = (r.get("v") or {}).get("preco")
         return (p, r.get("var")) if p else (pw, None)
+    hoje = datetime.now(TZ).date().isoformat(); agora = datetime.now(TZ).strftime("%H:%M")
     out = []
     for x in sg["m"]:
         if x.get("ref"): continue
-        tot, dia, pos = x["cash"], 0.0, []
-        for y in x.get("pos") or []:
+        cash, pa, prov = x["cash"], {y["t"]: dict(y) for y in x.get("pos") or []}, []
+        if sg["d1"] < hoje:  # ordens abertas da simulação × mínima/máxima de hoje (TradingView): executa ao vivo, provisória até o fechamento
+            for o in x.get("ord") or []:
+                r = by.get(o["t"]) or {}; dl, dh = r.get("dl"), r.get("dh")
+                if dl is None or dh is None: continue
+                if o["lado"] == "c" and dl <= o["lim"]:
+                    px = min(o["lim"], dh); q = int(o.get("r", 0) * (1 - modelos.CUSTO) // px) if px > 0 else 0
+                    if q < 1: continue
+                    cost = q * px / (1 - modelos.CUSTO); cash -= cost
+                    y = pa.setdefault(o["t"], {"t": o["t"], "q": 0, "inv": 0.0, "p": px}); y["q"] += q; y["inv"] = round(y["inv"] + cost, 2)
+                elif o["lado"] == "v" and dh >= o["lim"] and o["t"] in pa:
+                    px = max(o["lim"], dl); q = pa[o["t"]]["q"]; cost = q * px * (1 - modelos.CUSTO); cash += cost; pa.pop(o["t"])
+                else: continue
+                k = (di, v0, x["m"], o["t"], o["lado"], hoje); _PROV.setdefault(k, agora)  # hora em que o servidor viu primeiro
+                prov.append({"d": hoje, "h": _PROV[k], "k": "compra" if o["lado"] == "c" else "venda", "t": o["t"], "q": q, "p": round(px, 2), "v": round(cost, 2),
+                             "x": "ordem com preço limite · provisória (confirma no fechamento)"})
+            if len(_PROV) > 5000: _PROV.clear()
+        tot, dia, pos = cash, 0.0, []
+        for y in pa.values():
             t, q, inv = y["t"], y["q"], y["inv"]; p, var = live(t, y["p"]); val = q * p; tot += val
             if var is not None and var > -100: dia += val * var / (100 + var)
             pos.append({"t": t, "q": q, "inv": inv, "v": round(val, 2), "pm": y.get("pm")})
         pos.sort(key=lambda y: -y["v"])
         for y in pos: y["s"] = snapshots.nome_popular(y["t"], (by.get(y["t"]) or {}).get("nome"))
         out.append({"m": x["m"], "n": x["n"], "ap": sg.get("apT", sg["v0"]), "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
-                    "cash": x["cash"], "np": len(pos), "pos": pos, "ir": x.get("ir"), "c": x.get("c"), "s": x.get("s")})
+                    "cash": round(cash, 2), "np": len(pos), "pos": pos, "ir": x.get("ir"), "c": x.get("c"), "s": x.get("s"), **({"prov": prov} if prov else {})})
     out.sort(key=lambda y: -y["v"])
     return None, {"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out}, (D, tk, di, v0, ap, ex, ret, sg)
 

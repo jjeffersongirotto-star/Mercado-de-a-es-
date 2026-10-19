@@ -162,6 +162,26 @@ def set_metodos(D, rows):
     D["_mk"] = key; _C.clear()
 
 
+def _ord_ganho(D, k, compra):
+    """Ganho (log) de uma ordem com preço limite a k volatilidades, decidida na semana d, sobre comprar/vender no fechamento da semana
+    seguinte (como era antes): executa na 1ª semana d+1..d+ORD_SEM em que a mínima (compra) ou a máxima (venda) toca o limite, senão no
+    fechamento da última. -> matriz N × T (coluna d; NaN sem dados ou sem as semanas seguintes ainda)."""
+    C, Cf, LO, HI = D["C"], D["Cf"], D["LO"], D["HI"]; N, T = C.shape
+    with np.errstate(invalid="ignore", divide="ignore"):
+        f32 = np.float32; dd = np.clip(k * D["VW"], ORD_MIN, ORD_MAX).astype(f32)  # float32: pico de memória menor no plano gratuito
+        lim = Cf.astype(f32) * ((1 - dd) if compra else (1 + dd)); del dd
+        px = np.full((N, T), np.nan, f32); feito = np.zeros((N, T), bool)
+        for j in range(1, ORD_SEM + 1):
+            lo = LO[:, j:]; hi = HI[:, j:]; L = lim[:, :T - j]
+            toc = ~feito[:, :T - j] & ((lo <= L) if compra else (hi >= L))
+            px[:, :T - j] = np.where(toc, np.minimum(L, hi) if compra else np.maximum(L, lo), px[:, :T - j]); feito[:, :T - j] |= toc
+        del lim
+        px[:, :T - ORD_SEM] = np.where(feito[:, :T - ORD_SEM], px[:, :T - ORD_SEM], C[:, ORD_SEM:]); px[:, T - ORD_SEM:] = np.nan
+        m1 = np.full((N, T), np.nan, f32); m1[:, :T - 1] = C[:, 1:]
+        G = (np.log(m1 / px) if compra else np.log(px / m1)).astype(f32)
+    return G
+
+
 def _adp_x(D, i, NTc):
     """Exposição (0/1) de cada especialista de ADP na semana i, só com dados até a semana i -> matriz K × N."""
     N = D["C"].shape[0]; z = np.zeros(N, bool); g = lambda k: D[k][:, i] if k in D else z; LP = D["LP"][:, i]
@@ -188,12 +208,24 @@ def _adapt(D):
     NTc = np.cumsum(D["NT"], axis=1, dtype=np.float32) if "NT" in D else np.zeros((N, T), np.float32)
     DVg = np.nan_to_num(D["DV"]) + np.nan_to_num(D["JT"])
     S = np.zeros((len(ADP_CTX), K)); AX = np.zeros((N, T), np.float32); AA = np.zeros((N, T), np.uint8); AP = np.zeros((N, T), np.uint8)
+    tem_hl = "LO" in D and np.isfinite(D["LO"]).any()
+    GB = [_ord_ganho(D, k, True) for k in ORD_KS] if tem_hl else None; GS = [_ord_ganho(D, k, False) for k in ORD_KS] if tem_hl else None
+    SB, SS = np.zeros((len(ADP_CTX), len(ORD_KS))), np.zeros((len(ADP_CTX), len(ORD_KS))); dko = .5 ** (1 / ADP_MEIA)
+    ODc, ODv = D["ODI"].copy(), D["ODI"].copy(); CX = np.zeros((N, T), np.uint8)  # distância escolhida por ação/semana; cenário de cada semana
     from collections import deque
     nb = nh = 0; Xp = None; pre = np.arange(K) < ADP_PRECO; kn = ADP.index("noticias"); hn = deque(maxlen=5)
     for i in range(T):
         mi = D["MI"][i]; m = 0 if mi < MEDO else 2 if mi > 55 else 1
         ctx = (m * 2 + int(bool(queda[i]))) * 3 + setor
-        X = _adp_x(D, i, NTc)
+        X = _adp_x(D, i, NTc); CX[:, i] = ctx
+        if tem_hl and i >= ORD_SEM + 1:  # ordens decididas na semana d = i − ORD_SEM − 1 já venceram: aprende qual distância rendeu mais
+            d = i - ORD_SEM - 1; v = ~EK & np.isfinite(GB[0][:, d]); cx = CX[v, d]
+            if v.any():
+                cnt = np.bincount(cx, minlength=len(ADP_CTX))[:, None]
+                for M, G in ((SB, GB), (SS, GS)):
+                    M *= dko; M += np.array([np.bincount(cx, weights=np.nan_to_num(g[v, d]), minlength=len(ADP_CTX)) for g in G]).T / np.maximum(cnt, 1)
+            kb, ks = np.array(ORD_KS)[SB.argmax(axis=1)][ctx], np.array(ORD_KS)[SS.argmax(axis=1)][ctx]
+            ODc[:, i] = np.clip(kb * D["VW"][:, i], ORD_MIN, ORD_MAX); ODv[:, i] = np.clip(ks * D["VW"][:, i], ORD_MIN, ORD_MAX)
         if Xp is not None:  # aprende com a semana que acabou: exposições da semana anterior × resultado desta
             with np.errstate(invalid="ignore", divide="ignore"): r = (Cf[:, i] + DVg[:, i]) / Cf[:, i - 1] - 1
             ok = ~np.isnan(C[:, i]) & ~np.isnan(C[:, i - 1]) & np.isfinite(r) & ~EK; c = D["cdb"][i] - 1
@@ -212,9 +244,11 @@ def _adapt(D):
             v = np.isfinite(f) & ~EK; b = (hn[0] == 0) & v
             if b.any(): nb += int(b.sum()); nh += int((f[b] < np.median(f[v])).sum())
     W = np.exp(ADP_ETA * (S - S.max(axis=1, keepdims=True))); W /= W.sum(axis=1, keepdims=True)
-    D["AX"], D["AA"], D["AP"] = AX, AA, AP
+    D["AX"], D["AA"], D["AP"] = AX, AA, AP; D["ODc"], D["ODv"] = ODc, ODv
+    del GB, GS
     D["ADPS"] = {"ctx": [{"c": ADP_CTX[c], "top": [[_adp_nome(ADP[k]), round(100 * float(W[c, k]))] for k in np.argsort(-W[c])[:3]]} for c in range(len(ADP_CTX))],
-                 "news": {"n": nb, "acerto": round(100 * nh / nb, 1) if nb else None}}
+                 "news": {"n": nb, "acerto": round(100 * nh / nb, 1) if nb else None},
+                 "ordem": [{"c": ADP_CTX[c], "compra": ORD_KS[int(SB[c].argmax())], "venda": ORD_KS[int(SS[c].argmax())]} for c in range(len(ADP_CTX))] if tem_hl else []}
 
 
 def _adp_nome(k): return ADP_N.get(k) or MOD[k]["n"]
@@ -244,7 +278,7 @@ def set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 14       # versão das contas (14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 15       # versão das contas (15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -295,6 +329,16 @@ ADP_MEIA = 104    # meia-vida da memória do aprendizado (semanas): acertos anti
 ADP_ETA = 200.0   # o quanto o especialista que mais acertou no cenário ganha peso sobre os outros (testado: 8, 30, 80, 200; 200 rendeu mais)
 ADP_NOTA = 60     # especialista Qualidade: fica na ação com nota de qualidade a partir disto
 ADP_CTX = [f"{m} · {t} · {s}" for m in ("medo", "neutro", "ganância") for t in ("Ibovespa em alta", "Ibovespa em queda") for s in ("setor perene", "banco", "outros setores")]
+# Ordens com preço limite (como um investidor): a compra fica um pouco abaixo e a venda um pouco acima do preço do dia da decisão, a
+# distância = ORD_K × volatilidade semanal da ação (26 semanas, só dados até a decisão), entre ORD_MIN e ORD_MAX; executa no dia em que a
+# mínima (compra) ou a máxima (venda) do dia toca o limite; sem tocar em ORD_SEM semanas, executa no fechamento; o modelo mudou de
+# ideia: cancela. Não aumenta o número de compras e vendas (são as mesmas decisões, só o dia e o preço mudam)
+ORD_ON = False    # ordens com preço limite ligadas (desligadas: tudo no fechamento da semana, como antes)
+ORD_SEM = 4       # prazo da ordem (semanas): sem tocar o limite, executa no fechamento da última
+ORD_K = 0.5       # distância do limite em volatilidades semanais da ação
+ORD_MIN = .01     # distância mínima do limite (1%)
+ORD_MAX = .08     # distância máxima do limite (8%)
+ORD_KS = (0.0, 0.25, 0.5, 1.0)  # Adaptativo: distâncias (em volatilidades) que ele testa no histórico e escolhe por cenário
 HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
 FORTE_R12 = 100   # Análise técnica: entrada no rodízio só com alta de pelo menos 10% em 12 meses (×1000)
 # "lucro": só compra se o último balanço anual publicado teve lucro (fund.json); no teste 2006–2026 ajudou só estes dois modelos
@@ -455,6 +499,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     # preço e proventos em float64 (dinheiro); sinais em float32 (só comparações): metade da memória
     C, DV = arr(), arr()
     SI, M2, R12, P1, P3, VL = (arr(np.float32) for _ in range(6))  # VL: volume médio diário de 60 pregões (R$ mil; build_modelos → vl)
+    LO, HI = arr(np.float32), arr(np.float32); OL, OH = np.full((N, T), 255, np.uint8), np.full((N, T), 255, np.uint8)  # mín./máx. da semana
     LP = np.ones((N, T), bool); JC = np.zeros((N, T)); DT = {}  # JC: JCP por ação na semana; DT: tipos (J, D, R, K) dos proventos da B3
     SPL = {}  # desdobramentos/grupamentos de cada ação (snapshot modelos → sp): número de ações dos balanços na base dos preços
     for k, t in enumerate(tick):
@@ -463,6 +508,9 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
         for M, key in ((C, "c"), (SI, "si"), (M2, "m2"), (R12, "r12"), (P1, "p1"), (P3, "p3"), (VL, "vl")):
             v = a.get(key) or []
             M[k, i0:i0 + len(v)] = [np.nan if x is None else x for x in v]
+        for M, key, dt in ((LO, "lo", 0), (HI, "hi", 0), (OL, "ol", 1), (OH, "oh", 1)):
+            v = a.get(key) or []
+            M[k, i0:i0 + len(v)] = [(255 if x is None else min(254, x)) if dt else (np.nan if x is None else x) for x in v]
         DV[k, i0:] = 0
         lp = a.get("lp")
         if lp: LP[k, i0:i0 + len(lp)] = [x != 0 for x in lp]  # 0 = prejuízo no último balanço; sem balanço = liberado
@@ -484,6 +532,11 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     # híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições dos especialistas, pesadas pelo retorno de cada um nas últimas
     # HIB_SEM semanas (ação + proventos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte)
     Cf = pd.DataFrame(C.T).ffill().to_numpy().T
+    with np.errstate(invalid="ignore", divide="ignore"):  # mín./máx. da semana em R$ (vinham em ‰ do fechamento); distância das ordens com preço limite
+        LO = (C * (1 + LO / 1000)).astype(np.float32); HI = (C * (1 + HI / 1000)).astype(np.float32)
+        lr = np.log(pd.DataFrame(Cf.T)).diff()
+        VW = lr.rolling(26, min_periods=8).std().to_numpy(np.float32).T; del lr
+        ODI = np.clip(ORD_K * VW, ORD_MIN, ORD_MAX).astype(np.float32)
     HX, HA, HP = _hib(Cf, DV, cdb, [np.ones((N, T), bool), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0])
     G = np.full(T, np.nan)  # ouro (R$) no último dia com preço de cada semana
     if gold and gold.get("d"):
@@ -535,7 +588,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
             "EK": EK, "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -663,12 +716,12 @@ def _signal(D, mid, idx, i):
 
 # Arquivo do modelo (⬇ → Modelo (regras e código) na Previsão): parâmetros e funções de cada modelo; o texto vem do próprio código
 # (valor atual e comentário de cada parâmetro, fonte de cada função) e do painel ⓘ → Modelos da Previsão (server.api_modelos_ficha)
-FICHA_COMUM = (("CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
+FICHA_COMUM = (("ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
                ("_signals", "_signal", "motivo", "simulate", "Conta", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
 FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
          "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
          "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")),
-         "adapt": (("ADP", "ADP_N", "ADP_PRECO", "ADP_MEIA", "ADP_ETA", "ADP_NOTA", "HIB_COMPRA"), ("_adp_x", "_adapt")), "barsi": (("BARSI_DY", "BARSI_ANOS", "BARSI_CAIXA", "PERENE_TXT"), ("perene", "build", "_barsi_caixa")),
+         "adapt": (("ADP", "ADP_N", "ADP_PRECO", "ADP_MEIA", "ADP_ETA", "ADP_NOTA", "ORD_KS", "HIB_COMPRA"), ("_adp_x", "_ord_ganho", "_adapt")), "barsi": (("BARSI_DY", "BARSI_ANOS", "BARSI_CAIXA", "PERENE_TXT"), ("perene", "build", "_barsi_caixa")),
          **{m: (("METODO",), ("set_metodos", "_fund_mats")) for m in ("value", "growth", "garp", "fatores")}}
 
 
@@ -728,6 +781,36 @@ def motivo(D, mid, k, i):
         if mid == "garp": return f"PEG {br(-v, 2)}"
         return f"nota dos fatores {br(v, 2)}"
     return "sem sinal do método (sem valor de mercado)"
+
+
+class Ordens:
+    """Ordens com preço limite de várias ações ao mesmo tempo (ORD_*): cada lado guarda o preço de referência do dia da decisão e há quantas
+    semanas a ordem espera. lado(i, quer, P) -> (executa, preço, tocou): executa = tocou o limite na semana i ou venceu o prazo."""
+
+    def __init__(s, D, idx, lado, dist="ODI"):
+        s.D, s.idx, s.c, s.dk = D, np.asarray(idx, int), lado == "c", dist; n = len(s.idx)
+        s.ref, s.sem = np.full(n, np.nan), np.zeros(n)
+
+    def __call__(s, i, quer, P):
+        D, k = s.D, s.idx
+        if i == 0 or "LO" not in D or not ORD_ON: return quer, P, np.zeros(len(k), bool)
+        ref0 = D["Cf"][k, i - 1]; nova = quer & np.isnan(s.ref)
+        s.ref = np.where(nova, ref0, np.where(quer, s.ref, np.nan))
+        d = D[s.dk][k, i - 1]; lo, hi = D["LO"][k, i], D["HI"][k, i]
+        with np.errstate(invalid="ignore"):
+            if s.c: lim = s.ref * (1 - d); toc = quer & (lo <= lim); px = np.where(toc, np.minimum(lim, hi), P)
+            else: lim = s.ref * (1 + d); toc = quer & (hi >= lim); px = np.where(toc, np.maximum(lim, lo), P)
+        sem_dado = quer & (np.isnan(lo) | np.isnan(d))  # semana sem mínima/máxima: executa no fechamento (como antes)
+        vai = toc | sem_dado | (quer & (s.sem >= ORD_SEM - 1))
+        s.sem = np.where(quer & ~vai, s.sem + 1, 0); s.ref = np.where(vai, np.nan, s.ref)
+        return vai, np.where(toc, px, P), toc & ~sem_dado
+
+    def dia(s, i, q):
+        """data (AAAA-MM-DD) em que a ordem da ação q tocou o limite na semana i (dia da mínima/máxima)."""
+        o = int((s.D["OL"] if s.c else s.D["OH"])[s.idx[q], i])
+        if o >= 255: return s.D["w"][i]
+        from datetime import date, timedelta
+        return (date.fromisoformat(s.D["w"][i]) - timedelta(days=o)).isoformat()
 
 
 class Conta:
@@ -808,16 +891,17 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     st, k = np.nan_to_num(sig0, nan=0).astype(bool), np.full(n, 10 ** 6)
     lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None; vm = []; cj = np.zeros(n)  # cj: rendimento do CDB no mês
     meset = {w: j for j, w in enumerate(me)}
-    A.cash += ap[0]
+    A.cash += ap[0]; dc, dv = ("ODc", "ODv") if mid == "adapt" else ("ODI", "ODI")  # Adaptativo: distância aprendida por cenário
+    Oc, Ov = Ordens(D, idx, "c", dc), Ordens(D, idx, "v", dv)  # ordens com preço limite (compra e venda)
     mov = [[{"d": D["w"][s], "k": "aporte", "v": round(float(ap[0]), 2), "x": "valor inicial"}] for _ in range(n)] if rec else None
 
-    def log(sh0, i, P, x):  # rec: compras/vendas da semana (mudança no nº de ações), uma linha por empresa, com o motivo
+    def log(sh0, i, P, x, O=None, toc=None):  # rec: compras/vendas da semana (mudança no nº de ações), uma linha por empresa, com o motivo
         if not rec: return
         for q in np.flatnonzero(A.sh != sh0):
-            dq = A.sh[q] - sh0[q]; v = A.sh[q] * P[q] + A.cash[q]
-            mov[q].append({"d": D["w"][i], "k": "compra" if dq > 0 else "venda", "t": D["tick"][idx[q]], "q": int(abs(dq)), "p": round(float(P[q]), 2),
+            dq = A.sh[q] - sh0[q]; v = A.sh[q] * P[q] + A.cash[q]; lim = O is not None and toc[q]
+            mov[q].append({"d": O.dia(i, q) if lim else D["w"][i], "k": "compra" if dq > 0 else "venda", "t": D["tick"][idx[q]], "q": int(abs(dq)), "p": round(float(P[q]), 2),
                            "v": round(float(abs(dq) * P[q] / (1 - CUSTO) if dq > 0 else -dq * P[q] * (1 - CUSTO)), 2),
-                           "x": x if isinstance(x, str) else x(q), "pm": round(float(A.basis[q] / A.sh[q]), 2) if A.sh[q] > 0 else None,
+                           "x": (x if isinstance(x, str) else x(q)) + (f" · ordem com preço limite R$ {P[q]:.2f}".replace(".", ",") if lim else ""), "pm": round(float(A.basis[q] / A.sh[q]), 2) if A.sh[q] > 0 else None,
                            "pc": round(float(100 * A.sh[q] * P[q] / v), 1) if v > 0 else None})
     for i in range(s, e + 1):
         p = C[idx, i]; ok = ~np.isnan(p); lastp = np.where(ok, p, lastp); P = lastp
@@ -841,8 +925,9 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             want, buy = np.ones(n, bool), sig
         if mod.get("frac"):
             e = D[mod["x"]][idx, i - 1] if i > 0 else np.ones(n)
-        elif i > s:
-            sh0 = A.sh.copy(); A.sell(~want & (A.sh > 0) & ok, P); log(sh0, i, P, lambda q: "venda: " + motivo(D, mid, idx[q], i - 1))
+        elif i > s:  # venda com preço limite (executa no dia em que a máxima toca o limite, ou no fim do prazo)
+            vai, px, toc = Ov(i, ~want & (A.sh > 0) & ok, P)
+            sh0 = A.sh.copy(); A.sell(vai, px); log(sh0, i, px, lambda q: "venda: " + motivo(D, mid, idx[q], i - 1), Ov, toc)
         tax = 0
         j = meset.get(i)
         if j is not None and i > s:
@@ -856,13 +941,15 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         sh0 = A.sh.copy()
         if mod.get("frac"):
             V = A.sh * P + A.cash; falta = e * V - A.sh * P
-            A.buy(ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P, falta)  # só compra quando a diferença para o alvo é relevante
-        else:
-            A.buy(buy & ok, P)
+            vai, px, toc = Oc(i, ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P)  # só compra quando a diferença para o alvo é relevante
+            A.buy(vai, px, falta)
+        else:  # compra com preço limite: o dinheiro espera no CDB até a mínima do dia tocar o limite (ou o fim do prazo)
+            vai, px, toc = Oc(i, buy & ok & (A.cash * (1 - CUSTO) >= P), P)
+            A.buy(vai, px)
             if mid == "barsi" and i > 0:  # caixa acima de BARSI_CAIXA: compra mesmo acima do teto (a empresa tem teto e lucro)
                 ex = A.cash - BARSI_CAIXA * (A.sh * P + A.cash)
                 with np.errstate(invalid="ignore"): A.buy(ok & ~buy & np.isfinite(D["TETO"][idx, i - 1]) & D["LP"][idx, i - 1] & (ex > np.maximum(P, 100)), P, ex)
-        log(sh0, i, P, lambda q: "compra: " + motivo(D, mid, idx[q], i - 1))
+        log(sh0, i, px, lambda q: "compra: " + motivo(D, mid, idx[q], i - 1), Oc, toc)
         if j is not None: vm.append(A.sh * P + A.cash)
         if rec and j is not None:
             v = A.sh * P + A.cash
@@ -1138,7 +1225,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 7  # 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 8  # 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -1300,6 +1387,9 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
+    dc,dv=("ODc","ODv") if mid=="adapt" else ("ODI","ODI")  # Adaptativo: distância aprendida por cenário
+    Oc,Ov,Ov2=Ordens(D,idx,"c",dc),Ordens(D,idx,"v",dv),Ordens(D,idx,"v",dv)  # ordens com preço limite: compra, venda do modelo, venda ocasional
+    olim=lambda O,i,q,px,t: (O.dia(i,q) if t[q] else W[i], f" · ordem com preço limite R$ {px[q]:.2f}".replace(".",",") if t[q] else "")
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
         if i>s:
@@ -1324,19 +1414,19 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
         rel=(w==0)&(pend>0)
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa
         if sell and i>s:
-            out=(sh>0)&(w==0)&ok&(age>=mod['min'])
-            v=sh*P*(1-CUSTO);g=np.where(out,v-basis,0)
+            out,px,tc=Ov(i,(sh>0)&(w==0)&ok&(age>=mod['min']),P)  # venda com preço limite (máxima do dia) ou no fim do prazo
+            v=sh*px*(1-CUSTO);g=np.where(out,v-basis,0)
             if rec:
-                for q in np.flatnonzero(out): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":motivo})
-            cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
+                for q in np.flatnonzero(out): d_,x_=olim(Ov,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":motivo+x_})
+            cash+=(v*out).sum();msales+=(sh*px*out).sum();mgain+=g.sum();ns+=out.sum()
             sh=np.where(out,0,sh);basis=np.where(out,0,basis)
         if RG.get('venda') and not sell and i>s:  # venda ocasional dos modelos de segurar
-            mo=_venda(D,mid,idx,i,sh,basis,P,ok,age);out=mo!=""
+            mo=_venda(D,mid,idx,i,sh,basis,P,ok,age);out,px,tc=Ov2(i,mo!="",P)
             if out.any():
-                v=sh*P*(1-CUSTO);g=np.where(out,v-basis,0)
+                v=sh*px*(1-CUSTO);g=np.where(out,v-basis,0)
                 if rec:
-                    for q in np.flatnonzero(out): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":mo[q]})
-                cash+=(v*out).sum();msales+=(sh*P*out).sum();mgain+=g.sum();ns+=out.sum()
+                    for q in np.flatnonzero(out): d_,x_=olim(Ov2,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":mo[q]+x_})
+                cash+=(v*out).sum();msales+=(sh*px*out).sum();mgain+=g.sum();ns+=out.sum()
                 sh=np.where(out,0,sh);basis=np.where(out,0,basis);ban=np.where(out,VENDA["sem_recompra"],ban)
                 w=np.where(out,0,w);tw=w.sum();w=w/tw if tw>0 else w  # vendida não recebe o aporte da mesma semana
                 rel=out&(pend>0)
@@ -1372,16 +1462,17 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
         elif cash>0.005 and w.sum()>0:
             pend+=cash*w;cash=0.0
         if mid=='barsi' and j is not None and i>s: cash,pend=_barsi_caixa(D,idx,i,w,sh,P,ok,cash,pend,RG,ban)
-        m=ok&(P>0)&(pend>0)
+        m,px,tc=Oc(i,ok&(P>0)&(pend*(1-CUSTO)>=P),P)  # compra com preço limite: a reserva espera no CDB até a mínima do dia tocar o limite
         if m.any():
-            q=np.where(m,np.floor(pend*(1-CUSTO)/np.where(m,P,np.inf)+1e-9),0.0);m=q>=1
+            q=np.where(m,np.floor(pend*(1-CUSTO)/np.where(m,px,np.inf)+1e-9),0.0);m=q>=1
             if m.any():
-                cost=np.where(m,q*P/(1-CUSTO),0.0);new=m&(sh<=0);age=np.where(new,0,age)
+                cost=np.where(m,q*px/(1-CUSTO),0.0);new=m&(sh<=0);age=np.where(new,0,age)
                 if rec:
                     qn,po=_nota(D,idx,max(0,i-1)) if RG else (None,None)
                     for k in np.flatnonzero(m):
-                        e={"d":W[i],"k":"compra","t":nm[idx[k]],"q":int(q[k]),"p":round(float(P[k]),2),"v":round(float(cost[k]),2)}
+                        d_,x_=olim(Oc,i,k,px,tc);e={"d":d_,"k":"compra","t":nm[idx[k]],"q":int(q[k]),"p":round(float(px[k]),2),"v":round(float(cost[k]),2)}
                         if RG and _desc(qn[k],po[k]): e["x"]=_desc(qn[k],po[k])
+                        if x_: e["x"]=(e.get("x","") + x_).lstrip(" ·")
                         ev.append(e)
                 sh+=np.where(m,q,0);basis+=cost;pend=np.maximum(0,pend-cost);nb+=m.sum()
         if rec: _cdi(ev,W[i],cash+pend.sum()-b0)
@@ -1391,7 +1482,13 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     pos=[{"t":nm[idx[q]],"q":int(sh[q]),"p":round(float(L[q]),2),"pm":round(float(basis[q]/sh[q]),2),"v":round(float(sh[q]*L[q]),2),"inv":round(float(basis[q]),2),
           "pct":round(float(sh[q]*L[q]/basis[q]*100-100),2) if basis[q]>0 else None,"dv":round(float(dvt[q]),2)} for q in np.flatnonzero(sh>0)]
     pos.sort(key=lambda x:-x["v"])
-    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
+    # ordens abertas no fim (limite para a semana seguinte): o servidor confere ao vivo com a mínima/máxima de hoje (server._simw)
+    oa=[]
+    for O,ld in ((Oc,"c"),(Ov,"v"),(Ov2,"v")):
+        for q in np.flatnonzero(~np.isnan(O.ref)):
+            dd=float(D[O.dk][idx[q],e]);lim=O.ref[q]*((1-dd) if ld=="c" else (1+dd))
+            if np.isfinite(lim): oa.append({"t":nm[idx[q]],"lado":ld,"lim":round(float(lim),2),"sem":int(O.sem[q]),**({"r":round(float(pend[q]),2)} if ld=="c" else {"q":int(sh[q])})})
+    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev,"ord":oa,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
 
 
 def _rule(rows, m):
@@ -1459,7 +1556,7 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd)
         _mzput((key, m["id"]), h)  # todas as movimentações, comprimidas: páginas e histórico por empresa em simmov
         out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
-                         "cash": h["cash"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"])})
+                         "cash": h["cash"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"]), "ord": h.get("ord") or []})
     out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": pc(r["v"]) if r["v"] is not None else None, "ref": True} for r in _refs(D, me, aps, wd, apT)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
     _C[key] = out

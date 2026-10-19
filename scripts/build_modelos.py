@@ -48,6 +48,28 @@ def divs(out, t, idx, sub="history4"):
     return pd.DataFrame(M, index=idx, columns=["dv"] + [c for c, _ in TIPO])
 
 
+def hilo(out, t, c, W, weeks, sub="history4"):
+    """Mínima e máxima diárias de cada semana (ordens com preço limite: modelos.py → LO/HI) e quantos dias antes do fim da semana
+    elas aconteceram (dia da execução nas movimentações). Sem máxima/mínima no arquivo (antigos, Yahoo): vazio (executa no fechamento).
+    -> (lo, hi) em milésimos relativos ao fechamento da semana, (ol, oh) em dias; listas alinhadas a W."""
+    h = json.loads(gzip.decompress(open(os.path.join(out, sub, f"{t}.json.gz"), "rb").read())).get("d") or {}
+    if not h.get("h") or not h.get("l"): return [None] * len(W), [None] * len(W), [None] * len(W), [None] * len(W)  # sem máx./mín. reais: fechamento
+    idx = pd.to_datetime(h.get("t") or [], unit="s").normalize()
+    H = pd.Series(h["h"], index=idx, dtype="float64"); L = pd.Series(h["l"], index=idx, dtype="float64")
+    H, L = H[~H.index.duplicated()].reindex(c.index), L[~L.index.duplicated()].reindex(c.index)
+    H, L = H.fillna(c), L.fillna(c)
+    per = c.index.to_period("W-FRI"); wk = per.map(lambda p: weeks.get(p, pd.NaT))
+    df = pd.DataFrame({"h": H.to_numpy(), "l": L.to_numpy(), "d": c.index, "w": wk}).dropna(subset=["w"])
+    g = df.groupby("w")
+    lo, hi = g["l"].min(), g["h"].max()
+    dlo = df.loc[g["l"].idxmin().dropna().astype(int), ["w", "d"]].set_index("w")["d"] if len(df) else pd.Series(dtype="datetime64[ns]")
+    dhi = df.loc[g["h"].idxmax().dropna().astype(int), ["w", "d"]].set_index("w")["d"] if len(df) else pd.Series(dtype="datetime64[ns]")
+    cw = c.reindex(W, method="ffill", limit=10)
+    q = lambda s, r: [None if (x != x or y != y or not y) else int(round(1000 * (x / y - 1))) for x, y in zip(s.reindex(W), r)]
+    o = lambda s: [None if x is pd.NaT or x != x else int((w - x).days) for x, w in zip(s.reindex(W), W)]
+    return q(lo, cw), q(hi, cw), o(dlo), o(dhi)
+
+
 def features(c, v, dv, mi, mk):
     """Indicadores diários de uma ação (c, v: fechamento e volume; dv: proventos; mi: índice do mercado; mk: mercado acumulado)."""
     r = c.pct_change().where(lambda x: x.abs() < 0.5)
@@ -167,7 +189,7 @@ def main(out):
         if cw.notna().sum() < 2: continue
         dw = dd.groupby(dd.index.to_period("W-FRI")).sum()
         dw.index = dw.index.map(lambda p: weeks.get(p, pd.NaT)); dw = dw[dw.index.notna()].reindex(W).fillna(0)
-        series[t] = (cw, dw, X, splits(out, t, sub))
+        series[t] = (cw, dw, X, splits(out, t, sub), hilo(out, t, c, W, weeks, sub))
         print(f"  {t}: {len(c)} pregões ({time.time() - t0:.0f}s)", flush=True) if len(series) % 50 == 0 else None
     P = pd.concat(rows).sort_index()
     pred, acerto = {}, {}
@@ -176,7 +198,7 @@ def main(out):
         print(f"algoritmo {H} pregões: acerto {acerto[H]}% ({time.time() - t0:.0f}s)", flush=True)
     A = {}
     q = lambda s, k=1: [None if x != x else (int(round(x * k)) if k != 1 or float(x).is_integer() else round(float(x), 4)) for x in s]
-    for t, (cw, dw, X, sp) in series.items():
+    for t, (cw, dw, X, sp, hl) in series.items():
         i0 = int(np.argmax(cw.notna().to_numpy()))
         Xw = X.reindex(W, method="ffill", limit=10).iloc[i0:]
         a = {"i0": i0, "c": [None if x != x else round(float(x), 4) for x in cw.iloc[i0:]],
@@ -186,6 +208,7 @@ def main(out):
              "tp": {str(i - i0): "".join(c for c, x in zip(TC, r) if x > 0) for i, r in enumerate(dw[TC].to_numpy()) if i >= i0 and r.max() > 0},
              "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000), "lp": lucro(FD.get(t), W[i0:]), "vl": [None if x != x else int(round(x)) for x in Xw.vl]}
         if sp: a["sp"] = sp
+        a["lo"], a["hi"], a["ol"], a["oh"] = (x[i0:] for x in hl)  # mínima/máxima da semana (‰ do fechamento) e dias antes do fim da semana
         for H, k in zip(HS, ("p1", "p3")):
             p = pred[H].xs(t, level=1) if t in pred[H].index.get_level_values(1) else pd.Series(dtype=float)
             a[k] = q(p.reindex(W, method="ffill", limit=2).iloc[i0:], 1000)
