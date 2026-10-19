@@ -563,12 +563,10 @@ function ruleText() {
 // ---------- CSV ----------
 function exportCsv() {
   const fields = state.data.fields;
-  const q = (s) => { s = s == null ? '' : String(s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const head = ['Ticker', 'Empresa', 'Setor', 'Variação dia (%)', 'Confiança das fontes', 'Barato/Caro (%)', 'Valor justo (método)', ...fields.map(f => f.label + (f.unit === '%' ? ' (%)' : f.unit === '$' ? ` (${state.data.currency})` : ''))];
-  const lines = [head.map(q).join(';')];
-  const n = (v) => v == null ? '' : String(v).replace('.', ',');
-  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, n(r.var), r.S ? confTxt(r) : '', ...(f => f.why ? [f.lab, f.why] : [n(Math.round(f.pct * 10) / 10), f.m])(fairOf(r)), ...fields.map(f => n(val(r, f.key)))].map(q).join(';'));
-  saveFile('\ufeff' + lines.join('\r\n'), `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`, 'text/csv;charset=utf-8');
+  const lines = [head];
+  for (const r of state.filtered) lines.push([r.ticker, r.nome, r.setor, r.var, r.S ? confTxt(r) : '', ...(f => f.why ? [f.lab, f.why] : [Math.round(f.pct * 10) / 10, f.m])(fairOf(r)), ...fields.map(f => val(r, f.key))]);
+  saveCsv(lines, `screener_${state.country}_${state.source}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`);
 }
 
 // ---------- País e fonte ----------
