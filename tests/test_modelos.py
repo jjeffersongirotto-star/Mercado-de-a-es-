@@ -445,14 +445,27 @@ def test_noticias_fato_e_suposicao():
 
 
 def test_metodos_value_e_hibrido():
-    # valor justo de Graham = √(22,5 × 10 × 100) = 150: AAA3 vale 50 hoje (margem 67%) entra; BBB3 vale 1.000 (acima do justo) não
-    anos = list(range(2008, 2020)); f = {"y": anos, "ni": [10.0] * 12, "eq": [100.0] * 12, "rev": [50.0] * 12}
-    D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}}), cdi(), fund={"AAA3": f, "BBB3": f})
-    assert "VAL" not in D and not modelos._signal(D, "value", [0, 1], 60).any()  # sem valor de mercado: fora (dinheiro no CDB)
+    # valor justo de Graham = √(22,5 × 10 × 100) = 150: AAA3 (5 ações × R$ 10 = 50, margem 67%) entra; BBB3 (100 ações = 1.000) não
+    anos = list(range(2008, 2020)); f = lambda sh: {"y": anos, "ni": [10.0] * 12, "eq": [100.0] * 12, "rev": [50.0] * 12, "sh": [sh] * 12}
+    D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}}), cdi(), fund={"AAA3": f(5.0), "BBB3": f(100.0)})
+    assert "VAL" not in D and not modelos._signal(D, "value", [0, 1], 60).any()  # sem set_metodos: fora (dinheiro no CDB)
     modelos.set_metodos(D, [{"ticker": "AAA3", "v": {"valmerc": 50.0}}, {"ticker": "BBB3", "v": {"valmerc": 1000.0}}])
     assert list(modelos._signal(D, "value", [0, 1], 60)) == [True, False]
     assert D["HW"].shape[0] == len(modelos.HIB)  # híbrido estuda também os modelos de método
 
+
+def test_metodos_acoes_da_epoca():
+    # número de ações de cada balanço (CVM), não o de hoje: CCC3 tinha 5 ações até 2018 e emitiu até 100 em 2019 (diluição)
+    anos = list(range(2008, 2020)); sh = [5.0] * 11 + [100.0]
+    f = {"y": anos, "ni": [10.0] * 12, "eq": [100.0] * 12, "rev": [50.0] * 12, "sh": sh}
+    D = modelos.build(snap({"CCC3": {"c": 10.0}}), cdi(), fund={"CCC3": f})
+    modelos.set_metodos(D, [{"ticker": "CCC3", "v": {"valmerc": 1000.0}}])
+    w = D["w"]; i19, i20 = w.index(next(x for x in w if x >= "2020-02")), w.index(next(x for x in w if x >= "2020-06"))
+    assert bool(D["VAL"][0, i19]) and not D["VAL"][0, i20]  # antes do balanço de 2019 (maio/2020): barata; depois: cara
+    # desdobramento 2:1 depois do balanço: ações do balanço levadas à base dos preços de hoje (× 2)
+    sp = snap({"DDD3": {"c": 10.0}}); sp["a"]["DDD3"]["sp"] = [["2020-08-01", 2.0]]
+    D = modelos.build(sp, cdi(), fund={"DDD3": dict(f, sh=[5.0] * 12)})
+    assert D["FM"]["SHW"][0, i20] == 10.0
 
 def test_ficha_e_movimentacoes():
     # arquivo do modelo: todo modelo tem ficha; cada parâmetro citado existe e tem explicação (comentário no código)

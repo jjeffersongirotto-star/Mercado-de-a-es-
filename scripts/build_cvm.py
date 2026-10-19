@@ -31,6 +31,22 @@ def read(z, name, codes=None, cols=None):
     if codes is not None: df = df[df["CD_CONTA"].isin(codes)]
     return df
 
+def acoes(z, kind, year):
+    """Composição do capital da entrega (DFP/ITR) -> {cnpj: ações em circulação = total integralizado − tesouraria} (versão mais nova).
+    Fonte do número de ações de cada ano nos modelos (fund.json → sh): valor de mercado da época sem supor a base acionária de hoje."""
+    df = read(z, f"{kind}_cia_aberta_composicao_capital_{year}.csv")
+    if df.empty: return {}
+    col = lambda *ks: next((c for c in df.columns if all(k in c.upper() for k in ks)), None)
+    tot, tes = col("TOTAL", "INTEGR"), col("TOTAL", "TESOURO")
+    if not tot: return {}
+    df = df.assign(_v=pd.to_numeric(df.get("VERSAO"), errors="coerce").fillna(0)).sort_values("_v")
+    out = {}
+    for c, a, b in zip(df["CNPJ_CIA"], df[tot], df[tes] if tes else [None] * len(df)):
+        try: n = float(a) - (float(b) if b not in (None, "") and b == b else 0)
+        except (TypeError, ValueError): continue
+        if n > 0: out[c] = n  # a última versão (maior VERSAO) fica
+    return out
+
 def stmts(z, kind, year, stmt, codes):
     """con (consolidado) com fallback ind (individual) por empresa."""
     cols = ["CNPJ_CIA", "DT_REFER", "VERSAO", "ESCALA_MOEDA", "ORDEM_EXERC", "DT_INI_EXERC", "DT_FIM_EXERC", "CD_CONTA", "DS_CONTA", "VL_CONTA"]

@@ -26,6 +26,13 @@ TIPO = (("J", "JRS CAP PROPRIO"), ("D", "DIVIDENDO"), ("R", "RENDIMENTO"), ("K",
 TC = [c for c, _ in TIPO]
 
 
+def splits(out, t, sub="history4"):
+    """Desdobramentos/grupamentos/bonificações do arquivo de histórico [[último pregão antes (AAAA-MM-DD), fator]] (ajustado = bruto ÷
+    fatores dos eventos com data ≥ o pregão): modelos.py leva o número de ações de cada balanço (fund.json → sh) à base dos preços."""
+    h = json.loads(gzip.decompress(open(os.path.join(out, sub, f"{t}.json.gz"), "rb").read()))
+    return [[pd.Timestamp(x[0], unit="s").strftime("%Y-%m-%d"), round(float(x[1]), 6)] for x in h.get("splits") or [] if x[1]]
+
+
 def divs(out, t, idx, sub="history4"):
     """Proventos por pregão (data ex) do arquivo history4 da ação: total (dv) e quanto de cada tipo da B3 (J = JCP, D = dividendo,
     R = rendimento, K = restituição de capital; datas antigas vêm do Yahoo sem tipo)."""
@@ -151,7 +158,7 @@ def main(out):
         if cw.notna().sum() < 2: continue
         dw = dd.groupby(dd.index.to_period("W-FRI")).sum()
         dw.index = dw.index.map(lambda p: weeks.get(p, pd.NaT)); dw = dw[dw.index.notna()].reindex(W).fillna(0)
-        series[t] = (cw, dw, X)
+        series[t] = (cw, dw, X, splits(out, t, sub))
         print(f"  {t}: {len(c)} pregões ({time.time() - t0:.0f}s)", flush=True) if len(series) % 50 == 0 else None
     P = pd.concat(rows).sort_index()
     pred, acerto = {}, {}
@@ -160,7 +167,7 @@ def main(out):
         print(f"algoritmo {H} pregões: acerto {acerto[H]}% ({time.time() - t0:.0f}s)", flush=True)
     A = {}
     q = lambda s, k=1: [None if x != x else (int(round(x * k)) if k != 1 or float(x).is_integer() else round(float(x), 4)) for x in s]
-    for t, (cw, dw, X) in series.items():
+    for t, (cw, dw, X, sp) in series.items():
         i0 = int(np.argmax(cw.notna().to_numpy()))
         Xw = X.reindex(W, method="ffill", limit=10).iloc[i0:]
         a = {"i0": i0, "c": [None if x != x else round(float(x), 4) for x in cw.iloc[i0:]],
@@ -169,6 +176,7 @@ def main(out):
              "jc": {str(i - i0): round(float(x), 6) for i, x in enumerate(dw["J"].to_numpy()) if x > 0 and i >= i0},
              "tp": {str(i - i0): "".join(c for c, x in zip(TC, r) if x > 0) for i, r in enumerate(dw[TC].to_numpy()) if i >= i0 and r.max() > 0},
              "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000), "lp": lucro(FD.get(t), W[i0:]), "vl": [None if x != x else int(round(x)) for x in Xw.vl]}
+        if sp: a["sp"] = sp
         for H, k in zip(HS, ("p1", "p3")):
             p = pred[H].xs(t, level=1) if t in pred[H].index.get_level_values(1) else pd.Series(dtype=float)
             a[k] = q(p.reindex(W, method="ffill", limit=2).iloc[i0:], 1000)

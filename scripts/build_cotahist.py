@@ -216,10 +216,13 @@ print(f"COTAHIST: {ok} tickers gravados; último pregão {max(max(v) for v in da
 SPL = [2, 3, 4, 5, 8, 10, 20, 25, 50, 100, 1000]
 def split_adj(keys, days):
     """Preços ajustados de uma ação que saiu (sem a lista de eventos da B3): salto de preço do tamanho de um desdobramento/grupamento
-    comum, confirmado pela mudança inversa no número de ações negociadas (mediana de 10 pregões antes e depois)."""
-    c = [days[d][0] for d in keys]; q = [days[d][1] for d in keys]; f = [1.0] * len(c); k = 1.0
+    comum, confirmado pela mudança inversa no número de ações negociadas (mediana de 10 pregões antes e depois).
+    -> (preços ajustados, eventos [(último pregão antes, fator)] na convenção do history4: ajustado = bruto ÷ produto dos fatores
+    dos eventos com data ≥ o pregão; modelos.py usa os eventos para levar o número de ações de cada balanço à base de hoje)."""
+    c = [days[d][0] for d in keys]; q = [days[d][1] for d in keys]; f = [1.0] * len(c); k = 1.0; ev = []
     for i in range(len(c) - 1, 0, -1):
         f[i] = k
+        if i < len(c) - 1 and f[i] != f[i + 1]: ev.append((keys[i], f[i + 1] / f[i]))
         if c[i - 1] <= 0 or c[i] <= 0: continue
         r = c[i] / c[i - 1]
         if abs(math.log(r)) < math.log(1.8): continue
@@ -233,7 +236,8 @@ def split_adj(keys, days):
         if abs(math.log(r / m)) > 0.15: continue
         if qa > 0 and qb > 0 and abs(math.log(qa / qb * m)) < math.log(3): k *= m  # ações negociadas mudam no sentido inverso
     f[0] = k
-    return [round(x * y, 4) for x, y in zip(c, f)]
+    if len(c) > 1 and f[0] != f[1]: ev.append((keys[0], f[1] / f[0]))
+    return [round(x * y, 4) for x, y in zip(c, f)], sorted(ev)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modelos import REGRAS  # noqa: E402  (liquidez mínima dos modelos: só entram as que já tiveram esse volume)
@@ -246,8 +250,9 @@ for t, days in fora_b3.items():
     if len(keys) < 250: continue
     vol = [days[d][2] for d in keys]
     if max(sum(vol[i:i + 60]) / 60 for i in range(0, max(1, len(vol) - 59), 20)) < REGRAS["liq"]: continue
-    tt = [ts_of(d) for d in keys]; adj = split_adj(keys, days)
+    tt = [ts_of(d) for d in keys]; adj, spl = split_adj(keys, days)
     pay = {"d": {"t": tt, "c": adj, "vol": [round(v) for v in vol], "source": "B3 (COTAHIST)"}, "divs": [], "isin": days[keys[-1]][3],
+           "splits": [[ts_of(d), round(m, 6), "AJUSTE (preço)"] for d, m in spl],
            "saiu": f"{keys[-1][:4]}-{keys[-1][4:6]}-{keys[-1][6:]}"}
     with open(os.path.join(sd, t + ".json.gz"), "wb") as f:
         f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
