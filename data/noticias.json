@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-10-19T17:11:07+00:00",
+ "fetched_at": "2026-10-19T20:47:39+00:00",
  "temas": {
   "mercado": "Mercado",
   "barsi": "Luiz Barsi"
@@ -591,6 +591,323 @@
    "tf": [],
    "m": [
     "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa cede 0,17% com baixa forte em Petrobras e eleições no radar",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> Depois de subir logo após a abertura dos negócios, a bolsa local mudou de direção ainda no fim da manhã, diante da queda mais intensa das ações da Petrobras. Ao longo da tarde, o Ibovespa ainda chegou a oscilar…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/19/ibovespa-cede-017percent-com-baixa-forte-em-petrobras-e-eleicoes-no-radar.ghtml",
+   "img": "https://s2-valor.glbimg.com/jZ-lQub7SrhXjgtziwmujIb5R0g=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/V/Q/A5mGbKTCKeHFL6bJCGyA/foto03fin-201-crdcs-c6.jpg",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "ANPD pede que Meta esclareça denúncias de violações de contas em redes sociais na campanha eleitoral",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> Meta, empresa dona do Facebook, WhatsApp e Instagram, \"big tech\" Benoit Tessier/Reuters A Agência Nacional de Proteção de Dados (ANPD) notificou nesta segunda-feira (19) a Meta Platforms para que preste…",
+   "url": "https://valor.globo.com/politica/eleicoes-2026/noticia/2026/10/19/anpd-pede-que-meta-esclareca-denuncias-de-violacoes-de-contas-em-redes-sociais-na-campanha-eleitoral.ghtml",
+   "img": "https://s2-valor.glbimg.com/QcZnxRAnUd8bYOP3v_msXex0-GI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/q/y/i1gMPLSMSblbucvg2Xqg/2026-05-04t160810z-406096418-rc211fal39mf-rtrmadp-3-meta-lawsuit-new-mexico-trial-1-.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Juros futuros têm movimentos discretos com eleição acirrada às vésperas do 2° turno",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> Os juros futuros encerraram o pregão desta segunda-feira sem direção única e com movimentos discretos em toda a extensão da estrutura a termo da curva. Em um dia em que não trouxe eventos relevantes que alterassem a…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/19/juros-futuros-tem-movimentos-discretos-com-eleicao-acirrada-as-vesperas-do-2-turno.ghtml",
+   "img": "https://s2-valor.glbimg.com/AP6aOmr0zLwjMzcb5iZlvm5EGcA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/1/4/BcFPcpSiqig1HRdbApwA/foto30opin-201-col-op1-a18.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar à vista recua com ajuste de posições de olho no 2º turno da eleição",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> O dólar à vista exibiu desvalorização frente ao real, em uma sessão em que a moeda americana registrou força no exterior (ainda que outras divisas pares também estivessem resilientes). A manifestação de apoio ao…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/19/dolar-a-vista-recua-com-ajuste-de-posicoes-de-olho-no-2o-turno-da-eleicao.ghtml",
+   "img": "https://s2-valor.glbimg.com/h8M9uHVMjqytDk6F-enJjG3X4A8=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/p/y/tjvm4iQByI9VrMkviYeQ/005fev22.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Procuradoria do DF prorroga por 2 meses o prazo para avaliação dos danos do Banco Master no BRB",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A Procuradoria-Geral do Distrito Federal (PGDF) prorrogou por 90 dias o prazo de funcionamento da Comissão Especial de Recuperação de Ativos e Composição Consensual de Danos relacionados ao Banco de Brasília (BRB).…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/19/procuradoria-do-df-prorroga-por-2-meses-o-prazo-para-avaliao-dos-danos-do-banco-master-no-brb.ghtml",
+   "img": "https://s2-valor.glbimg.com/nJxiFG-VcjDcF9Ulg35EM6We7gE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/m/L/1SpBAAQI6YrRr1BUGMrQ/foto06fin-101-brb-c4.jpg",
+   "t": [
+    "BSLI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Campanha de Flávio quer pagamento do Bolsa Família por 24 meses a quem conseguir emprego",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A coordenadora do núcleo econômico da campanha do candidato à Presidência Flávio Bolsonaro (PL), Daniella Marques, disse hoje que, caso Flávio seja eleito, aumentará para dois anos o período de transição no programa…",
+   "url": "https://valor.globo.com/politica/eleicoes-2026/noticia/2026/10/19/campanha-de-flvio-quer-pagamento-do-bolsa-famlia-por-24-meses-a-quem-conseguir-emprego.ghtml",
+   "img": "https://s2-valor.glbimg.com/sChxajbdG4FfkvsefGVpZV8mMxc=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/R/6/dPxDazRvWER4GjI99iJA/foto08pol-111-tributa-a16.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Diretor da S&P Global alerta que empresas de tecnologia provavelmente têm mais dívidas relacionadas à IA do que comentam",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A agência de classificação de risco S&P Global estima que as maiores empresas de tecnologia do mundo provavelmente tenham mais passivos relacionados à inteligência artificial do que se sabe atualmente, embora seu…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/diretor-da-sp-global-alerta-que-empresas-de-tecnologia-provavelmente-tm-mais-dvidas-relacionadas-ia-do-que-comentam.ghtml",
+   "img": "https://s2-valor.glbimg.com/sUR95nTVoZBGMcOpKwuQrK0zmnU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/2/o/RAJMTyS3CSpgef2oniFg/john-adams-1xin4fmr78a-unsplash.jpg",
+   "t": [],
+   "tf": [
+    "us:SPGI"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Netflix e Globo anunciam acordo de licenciamento para exibir filmes, novelas e séries",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A Netflix anunciou nesta segunda-feira (19) um acordo de licenciamento no qual 18 obras originais da Globo, entre filmes, novelas e séries, estarão disponíveis na plataforma de streaming americana a partir de…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/netflix-e-globo-anunciam-acordo-de-licenciamento-para-exibir-filmes-novelas-e-series.ghtml",
+   "img": "https://s2-valor.glbimg.com/r3_nlbFIxUOhSL7q-FFOYKENUUY=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/u/X/seARuvTk6jU1d1ZdqLsw/1-destaques-eng-.png",
+   "t": [],
+   "tf": [
+    "us:NFLX"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Apple enfrenta novo pedido de indenização após veredicto histórico de patente de US$ 5,7 bi",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> Uma empresa de tecnologia que ganhou um veredicto histórico de US$ 5,7 bilhões por violação de patente contra a Apple pediu a um juiz federal que adicionasse mais indenizações e juros, expondo potencialmente a…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/apple-enfrenta-novo-pedido-de-indenizao-aps-veredicto-histrico-de-patente-de-us-57-bi.ghtml",
+   "img": "https://s2-valor.glbimg.com/PmDb_y7gbL1P8u9jMcDxYaWvjXU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/L/U/naN5EbRBylvkUaLoxf1Q/465644077.jpg",
+   "t": [],
+   "tf": [
+    "us:AAPL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ypê é destaque no ranking Merco Talento Brasil 2026",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> Às vésperas de completar 76 anos de história, em 6 de novembro, a Ypê, presente em 96,3% dos domicílios brasileiros, segundo o ranking Brand Footprint 2026, soma mais um reconhecimento à sua trajetória. A companhia…",
+   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/ype-e-destaque-no-ranking-merco-talento-brasil-2026-1.ghtml",
+   "img": "https://s2-valor.glbimg.com/3nemkSGFZcCtS2uSEkDFnPg51vM=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/E/v/dN0mb4SAWvcrATV7VxQg/publicador-api-valor-dino-100-8ef5676b-7b25-4fcd-a1e3-189ee426b8f3.jpeg-20261019160834",
+   "t": [
+    "AZZA3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Lumu integra solução ao CrowdStrike Falcon Next-Gen SIEM",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A Lumu, criadora do modelo de segurança Continuous Compromise Assessment®, anunciou uma nova integração com o CrowdStrike Falcon® Next-Gen SIEM. A integração incorpora os dados de comprometimento de rede…",
+   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/lumu-integra-solucao-ao-crowdstrike-falcon-nextgen-siem-1.ghtml",
+   "img": "https://s2-valor.glbimg.com/fue-D9T-MsghSp-2PziHIuwF1dE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/R/A/AOaGABT5K5cB9f0FYfLg/publicador-api-valor-dino-100-43c9ef4b-f77d-41f7-90e6-e31fc85bfea1.png-20261019155145",
+   "t": [],
+   "tf": [
+    "us:CRWD"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Itaú passa a permitir uso de pontos para pagamentos via Pix",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> O Itaú Unibanco anunciou nesta segunda-feira (19) que seus clientes poderão usar pontos para fazer pagamentos via Pix pelo aplicativo do banco. Com a novidade, o programa Pontos Itaú passa a oferecer mais uma opção…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/19/ita-passa-a-permitir-uso-de-pontos-para-pagamentos-via-pix.ghtml",
+   "img": "https://s2-valor.glbimg.com/UInKCTfbx6lK-oss2MA9t9wrW6k=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/d/k/RHrnQUS4G4y61WZGABmw/itau-sm2-1-1-.jpg",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Inter firma parceria com Data Hackers sobre dados e IA",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> O Inter anunciou uma parceria institucional com o Data Hackers, comunidade que se apresenta como o maior ecossistema de dados e inteligência artificial (IA) do Brasil, para estimular a troca de conhecimento técnico…",
+   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/inter-firma-parceria-com-data-hackers-sobre-dados-e-ia-1.ghtml",
+   "img": "https://s2-valor.glbimg.com/Gmq_CrZPVkP9z2szrOT2e4dhVoc=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/N/h/zfKj32R6yepzuBHc4xrA/publicador-api-valor-dino-100-358d8d9c-cc4b-41cd-8243-141d491b721d.jpg-20261019150709",
+   "t": [],
+   "tf": [
+    "us:INBR"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "BB cria ‘cofrinho’ de reinvestimento de dividendos e JCP",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> O Banco do Brasil criou uma ferramenta de reinvestimento de dividendos de ações e fundos imobiliários e de juros sobre capital próprio (JCP). Por meio do Cofrinho de Proventos, o investidor poderá ter os recursos…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/19/bb-cria-cofrinho-de-reinvestimento-de-dividendos-e-jcp.ghtml",
+   "img": "https://s2-valor.glbimg.com/wSsiDUq5rlAEDPlYC01skOz3qIw=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/h/y/EHO4JKRqyxqO3SUtazFg/439452971.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Tags de modelo white label crescem com bancos e marcas",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A presença de bancos e marcas no mercado brasileiro de tags está em expansão. Dados da Klavi indicam que tags ligadas a Nubank, Itaú, Inter, C6 e Sicoob somam cerca de 4,5% do valor movimentado no levantamento. Esse…",
+   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/tags-de-modelo-white-label-crescem-com-bancos-e-marcas-1.ghtml",
+   "img": "https://s2-valor.glbimg.com/5cg0LjYmF_Q1c6wjIX4RhdvS9HA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/2/A/U3DEhgRjilX0tiEPtWJQ/publicador-api-valor-dino-100-9a10672e-be0c-4f73-bb1e-22483119f60d.png-20261019144012",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [
+    "us:INBR",
+    "us:NU",
+    "us:ROXO"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Após Anthropic anunciar fundo ‘de benefício público’, Musk promete doar ações a crianças dos EUA",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A Anthropic, desenvolvedora do chatbot Claude, anunciou, no domingo (18), que destinará 5% de suas ações a um novo fundo de benefício público para facilitar doações em prol do “bem comum”. Na sequência, Elon Musk se…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/aps-anthropic-montar-fundo-de-benefcio-pblico-musk-promete-doar-aes-a-crianas-dos-eua.ghtml",
+   "img": "https://s2-valor.glbimg.com/CGlRT0LQdIWmJJIx79SuUP2xIPw=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/a/L/IZBs9CRlexrr1QTxOrxg/430970759.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "EUA aprovam Jemperli, da GSK, como imunoterapia para certos tipos de câncer retal",
+   "data": "2026-10-19",
+   "fonte": "Valor Econômico",
+   "resumo": "]]> A GSK informou que a Administração de Alimentos e Medicamentos dos Estados Unidos (FDA, na sigla em inglês) aprovou o Jemperli como imunoterapia para pacientes adultos com determinados tipos de câncer de reto.…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/eua-aprovam-jemperli-da-gsk-como-imunoterapia-para-certos-tipos-de-cncer-retal.ghtml",
+   "img": "https://s2-valor.glbimg.com/_ieMlBIkkCYAyHcLw1YXc8a7u7o=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/q/A/F9msAsT5KLHw8DFrlr2Q/403747894.jpg",
+   "t": [],
+   "tf": [
+    "gb:GSK"
+   ],
+   "m": [
+    "gb",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Automob (AMOB3): ações saltam 15% após divulgação de dados operacionais do 3º tri",
+   "data": "2026-10-19",
+   "fonte": "InfoMoney",
+   "resumo": "Concessionária Autostar, uma das adquiridas pela Automob (Crédito: Divulgação) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2024/12/Autostar_Nacoes-unidas.jpg?fit=907%2C605&quality=70&strip=all\"…",
+   "url": "https://www.infomoney.com.br/mercados/automob-amob3-acoes-saltam-apos-divulgacao-de-dados-operacionais-do-3o-tri/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2024/12/Autostar_Nacoes-unidas.jpg",
+   "t": [
+    "AMOB3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar hoje cai a R$ 5,04, reagindo a disputa eleitoral no Brasil e seguindo exterior",
+   "data": "2026-10-19",
+   "fonte": "InfoMoney",
+   "resumo": "Foto genérica de dólares \" data-image-caption=\" (Foto: Blogging Guide/Unsplash) \"…",
+   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-19102026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/blogging-guide-K5DY18hy5JQ-unsplash_red.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa fecha com leve queda, com olhos na eleição; dólar cai a R$ 5,04",
+   "data": "2026-10-19",
+   "fonte": "InfoMoney",
+   "resumo": "Índices nos EUA terminam mistos; apenas o Dow fecha negativo The post Ibovespa fecha com leve queda, com olhos na eleição; dólar cai a R$ 5,04 appeared first on InfoMoney .",
+   "url": "https://www.infomoney.com.br/mercados/ibovespa-hoje-bolsa-de-valores-ao-vivo-19102026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/08/Ibovespa-ao-vivo-7.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
    ]
   },
   {
