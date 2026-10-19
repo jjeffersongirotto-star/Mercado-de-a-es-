@@ -802,6 +802,8 @@ def api_returns(di: str, df: str):
         return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
     rows = universe.tradable(rows)
     tick = [r["ticker"] for r in rows]
+    E = ((snapshots.load("etfs", max_mem_age=6 * 3600)[0] or {}).get("e")) or {}
+    tick += [t for t, x in E.items() if not x.get("il")]  # ETFs líquidos (mesma regra das ações): Comparar e chat
     miss = [t for t in tick if t not in history._allc["d"]]
     if len(miss) > 20:
         if not _retw["busy"]:
@@ -961,6 +963,10 @@ def api_widget(t: str = "", v: int = 1):
     out = []
     for tk in want:
         r = by.get(tk)
+        e = None if r else ((snapshots.load("etfs", max_mem_age=3 * 3600)[0] or {}).get("e") or {}).get(tk)
+        if e:  # ETF (snapshot etfs, o mesmo da aba Mercado → ETFs): fechamento do último pregão; sem Barato/Caro nem Medo e Ganância
+            out.append({"t": tk, "n": e.get("f") or e.get("n"), "s": e.get("n"), "l": (logos.get(tk) or {}).get("f"), "p": e.get("p"), "v": e.get("v"),
+                        "f": None, "m": None, "x": "ETF", "g": None}); continue
         if not r:  # fora da B3: cotação da aba Mercado do país (TradingView, foreign_quotes); BDR que o site não mostra: só o logo
             q = fq.get(tk)
             if not q or ver < 2:  # app até 1.5 (sem v=2) mostraria o preço como R$: só logo e país
