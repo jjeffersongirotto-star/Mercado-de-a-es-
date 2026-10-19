@@ -355,6 +355,7 @@
   .gt-head { display: flex; align-items: center; gap: .3rem; padding: .45rem .55rem; background: rgb(30 41 59 / .7); cursor: pointer; user-select: none; }
   .gt-name { font-size: 12.5px; font-weight: 700; color: rgb(226 232 240); line-height: 1.15; flex: 1; min-width: 0; }
   .gt-fav .gt-name { color: rgb(250 204 21); }
+  .site-new { position: sticky; top: 0; z-index: 60; display: flex; align-items: center; justify-content: center; gap: .6rem; padding: .45rem .8rem; background: var(--c-amber); color: rgb(15 23 42); font-weight: 700; font-size: 13px; } .site-new .gbtn { min-height: 0; padding: .25rem .7rem; }
   .gt-grip { flex: none; height: 16px; cursor: ns-resize; touch-action: none; display: grid; place-items: center; } .gt-grip::before { content: ''; width: 44px; height: 4px; border-radius: 9999px; background: var(--bd); }
   .gt-grip:hover::before, .gt-grip.on::before { background: var(--c-amber); }
   .gt-n { font-size: 10.5px; color: rgb(148 163 184); }
@@ -776,7 +777,7 @@
 <h3>Exportar (CSV)</h3>
 <ol class="list-decimal pl-5"><li>Na aba Mercado, aplique a busca, os filtros e a ordenação que quiser.</li><li>Toque em ↓ CSV (no topo da lista).</li><li>O arquivo baixa com as ações filtradas e os indicadores (abre no Excel/Google Planilhas).</li></ol>
 <h3>Atualizar dados</h3>
-<ol class="list-decimal pl-5"><li>Toque no botão ⟳ (Atualizar) no topo.</li><li>O horário da última atualização aparece ao lado (horário de Brasília).</li><li>Os dados também se atualizam sozinhos a cada 30 minutos.</li></ol>
+<ol class="list-decimal pl-5"><li>Toque no botão ⟳ (Atualizar) no topo. Se saiu versão nova do site, ⟳ já recarrega com ela.</li><li>Versão nova do site: o site confere ao abrir, ao voltar ao app, a cada atualização dos dados e a cada 10 minutos; quando há, aparece no topo a faixa Nova versão do site disponível com Atualizar (volta na mesma aba e posição). No topo do ⓘ: versão do app instalado e data da versão do site.</li><li>O horário da última atualização aparece ao lado (horário de Brasília).</li><li>Os dados também se atualizam sozinhos a cada 30 minutos.</li></ol>
 <h3>Fontes e consenso</h3>
 <ol class="list-decimal pl-5"><li>No topo da aba Mercado, o seletor Fonte vem em Todos (consenso entre as fontes).</li><li>Escolha uma fonte (ex.: Status Invest) para ver só os valores dela; filtros e ordenação passam a usar esses valores.</li><li>Abra Status das fontes (abaixo dos filtros) para ver de onde e quando veio cada fonte.</li><li>Toque em um indicador do card para ver o valor de cada fonte; o botão ⓘ explica as regras e as cores.</li></ol>
 <h3>País</h3>
@@ -893,6 +894,7 @@
     <details class="icard"><summary>Prioridade dos dados da B3</summary><div class="ib"><ul>
       <li>Tudo que vem de arquivos/APIs oficiais da B3 tem prioridade máxima: em qualquer divergência com outra fonte, vale o valor da B3.</li>
       <li><b>Histórico de preços</b> das ações brasileiras: arquivos oficiais COTAHIST da B3 (fechamento diário do mercado à vista, lote padrão, desde 1994), agrupados pelo ISIN. Ajuste por desdobramento, grupamento e bonificação com os eventos oficiais da B3 (conferidos com o salto do preço); Yahoo só completa eventos antigos que a B3 não lista. Não usamos mais histórico do Yahoo para ações brasileiras (só para ações estrangeiras).</li>
+      <li><b>Cotação e variação do dia</b> (Brasil, em Todos): TradingView para todas as ações, com uns 15 minutos de atraso (Fundamentus e Status Invest só mudam a cotação depois do fechamento); se o TradingView não responder, todas voltam ao Fundamentus. Com uma fonte escolhida no topo, aparece a cotação dela.</li>
       <li><b>Proventos</b>: lista oficial da B3 (com tipo: dividendo, JCP, rendimento); datas anteriores à lista da B3 vêm do Yahoo (dividendos e JCP somados, valores brutos). Bonificação em ações = só os eventos que a B3 registra como BONIFICAÇÃO; DESDOBRAMENTO e GRUPAMENTO só ajustam quantidade e preço e não contam como provento.</li>
       <li><b>Confiança das fontes</b> (etiqueta no card e CSV): “% concordam” = parte dos indicadores do card em que as fontes concordam. Cada indicador vale 100% quando está normal, metade quando está laranja (maioria com divergência) e 0 quando está vermelho (sem maioria). Indicadores com EBIT (ROIC, EV/EBIT, P/EBIT, EV/EBITDA, Margem EBIT, Dív.Líq/EBIT) e o DY pesam metade, porque as fontes os calculam de jeitos diferentes (EBIT ajustado, janela dos proventos) e divergem com frequência sem erro; Cotação, Valor de mercado, Patrimônio líquido e Volume ficam fora (sempre concordam). Também ficam fora indicadores sem valor, com uma fonte só e os de bancos. Com uma fonte só na empresa aparece “1 fonte”.</li>
       <li><b>Empresas exibidas</b>: papel que não aparece negociado no COTAHIST nos últimos 90 dias é tratado como não negociado e sai da lista.</li>

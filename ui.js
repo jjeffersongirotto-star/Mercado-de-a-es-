@@ -227,23 +227,38 @@ window.verCmp = (a, b) => {
 };
 if (typeof module !== 'undefined') module.exports = { avgLastMonths: window.avgLastMonths, verCmp: window.verCmp };
 
-// Volta ao app: < 10 min fora não faz nada. >= 10 min: atualiza os dados em segundo plano mantendo aba, cards e rolagem;
-// só recarrega a página se saiu versão nova, e restaura aba + rolagem depois (sessionStorage).
+// Versão nova do site (mesmo endereço, outros ?v= nos scripts): confere ao abrir (dataload), ao voltar ao app, a cada atualização de
+// dados, no ⟳ e a cada 10 min com a tela aberta; achou -> faixa "Nova versão do site disponível · Atualizar" até atualizar.
+// Volta ao app depois de >= 10 min fora: também atualiza os dados em segundo plano mantendo aba, cards e rolagem.
+// Recarregar guarda a rolagem (sessionStorage) e a aba já fica no aparelho.
 if (typeof document !== 'undefined') (function () {
-  const mine = [...document.scripts].map(x => x.src).filter(x => x.includes('/static/')).join('|');
+  // scripts desta página: lidos na hora de conferir (quando o ui.js roda, os scripts depois dele ainda não existem)
+  const mine = () => [...document.scripts].map(x => x.src).filter(x => x.includes('/static/')).join('|');
   const RK = 'screenerB3.restore.v1';
   try { const r = JSON.parse(sessionStorage.getItem(RK) || 'null'); sessionStorage.removeItem(RK);
     if (r && Date.now() - r.at < 120000) { let n = 0; const go = () => { window.scrollTo(0, r.y); if (Math.abs(window.scrollY - r.y) > 5 && ++n < 40) setTimeout(go, 250); }; setTimeout(go, 300); } } catch (e) { }
+  let novo = false, last = 0;
+  const reload = () => { try { sessionStorage.setItem(RK, JSON.stringify({ y: window.scrollY, at: Date.now() })); } catch (e) { } location.reload(); };
+  const banner = () => { if (!document.getElementById('siteNew')) document.body.insertAdjacentHTML('afterbegin', '<div id="siteNew" class="site-new" role="status"><span>Nova versão do site disponível</span><button type="button" class="gbtn pri" data-sitenew>Atualizar</button></div>'); };
+  async function siteCheck(force) {
+    if (novo || document.readyState === 'loading' || (!force && Date.now() - last < 15000)) return novo; last = Date.now();
+    try {
+      const h = await (await fetch('/', { cache: 'no-store' })).text(); const vs = [...h.matchAll(/<script[^>]*\ssrc="(\/static\/[^"]+)"/g)].map(m => location.origin + m[1]).join('|');
+      if (vs && vs !== mine()) { novo = true; banner(); if (window.appVer) window.appVer(); }
+    } catch (e) { }
+    return novo;
+  }
+  Object.assign(window, { siteCheck, siteReload: reload, siteNovo: () => novo });
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-sitenew]')) reload(); });
+  document.addEventListener('dataload', () => siteCheck());
+  setInterval(() => { if (document.visibilityState === 'visible') siteCheck(); }, 10 * 60 * 1000);
   let hiddenAt = 0, busy = false;
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+    siteCheck(true);
     if (busy || !hiddenAt || Date.now() - hiddenAt < 10 * 60 * 1000) return; busy = true;
     const y = window.scrollY;
-    try {
-      const h = await (await fetch('/', { cache: 'no-store' })).text(); const vs = [...h.matchAll(/src="(\/static\/[^"]+)"/g)].map(m => location.origin + m[1]).join('|');
-      if (vs && mine && vs !== mine) { try { sessionStorage.setItem(RK, JSON.stringify({ y, at: Date.now() })); } catch (e) { } location.reload(); return; }
-      if (typeof window.load === 'function') { await window.load(); requestAnimationFrame(() => window.scrollTo(0, y)); }
-    } catch (e) { }
+    try { if (typeof window.load === 'function') { await window.load(); requestAnimationFrame(() => window.scrollTo(0, y)); } } catch (e) { }
     busy = false;
   });
 })();
@@ -256,14 +271,18 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   // O site confere /app/version.json ao abrir e ao voltar e oferece baixar pelo navegador (dl: mesmo APK fora deste endereço).
   const av = (navigator.userAgent.match(/JGInvestingApp\/([\d.]+)/) || [])[1];
   // dentro do app: topo do ⓘ diz a versão instalada e se é a mais recente (o Baixar APK do site mostra sempre a publicada)
+  // e, no site e no app, a versão do site (window.SITE_AT do servidor) ou o aviso de versão nova com Atualizar (window.siteCheck)
   const appVer = async () => {
-    const el = document.getElementById('appVer'); if (!el || !av) return;
-    try {
+    const el = document.getElementById('appVer'); if (!el) return;
+    let app = '';
+    if (av) try {
       const v = await (await fetch('/app/version.json?t=' + Date.now(), { cache: 'no-store' })).json();
       const nova = v && v.versionName && window.verCmp(v.versionName, av) > 0;
-      el.textContent = `App instalado: versão ${av}` + (nova ? ` · nova versão ${v.versionName} disponível: feche e abra o app para atualizar` : ' · é a mais recente');
-      el.classList.remove('hidden');
-    } catch (e) { }
+      app = `App instalado: versão ${av}` + (nova ? ` · nova versão ${v.versionName} disponível: feche e abra o app para atualizar` : ' · é a mais recente');
+    } catch (e) { app = `App instalado: versão ${av}`; }
+    const novo = window.siteCheck ? await window.siteCheck(true) : false;
+    const site = novo ? 'Site: nova versão disponível <button type="button" class="gbtn pri" data-sitenew>Atualizar</button>' : (window.SITE_AT ? `Site: atualizado em ${window.SITE_AT}` : '');
+    el.innerHTML = [app, site].filter(Boolean).join('<br>'); el.classList.toggle('hidden', !el.innerHTML);
   };
   window.appVer = appVer;  // app.js → infoOpen
   if (av && window.verCmp(av, '1.14') < 0) {

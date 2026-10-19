@@ -285,6 +285,9 @@ def build():
     except Exception as e:
         names = {}; status["brapi_nomes"] = f"falhou: {e}"
     tv, status["tradingview"] = load_tv("br")
+    # cotação e variação do dia no Brasil em "Todos": TradingView (~15 min de atraso) para TODAS as ações quando ele vem ao vivo
+    # (Fundamentus e Status Invest só mudam a cotação depois do fechamento); sem TradingView ao vivo, todas voltam ao de antes
+    px_tv = status["tradingview"].startswith("ao vivo")
     snaps = {}
     snapshots.invalidate()
     for sid, name in (("i10", "investidor10"), ("ddm", "dadosdemercado"), ("cvm", "cvm")):
@@ -338,8 +341,10 @@ def build():
             nm = {"nome": s.get("NOME"), "setor": s.get("SETOR")}
         if not nm.get("nome") and t in tv:
             nm = {"nome": tv[t]["m"].get("nome"), "setor": tv[t]["m"].get("setor"), "subsetor": tv[t]["m"].get("subsetor")}
-        var = names.get(t, {}).get("var")
-        if var is None and t in tv: var = tv[t]["m"].get("var")
+        if px_tv: var = (tv.get(t) or {}).get("m", {}).get("var")
+        else:
+            var = names.get(t, {}).get("var")
+            if var is None and t in tv: var = tv[t]["m"].get("var")
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
                      "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, **lucro_pl(fda.get(t)), **ex})
     rows.sort(key=lambda r: -((r["S"].get("tv") or {}).get("liq2m") or 0))
@@ -354,6 +359,7 @@ def build():
         "fields": [{"key": k, "label": l, "unit": u, "dir": d, "excludeNeg": e, "compared": c, **FIELD_EXTRA.get(k, {})}
                    for k, l, u, d, e, fc, sc, z, a, c in FIELDS],
         "counts": {"tickers": len(rows), "red_before": n_red},
+        "px_tv": px_tv,
         "rows": rows,
     }
 
@@ -401,6 +407,10 @@ def finalize(base, yf_store=None):
             mv = (MXB.get(r["ticker"]) or {}).get("vol") or {}
             nr["v"].update({k: mv.get(k) for k in VOL_PER})
             for k in VOL_PER: (nr.get("src") or {}).pop(k, None)
+        if isbr and base.get("px_tv"):  # cotação em "Todos": a do TradingView (build → px_tv), sem consenso; sem ela, "—"
+            nr["v"]["preco"] = ((r.get("S") or {}).get("tv") or {}).get("preco")
+            nr.setdefault("src", {})["preco"] = "tv"
+            for d_ in (nr.get("st"), nr.get("cm"), nr.get("ag")): (d_ or {}).pop("preco", None)
         if isbr:  # cadastro oficial da B3 completa nome/setor; sem nome ou sem nenhum fundamento, o papel sai
             cd = CAD.get(r["ticker"][:4])
             if cd and cd[1] in valor_justo.FAIR["barsi_seg"]: nr["seg"] = cd[1]  # Barato/Caro: Barsi pelo segmento oficial da B3
@@ -1352,7 +1362,8 @@ def _index_html():
         if os.path.exists(TW_CSS) and os.path.getsize(TW_CSS) > 1000 and not os.environ.get("TW_CDN"):  # TW_CDN=1 volta ao CDN
             h = re.sub(r'<script src="https://cdn\.tailwindcss\.com"></script>\s*<script src="/tailwind\.config\.js"></script>',
                        f'<link rel="stylesheet" href="/static/tw.css?v={_hash(TW_CSS)}">', h, count=1)
-        h = h.replace('<script src="/static/', f'<script>window.INDICES={json.dumps(history.INDICES, ensure_ascii=False)}</script><script src="/static/', 1)
+        at = datetime.fromtimestamp(max(key), timezone.utc).astimezone(TZ).strftime("%d/%m/%Y %H:%M")  # versão do site (ⓘ: "Site: atualizado em")
+        h = h.replace('<script src="/static/', f'<script>window.INDICES={json.dumps(history.INDICES, ensure_ascii=False)};window.SITE_AT="{at}"</script><script src="/static/', 1)
         h = h.replace('<span class="apk-v">atual</span>', f'<span class="apk-v">{apk_version()}</span>', 1)  # ⓘ → App Android
         _INDEX.update(key=key, html=h.encode("utf-8"))
     return _INDEX["html"]
