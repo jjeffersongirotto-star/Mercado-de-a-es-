@@ -1,22 +1,43 @@
 #!/usr/bin/env python3
-"""Notícias sobre Luiz Barsi para a aba Notícias -> OUT/noticias.json (fonte única da aba; o servidor só repassa o arquivo).
-Mantém os itens já publicados (resumos escritos à mão ficam como estão), acrescenta os novos do RSS do Bing Notícias
-(título com "Barsi", até DIAS dias) com a imagem de capa da própria página (og:image) e o resumo da página (og:description, curto),
-tira os links que deixaram de abrir (HTTP 404/410) e fica com os MAX mais recentes. ~20 pedidos por execução (rotina, bloco rápido).
-Uso: fetch_noticias.py OUT_DIR"""
-import html, json, os, re, sys, time
+"""Notícias da aba Notícias -> OUT/noticias.json (fonte única da aba e das notícias que os modelos leem; o servidor só repassa o arquivo).
+Dois temas, cada item com "tema":
+- "barsi": matérias sobre Luiz Barsi (RSS do Bing Notícias, título com "Barsi"), até MAX_BARSI, com imagem de capa (og:image) e
+  resumo da própria página; links que deixam de abrir (HTTP 404/410) saem.
+- "mercado": notícias de mercado em português das FONTES (RSS de cada uma; a que não responder fica de fora nesse dia; Bing
+  Notícias em português é a reserva), só as que citam empresas da B3 ou palavras de mercado (MERCADO_RX). Cada item ganha "t"
+  (tickers citados: código escrito no texto ou nome popular de nomes_populares.json), que os modelos da Previsão usam
+  (modelos.noticias_itens). Ficam as dos últimos DIAS dias, até MAX_MERCADO; marcos escolhidos à mão em noticias_marcos.json
+  (fatos importantes antes da coleta diária) entram sempre.
+Uso: fetch_noticias.py OUT_DIR   (rotina diária, bloco rápido; ~60 pedidos por execução)"""
+import html, json, os, re, sys, time, unicodedata
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from urllib.parse import parse_qs, urlparse
 import requests
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE); sys.path.insert(0, os.path.dirname(HERE))
 
-TEMA, MAX, DIAS = "Luiz Barsi", 10, 120
-RSS = "https://www.bing.com/news/search?q=%22Luiz+Barsi%22&format=rss&setlang=pt-BR&cc=BR"
+MAX_BARSI, MAX_MERCADO, DIAS, OG_MAX = 20, 300, 120, 40
+RSS_BARSI = "https://www.bing.com/news/search?q=%22Luiz+Barsi%22&format=rss&setlang=pt-BR&cc=BR"
+# Fontes de mercado (todas em português do Brasil): nome -> endereços do RSS, na ordem de tentativa
+FONTES_RSS = {
+    "Valor Econômico": ["https://pox.globo.com/rss/valor/", "https://valor.globo.com/rss/valor/"],
+    "InfoMoney": ["https://www.infomoney.com.br/mercados/feed/", "https://www.infomoney.com.br/feed/"],
+    "Reuters (Investing.com Brasil)": ["https://br.investing.com/rss/news_25.rss", "https://br.investing.com/rss/news.rss"],
+    "Exame": ["https://exame.com/invest/mercados/feed/", "https://exame.com/feed/"],
+    "Agência Brasil": ["https://agenciabrasil.ebc.com.br/rss/economia/feed.xml"],
+}
+RSS_RESERVA = "https://www.bing.com/news/search?q=Ibovespa+OR+%22a%C3%A7%C3%B5es%22+OR+B3&format=rss&setlang=pt-BR&cc=BR"
+MERCADO_RX = re.compile(r"\b(ibovespa|bolsa|b3|a[cç][aãoõ]es|a[cç][aã]o|selic|copom|d[oó]lar|infla[cç][aã]o|ipca|juros|dividendo|provento|jcp|"
+                        r"balan[cç]o|lucro|preju[ií]zo|trimestre|ipo|opa|recompra|fato relevante|cvm|mercado financeiro)\b", re.I)
+AMBIGUOS = set(json.load(open(os.path.join(os.path.dirname(HERE), "vocabulario.json"), encoding="utf-8"))["noticias"]["nomes_ambiguos"])  # nomes = palavras comuns
+TICKER_RX = re.compile(r"\b([A-Z]{4}(?:3|4|5|6|11))\b")
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36", "Accept-Language": "pt-BR,pt;q=0.9"}
 FONTES = {"estadao.com.br": "Estadão", "seudinheiro.com": "Seu Dinheiro", "infomoney.com.br": "InfoMoney", "exame.com": "Exame",
           "valor.globo.com": "Valor Econômico", "moneytimes.com.br": "Money Times", "einvestidor": "Estadão E-Investidor",
           "bpmoney.com.br": "BP Money", "suno.com.br": "Suno", "opetroleo.com.br": "O Petróleo", "cnnbrasil.com.br": "CNN Brasil",
-          "istoedinheiro.com.br": "IstoÉ Dinheiro", "forbes.com.br": "Forbes Brasil", "investnews.com.br": "InvestNews"}
+          "istoedinheiro.com.br": "IstoÉ Dinheiro", "forbes.com.br": "Forbes Brasil", "investnews.com.br": "InvestNews",
+          "investing.com": "Reuters (Investing.com Brasil)", "agenciabrasil.ebc.com.br": "Agência Brasil"}
 
 
 def get(url):
@@ -39,43 +60,130 @@ def fonte(url):
 
 
 def curto(t, n=220):
-    t = re.sub(r"\s+", " ", t or "").strip()
+    t = re.sub(r"<[^>]+>", " ", html.unescape(t or ""))
+    t = re.sub(r"\s+", " ", t).strip()
     return t if len(t) <= n else t[:n].rsplit(" ", 1)[0] + "…"
+
+
+def chave(t):
+    """título normalizado (sem acento, minúsculo, só letras e números): a mesma notícia em duas fontes entra uma vez só."""
+    t = unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", " ", t).strip()[:90]
+
+
+def itens_rss(texto):
+    """-> [(título, link, data UTC, resumo, imagem do RSS ou None)] de um RSS."""
+    out = []
+    for x in re.findall(r"<item\b.*?>(.*?)</item>", texto, re.S):
+        g = lambda tag: (lambda m: html.unescape(re.sub(r"^<!\[CDATA\[|\]\]>$", "", m.group(1).strip())).strip() if m else "")(re.search(rf"<{tag}\b[^>]*>(.*?)</{tag}>", x, re.S))
+        lk = g("link"); lk = (parse_qs(urlparse(lk).query).get("url") or [lk])[0]
+        try: dt = parsedate_to_datetime(g("pubDate"))
+        except Exception: continue
+        if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
+        im = re.search(r'<(?:media:content|media:thumbnail|enclosure)[^>]+url=["\']([^"\']+)', x)
+        out.append((curto(g("title"), 160), lk, dt, curto(g("description")), im.group(1) if im else None))
+    return out
+
+
+def empresas(rows, pop):
+    """-> (tickers da B3 do site, [(nome, ticker)]): nome popular e apelidos de nomes_populares.json (raiz de 4 letras da B3),
+    um ticker por empresa (o do universo do site); nomes que também são palavras comuns (AMBIGUOS: Vale, Rumo, Oi, Vivo…) só valem
+    com o ticker escrito no texto; nomes de até 4 letras (Itaú, WEG) só com a grafia exata."""
+    tk = {r["ticker"] for r in rows if re.fullmatch(r"[A-Z]{4}(3|4|5|6|11)", r.get("ticker") or "")}
+    por_raiz = {}
+    for r in rows:
+        t = r.get("ticker") or ""
+        if t in tk and (r.get("k1") or t[:4] not in por_raiz): por_raiz[t[:4]] = t
+    nomes = []
+    for raiz, t in por_raiz.items():
+        e = pop.get(raiz)
+        if not e: continue
+        for n in [e] if isinstance(e, str) else [e.get("n")] + list(e.get("aliases") or []):
+            if not n or n in AMBIGUOS: continue
+            nomes.append((n, t, len(n) <= 4))  # nome curto (Itaú, WEG): só com a grafia exata
+    nomes.sort(key=lambda x: -len(x[0]))
+    return tk, nomes
+
+
+def marcar(texto, tk, nomes):
+    """tickers da B3 citados no texto: código escrito (PETR4) ou nome popular (Petrobras, Itaú…), sem diferenciar maiúsculas."""
+    achou = {m for m in TICKER_RX.findall(texto or "") if m in tk}
+    low = (texto or "").lower()
+    for n, t, exato in nomes:
+        if re.search(r"(?<![\w])" + re.escape(n if exato else n.lower()) + r"(?![\w])", texto if exato else low): achou.add(t)
+    return sorted(achou)
 
 
 def main(out):
     p = os.path.join(out, "noticias.json")
     try: old = json.load(open(p, encoding="utf-8"))
     except Exception: old = {}
-    itens = old.get("itens") or []
-    ok = []
-    for it in itens:  # link morto sai; erro de rede ou bloqueio mantém
+    agora = datetime.now(timezone.utc)
+    velhos = old.get("itens") or []
+    for it in velhos: it.setdefault("tema", "barsi")  # itens de antes dos temas: eram todos do Barsi
+    # empresas do site (nomes e tickers) para marcar "t"
+    try:
+        from snaputil import APP_API
+        rows = (requests.get(APP_API, timeout=180).json() or {}).get("rows") or []
+    except Exception as e:
+        rows = []; print("noticias: sem /api/data (notícias ficam sem empresas):", type(e).__name__)
+    pop = json.load(open(os.path.join(os.path.dirname(HERE), "nomes_populares.json"), encoding="utf-8"))
+    tk, nomes = empresas(rows, pop)
+    # Barsi: como antes (link morto sai)
+    barsi = []
+    for it in [i for i in velhos if i["tema"] == "barsi"]:
         r = get(it["url"])
         if r is not None and r.status_code in (404, 410): continue
-        ok.append(it)
-    urls = {it["url"] for it in ok}
-    r = get(RSS); novos = 0
+        barsi.append(it)
+    urls = {it["url"] for it in velhos}; nb = 0
+    r = get(RSS_BARSI)
     if r is not None and r.status_code == 200:
-        agora = datetime.now(timezone.utc)
-        for x in re.findall(r"<item>(.*?)</item>", r.text, re.S):
-            g = lambda tag: (lambda m: html.unescape(m.group(1)).strip() if m else "")(re.search(rf"<{tag}>(.*?)</{tag}>", x, re.S))
-            tit, lk, pub = g("title"), g("link"), g("pubDate")
-            url = (parse_qs(urlparse(lk).query).get("url") or [lk])[0]
-            try: dt = parsedate_to_datetime(pub)
-            except Exception: continue
+        for tit, url, dt, desc, _ in itens_rss(r.text):
             if "barsi" not in tit.lower() or (agora - dt).days > DIAS or url in urls: continue
             pg = get(url)
             if pg is None or pg.status_code != 200: continue
             img = meta(pg.text, "og:image")
-            ok.append({"titulo": curto(meta(pg.text, "og:title") or tit, 160), "data": dt.date().isoformat(), "fonte": fonte(url),
-                       "resumo": curto(meta(pg.text, "og:description") or g("description")), "url": url,
-                       "img": img if img and img.startswith("https://") else None})
-            urls.add(url); novos += 1; time.sleep(1)
-    ok.sort(key=lambda it: it.get("data") or "0000", reverse=True)
-    data = {"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "tema": TEMA, "itens": ok[:MAX]}
+            barsi.append({"tema": "barsi", "titulo": curto(meta(pg.text, "og:title") or tit, 160), "data": dt.date().isoformat(), "fonte": fonte(url),
+                          "resumo": curto(meta(pg.text, "og:description") or desc), "url": url, "img": img if img and img.startswith("https://") else None})
+            urls.add(url); nb += 1; time.sleep(1)
+    # Mercado: fontes em português (+ reserva), só notícias de mercado
+    merc = [i for i in velhos if i["tema"] == "mercado" and not i.get("marco") and (agora.date() - datetime.fromisoformat(i["data"]).date()).days <= DIAS]
+    vistos = {chave(i["titulo"]) for i in merc} | {i["url"] for i in merc}
+    novos, og, por_fonte = [], 0, {}
+    feeds = [(n, u) for n, us in FONTES_RSS.items() for u in us] + [("Bing Notícias", RSS_RESERVA)]
+    ok_fonte = set()
+    for nome, u in feeds:
+        if nome in ok_fonte: continue  # já respondeu pelo endereço anterior
+        r = get(u)
+        if r is None or r.status_code != 200 or "<item" not in r.text: continue
+        ok_fonte.add(nome); n0 = len(novos)
+        for tit, url, dt, desc, img in itens_rss(r.text):
+            if (agora - dt).days > DIAS or url in vistos or chave(tit) in vistos: continue
+            texto = f"{tit}. {desc}"; t = marcar(texto, tk, nomes)
+            if not t and not MERCADO_RX.search(texto): continue  # fora do assunto mercado
+            novos.append({"tema": "mercado", "titulo": tit, "data": dt.date().isoformat(), "fonte": fonte(url) if nome == "Bing Notícias" else nome,
+                          "resumo": desc, "url": url, "img": img if img and img.startswith("https://") else None, "t": t})
+            vistos |= {url, chave(tit)}
+        por_fonte[nome] = len(novos) - n0
+    for it in novos:  # imagem e resumo da própria página, quando o RSS não traz (limite por execução)
+        if it["img"] or og >= OG_MAX: continue
+        pg = get(it["url"]); og += 1
+        if pg is not None and pg.status_code == 200:
+            img = meta(pg.text, "og:image"); it["img"] = img if img and img.startswith("https://") else None
+            it["resumo"] = it["resumo"] or curto(meta(pg.text, "og:description"))
+        time.sleep(0.5)
+    merc = sorted(merc + novos, key=lambda i: i["data"], reverse=True)[:MAX_MERCADO]
+    try: marcos = json.load(open(os.path.join(HERE, "noticias_marcos.json"), encoding="utf-8"))["itens"]
+    except Exception as e: marcos = []; print("noticias: sem marcos:", e)
+    for m in marcos:
+        m.update({"tema": "mercado", "marco": True}); m.setdefault("t", marcar(f"{m['titulo']}. {m.get('resumo', '')}", tk, nomes))
+    itens = sorted(barsi, key=lambda i: i.get("data") or "", reverse=True)[:MAX_BARSI] + merc + marcos
+    itens.sort(key=lambda i: i.get("data") or "0000", reverse=True)
+    data = {"fetched_at": agora.isoformat(timespec="seconds"), "temas": {"mercado": "Mercado", "barsi": "Luiz Barsi"},
+            "fontes": sorted(ok_fonte), "itens": itens}
     json.dump(data, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    print(f"noticias: {len(data['itens'])} itens ({novos} novos)")
-    return 0 if data["itens"] else 1
+    print(f"noticias: {len(itens)} itens (Barsi {nb} novos; mercado {len(novos)} novos: {por_fonte}; fontes que responderam: {sorted(ok_fonte)})")
+    return 0 if itens else 1
 
 
 if __name__ == "__main__":
