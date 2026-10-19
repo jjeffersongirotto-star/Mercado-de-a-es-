@@ -213,6 +213,11 @@ window.saveFile = function (text, name, type) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 };
+// CSV para Excel em português: separador ;, números com vírgula, BOM UTF-8. lines = linhas (listas de valores); números viram "1234,5".
+window.saveCsv = (lines, name) => {
+  const q = (s) => { s = s == null ? '' : typeof s === 'number' ? String(s).replace('.', ',') : String(s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  saveFile('\ufeff' + lines.map(l => l.map(q).join(';')).join('\r\n'), name, 'text/csv;charset=utf-8');
+};
 window.saveJSON = (obj, prefix) => saveFile(JSON.stringify(obj, null, 1), prefix + '-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json', 'application/json');
 // Nomes de versão comparados por número em cada parte ("1.10" > "1.9"; nunca como texto). Mesma regra de UpdateLogic.cmpName (app).
 window.verCmp = (a, b) => {

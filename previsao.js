@@ -402,8 +402,22 @@ if (typeof document !== 'undefined') {
     el('pvMod').innerHTML = o.map(([v, l]) => `<option value="${v}"${v === st.mod ? ' selected' : ''}>${esc(l)}</option>`).join('');
     el('pvModInfo').textContent = MM ? `Dados de ${dataBR(MM.ini)} a ${dataBR(MM.fim)}.` : '';
   }
-  el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; peek = null; st.pvt = multi() || st.mod === '*' ? 'des' : 'tab'; save(); applyMode(); compute(); });
+  el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; peek = null; des = null; modDl(); st.pvt = multi() || st.mod === '*' ? 'des' : 'tab'; save(); applyMode(); compute(); });
   el('pvModI').addEventListener('click', () => infoSection('Modelos da Previsão'));
+  // ⬇ planilha (.csv) do modelo escolhido (em Todos não aparece): o Desempenho e o mês a mês que estão na tela, nos mesmos valores
+  const modDl = () => el('pvModD').classList.toggle('hidden', !st.mod || isAll() || !des);
+  el('pvModD').addEventListener('click', () => {
+    if (!des) return;
+    const L = [[`Modelo: ${modName(st.mod)}`], [`Empresa: ${MULTI[st.ticker] || st.ticker}`, `Período: ${dataBR(des.ini)} a ${dataBR(des.fim)}`, `Aportado: ${brl.format(des.apT)}`], [],
+      ['Desempenho'], ['Tipo', 'Nome', 'Empresa', 'Valor final (R$)', 'Rendimento (%)', 'TIR anual (%)', 'Imposto (R$)', 'Compras', 'Vendas']];
+    for (const r of des.rows) L.push([r.k === 'g' ? 'Grupo (rodízio)' : r.k === 'r' ? 'Referência' : 'Modelo', r.k === 'g' ? `${modName(r.m)} · ${r.n}` : r.k === 'r' ? r.t : modName(r.m),
+      r.k === 'g' ? (r.t || []).join(', ') : r.k === 'r' ? '' : r.t, r.v, r.pct, r.ra, r.ir, r.c, r.s]);
+    if (rows.length && modRows) {
+      L.push([], [`Mês a mês: ${el('pvMode').textContent}`], ['Mês', 'Aporte (R$)', 'Aporte total (R$)', 'Retirada (R$)', 'Rentabilidade no mês (R$)', 'Proventos no mês (R$)', 'Imposto no mês (R$)', 'Patrimônio sem proventos (R$)', 'Patrimônio com proventos (R$)', 'No CDB (R$)', 'Posição']);
+      for (const x of rows) L.push([x.ym, x.ap, x.apT, x.w, x.rent, x.div, x.tax, x.sem, x.com, x.cdb, x.pos]);
+    }
+    saveCsv(L, `modelo_${st.mod}_${(MULTI[st.ticker] ? st.ticker : st.ticker || 'empresa').replace(/[^\w]/g, '')}_${new Date().toISOString().slice(0, 10)}.csv`);
+  });
   // Comparar → Modelos: tocar numa empresa abre aqui a simulação mês a mês (mesmo valor inicial, aporte e período)
   // abre com os valores do Comparar sem mudar o card Modelos nem a empresa da Previsão; "‹ Voltar ao Comparar" chama o.back
   window.pvOpen = (o) => {
@@ -474,7 +488,7 @@ if (typeof document !== 'undefined') {
     const b = modBody(); const G = typeof userGroups === 'function' ? userGroups() : [];
     try {
       const d = await post(Object.assign({ ticker: st.ticker, modelo: st.mod, grupos: G, fav: [...FAVS] }, b)); if (my !== seq) return;
-      des = d; perHtml(d); const emp = d.rows.filter(r => r.k === 'a');
+      des = d; perHtml(d); modDl(); const emp = d.rows.filter(r => r.k === 'a');
       if (!multi()) sel = sel && emp.some(r => r.t === sel.t && r.m === sel.m) ? sel : { t: st.ticker, m: st.mod === '*' ? emp[0]?.m : st.mod };
       else if (sel && !emp.some(r => r.t === sel.t && r.m === sel.m)) sel = null;
       el('pvDes').innerHTML = desHtml(d); loadTab();
