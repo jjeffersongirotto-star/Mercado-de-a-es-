@@ -10,6 +10,8 @@ Uso: fetch_b3_etfs.py lista|dados OUT_DIR"""
 import base64, gzip, json, os, re, sys, time, unicodedata
 from datetime import datetime, timezone
 import requests
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import universe  # noqa: E402  (mesma regra de ilíquido do site)
 
 UA = {"User-Agent": "Mozilla/5.0"}
 URL = "https://sistemaswebb3-listados.b3.com.br/fundsListedProxy/Search/GetListFunds/"
@@ -70,6 +72,7 @@ def dados(out):
         if len(c) < 2: continue
         x["p"] = c[-1]; x["v"] = round((c[-1] / c[-2] - 1) * 100, 2) if c[-2] else None; x["u"] = datetime.fromtimestamp(ts[-1], timezone.utc).strftime("%Y-%m-%d")
         x["vm"] = round(sum(v[-30:]) / len(v[-30:])) if v else None  # volume médio diário de 30 pregões (R$)
+        if universe.illiquid(x["vm"]): x["il"] = 1  # mesma regra das ações: some com "Só líquidos"
         dv = [b for a, b in (h.get("divs") or []) if a >= ts[-1] - 365 * 86400]
         x["dy"] = round(sum(dv) / c[-1] * 100, 2) if dv and c[-1] else 0.0  # proventos de 12 meses ÷ preço (%)
         for n in range(1, 6):  # rendimento só de preço em n anos (proventos à parte, em dy)
