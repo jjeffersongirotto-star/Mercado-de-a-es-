@@ -3,8 +3,8 @@ import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
 import fetch_noticias as F
 
-ROWS = [{"ticker": "PETR4", "k1": 1}, {"ticker": "PETR3"}, {"ticker": "VALE3", "k1": 1}, {"ticker": "ITUB4", "k1": 1}, {"ticker": "WEGE3", "k1": 1}]
-POP = {"PETR": "Petrobras", "VALE": "Vale", "ITUB": {"n": "Itaú", "aliases": ["itau unibanco"]}, "WEGE": "WEG"}
+ROWS = [{"ticker": "PSSA3", "k1": 1}, {"ticker": "PETR4", "k1": 1}, {"ticker": "PETR3"}, {"ticker": "VALE3", "k1": 1}, {"ticker": "ITUB4", "k1": 1}, {"ticker": "WEGE3", "k1": 1}]
+POP = {"PSSA": {"n": "Porto", "aliases": ["porto seguro"]}, "PETR": "Petrobras", "VALE": "Vale", "ITUB": {"n": "Itaú", "aliases": ["itau unibanco"]}, "WEGE": "WEG"}
 
 
 def test_empresas_citadas():
@@ -13,6 +13,7 @@ def test_empresas_citadas():
     assert m("Petrobras anuncia recompra") == ["PETR4"]  # um ticker por empresa (o do universo do site)
     assert m("Ação da Vale cai") == [] and m("VALE3 lidera alta") == ["VALE3"]  # nome que é palavra comum: só com o código
     assert m("Itaú tem lucro recorde") == ["ITUB4"] and m("o itaú caiu") == []  # nome curto: grafia exata
+    assert m("Atos em Porto Alegre") == [] and m("Porto Seguro tem lucro") == ["PSSA3"]  # "Porto" sozinho é palavra comum
     assert m("WEG e Petrobras sobem") == ["PETR4", "WEGE3"] and m("PETR3 sobe") == ["PETR3"]
 
 
