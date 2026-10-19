@@ -27,8 +27,8 @@ REF = [
     {"id": "cdb", "n": "CDB", "vende": False, "ref": True,
      "nota": "sem resgate no período: no resgate paga IR de 15% sobre o rendimento (aplicação acima de 2 anos)"},
     {"id": "ouro", "n": "Ouro", "vende": False, "ref": True, "nota": "ouro em reais, custo de 0,3% em cada compra; nunca vende"},
-    {"id": "ibov", "n": "Ibovespa", "vende": False, "ref": True, "nota": "pontos do índice (sem dividendos, como um fundo de índice sem reinvestir), custo de 0,3% em cada compra; nunca vende"},
-    {"id": "idiv", "n": "IDIV", "vende": False, "ref": True, "nota": "índice de dividendos da B3 (pontos do índice, série histórica da B3 desde 2005), custo de 0,3% em cada compra; nunca vende"},
+    {"id": "ibov", "n": "Ibovespa", "vende": False, "ref": True, "nota": "pontos do índice (retorno total: os proventos ficam reinvestidos no índice, como num fundo que acompanha o Ibovespa), custo de 0,3% em cada compra; nunca vende"},
+    {"id": "idiv", "n": "IDIV", "vende": False, "ref": True, "nota": "índice de dividendos da B3 (pontos do índice, retorno total: os proventos ficam reinvestidos; série histórica da B3 desde 2005), custo de 0,3% em cada compra; nunca vende"},
 ]
 REF_SERIE = {"ouro": "G", "ibov": "IB", "idiv": "IV"}  # série de preço de cada referência que compra cotas (CDB: rende o CDI)
 # base dos modelos = empresas listadas hoje: as que saíram da bolsa ou faliram no período não estão -> resultados longos ficam otimistas
@@ -364,9 +364,14 @@ def _saiu(D, idx, i):
     a = D["SAI"][idx]; return (a >= 0) & (i > a)
 
 
+SAIDA_TXT = (("FAL", "falência"), ("INCORPOR", "incorporada por outra empresa"), ("VOLUNT", "fechou o capital (OPA)"),
+             ("OFÍCIO", "registro cancelado pela CVM"), ("OFICIO", "registro cancelado pela CVM"), ("EXTIN", "empresa extinta"))  # motivo da CVM -> texto
+
+
 def _saiu_txt(D, k):
-    m = D.get("SAIX", {}).get(k) or ""
-    return f"saiu da bolsa ({m.lower()})" if m else "deixou de ser negociada (saída da bolsa ou troca de código)"
+    m = (D.get("SAIX", {}).get(k) or "").upper()
+    if not m: return "deixou de ser negociada (sem motivo registrado na CVM)"
+    return "saiu da bolsa: " + next((t for x, t in SAIDA_TXT if x in m), m.lower())
 
 
 def ready_groups(rows):

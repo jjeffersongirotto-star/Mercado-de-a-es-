@@ -21,7 +21,7 @@ def main(out, cache):
         old = json.load(open(path))
         age = time.time() - datetime.fromisoformat(old["fetched_at"]).timestamp()
         tem_dl = any("dl" in v for v in old["a"].values())  # snapshot antigo sem dívida ou sem as empresas que saíram: refaz
-        if age < WEEK and tem_dl and "saida" in old: print("fund: snapshot desta semana já existe"); return 0
+        if age < WEEK and tem_dl and "troca" in old: print("fund: snapshot desta semana já existe"); return 0
     except Exception:
         pass
     today = date.today()
@@ -33,8 +33,12 @@ def main(out, cache):
         pass
     # empresas que saíram da bolsa (history4_saiu, build_cotahist.py): CNPJ pelos FCA desde 2010 e motivo do cancelamento na CVM
     sd = os.path.join(out, "history4_saiu"); saiu = sorted(f[:-8] for f in os.listdir(sd)) if os.path.isdir(sd) else []
+    troca = {}  # código antigo -> código de hoje da MESMA companhia (troca de código ou de classe: não é saída da bolsa)
     if saiu:
         velho = tickers(cache, today.year, anos=today.year - 2009, ativos=False)
+        hoje = {}
+        for t, c in t2c.items(): hoje.setdefault(c, t)
+        troca = {t: hoje[velho[t]] for t in saiu if t in velho and velho[t] in hoje}
         t2c.update({t: velho[t] for t in saiu if t in velho and t not in t2c})
     try: canc = cancelamentos() if saiu else {}
     except Exception as e: canc = {}; print("fund: cadastro da CVM indisponível:", type(e).__name__)
@@ -70,8 +74,8 @@ def main(out, cache):
         A[t] = {"y": ys, "rev": [d[y].get("rev") for y in ys], "ni": [d[y]["ni"] for y in ys], "eq": [d[y]["eq"] for y in ys]}
         if any("dl" in d[y] for y in ys): A[t].update({"dl": [d[y].get("dl") for y in ys], "eb": [d[y].get("eb") for y in ys]})
     if not A: print("fund: nada montado", file=sys.stderr); return 1
-    saida = {t: canc.get(t2c.get(t), "") for t in saiu}  # motivo da saída ("" = registro não cancelado ou sem CNPJ: troca de código, etc.)
-    json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "fonte": "CVM (DFP, dados abertos)", "a": A, "saida": saida},
+    saida = {t: canc.get(t2c.get(t), "") for t in saiu if t not in troca}  # motivo da saída ("" = registro não cancelado ou sem CNPJ: troca de código, etc.)
+    json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "fonte": "CVM (DFP, dados abertos)", "a": A, "saida": saida, "troca": troca},
               open(path, "w"), separators=(",", ":"))
     print(f"fund: {len(A)} tickers, exercícios {ANO0}–{today.year - 1}, {os.path.getsize(path) / 1e6:.1f} MB")
     return 0

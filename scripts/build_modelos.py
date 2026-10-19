@@ -130,12 +130,13 @@ def main(out):
     weeks = C.index.to_series().groupby(C.index.to_period("W-FRI")).max()  # último pregão de cada semana
     weeks = weeks[weeks >= pd.Timestamp(START)]
     W = pd.DatetimeIndex(weeks.values)
-    try: FD = json.load(open(os.path.join(out, "fund.json")))["a"]  # fundamentos anuais (scripts/build_fund.py)
-    except Exception as e: FD = {}; print("modelos: sem fundamentos (fund.json):", e)
+    try: FJ = json.load(open(os.path.join(out, "fund.json"))); FD = FJ["a"]  # fundamentos anuais (scripts/build_fund.py)
+    except Exception as e: FJ, FD = {}, {}; print("modelos: sem fundamentos (fund.json):", e)
+    TROCA = FJ.get("troca") or {}  # código antigo da mesma companhia de hoje (troca de código/classe): não é saída da bolsa
     rows, series = [], {}
     for t, CC, VV, sub in [(t, C, V, "history4") for t in C.columns] + [(t, Cs, Vs, "history4_saiu") for t in Cs.columns]:
         c = CC[t].dropna()
-        if len(c) < 260 or (sub != "history4" and t in C.columns): continue
+        if len(c) < 260 or (sub != "history4" and (t in C.columns or t in TROCA)): continue
         v, dd = VV[t].reindex(c.index), divs(out, t, c.index, sub); dv = dd["dv"]
         X = features(c, v, dv, mi, mk)
         X["liq"] = (liq[t].reindex(c.index).fillna(False).astype(bool) if t in liq.columns else

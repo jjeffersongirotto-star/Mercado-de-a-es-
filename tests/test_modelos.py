@@ -410,7 +410,7 @@ def test_empresa_que_saiu_da_bolsa():
     me = months(D, "2020-02", "2021-12"); ap = [2000.0] + [100.0] * (len(me) - 1)
     h = modelos.grupo(D, "hold", [0, 1], me, ap, rec=True, RG={})[4]  # sem as regras: só a saída da bolsa vende
     vs = [e for e in h["mov"] if e["k"] == "venda" and e["t"] == "BBB3"]
-    assert len(vs) == 1 and vs[0]["d"] > W[k] and vs[0]["p"] == 1.0 and "falência" in vs[0]["x"], vs  # perda entra de verdade
+    assert len(vs) == 1 and vs[0]["d"] > W[k] and vs[0]["p"] == 1.0 and vs[0]["x"] == "saiu da bolsa: falência", vs  # perda entra de verdade
     assert not [e for e in h["mov"] if e["k"] == "compra" and e["t"] == "BBB3" and e["d"] >= W[k]]
     assert [p["t"] for p in h["pos"]] == ["AAA3"]
     r = modelos.simulate(D, "hold", [1], me, ap, [0.0] * len(me))
