@@ -21,7 +21,7 @@
         let d = null;
         for (let i = 0; i < 6; i++) { try { const r = await fetch('/api/modelos/simgrupo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(g.sim) }); d = await r.json(); if (r.status !== 202) break; } catch (e) { d = { error: 'Sem conexão.' }; break; } await new Promise(z => setTimeout(z, 5000)); }
         simLoad.delete(g.name);
-        if (d && !d.error && d.m) { SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); } else if (!ok) SIM[g.name] = { k: simK(g), day: '', err: (d && d.error) || 'Não foi possível simular agora.' };
+        if (d && !d.error && d.m) { SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); } else if (!ok) SIM[g.name] = { k: simK(g), day: d && d.pend ? today() : '', err: (d && d.error) || 'Não foi possível simular agora.' };  // começo depois dos dados: tenta de novo no dia seguinte
         window.gruposRefresh && gruposRefresh();
       })();
     }

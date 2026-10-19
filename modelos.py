@@ -531,10 +531,29 @@ def meta(D):
 
 
 def _span(D, di, df):
-    """Semanas de fim de mês entre di e df (AAAA-MM): mês 1 = fim de di."""
-    di = max(di, D["ini"]); ym = D["ym"]
-    me = [i for i in range(len(ym)) if D["me"][i] and di <= ym[i] <= df]
+    """Semanas de aporte entre di e df. AAAA-MM: fins de mês (mês 1 = fim de di). AAAA-MM-DD: 1ª semana dos dados a partir do dia
+    (valor inicial) + fins dos meses seguintes; df com dia termina na última semana até ele. Vazio: nenhuma semana a partir de di."""
+    ym, W, ME = D["ym"], D["w"], D["me"]
+    if len(di) > 7:
+        di = max(di, D["ini"] + "-01")
+        s = next((i for i in range(len(W)) if W[i] >= di), None)
+        if s is None: return []
+        me = [s] + [i for i in range(s + 1, len(ym)) if ME[i] and ym[i] > ym[s] and ym[i] <= df[:7]]
+    else:
+        di = max(di, D["ini"])
+        me = [i for i in range(len(ym)) if ME[i] and di <= ym[i] <= df[:7]]
+    if len(df) > 7 and me:
+        e = max((i for i in range(me[0], len(W)) if W[i] <= df), default=me[0])
+        me = [i for i in me if i <= e]
+        if e > me[-1]: me.append(e)
     return me
+
+
+def _curto(D, di):
+    """Mensagem quando não há semana para simular: começo depois dos dados (espera a próxima atualização) ou fora dos dados."""
+    if len(di) > 7 and di > D["w"][-1]:
+        return f"Começa a operar na primeira semana a partir de {di[8:10]}/{di[5:7]}/{di[:4]} (os dados dos modelos vão até {D['w'][-1][8:10]}/{D['w'][-1][5:7]}/{D['w'][-1][:4]}); o valor fica no CDB até lá."
+    return f"Período fora dos dados dos modelos ({D['ini']} a {D['fim']})."
 
 
 def pode(D, mid, idx):
@@ -943,7 +962,7 @@ def run(D, req):
     """Pedido da aba Previsão -> linhas do Desempenho (grupos primeiro) e, com tab, as linhas mensais de uma simulação."""
     di, df = str(req.get("di") or ""), str(req.get("df") or "")
     me = _span(D, di, df)
-    if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
+    if not me: return {"error": _curto(D, di)}
     ap = [max(0.0, float(x or 0)) for x in (req.get("ap") or [])][:len(me)]
     wd = [max(0.0, float(x or 0)) for x in (req.get("w") or [])][:len(me)]
     ap += [0.0] * (len(me) - len(ap)); wd += [0.0] * (len(me) - len(wd))
@@ -1320,7 +1339,10 @@ def sim_def(b):
     except Exception: ap = 0.0
     try: v0 = max(0.0, float(b.get("v0") or 0))
     except Exception: v0 = 0.0
-    return str(b.get("di") or "")[:7], v0, ap, rows(b.get("ex")), rows(b.get("ret"))
+    import re
+    di = str(b.get("di") or "")[:10]
+    if not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", di): di = di[:7]  # AAAA-MM (grupos antigos) ou AAAA-MM-DD
+    return di, v0, ap, rows(b.get("ex")), rows(b.get("ret"))
 
 
 def sim_flows(v0, ap, ex, ret, n):
@@ -1338,7 +1360,7 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
     dos dados (a mesma conta de grupo(), igual ao Comparar/Previsão com data final = hoje). Recalcula do início a cada versão dos dados
     (os preços antigos são ajustados por proventos e desdobramentos) e guarda o resultado em _C."""
     me = _span(D, di, D["fim"])
-    if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
+    if not me: return {"error": _curto(D, di), "pend": len(di) > 7 and di > D["w"][-1]}
     v0 = max(0.0, float(v0 or 0))
     if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
     aps, wd = sim_flows(v0, ap, list(ex), list(ret), len(me))
@@ -1348,7 +1370,7 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
     if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
     apT = sum(aps) - sum(wd)  # valor aportado: cresce com cada aporte, cai com cada retirada; rendimento sobre ele
     pc = lambda v: round((v / apT - 1) * 100, 2) if apT > 0 else None
-    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "ap": ap, "apT": round(apT, 2), "aviso": AVISO,
+    out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": di if len(di) > 7 else D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "ap": ap, "apT": round(apT, 2), "aviso": AVISO,
            "apS": round(sum(aps), 2), "wS": round(sum(wd), 2), "at": D["at"], "n": len(idx), "eng": ENGINE, "m": []}
     for m in MODELOS:
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd)
@@ -1382,7 +1404,7 @@ def sim_hist(D, tickers, di, v0, mid, ap=0.0, ex=(), ret=()):
     empresa), do cache comprimido _MZ; se saiu da memória, refaz só esse modelo."""
     if mid not in MOD or mid not in {m["id"] for m in MODELOS}: return {"error": "Modelo desconhecido."}
     me = _span(D, di, D["fim"]); v0 = max(0.0, float(v0 or 0))
-    if len(me) < 2 or v0 <= 0: return {"error": "Simulação inválida."}
+    if not me or v0 <= 0: return {"error": "Simulação inválida."}
     aps, wd = sim_flows(v0, ap, list(ex), list(ret), len(me))
     k = (_simkey(D, tickers, di, aps, wd), mid)
     if k not in _MZ:
@@ -1417,7 +1439,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     Comparar → Modelos e Previsão com o card Modelos em Todos (grupos: rodízio dos modelos que trocam de empresa).
     -> empresas usadas (com preço no início), lucro %, valor final, IR, compras/vendas por modelo × empresa, posições e resumos."""
     me = _span(D, di, df)
-    if len(me) < 2: return {"error": f"Período curto ou fora dos dados dos modelos ({D['ini']} a {D['fim']})."}
+    if not me: return {"error": _curto(D, di)}
     aps = ([max(0.0, float(x or 0)) for x in aps] + [0.0] * len(me))[:len(me)]
     wd = ([max(0.0, float(x or 0)) for x in (wd or [])] + [0.0] * len(me))[:len(me)]
     key = repr(("cmp", D["at"], tuple(tickers), di, df, aps, wd, tx, repr(grupos)))
