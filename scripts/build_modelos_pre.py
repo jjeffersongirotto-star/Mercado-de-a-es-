@@ -14,9 +14,7 @@ import history, modelos, snapshots, universe  # noqa: E402
 def main(out):
     t0 = time.time()
     snap = json.load(open(os.path.join(out, "modelos.json"), encoding="utf-8"))
-    try: gold = history.gold()
-    except Exception: gold = None
-    D = modelos.build(snap, history.bcb("cdi"), gold); del snap
+    D = modelos.build(snap, history.bcb("cdi"), **modelos.entradas()); del snap  # mesmas entradas do servidor (modelos.data)
     url = snapshots.APP_URL.rstrip("/")
     rows = []
     for i in range(12):  # site pode estar acordando

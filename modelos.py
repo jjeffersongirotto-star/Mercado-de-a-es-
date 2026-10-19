@@ -409,7 +409,21 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
             "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
-            "fp": hashlib.sha1(repr(snap.get("fetched_at")).encode() + cdb.tobytes() + np.nan_to_num(G, nan=-1.0).tobytes()).hexdigest()[:16]}
+            "fp": hashlib.sha1(repr((snap.get("fetched_at"), len(fund or {}), len(news or []), sorted(saida or {}))).encode() + cdb.tobytes()
+                               + np.nan_to_num(G, nan=-1.0).tobytes() + np.nan_to_num(IB, nan=-1.0).tobytes() + np.nan_to_num(IV, nan=-1.0).tobytes()).hexdigest()[:16]}
+
+
+def entradas():
+    """Tudo o que build usa além do snapshot `modelos` e do CDI (servidor e pré-cálculo do Comparar montam igual)."""
+    import snapshots, history
+    try: gold = history.gold()
+    except Exception: gold = None  # sem ouro: a referência Ouro mostra "—"
+    try: ibov = history.get("IBOV", "m")
+    except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
+    fj = (snapshots.load("fund")[0]) or {}  # balanços anuais: venda ocasional (REGRAS); saida: motivo da saída da bolsa
+    idiv = (((snapshots.load("b3_idx_hist")[0]) or {}).get("s") or {}).get("IDIV")  # referência IDIV (série da B3)
+    news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0])  # Fatos Relevantes da CVM + notícias com tickers
+    return {"gold": gold, "ibov": ibov, "fund": fj.get("a") or {}, "news": news, "saida": fj.get("saida"), "idiv": idiv}
 
 
 def data():
@@ -420,16 +434,10 @@ def data():
         snap = snapshots.load("modelos", max_mem_age=6 * 3600)[0]
         if not snap or not snap.get("a"): raise RuntimeError("sinais dos modelos ainda não calculados")
         if _D["key"] != snap.get("fetched_at") or _D["d"] is None:
-            try: gold = history.gold()
-            except Exception: gold = None  # sem ouro: a referência Ouro mostra "—"
-            try: ibov = history.get("IBOV", "m")
-            except Exception: ibov = None  # sem Ibovespa: a referência mostra "—"
-            fj = (snapshots.load("fund")[0]) or {}; fund = fj.get("a") or {}  # balanços anuais: venda ocasional (REGRAS); saida: motivo da saída da bolsa
-            idiv = (((snapshots.load("b3_idx_hist")[0]) or {}).get("s") or {}).get("IDIV")  # referência IDIV (série da B3)
-            news = noticias_itens(snapshots.load("fatos")[0], snapshots.load("noticias")[0])  # Fatos Relevantes da CVM + notícias com tickers
+            E = entradas()
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
-                _D["d"] = build(snap, history.bcb("cdi"), gold, ibov, fund, news, fj.get("saida"), idiv, consome=True); _D["key"] = snap.get("fetched_at")
+                _D["d"] = build(snap, history.bcb("cdi"), **E, consome=True); _D["key"] = snap.get("fetched_at")
         snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
