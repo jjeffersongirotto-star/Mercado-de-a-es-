@@ -93,11 +93,20 @@ def set_metodos(D, rows):
     key = (D.get("at"), tuple(sorted(vm)))
     if D.get("_mk") == key or "FM" not in D or "SHW" not in D["FM"]: return
     FM, Cf, N, T = D["FM"], D["Cf"], *D["C"].shape
-    SH = FM["SHW"]; F = np.where([t[-2:] == "11" for t in D["tick"]], np.nan, 1.0)  # fator da classe; UNIT fora de /api/data: sem sinal
+    # fator da classe e da escala: a CVM informa ações em unidades ou em milhares (varia por empresa) -> f perto de 1 ou de 1.000
+    SH = FM["SHW"]; F = np.full(N, np.nan); lo, hi_ = METODO["classe"]
     for t, v in vm.items():
         k = D["ix"][t]; q = SH[k][~np.isnan(SH[k])]
         if len(q) and Cf[k, -1] > 0:
-            f = v / (Cf[k, -1] * q[-1]); F[k] = f if METODO["classe"][0] <= f <= METODO["classe"][1] else np.nan  # fora da faixa: dado suspeito
+            f = v / (Cf[k, -1] * q[-1]); F[k] = f if lo <= f <= hi_ or lo <= f / 1000 <= hi_ else np.nan  # fora das faixas: dado suspeito
+    # sem /api/data (saiu da bolsa): escala pelo giro (volume diário ÷ valor de mercado) mais perto do giro mediano das empresas de hoje
+    with np.errstate(invalid="ignore", divide="ignore"):
+        gk = lambda k, f: np.nanmedian(D["VL"][k] / (Cf[k] * SH[k] * f)) if np.isfinite(D["VL"][k] / (Cf[k] * SH[k])).any() else np.nan
+        g0 = np.nanmedian([gk(k, F[k]) for k in np.flatnonzero(np.isfinite(F))] or [np.nan])
+        for k in np.flatnonzero(~np.isfinite(F)):
+            if D["tick"][k] in vm or D["tick"][k][-2:] == "11" or not np.isfinite(g0): continue  # UNIT sem /api/data: sem sinal
+            d = {f: abs(np.log(gk(k, f) / g0)) for f in (1.0, 1000.0)}; f = min(d, key=lambda x: d[x] if np.isfinite(d[x]) else np.inf)
+            if np.isfinite(d[f]) and d[f] < np.log(30): F[k] = f
     with np.errstate(invalid="ignore", divide="ignore"):
         C32 = Cf.astype(np.float32); MC = C32 * SH; MC *= F[:, None].astype(np.float32); NI, EQ, G1, G3 = FM["NIW"], FM["EQW"], FM["G1"], FM["G3"]
         PL = np.where((NI > 0) & (MC > 0), MC / NI, np.nan)
