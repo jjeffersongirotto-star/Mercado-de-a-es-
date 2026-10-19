@@ -59,7 +59,10 @@ const parseVal = (s) => { s = String(s ?? '').trim().replace(',', '.'); if (s ==
 const prefs = (() => {
   let p = {};
   try { p = JSON.parse(localStorage.getItem(LS_KEY) || 'null') || migratePrefs(JSON.parse(localStorage.getItem('screenerB3.filtros.v1') || '{}') || {}); } catch (e) { p = {}; }
-  return { order: p.order || [], fav: p.fav || {}, hidden: p.hidden || {}, values: p.values || {}, per: p.per || {},
+  // valores digitados só valem enquanto o site/app está aberto (sessionStorage): ao abrir de novo, filtros vazios (com filtro
+  // guardado a primeira carga ficava lenta); ordem, ☆, ocultos, período e painel aberto continuam no aparelho
+  let v = {}; try { v = JSON.parse(sessionStorage.getItem(LS_KEY) || '{}') || {}; } catch (e) { }
+  return { order: p.order || [], fav: p.fav || {}, hidden: p.hidden || {}, values: v, per: p.per || {},
            open: !!p.open, folderOpen: !!p.folderOpen };
 })();
 function migratePrefs(o) {  // v1: volumes e crescimento eram campos soltos (liquidez 2 meses digitada em R$; volumes em milhões)
@@ -75,7 +78,9 @@ function migratePrefs(o) {  // v1: volumes e crescimento eram campos soltos (liq
   }
   return p;
 }
-const savePrefs = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch (e) { /* modo privado */ } };
+const savePrefs = () => {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ ...prefs, values: {} })); sessionStorage.setItem(LS_KEY, JSON.stringify(prefs.values)); } catch (e) { /* modo privado */ }
+};
 
 const filterFields = () => state.data.fields.filter(f => hint(f));
 const groupFields = (g) => filterFields().filter(f => f.grp === g);
