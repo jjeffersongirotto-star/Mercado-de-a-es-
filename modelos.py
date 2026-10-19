@@ -18,6 +18,11 @@ MODELOS = [
     {"id": "alg1", "n": "Algoritmo 1 mês", "vende": True, "p": "p1", "min": 12},
     {"id": "alg3", "n": "Algoritmo 3 meses", "vende": True, "p": "p3", "min": 12, "lucro": True},
     {"id": "tendencia", "n": "Análise técnica", "vende": True, "min": 4, "lucro": True},
+    # métodos das matérias do painel ⓘ → Métodos de investimento → Para ler (regras em METODO; sinais em set_metodos)
+    {"id": "value", "n": "Value (Graham)", "vende": True, "min": 4, "sig": "VAL", "sc": "VALS", "mg": .10},
+    {"id": "growth", "n": "Growth (O'Neil)", "vende": True, "min": 4, "sig": "GRO", "sc": "GROS", "mg": .10},
+    {"id": "garp", "n": "GARP (PEG)", "vende": True, "min": 4, "sig": "GARP", "sc": "GARPS", "mg": .20},
+    {"id": "fatores", "n": "Fatores", "vende": True, "min": 4, "sig": "FAT", "sc": "FATS", "mg": .10},
     {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
     {"id": "barsi", "n": "Método Barsi", "vende": False, "lucro": True},
 ]
@@ -53,6 +58,74 @@ def perene(r, cad=None):
 besst = perene  # nome antigo
 
 
+def _hib(Cf, DV, cdb, X):
+    """Híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições X dos especialistas (ordem de HIB), pesadas pelo retorno de cada
+    um nas últimas HIB_SEM semanas (ação + proventos brutos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte).
+    -> (HX, HW: peso de cada especialista em %). float32 e nos mesmos arrays: pico de memória menor no plano gratuito."""
+    N, T = Cf.shape
+    rs = np.zeros((N, T), np.float32)
+    with np.errstate(invalid="ignore", divide="ignore"): rs[:, 1:] = np.nan_to_num((Cf[:, 1:] + np.nan_to_num(DV[:, 1:])) / Cf[:, :-1] - 1)
+    K = len(X); wt = np.zeros((K, N, T), np.float32); c = (cdb[1:] - 1).astype(np.float32)
+    for k in range(K):  # um especialista por vez: sem temporários do tamanho de K × ações × semanas
+        x = X[k].astype(np.float32); w = wt[k]
+        w[:, 1:] = np.log1p(x[:, :-1] * rs[:, 1:] + (1 - x[:, :-1]) * c[None, :])
+        np.cumsum(w, axis=1, out=w); w[:, HIB_SEM:] -= w[:, :-HIB_SEM].copy()
+    del rs
+    wt -= wt.max(axis=0, keepdims=True); wt *= HIB_ETA; np.exp(wt, out=wt); wt /= wt.sum(axis=0, keepdims=True)
+    HX = np.zeros((N, T), np.float32)
+    for k in range(K): HX += wt[k] * X[k]
+    HX = np.round(HX * 4) / 4
+    wt *= 100; np.round(wt, out=wt)
+    return HX, wt.astype(np.int16)
+
+
+def set_metodos(D, rows):
+    """Sinais dos modelos de método (METODO) com o valor de mercado de hoje (/api/data) levado a cada semana pelo preço; refaz o híbrido
+    com eles. Só recalcula quando muda a versão dos dados ou o conjunto de empresas com valor de mercado."""
+    import pandas as pd
+    vm = {r["ticker"]: (r.get("v") or {}).get("valmerc") for r in rows}
+    vm = {t: v for t, v in vm.items() if v and v > 0 and t in D["ix"]}
+    key = (D.get("at"), tuple(sorted(vm)))
+    if D.get("_mk") == key or "FM" not in D or "NIW" not in D["FM"]: return
+    FM, Cf, N, T = D["FM"], D["Cf"], *D["C"].shape
+    last = np.array([Cf[k, -1] for k in range(N)])
+    S = np.full(N, np.nan)
+    for t, v in vm.items(): k = D["ix"][t]; S[k] = v / last[k] if last[k] > 0 else np.nan
+    with np.errstate(invalid="ignore", divide="ignore"):
+        MC = (S[:, None] * Cf).astype(np.float32); NI, EQ, G1, G3 = FM["NIW"], FM["EQW"], FM["G1"], FM["G3"]
+        PL = np.where((NI > 0) & (MC > 0), MC / NI, np.nan)
+        VJ = np.sqrt(np.where((NI > 0) & (EQ > 0), 22.5 * NI * EQ, np.nan)); VALS = (1 - MC / VJ).astype(np.float32)  # margem sobre o justo
+        PEG = np.where(G3 > 0, PL / (100 * G3), np.nan).astype(np.float32)
+        hi = pd.DataFrame(Cf.T).rolling(52, min_periods=26).max().to_numpy().T
+        ib = pd.Series(D["IB"]); alta = (ib > ib.rolling(40, min_periods=20).mean()).to_numpy()
+        Q = FM["Q"]; M = METODO
+        ent = {"VAL": (VALS >= M["v_entra"]) & (Q >= M["v_nota"]), "GRO": (G1 >= M["g_ano"]) & (G3 >= M["g_3a"]) & (Cf >= (1 - M["g_max"]) * hi) & alta[None, :],
+               "GARP": (PEG > 0) & (PEG < M["p_entra"]) & (G3 >= M["p_cres"])}
+        sai = {"VAL": ~(VALS >= 0), "GRO": ~(G1 >= 0) | ~alta[None, :], "GARP": ~(PEG > 0) | (PEG > M["p_sai"]) | ~(G3 >= M["p_cres"] / 2)}
+        # fatores: posição (0–1) entre as empresas da semana em cada fator; média com pelo menos f_min fatores
+        rk = lambda A: pd.DataFrame(A).rank(axis=0, pct=True).to_numpy(np.float32)
+        rr = np.zeros((N, T), np.float32); rr[:, 1:] = Cf[:, 1:] / Cf[:, :-1] - 1
+        vol = np.where(np.isnan(Cf), np.nan, pd.DataFrame(rr.T).rolling(52, min_periods=26).std().to_numpy(np.float32).T)
+        F = np.stack([rk(np.where(MC > 0, NI / MC, np.nan)), rk(Q), rk(D["R12"]), rk(-vol)])
+        nf = (~np.isnan(F)).sum(axis=0)
+        with warnings.catch_warnings(): warnings.simplefilter("ignore"); FATS = np.where(nf >= M["f_min"], np.nanmean(F, axis=0), np.nan).astype(np.float32)
+        del F
+        ent["FAT"] = FATS >= M["f_entra"]; sai["FAT"] = ~(FATS >= M["f_sai"])
+    out = {}
+    for k in ent:  # estado com entrada e saída diferentes (não fica entrando e saindo na fronteira); Growth: stop sobre o preço de entrada
+        st = np.zeros(N, bool); pe = np.full(N, np.nan); X = np.zeros((N, T), bool); E_, S_ = ent[k], sai[k]
+        for i in range(T):
+            c = Cf[:, i]
+            out_ = S_[:, i] | np.isnan(c)
+            if k == "GRO": out_ |= c < (1 - M["g_stop"]) * pe
+            new = ~st & E_[:, i]; st = np.where(st, ~out_, E_[:, i]); pe = np.where(new, c, np.where(st, pe, np.nan)); X[:, i] = st
+        out[k] = X
+    D.update(out); D.update({"VALS": VALS, "GROS": G1.astype(np.float32), "GARPS": (-PEG).astype(np.float32), "FATS": FATS})
+    hx = [np.ones((N, T), bool), D["FAV"]["p1"], D["FAV"]["p3"], np.nan_to_num(D["M2"]) > 0, out["VAL"], out["GRO"], out["GARP"], out["FAT"]]
+    D["HX"], D["HW"] = _hib(Cf, D["DV"] + D["JT"], D["cdb"], hx)
+    D["_mk"] = key; _C.clear()
+
+
 def set_setores(D, rows, cad=None):
     """Marca as empresas de setor perene nas matrizes (fora delas o Método Barsi fica "fora do método")."""
     bs = {r["ticker"] for r in rows if perene(r, cad)}
@@ -66,8 +139,9 @@ def set_setores(D, rows, cad=None):
             n = FM["TEM"][m].sum(axis=0); sh = np.where(n >= 3, FM["PREJ"][m].sum(axis=0) / np.maximum(n, 1), 0)
             CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
+    set_metodos(D, rows)
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 9        # versão das contas (9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 10       # versão das contas (10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -93,7 +167,17 @@ TROCA_SEM = 12     # rodízio: semanas mínimas na empresa antes de trocar por o
 # rodízio: grupos prontos (nome, subsetor, quantas maiores por valor de mercado) + os grupos do usuário (aba Grupos)
 GRUPOS = [("5 maiores bancos", r"^Bancos", 5), ("5 maiores de energia elétrica", r"^Energia Elétrica", 5), ("10 maiores da B3", None, 10)]
 # Híbrido: especialistas (exposição de cada um) e peso pelo acerto recente na própria ação (painel ⓘ → Modelos da Previsão)
-HIB = ("hold", "alg1", "alg3", "media200")
+HIB = ("hold", "alg1", "alg3", "media200", "value", "growth", "garp", "fatores")  # os 4 últimos entram com set_metodos
+# Modelos de método (matérias do ⓘ → Métodos de investimento → Para ler), com o valor de mercado da época = valor de mercado de hoje
+# (/api/data) × preço da época ÷ preço de hoje (sem o número de ações de cada ano; empresas que saíram da bolsa ficam de fora):
+# value: compra com margem ≥ 'v_entra' sobre o valor justo de Graham √(22,5 × lucro × patrimônio) e nota ≥ 'v_nota'; vende acima do justo
+# growth (CAN SLIM simplificado): lucro do ano ≥ +'g_ano' e média de 3 anos ≥ +'g_3a', preço até 'g_max' abaixo da máxima de 52 semanas
+#   e Ibovespa acima da média de 40 semanas; vende com perda de 'g_stop' sobre o preço de entrada, lucro caindo ou mercado em baixa
+# garp: PEG = P/L ÷ crescimento médio do lucro em 3 anos (%) abaixo de 'p_entra' (crescimento ≥ 'p_cres'); vende com PEG acima de 'p_sai'
+# fatores: média das posições (0–1) em valor (lucro ÷ valor de mercado), qualidade (nota), momentum (alta em 12 meses) e baixa
+#   volatilidade (52 semanas); compra a partir de 'f_entra', vende abaixo de 'f_sai'
+METODO = {"v_entra": .25, "v_nota": 50, "g_ano": .20, "g_3a": .15, "g_max": .15, "g_stop": .08, "p_entra": 1.0, "p_cres": .10, "p_sai": 1.5,
+          "f_entra": .70, "f_sai": .50, "f_min": 3}
 # Ajusta a parte na ação com aportes e proventos (compra só até a exposição alvo; o resto espera no CDB) e não vende:
 # no teste com IR e custos, vender (mesmo em parte ou dentro da isenção) sempre rendeu menos que manter.
 HIB_SEM, HIB_ETA = 52, 5  # janela do acerto recente (semanas) e o quanto o melhor recebe mais peso
@@ -123,6 +207,7 @@ def _fund_mats(tick, wk, fund):
     QY = np.full((N, T), np.nan, np.float32); QW = np.zeros((N, T), np.float32); PORTE = np.full((N, T), -1, np.int8)
     DIV = z(); DLX = np.full((N, T), np.nan, np.float32); lim = valor_justo.FAIR["al_dlebitda"]  # limite do alerta ⚠️ do card
     fa = lambda v: np.array([np.nan if x is None else x for x in v or []], float)
+    NIW, EQW, G1, G3 = (np.full((N, T), np.nan, np.float32) for _ in range(4))  # lucro e patrimônio do último balanço; crescimento do lucro
     F, byy = {}, {}
     for k, t in enumerate(tick):
         f = (fund or {}).get(t)
@@ -175,10 +260,16 @@ def _fund_mats(tick, wk, fund):
                 if not np.isnan(dx[e]): add(P_["divida"], (lim - dx[e]) / (lim - NOTA["div_ok"]))  # até 1× nota cheia; no limite do alerta, zero
             dv = bool(dx[j] > lim and j >= 1 and (np.isnan(dx[j - 1]) or dx[j] > dx[j - 1]))  # dívida acima do alerta e subindo
             per[j] = (q, qw, po, fo, p2, gr, dv, dx[j])
+        with np.errstate(invalid="ignore", divide="ignore"):  # crescimento do lucro: 1 ano e média de 3 anos (só com lucro nas duas pontas)
+            g1 = np.full(len(ni), np.nan); g3 = np.full(len(ni), np.nan)
+            g1[1:] = np.where((ni[1:] > 0) & (ni[:-1] > 0), ni[1:] / ni[:-1] - 1, np.nan)
+            g3[3:] = np.where((ni[3:] > 0) & (ni[:-3] > 0), (ni[3:] / ni[:-3]) ** (1 / 3) - 1, np.nan)
         for i in np.flatnonzero(jl >= 0):
             j = jl[i]; TEM[k, i] = not np.isnan(ni[j]); PREJ[k, i] = ni[j] < 0
+            NIW[k, i], EQW[k, i], G1[k, i], G3[k, i] = ni[j], eq[j], g1[j], g3[j]
             QY[k, i], QW[k, i], PORTE[k, i], FORTE[k, i], PREJ2[k, i], GRANDE[k, i], DIV[k, i], DLX[k, i] = per[j]
-    return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM, "QY": QY, "QW": QW, "PORTE": PORTE, "DIV": DIV, "DLX": DLX}
+    return {"PREJ2": PREJ2, "GRANDE": GRANDE, "FORTE": FORTE, "PREJ": PREJ, "TEM": TEM, "QY": QY, "QW": QW, "PORTE": PORTE, "DIV": DIV, "DLX": DLX,
+            "NIW": NIW, "EQW": EQW, "G1": G1, "G3": G3}
 
 
 _VOCN = None
@@ -264,15 +355,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     # híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições dos especialistas, pesadas pelo retorno de cada um nas últimas
     # HIB_SEM semanas (ação + proventos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte)
     Cf = pd.DataFrame(C.T).ffill().to_numpy().T
-    rs = np.zeros((N, T)); rs[:, 1:] = np.nan_to_num((Cf[:, 1:] + np.nan_to_num(DV[:, 1:])) / Cf[:, :-1] - 1)
-    X = np.stack([np.ones((N, T)), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0]).astype(float)
-    # mesma conta de antes, nos mesmos arrays (pico de memória menor no plano gratuito): retorno log -> soma acumulada -> janela -> pesos
-    wt = np.zeros_like(X); wt[:, :, 1:] = np.log1p(X[:, :, :-1] * rs[None, :, 1:] + (1 - X[:, :, :-1]) * (cdb[1:] - 1)[None, None, :]); del rs
-    np.cumsum(wt, axis=2, out=wt); tmp = wt[:, :, :-HIB_SEM].copy(); wt[:, :, HIB_SEM:] -= tmp; del tmp
-    wt -= wt.max(axis=0, keepdims=True); wt *= HIB_ETA; np.exp(wt, out=wt); wt /= wt.sum(axis=0, keepdims=True)
-    HX = np.round((wt * X).sum(axis=0) * 4) / 4
-    HW = np.round(wt * 100).astype(np.int16)  # peso de cada especialista (%): a tabela mostra quem o híbrido está seguindo
-    del X, wt  # temporários grandes (4 × ações × semanas): libera antes de seguir
+    HX, HW = _hib(Cf, DV, cdb, [np.ones((N, T), bool), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0])
     G = np.full(T, np.nan)  # ouro (R$) no último dia com preço de cada semana
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
@@ -408,6 +491,7 @@ def _signal(D, mid, idx, i):
     if mid == "medo_mercado": return np.full(n, bool(D["MI"][i] < MEDO))
     if mid == "medo_acao": return D["SI"][idx, i] < MEDO
     if mid in ("media200", "tendencia"): return D["M2"][idx, i] > 0
+    if MOD[mid].get("sig"): M = D.get(MOD[mid]["sig"]); return M[idx, i] if M is not None else np.zeros(n, bool)  # sem set_metodos: fora
     if mid == "hibrido": return D["HX"][idx, i] > 0  # (só para o 1º sinal; a simulação usa a exposição HX)
     if mid == "barsi":  # compra só no teto ou abaixo; acima ou sem teto: espera no CDB (nunca vende)
         with np.errstate(invalid="ignore"): return D["Cf"][idx, i] <= D["TETO"][idx, i]
@@ -605,7 +689,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
     Ações inteiras: a sobra fica no CDB. -> valor final, IR e o histórico (por empresa e cada movimentação, uma por linha)."""
     gidx = list(gidx); s, e = me[0], me[-1]; mod = MOD[mid]; nm = D["tick"]
     C, DV = D["C"], D["DV"]
-    alg = mid != "tendencia"
+    alg = "p" in mod; met = bool(mod.get("sig"))  # algoritmos · métodos (sinal e força prontos em set_metodos) · Análise técnica
     A = Conta(1); cur, k, pdiv, why_in = -1, 0, 0.0, None; lastp = {g: C[g, s] for g in gidx}
     per = {g: {"t": nm[g], "c": 0, "sem": 0, "n": 0, "res": 0.0, "ir": 0.0} for g in gidx}
     trocas, cdbw, tot, vm, ev = 0, 0, 0, [], []; nav, navpk, dd, vprev = 1.0, 1.0, 0.0, None
@@ -616,14 +700,17 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
     def score(g, i):  # (força do sinal, favorável?); modelos com "lucro": só com lucro no último balanço publicado
         ok = bool(D["LP"][g, i]) or not mod.get("lucro")
         if alg: return D["P"][mod["p"]][g, i], bool(D["FAV"][mod["p"]][g, i]) and ok
+        if met: return (D[mod["sc"]][g, i], bool(D[mod["sig"]][g, i])) if mod["sig"] in D else (np.nan, False)
         return D["R12"][g, i], bool(D["M2"][g, i] > 0) and ok
 
     def strong(g, i):  # bom momento para comprar: chance bem acima da mediana do ano (algoritmos) ou alta forte em 12 meses (Análise técnica)
         if alg: return D["P"][mod["p"]][g, i] - D["MED"][mod["p"]][g, i] >= MARGEM[mid]
+        if met: return True  # o sinal do método já é a entrada
         return D["M2"][g, i] > 0 and D["R12"][g, i] >= FORTE_R12
 
     def why(g, i):
         sc, _ = score(g, i)
+        if met: return f"sinal do método {mod['n']}"
         return f"chance de alta {pct(sc)}" if alg else f"alta de {pct(sc)} em 12 meses e acima da média de 200 dias"
 
     def sell_cur(P, i, motivo):
@@ -652,8 +739,8 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
                 k += 1
                 sc, fav = score(cur, i - 1)
                 if not fav and k >= mod["min"] and not np.isnan(C[cur, i]):
-                    sell_cur(lastp[cur], i, "previsão desfavorável" if alg else "abaixo da média de 200 dias"); saiu = True  # espera ao menos 1 semana
-                elif best >= 0 and best != cur and k >= TROCA_SEM and not np.isnan(C[cur, i]) and score(best, i - 1)[0] >= sc + MARGEM[mid]:
+                    sell_cur(lastp[cur], i, "previsão desfavorável" if alg else f"saiu do critério do método {mod['n']}" if met else "abaixo da média de 200 dias"); saiu = True  # espera ao menos 1 semana
+                elif best >= 0 and best != cur and k >= TROCA_SEM and not np.isnan(C[cur, i]) and score(best, i - 1)[0] >= sc + MARGEM.get(mid, mod.get("mg", 0)):
                     sell_cur(lastp[cur], i, f"troca: {nm[best]} com sinal melhor"); trocas += 1  # troca direta: a outra está em bom momento agora
             if cur < 0 and best >= 0 and not saiu:
                 cur, k = best, 0; per[cur]["c"] += 1; why_in = why(cur, i - 1)
@@ -786,7 +873,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 4  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 5  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -833,9 +920,10 @@ def _gtargets(D, mid, idx, i):
         T=D['TETO'][idx,i]; P=D['Cf'][idx,i]
         with np.errstate(invalid='ignore'): z=ok&D['BS'][idx]&(P<=T)&D['LP'][idx,i]
         w=np.where(z,np.nan_to_num(T/P),0)  # mais peso para o maior rendimento de dividendos
-    elif mid in('alg1','alg3','tendencia'):
+    elif MOD[mid].get('sc') and MOD[mid]['sc'] not in D: w=np.zeros(n)  # sem set_metodos (sem valor de mercado): fica no CDB
+    elif mid in('alg1','alg3','tendencia') or MOD[mid].get('sc'):
         sig=_signals(D,mid,idx,i)&ok
-        sc=(D['P'][MOD[mid]['p']][idx,i] if mid!='tendencia' else D['R12'][idx,i]).astype(float)
+        sc=(D[MOD[mid]['sc']][idx,i] if MOD[mid].get('sc') else D['P'][MOD[mid]['p']][idx,i] if mid!='tendencia' else D['R12'][idx,i]).astype(float)
         sc=np.where(sig,np.nan_to_num(sc,nan=-1e9),-np.inf)
         top=np.argsort(-sc)[:GRUPO_K]; w=np.zeros(n); w[top[np.isfinite(sc[top])]]=1
     else: w=(_signals(D,mid,idx,i)&ok).astype(float)
@@ -932,7 +1020,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     idx=np.asarray(idx);n=len(idx);s,e=me[0],me[-1];mod=MOD[mid];sell=mod['vende'] and not mod.get('frac');RG=REGRAS if RG is None else RG;ban=np.zeros(n)
     sh=np.zeros(n);basis=np.zeros(n);pend=np.zeros(n);cash=float(ap[0]);age=np.zeros(n);carry=0;msales=0;mgain=0;mdq=np.zeros(n);ir=0;nb=0;ns=0
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
-    nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else 'abaixo da média de 200 dias'
+    nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)

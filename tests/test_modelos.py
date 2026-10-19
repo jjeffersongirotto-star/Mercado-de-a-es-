@@ -111,7 +111,7 @@ def test_comparar_media_e_empresas_sem_preco():
     nm = len(modelos.MODELOS) + len(modelos.REF); fo = out["fora"]  # Barsi fora do método (sem setor perene) nas 2 empresas
     assert len(out["v"]) == nm and len(out["v"][0]) == 2 and fo == 2 and out["p"][out["m"].index("barsi")] == [None, None]
     assert sum(r["pts"] for r in out["res"]) == 2 * sum((modelos.PONTOS + (0,) * nm)[:nm - 4])  # sem Barsi (fora), Ouro, Ibovespa e IDIV (sem cotação no teste)
-    assert {g["m"] for g in out["g"]} == {"alg1", "alg3", "tendencia"}
+    assert {g["m"] for g in out["g"]} == {"alg1", "alg3", "tendencia", "value", "growth", "garp", "fatores"}
     assert out["t"] == ["AAA3", "BBB3"] and out["pedidas"] == 3 and len(out["p"]) == nm
     i = out["m"].index("hold"); assert abs(out["res"][i]["media"] - sum(out["p"][i]) / 2) < 0.01
     md = [out["res"][k]["media"] for k in out["ord_media"] if out["res"][k]["media"] is not None]
@@ -133,7 +133,8 @@ def test_run_todos_ordena_grupos_primeiro():
                           "grupos": [{"n": "G", "t": ["AAA3", "BBB3"]}]})
     ks = [x["k"] for x in out["rows"]]
     # grupos primeiro (um rodízio por modelo que troca de empresa); depois modelos e CDB/Ouro juntos, pelo rendimento
-    assert ks[:3] == ["g"] * 3 and ks.count("g") == 3 and ks.count("r") == len(modelos.REF)
+    ng = sum(1 for m in modelos.MODELOS if m["vende"] and not m.get("frac"))  # um rodízio por modelo que vende
+    assert ks[:ng] == ["g"] * ng and ks.count("g") == ng and ks.count("r") == len(modelos.REF)
     emp = [x for x in out["rows"] if x["k"] != "g" and x["pct"] is not None]
     assert all(a["pct"] >= b["pct"] for a, b in zip(emp, emp[1:]))
     assert len([x for x in out["rows"] if x["k"] == "a"]) == 2 * (len(modelos.MODELOS) - 1)  # Barsi: as 2 estão fora do método
@@ -441,6 +442,16 @@ def test_noticias_fato_e_suposicao():
         assert bool(vs) == vende, (news, vs)
         if vende: assert vs[0]["d"] >= "2021-06-02" and "Recuperação Judicial" in vs[0]["x"]  # nunca antes de a notícia sair
 
+
+
+def test_metodos_value_e_hibrido():
+    # valor justo de Graham = √(22,5 × 10 × 100) = 150: AAA3 vale 50 hoje (margem 67%) entra; BBB3 vale 1.000 (acima do justo) não
+    anos = list(range(2008, 2020)); f = {"y": anos, "ni": [10.0] * 12, "eq": [100.0] * 12, "rev": [50.0] * 12}
+    D = modelos.build(snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}}), cdi(), fund={"AAA3": f, "BBB3": f})
+    assert "VAL" not in D and not modelos._signal(D, "value", [0, 1], 60).any()  # sem valor de mercado: fora (dinheiro no CDB)
+    modelos.set_metodos(D, [{"ticker": "AAA3", "v": {"valmerc": 50.0}}, {"ticker": "BBB3", "v": {"valmerc": 1000.0}}])
+    assert list(modelos._signal(D, "value", [0, 1], 60)) == [True, False]
+    assert D["HW"].shape[0] == len(modelos.HIB)  # híbrido estuda também os modelos de método
 
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
