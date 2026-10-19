@@ -97,9 +97,10 @@ def test_colocacoes_desempate_pelo_segundo_lugar():
     rk, cnt, order, pts = modelos.ranking(V)
     assert cnt[0].tolist() == [2, 0, 2] and cnt[1].tolist() == [2, 2, 0] and order == [1, 0, 2]
     assert pts.tolist() == [21 + 21 + 15 + 15, 18 + 18 + 21 + 21, 15 + 15 + 18 + 18]  # 1º = 21, 2º = 18, 3º = 15
-    # referência (última linha) com o maior rendimento: 1º nas colocações, mas nos Pontos fica com a última colocação
-    V2 = np.vstack([V, np.full(4, 99.0)]); rk2, cnt2, _, pts2 = modelos.ranking(V2, 1)
-    assert cnt2[3].tolist() == [4, 0, 0, 0] and pts2[3] == 4 * 12 and pts2[:3].tolist() == pts.tolist()
+    # referência (última linha) com o maior rendimento: não é modelo -> sem colocação, sem pontos, no fim; os modelos não mudam
+    V2 = np.vstack([V, np.full(4, 99.0)]); rk2, cnt2, o2, pts2 = modelos.ranking(V2, 1)
+    assert cnt2[3].tolist() == [0, 0, 0] and cnt2[:3].tolist() == cnt.tolist() and (rk2[3] == -1).all() and pts2[3] == 0
+    assert pts2[:3].tolist() == pts.tolist() and rk2[:3].tolist() == rk.tolist() and o2 == [1, 0, 2, 3]
     # nan = fora (Método Barsi fora do método): não pontua nem conta colocação
     V3 = V.copy(); V3[0, 0] = np.nan; rk3, cnt3, _, pts3 = modelos.ranking(V3)
     assert rk3[0, 0] == -1 and cnt3[0].sum() == 3 and pts3[1] == 21 + 18 + 21 + 21

@@ -286,11 +286,11 @@
     if (mv === 'emp') {
       const cols = d.ord_pos.filter(i => !R[i].ref && (!only || d.m[i] === only));
       const rl = (d.ref || []).map(r => `<button type="button" class="pv-lnk" data-mo="|${r.m}">${esc(r.t)}</button>${refInfo(r.m)} ${rp(r)}`).join(' · ');
-      return (rl ? `<p class="pvd-note">${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>`)}${cols.map(i => d.p[i][j] == null ? '<td data-v="" title="fora do método">—</td>' : `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
+      return (rl ? `<p class="pvd-note">${rl}</p>` : '') + tab([['Ativo', 't']].concat(cols.map(i => [N(i), d.m[i]])), d.t.map((tk, j) => `<tr>${td(tk, `<b>${esc(tk)}</b>${(d.nm || {})[tk] ? `<span class="gsub">${esc(d.nm[tk])}</span>` : ''}`)}${cols.map(i => d.p[i][j] == null ? '<td data-v="" title="fora do método">—</td>' : `<td class="tap" data-v="${d.p[i][j]}" data-mo="${esc(tk)}|${d.m[i]}">${RK(d.rk[i][j])}<span class="${cl(d.p[i][j])}">${pp(d.p[i][j])}</span></td>`).join('')}</tr>`).join(''));
     }
     if (mv === 'pos') {  // pontos por colocação (modelos.PONTOS: 21, 18, 15…); ordem pela média de pontos (modelos.ranking)
       const ps = posOf(d.ord_pts);
-      return tab([['Modelo', 'm']].concat(d.m.map((_, p) => [RKN(p), 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
+      return tab([['Modelo', 'm']].concat((R[0].pos || []).map((_, p) => [RKN(p), 'p' + p])).concat([['Pontos', 'pt'], ['Média de pontos', 'pm'], ['Lucro mediano', 'md']]),
         d.ord_pts.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''));
     }
     const ord = R.map((_, i) => i).sort((a, b) => (R[b].mediana ?? -1e9) - (R[a].mediana ?? -1e9)), ps = posOf(ord);

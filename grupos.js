@@ -156,16 +156,20 @@
   // abas criadas pelo usuário nos Favoritos foram removidas: apaga as que ficaram salvas no aparelho
   if (ui.fav.tabs || ui.fav.assign) { delete ui.fav.tabs; delete ui.fav.assign; if (ui.fav.tab !== 'prov') ui.fav.tab = 'all'; try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } }
   const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify(ui)); } catch (e) { } };
-  // Favoritos: arrastar a alça do fim do quadro aumenta ou diminui a altura (guardada no aparelho; dois toques volta ao padrão)
+  // quadros da aba Grupos (Favoritos e grupos; Fluxo da bolsa não): arrastar a alça do fim aumenta ou diminui a altura, guardada no
+  // aparelho por quadro (ui.gh[id]); dois toques volta ao padrão
+  if (!ui.gh) { ui.gh = {}; if (ui.favH) { ui.gh.fav = ui.favH; delete ui.favH; } saveUI(); }
+  const ghStyle = (id) => ui.gh[id] ? ` style="height:${ui.gh[id]}px;max-height:none"` : '';
+  const gripHtml = (n) => `<div class="gt-grip" data-ggrip role="separator" aria-orientation="horizontal" aria-label="Arraste para aumentar ou diminuir ${esc(n)}" title="Arraste para aumentar ou diminuir"></div>`;
   document.addEventListener('pointerdown', (e) => {
-    const g = e.target.closest('[data-favgrip]'); if (!g) return;
-    const box = g.closest('.gt-fav'), y0 = e.clientY, h0 = box.getBoundingClientRect().height;
+    const g = e.target.closest('[data-ggrip]'); if (!g) return;
+    const box = g.closest('.gt'), id = box.dataset.id, y0 = e.clientY, h0 = box.getBoundingClientRect().height;
     e.preventDefault(); g.setPointerCapture(e.pointerId); g.classList.add('on');
-    const mv = (ev) => { const h = Math.round(Math.min(window.innerHeight * .9, Math.max(140, h0 + ev.clientY - y0))); box.style.height = h + 'px'; box.style.maxHeight = 'none'; ui.favH = h; };
+    const mv = (ev) => { const h = Math.round(Math.min(window.innerHeight * .9, Math.max(140, h0 + ev.clientY - y0))); box.style.height = h + 'px'; box.style.maxHeight = 'none'; ui.gh[id] = h; };
     const up = () => { g.removeEventListener('pointermove', mv); g.classList.remove('on'); saveUI(); };
     g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up, { once: true }); g.addEventListener('pointercancel', up, { once: true });
   });
-  document.addEventListener('dblclick', (e) => { const g = e.target.closest('[data-favgrip]'); if (!g) return; delete ui.favH; saveUI(); const b = g.closest('.gt-fav'); b.style.height = ''; b.style.maxHeight = ''; });
+  document.addEventListener('dblclick', (e) => { const g = e.target.closest('[data-ggrip]'); if (!g) return; const b = g.closest('.gt'); delete ui.gh[b.dataset.id]; saveUI(); b.style.height = ''; b.style.maxHeight = ''; });
   window.gMigrate = (mp) => { // classe trocada (1 ticker por empresa) -> migra os grupos
     let ch = false; const m = (t) => mp[t] || t;
     for (const g of groups) { const n = [...new Set(g.tickers.map(m))]; if (n.join() !== g.tickers.join()) { g.tickers = n; ch = true; } }
@@ -285,10 +289,10 @@
   const starB = (id) => id === 'fav' ? '' : `<button type="button" class="gstar${ui.gstar.includes(id) ? ' on' : ''}" data-gstar="${esc(id)}" aria-label="Destacar grupo">${ui.gstar.includes(id) ? '★' : '☆'}</button>`;
   function tileHtml(id) {
     const d = groupData(id); if (!d) return '';
-    if (id === 'fav') return `<div class="gt gt-fav${favReord ? ' reord' : ''}" data-id="fav"${ui.favH ? ` style="height:${ui.favH}px;max-height:none"` : ''}><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span><button type="button" class="gbtn gford${favReord ? ' on' : ''}" data-favord aria-pressed="${favReord}" aria-label="Reorganizar favoritos" title="Reorganizar favoritos">⋮⋮</button></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}<div class="gt-grip" data-favgrip role="separator" aria-orientation="horizontal" aria-label="Arraste para aumentar ou diminuir os Favoritos" title="Arraste para aumentar ou diminuir"></div></div>`;
-    return `<div class="gt" data-id="${esc(id)}"><div class="gt-head" data-open="${esc(id)}">${starB(id)}<span class="gt-name">${esc(d.title)}</span></div>
+    if (id === 'fav') return `<div class="gt gt-fav${favReord ? ' reord' : ''}" data-id="fav"${ghStyle('fav')}><div class="gt-head" data-open="fav"><span class="gt-name">★ Favoritos</span><button type="button" class="gbtn gford${favReord ? ' on' : ''}" data-favord aria-pressed="${favReord}" aria-label="Reorganizar favoritos" title="Reorganizar favoritos">⋮⋮</button></div>${favControls()}<div class="gt-list">${favBody(false)}</div>${window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}${gripHtml('os Favoritos')}</div>`;
+    return `<div class="gt" data-id="${esc(id)}"${ghStyle(id)}><div class="gt-head" data-open="${esc(id)}">${starB(id)}<span class="gt-name">${esc(d.title)}</span></div>
       ${d.p ? ctlRow(d.p) : ''}
-      <div class="gt-list">${d.sim ? simBody(d.g, false) : grpBody(d, false)}</div><div class="gt-foot">${d.sim ? `<div class="upd gt-upd">${SIM[d.g.name] && SIM[d.g.name].d ? 'Dados até ' + dataBR(SIM[d.g.name].d.d1) : ''}</div>` : window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}${d.p ? '' : `${d.sim ? '' : `<button type="button" class="gt-act" data-g="edit" data-n="${esc(d.g.name)}">Editar</button>`}<button type="button" class="gt-act dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button>`}</div></div>`;
+      <div class="gt-list">${d.sim ? simBody(d.g, false) : grpBody(d, false)}</div><div class="gt-foot">${d.sim ? `<div class="upd gt-upd">${SIM[d.g.name] && SIM[d.g.name].d ? 'Dados até ' + dataBR(SIM[d.g.name].d.d1) : ''}</div>` : window.updTxt && updTxt() ? `<div class="upd gt-upd">${updTxt()}</div>` : ''}${d.p ? '' : `${d.sim ? '' : `<button type="button" class="gt-act" data-g="edit" data-n="${esc(d.g.name)}">Editar</button>`}<button type="button" class="gt-act dan" data-g="del" data-n="${esc(d.g.name)}">Excluir</button>`}</div>${gripHtml('o quadro')}</div>`;
   }
   // Fluxo da bolsa (B3: participação dos investidores, saldo compras − vendas)
   let FLOW = null, flowLoading = false;

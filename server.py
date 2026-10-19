@@ -1163,17 +1163,23 @@ def api_modelos_comparar(body: dict):
         D = modelos.data(); modelos.set_setores(D, rows, _cad()); _pre()
         if u == "all": tick = modelos.todas(D, rows)  # + as que saíram da bolsa
         out = modelos.compare(D, tick, str(b.get("di") or "")[:7], str(b.get("df") or "")[:7], aps, wd, tx, grupos)
+        if not out.get("error"): out = dict(out, nm=_nomes(out.get("t") or []))  # cópia: a resposta fica no cache de modelos
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
+def _nomes(tk):
+    """Nome popular (snapshots.nome_popular, o mesmo do widget) de cada ticker: {ticker: nome} (Grupo simulação e Comparar → Modelos)."""
+    by = {r["ticker"]: r for r in (cache.data or {}).get("rows") or []}
+    return {t: n for t in set(tk) if t for n in [snapshots.nome_popular(t, (by.get(t) or {}).get("nome"))] if n}
+
 def _sim_nomes(out):
-    """Nome popular (snapshots.nome_popular, o mesmo do widget) de cada ticker das posições e movimentações do Grupo simulação: {ticker: nome}."""
-    by = {r["ticker"]: r for r in (cache.data or {}).get("rows") or []}; tk = set()
+    """Nomes dos tickers das posições e movimentações do Grupo simulação."""
+    tk = set()
     for x in out.get("m") or [out]:
         tk |= {y.get("t") for y in (x.get("pos") or []) if isinstance(y, dict)} | {y.get("t") for y in (x.get("mov") or [])}
     if isinstance(out.get("pos"), dict): tk.add(out["pos"].get("t"))
-    return {t: n for t in tk if t for n in [snapshots.nome_popular(t, (by.get(t) or {}).get("nome"))] if n}
+    return _nomes(tk)
 
 @app.post("/api/modelos/simgrupo")
 def api_modelos_simgrupo(body: dict):
