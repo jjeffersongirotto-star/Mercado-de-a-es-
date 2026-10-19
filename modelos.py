@@ -58,25 +58,28 @@ def perene(r, cad=None):
 besst = perene  # nome antigo
 
 
-def _hib(Cf, DV, cdb, X):
+def _hib(Cf, DV, cdb, X, JT=None, bloco=64):
     """Híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições X dos especialistas (ordem de HIB), pesadas pelo retorno de cada
     um nas últimas HIB_SEM semanas (ação + proventos brutos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte).
-    -> (HX, HW: peso de cada especialista em %). float32 e nos mesmos arrays: pico de memória menor no plano gratuito."""
-    N, T = Cf.shape
-    rs = np.zeros((N, T), np.float32)
-    with np.errstate(invalid="ignore", divide="ignore"): rs[:, 1:] = np.nan_to_num((Cf[:, 1:] + np.nan_to_num(DV[:, 1:])) / Cf[:, :-1] - 1)
-    K = len(X); wt = np.zeros((K, N, T), np.float32); c = (cdb[1:] - 1).astype(np.float32)
-    for k in range(K):  # um especialista por vez: sem temporários do tamanho de K × ações × semanas
-        x = X[k].astype(np.float32); w = wt[k]
-        w[:, 1:] = np.log1p(x[:, :-1] * rs[:, 1:] + (1 - x[:, :-1]) * c[None, :])
-        np.cumsum(w, axis=1, out=w); w[:, HIB_SEM:] -= w[:, :-HIB_SEM].copy()
-    del rs
-    wt -= wt.max(axis=0, keepdims=True); wt *= HIB_ETA; np.exp(wt, out=wt); wt /= wt.sum(axis=0, keepdims=True)
-    HX = np.zeros((N, T), np.float32)
-    for k in range(K): HX += wt[k] * X[k]
-    HX = np.round(HX * 4) / 4
-    wt *= 100; np.round(wt, out=wt)
-    return HX, wt.astype(np.int16)
+    -> (HX, HA = especialista de maior peso, HP = peso dele em %). Em blocos de `bloco` empresas: pico de memória pequeno no plano gratuito
+    (o servidor caiu por memória com todas de uma vez)."""
+    N, T = Cf.shape; K = len(X); c = (cdb[1:] - 1).astype(np.float32)
+    HX = np.zeros((N, T), np.float32); HA = np.zeros((N, T), np.uint8); HP = np.zeros((N, T), np.uint8)
+    for a in range(0, N, bloco):
+        sl = slice(a, min(N, a + bloco)); cf = Cf[sl]; dv = np.nan_to_num(DV[sl]) + (np.nan_to_num(JT[sl]) if JT is not None else 0)
+        rs = np.zeros(cf.shape, np.float32)
+        with np.errstate(invalid="ignore", divide="ignore"): rs[:, 1:] = np.nan_to_num((cf[:, 1:] + dv[:, 1:]) / cf[:, :-1] - 1)
+        wt = np.zeros((K,) + cf.shape, np.float32)
+        for k in range(K):
+            x = np.asarray(X[k][sl], np.float32); w = wt[k]
+            w[:, 1:] = np.log1p(x[:, :-1] * rs[:, 1:] + (1 - x[:, :-1]) * c[None, :])
+            np.cumsum(w, axis=1, out=w); w[:, HIB_SEM:] -= w[:, :-HIB_SEM].copy()
+        wt -= wt.max(axis=0, keepdims=True); wt *= HIB_ETA; np.exp(wt, out=wt); wt /= wt.sum(axis=0, keepdims=True)
+        hx = np.zeros(cf.shape, np.float32)
+        for k in range(K): hx += wt[k] * np.asarray(X[k][sl], np.float32)
+        wt *= 100; np.round(wt, out=wt)  # peso em % inteiro (empate = o primeiro de HIB, como antes)
+        HX[sl] = np.round(hx * 4) / 4; HA[sl] = wt.argmax(axis=0); HP[sl] = wt.max(axis=0)
+    return HX, HA, HP
 
 
 def set_metodos(D, rows):
@@ -96,37 +99,43 @@ def set_metodos(D, rows):
         if len(q) and Cf[k, -1] > 0:
             f = v / (Cf[k, -1] * q[-1]); F[k] = f if METODO["classe"][0] <= f <= METODO["classe"][1] else np.nan  # fora da faixa: dado suspeito
     with np.errstate(invalid="ignore", divide="ignore"):
-        MC = (Cf * SH * F[:, None]).astype(np.float32); NI, EQ, G1, G3 = FM["NIW"], FM["EQW"], FM["G1"], FM["G3"]
+        C32 = Cf.astype(np.float32); MC = C32 * SH; MC *= F[:, None].astype(np.float32); NI, EQ, G1, G3 = FM["NIW"], FM["EQW"], FM["G1"], FM["G3"]
         PL = np.where((NI > 0) & (MC > 0), MC / NI, np.nan)
-        VJ = np.sqrt(np.where((NI > 0) & (EQ > 0), 22.5 * NI * EQ, np.nan)); VALS = (1 - MC / VJ).astype(np.float32)  # margem sobre o justo
-        PEG = np.where(G3 > 0, PL / (100 * G3), np.nan).astype(np.float32)
-        hi = pd.DataFrame(Cf.T).rolling(52, min_periods=26).max().to_numpy().T
+        VJ = np.sqrt(np.where((NI > 0) & (EQ > 0), 22.5 * NI * EQ, np.nan)); VALS = (1 - MC / VJ).astype(np.float32); del VJ  # margem sobre o justo
+        PEG = np.where(G3 > 0, PL / (100 * G3), np.nan).astype(np.float32); del PL
+        hi = pd.DataFrame(C32.T).rolling(52, min_periods=26).max().to_numpy(np.float32).T
         ib = pd.Series(D["IB"]); alta = (ib > ib.rolling(40, min_periods=20).mean()).to_numpy()
         Q = FM["Q"]; M = METODO
-        ent = {"VAL": (VALS >= M["v_entra"]) & (Q >= M["v_nota"]), "GRO": (G1 >= M["g_ano"]) & (G3 >= M["g_3a"]) & (Cf >= (1 - M["g_max"]) * hi) & alta[None, :],
+        ent = {"VAL": (VALS >= M["v_entra"]) & (Q >= M["v_nota"]), "GRO": (G1 >= M["g_ano"]) & (G3 >= M["g_3a"]) & (C32 >= (1 - M["g_max"]) * hi) & alta[None, :],
                "GARP": (PEG > 0) & (PEG < M["p_entra"]) & (G3 >= M["p_cres"])}
         sai = {"VAL": ~(VALS >= 0), "GRO": ~(G1 >= 0) | ~alta[None, :], "GARP": ~(PEG > 0) | (PEG > M["p_sai"]) | ~(G3 >= M["p_cres"] / 2)}
-        # fatores: posição (0–1) entre as empresas da semana em cada fator; média com pelo menos f_min fatores
-        rk = lambda A: pd.DataFrame(A).rank(axis=0, pct=True).to_numpy(np.float32)
-        rr = np.zeros((N, T), np.float32); rr[:, 1:] = Cf[:, 1:] / Cf[:, :-1] - 1
-        vol = np.where(np.isnan(Cf), np.nan, pd.DataFrame(rr.T).rolling(52, min_periods=26).std().to_numpy(np.float32).T)
-        F = np.stack([rk(np.where(MC > 0, NI / MC, np.nan)), rk(Q), rk(D["R12"]), rk(-vol)])
-        nf = (~np.isnan(F)).sum(axis=0)
-        with warnings.catch_warnings(): warnings.simplefilter("ignore"); FATS = np.where(nf >= M["f_min"], np.nanmean(F, axis=0), np.nan).astype(np.float32)
-        del F
+        del hi
+        # fatores: posição (0–1) entre as empresas da semana em cada fator; média com pelo menos f_min fatores (somada um fator por vez)
+        def rk(A):
+            m = np.isnan(A); o = np.argsort(np.where(m, np.inf, A), axis=0, kind="stable").astype(np.int32)
+            r = np.empty_like(o); np.put_along_axis(r, o, np.arange(N, dtype=np.int32)[:, None], axis=0); del o
+            x = (r + 1).astype(np.float32); x /= np.maximum((~m).sum(axis=0), 1).astype(np.float32); x[m] = np.nan; return x
+        rr = np.zeros((N, T), np.float32); rr[:, 1:] = C32[:, 1:] / C32[:, :-1] - 1
+        vol = np.array(pd.DataFrame(rr.T).rolling(52, min_periods=26).std().to_numpy(np.float32).T); del rr
+        vol[np.isnan(C32)] = np.nan; np.negative(vol, out=vol)
+        S, nf = np.zeros((N, T), np.float32), np.zeros((N, T), np.int8)
+        for A in (lambda: np.where(MC > 0, NI / MC, np.nan).astype(np.float32), lambda: Q, lambda: D["R12"], lambda: vol):
+            x = rk(np.asarray(A(), np.float32)); ok = ~np.isnan(x); S += np.where(ok, x, 0); nf += ok; del x, ok
+        del vol; FATS = np.where(nf >= M["f_min"], S / np.maximum(nf, 1), np.nan).astype(np.float32); del S, nf
         ent["FAT"] = FATS >= M["f_entra"]; sai["FAT"] = ~(FATS >= M["f_sai"])
     out = {}
     for k in ent:  # estado com entrada e saída diferentes (não fica entrando e saindo na fronteira); Growth: stop sobre o preço de entrada
         st = np.zeros(N, bool); pe = np.full(N, np.nan); X = np.zeros((N, T), bool); E_, S_ = ent[k], sai[k]
         for i in range(T):
-            c = Cf[:, i]
+            c = C32[:, i]
             out_ = S_[:, i] | np.isnan(c)
             if k == "GRO": out_ |= c < (1 - M["g_stop"]) * pe
             new = ~st & E_[:, i]; st = np.where(st, ~out_, E_[:, i]); pe = np.where(new, c, np.where(st, pe, np.nan)); X[:, i] = st
         out[k] = X
-    D.update(out); D.update({"VALS": VALS, "GROS": G1.astype(np.float32), "GARPS": (-PEG).astype(np.float32), "FATS": FATS})
+    del MC, C32, ent, sai; np.negative(PEG, out=PEG)  # temporários soltos antes do híbrido (pico menor)
+    D.update(out); D.update({"VALS": VALS, "GROS": G1, "GARPS": PEG, "FATS": FATS})
     hx = [np.ones((N, T), bool), D["FAV"]["p1"], D["FAV"]["p3"], np.nan_to_num(D["M2"]) > 0, out["VAL"], out["GRO"], out["GARP"], out["FAT"]]
-    D["HX"], D["HW"] = _hib(Cf, D["DV"] + D["JT"], D["cdb"], hx)
+    D["HX"], D["HA"], D["HP"] = _hib(Cf, D["DV"], D["cdb"], hx, D["JT"])
     D["_mk"] = key; _C.clear()
 
 
@@ -373,7 +382,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     # híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições dos especialistas, pesadas pelo retorno de cada um nas últimas
     # HIB_SEM semanas (ação + proventos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte)
     Cf = pd.DataFrame(C.T).ffill().to_numpy().T
-    HX, HW = _hib(Cf, DV, cdb, [np.ones((N, T), bool), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0])
+    HX, HA, HP = _hib(Cf, DV, cdb, [np.ones((N, T), bool), fav["p1"], fav["p3"], np.nan_to_num(M2) > 0])
     G = np.full(T, np.nan)  # ouro (R$) no último dia com preço de cada semana
     if gold and gold.get("d"):
         gs = pd.Series(gold["v"], index=pd.to_datetime(gold["d"]), dtype="float64")
@@ -423,7 +432,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HW": HW, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
             "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -579,8 +588,7 @@ def motivo(D, mid, k, i):
     if MOD[mid].get("p"): pk = MOD[mid]["p"]; return f"chance de alta {br(D['P'][pk][k, i] / 10)}% (mediana do último ano {br(D['MED'][pk][k, i] / 10)}%)" + lucro
     if mid == "barsi": return f"preço R$ {br(D['Cf'][k, i], 2)} · preço teto R$ {br(D['TETO'][k, i], 2)}" + lucro
     if mid == "hibrido":
-        w = D["HW"][:, k, i]; j = int(np.argmax(w))
-        return f"exposição-alvo {br(100 * D['HX'][k, i], 0)}% · segue {MOD[HIB[j]]['n']} (peso {int(w[j])}%)"
+        return f"exposição-alvo {br(100 * D['HX'][k, i], 0)}% · segue {MOD[HIB[int(D['HA'][k, i])]]['n']} (peso {int(D['HP'][k, i])}%)"
     sc = MOD[mid].get("sc")
     if sc in D:
         v = float(D[sc][k, i]); FM = D["FM"]
@@ -726,7 +734,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             v = A.sh * P + A.cash
             for q in range(n):
                 rows[q].append({"ym": D["ym"][i], "v": float(v[q]), "div": float(A.divT[q]), "tax": float(A.ir[q] + A.dtax[q]),
-                                "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {MOD[HIB[int(np.argmax(D['HW'][:, idx[q], i - 1]))]]['n']}"
+                                "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {MOD[HIB[int(D['HA'][idx[q], i - 1])]]['n']}"
                                         if mod.get("frac") and v[q] > 0 else
                                         "Ação" if A.sh[q] > 0 and A.cash[q] < max(1, P[q]) else "CDB" if A.sh[q] <= 0 else "Ação + CDB"),
                                 "c": int(A.compras[q]), "s": int(A.vendas[q]), "cdb": float(A.cash[q]), "cj": float(cj[q])})
