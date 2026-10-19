@@ -8,7 +8,7 @@ import json, os, sys, time
 from datetime import date, datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from build_cvm import get_zip, stmts, pivot, tickers, da_flows, nao_fin, divida_liquida, cancelamentos  # noqa: E402  (mesma leitura e contas da CVM)
+from build_cvm import get_zip, stmts, pivot, tickers, da_flows, nao_fin, divida_liquida, cancelamentos, acoes  # noqa: E402  (mesma leitura e contas da CVM)
 
 ANO0 = 2009
 WEEK = 6.5 * 86400
@@ -20,8 +20,9 @@ def main(out, cache):
     try:
         old = json.load(open(path))
         age = time.time() - datetime.fromisoformat(old["fetched_at"]).timestamp()
-        tem_dl = any("dl" in v for v in old["a"].values())  # snapshot antigo sem dívida ou sem as empresas que saíram: refaz
-        if age < WEEK and tem_dl and "troca" in old: print("fund: snapshot desta semana já existe"); return 0
+        tem_dl = any("dl" in v for v in old["a"].values())  # snapshot antigo sem dívida, sem as empresas que saíram ou sem ações: refaz
+        tem_sh = any("sh" in v for v in old["a"].values())
+        if age < WEEK and tem_dl and tem_sh and "troca" in old: print("fund: snapshot desta semana já existe"); return 0
     except Exception:
         pass
     today = date.today()
@@ -63,6 +64,7 @@ def main(out, cache):
             d = data.setdefault(c, {}).setdefault(y, {}); bal = {k: B.get((c, k)) for k in ("2.01.04", "2.02.01", "1.01.01", "1.01.02")}
             d["dl"] = divida_liquida(bal)
             if F.get((c, "3.05")) is not None and c in DA: d["eb"] = F[(c, "3.05")] + DA[c]
+        for c, q in acoes(z, "dfp", y).items(): data.setdefault(c, {}).setdefault(y, {})["sh"] = q  # ações em circulação na entrega
         print(f"  DFP {y}: {n} empresas", flush=True)
         z.close()
     A = {}
@@ -73,6 +75,7 @@ def main(out, cache):
         if not ys: continue
         A[t] = {"y": ys, "rev": [d[y].get("rev") for y in ys], "ni": [d[y]["ni"] for y in ys], "eq": [d[y]["eq"] for y in ys]}
         if any("dl" in d[y] for y in ys): A[t].update({"dl": [d[y].get("dl") for y in ys], "eb": [d[y].get("eb") for y in ys]})
+        if any("sh" in d[y] for y in ys): A[t]["sh"] = [d[y].get("sh") for y in ys]  # ações da companhia (todas as classes) em cada exercício
     if not A: print("fund: nada montado", file=sys.stderr); return 1
     saida = {t: canc.get(t2c.get(t), "") for t in saiu if t not in troca}  # motivo da saída ("" = registro não cancelado ou sem CNPJ: troca de código, etc.)
     json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "fonte": "CVM (DFP, dados abertos)", "a": A, "saida": saida, "troca": troca},
