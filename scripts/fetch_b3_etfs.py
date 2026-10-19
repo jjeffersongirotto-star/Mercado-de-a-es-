@@ -4,7 +4,8 @@
          do nome (TIPOS): ações do Brasil, ações de fora, renda fixa; cripto e fundos imobiliários (FII) ficam fora (FORA).
   dados  (depois do COTAHIST): preço, variação do dia, volume médio de 30 pregões, rendimento em 1–5 anos e proventos de 12 meses
          lidos dos históricos history4_etf/<TICKER>.json.gz que build_cotahist.py grava para os ETFs da lista (mesma base B3; pasta própria
-         para não entrarem no "mercado" do Medo e Ganância nem nos modelos).
+         para não entrarem no "mercado" do Medo e Ganância nem nos modelos); os de renda fixa (o COTAHIST não os traz), todos do Yahoo
+         (yahoo_hist: fonte do grupo inteiro, gravada no mesmo formato).
 Taxa de administração: o detalhe do fundo da B3 não responde e o cadastro da CVM (registro_classe) não traz a taxa -> fica sem.
 Uso: fetch_b3_etfs.py lista|dados OUT_DIR"""
 import base64, gzip, json, os, re, sys, time, unicodedata
@@ -74,8 +75,37 @@ def lista(out):
     return 0
 
 
+def yahoo_hist(out, t):
+    """ETF de renda fixa: a base da B3 (COTAHIST) não traz essas cotas -> histórico diário do Yahoo para o GRUPO inteiro (todos os de renda
+    fixa, nenhum misturado com COTAHIST), gravado em history4_etf no mesmo formato do COTAHIST (gráficos, Comparar, Carteira, modelos)."""
+    for host in ("query1", "query2"):
+        try:
+            r = requests.get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{t}.SA", headers=UA, timeout=(6, 30),
+                             params={"period1": 0, "period2": int(time.time()) + 86400, "interval": "1d", "events": "div,split"})
+            r.raise_for_status(); res = r.json()["chart"]["result"][0]; q = res["indicators"]["quote"][0]; break
+        except Exception as e:
+            res = None; err = e
+    if not res: print("ETF Yahoo", t, type(err).__name__, file=sys.stderr); return False
+    P = [(a, round(c, 4), round((v or 0) * c)) for a, c, v in zip(res.get("timestamp") or [], q.get("close") or [], q.get("volume") or []) if c]
+    if len(P) < 2: return False
+    divs = sorted([int(k), round(float(v["amount"]), 8), "provento (Yahoo)"] for k, v in ((res.get("events") or {}).get("dividends") or {}).items())
+    mm = {}
+    for a, c, _ in P:
+        k = time.strftime("%Y-%m", time.gmtime(a)); mm[k] = (mm[k][0], c) if k in mm else (a, c)
+    at = datetime.now().strftime("%d/%m/%Y"); src = "Yahoo (ETF de renda fixa)"
+    pay = {"d": {"t": [a for a, _, _ in P], "c": [c for _, c, _ in P], "vol": [v for _, _, v in P], "div": [d[:2] for d in divs], "source": src, "at": at},
+           "m": {"t": [mm[k][0] for k in sorted(mm)], "c": [mm[k][1] for k in sorted(mm)], "div": [d[:2] for d in divs], "source": src, "at": at},
+           "divs": divs, "splits": [], "isin": None}
+    os.makedirs(os.path.join(out, "history4_etf"), exist_ok=True)
+    with open(os.path.join(out, "history4_etf", f"{t}.json.gz"), "wb") as f: f.write(gzip.compress(json.dumps(pay, separators=(",", ":")).encode()))
+    time.sleep(0.4)
+    return True
+
+
 def dados(out):
     p = os.path.join(out, "etfs.json"); J = json.load(open(p)); E = J["e"]; ok = 0
+    ny = sum(yahoo_hist(out, t) for t, x in E.items() if x["k"] == "rf")
+    print(f"ETFs de renda fixa: {ny} históricos do Yahoo")
     for t, x in E.items():
         f = os.path.join(out, "history4_etf", f"{t}.json.gz")
         x["il"] = 1  # sem histórico no COTAHIST (ex.: os de renda fixa não aparecem nele): fora com "Só líquidos"
@@ -92,7 +122,7 @@ def dados(out):
         for n in range(1, 6):  # rendimento só de preço em n anos (proventos à parte, em dy)
             alvo = ts[-1] - n * 365.25 * 86400; j = next((i for i, a in enumerate(ts) if a >= alvo), None)
             x[f"r{n}"] = round((c[-1] / c[j] - 1) * 100, 1) if j is not None and j > 0 and c[j] else None
-        x["ini"] = datetime.fromtimestamp(ts[0], timezone.utc).strftime("%Y-%m-%d"); ok += 1
+        x["ini"] = datetime.fromtimestamp(ts[0], timezone.utc).strftime("%Y-%m-%d"); x["src"] = "Yahoo" if x["k"] == "rf" else "B3"; ok += 1
     J["dados_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     json.dump(J, open(p, "w"), ensure_ascii=False, separators=(",", ":"))
     print(f"ETFs: preços de {ok} de {len(E)} (COTAHIST)")

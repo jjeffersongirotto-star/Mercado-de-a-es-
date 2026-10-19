@@ -259,6 +259,7 @@ function searchRank0(r, q) {
 }
 window.searchRank = searchRank;
 function passes(r) {
+  if (r.etf && !(state.group && !state.selMode)) return false;  // ETF: aba Mercado → ETFs (aqui só dentro de um grupo/Favoritos)
   const q = norm($('#q').value.trim());
   if (q && !(r._s || norm(r.ticker + ' ' + r.nome)).includes(q)) return false;
   if (state.sector && state.sector !== 'Todos' && r.macro !== state.sector) return false;
@@ -457,10 +458,10 @@ function blockHtml(r) {
           <div class="flex items-center gap-1 min-w-0"><span class="text-sm text-slate-100 font-medium truncate">${esc(r.nome || '—')}</span><button type="button" class="gl-i" data-co="${r.ticker}" aria-label="Sobre ${esc(r.nome || r.ticker)}">ⓘ</button></div>
           <div class="text-[11px] text-slate-400 truncate">${esc([r.setor, r.subsetor].filter(Boolean).join(' · ') || 'Setor não informado')}</div>
         </div>
-        ${fairHtml(r)}<button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
+        ${r.etf ? '' : fairHtml(r)}<button type="button" class="tgl" aria-expanded="${open}" aria-label="${open ? 'Recolher' : 'Expandir'} indicadores de ${r.ticker}"><span>${open ? '−' : '+'}</span></button>
       </div>${updTxt() ? `<div class="upd">${updTxt()}</div>` : ''}${fgaHtml(r)}
     </div>
-    <div class="collapse-wrap"><div class="collapse-inner">${open ? chartSlot(r) + ibovW(r) + cardsHtml(r) : ''}</div></div>
+    <div class="collapse-wrap"><div class="collapse-inner">${open ? chartSlot(r) + ibovW(r) + (r.etf ? window.etfStats(r.ticker) : cardsHtml(r)) : ''}</div></div>
   </article>`;
 }
 
@@ -473,7 +474,7 @@ function setBlockOpen(art, open) {
   const t = art.dataset.ticker, inner = art.querySelector('.collapse-inner'), btn = art.querySelector('.tgl');
   if (open) {
     state.expanded.add(t);
-    if (!inner.firstElementChild) { const r = state.rowMap[t]; if (r) inner.innerHTML = chartSlot(r) + cardsHtml(r); }
+    if (!inner.firstElementChild) { const r = state.rowMap[t]; if (r) inner.innerHTML = chartSlot(r) + (r.etf ? window.etfStats(r.ticker) : cardsHtml(r)); }
     requestAnimationFrame(() => art.classList.add('open'));
   } else { state.expanded.delete(t); art.classList.remove('open'); }
   btn.setAttribute('aria-expanded', String(open));
@@ -666,7 +667,7 @@ function classify(r) {
   return out.filter(Boolean).slice(0, 2);
 }
 function prepRow(r) {
-  r.macro = macroSector(r); r.tags = classify(r);
+  r.macro = r.etf ? 'ETF' : macroSector(r); r.tags = r.etf ? [] : classify(r);  // ETF: sem setor de empresa nem classificação
   r._s = norm([r.ticker, r.nome, r.pn, r.setor, r.subsetor, r.psetor, r.pind, r.macro, r.desc].filter(Boolean).join(' | '));
 }
 
@@ -762,6 +763,7 @@ async function load() {
     if (!r.ok) { const j = await r.json().catch(() => ({})); $('#updated').textContent = 'Fonte indisponível: ' + (j.error || r.status); setTimeout(load, 15000); return; }
     const d = await r.json();
     if (country === 'br') { d.rowsK = universe(d.rows); d.rows = tradable(d.rows); await loadProfiles(d.rows); } // todas as classes negociadas; grupos prontos usam rowsK (1 por empresa)
+    if (country === 'br' && window.etfRows) { try { d.rows = d.rows.concat(await window.etfRows()); } catch (e) { } }  // ETFs (etfs.js, /api/etfs): Comparar, Carteira, Favoritos, Grupos
     d.rows.forEach(prepRow); d.hasLiq = d.rows.some(x => x.v.liq2m != null);
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
     sendPins(); pushApp();

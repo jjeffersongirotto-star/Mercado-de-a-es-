@@ -18,18 +18,29 @@
     seg.querySelectorAll('[data-mk]').forEach(b => b.classList.toggle('on', b.dataset.mk === (etf ? 'etf' : 'acoes')));
     if (etf && !D) load();  // já desenhado: a recarga de dados das ações (dataload) não refaz a lista nem fecha os gráficos abertos
   }
+  // mesma cópia para a aba e para o resto do site: app.js junta as linhas de ETF (etfRows) a state.data.rows (Comparar, Carteira, Favoritos,
+  // Grupos e widget usam as mesmas funções das ações); a aba Mercado → Ações não as mostra (passes) e os grupos prontos também não (sem k1)
+  let PE = null;
+  const fetchE = () => PE || (PE = getRetry('/api/etfs').then(d => (D = d)).catch(e => { PE = null; throw e; }));
+  window.etfRows = async () => {
+    const d = await fetchE();
+    return Object.entries(d.e || {}).map(([t, x]) => ({ ticker: t, nome: x.n, pn: [x.f, x.i].filter(Boolean).join(' | '), setor: 'ETF', subsetor: (d.tipos || {})[x.k],
+      var: x.v, cur: 'BRL', v: { preco: x.p }, etf: x.k, ...(x.il ? { il: 1 } : {}) }));
+  };
+  window.etfStats = (t) => { const x = D && D.e[t]; return x ? `<div class="etf-c">${statsHtml(x)}</div>` : ''; };  // card do ETF em Favoritos/Grupos
   async function load() {
     if (loading) return; loading = true; root.innerHTML = loaderHTML('Carregando ETFs…');
-    try { D = await getRetry('/api/etfs'); draw(); }
+    try { await fetchE(); draw(); }
     catch (e) { root.innerHTML = `<p class="pvd-note">Não foi possível carregar os ETFs: ${esc(e.message)}</p>`; }
     loading = false;
   }
-  const card = (t, x) => `<div class="etf-c" data-et="${esc(t)}"><div class="etf-h"><b>${esc(t)}</b><span class="gchip">${esc((D.tipos || {})[x.k] || '')}</span></div>
-    <p class="etf-n">${esc(x.n || '')}</p><p class="etf-i">Índice: ${esc(x.i || '—')}</p>
-    <div class="etf-p"><span class="text-lg font-bold">${x.p == null ? '—' : brl.format(x.p)}</span><span class="${cor(x.v)}">${P(x.v)}</span></div>
-    <div class="etf-g"><span>Volume médio<b>${x.vm == null ? '—' : fmtMoneyBig(x.vm)}</b></span><span>Proventos 12 m<b>${x.dy == null ? '—' : F2.format(x.dy) + '%'}</b></span>
+  const statsHtml = (x) => `<p class="etf-i">Índice: ${esc(x.i || '—')}</p><div class="etf-g"><span>Volume médio<b>${x.vm == null ? '—' : fmtMoneyBig(x.vm)}</b></span><span>Proventos 12 m<b>${x.dy == null ? '—' : F2.format(x.dy) + '%'}</b></span>
       <span>1 ano<b class="${cor(x.r1)}">${P(x.r1)}</b></span><span>3 anos<b class="${cor(x.r3)}">${P(x.r3)}</b></span><span>5 anos<b class="${cor(x.r5)}">${P(x.r5)}</b></span></div>
-    <p class="etf-u">${x.u ? 'Fechamento de ' + dataBR(x.u) + ' · toque para ver o gráfico' : 'Sem negócios no COTAHIST'}</p></div>`;
+    <p class="etf-u">${x.u ? 'Fechamento de ' + dataBR(x.u) + (x.src === 'Yahoo' ? ' (Yahoo)' : '') : 'Sem negócios no período'}</p>`;
+  const card = (t, x) => `<div class="etf-c" data-et="${esc(t)}"><div class="etf-h"><b>${esc(t)}</b><span class="gchip">${esc((D.tipos || {})[x.k] || '')}</span></div>
+    <p class="etf-n">${esc(x.n || '')}</p>
+    <div class="etf-p"><span class="text-lg font-bold">${x.p == null ? '—' : brl.format(x.p)}</span><span class="${cor(x.v)}">${P(x.v)}</span></div>
+    ${statsHtml(x)}${x.u ? '<p class="etf-u">Toque para ver o gráfico</p>' : ''}</div>`;
   function draw() {
     const E = (D && D.e) || {}, nq = norm(q);
     let L = Object.entries(E).filter(([t, x]) => (fil === 'todos' || x.k === fil) && (!liq || !x.il) && (!nq || norm(t + ' ' + (x.n || '') + ' ' + (x.f || '')).includes(nq)));
@@ -43,7 +54,7 @@
         <button id="etfDir" type="button" class="px-2.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm" aria-label="Inverter ordem">${sortIc(dir)}</button></div></section>
       <p class="text-xs text-slate-400"><span class="text-base font-bold text-slate-100">${L.length}</span> ETFs ${glossBtn('ETF')}</p>
       ${L.length ? `<div class="etf-grid">${L.map(([t, x]) => card(t, x)).join('')}</div>` : '<p class="pvd-note">Nenhum ETF com esses filtros.</p>'}
-      <p class="pvd-note">Lista oficial da B3 (fundos de índice; cripto e fundos imobiliários ficam de fora; tipo pelo índice no nome do fundo); preço e volume do COTAHIST da B3. ETF não tem balanço: sem P/L, ROE, dívida ou Barato/Caro. Para estudo, não é recomendação.</p>`;
+      <p class="pvd-note">Lista oficial da B3 (fundos de índice; cripto e fundos imobiliários ficam de fora; tipo pelo índice no nome do fundo); preço e volume do COTAHIST da B3 (os de renda fixa, que a B3 não traz nessa base, do Yahoo). ETF não tem balanço: sem P/L, ROE, dívida ou Barato/Caro. Para estudo, não é recomendação.</p>`;
   }
   seg.addEventListener('click', (e) => { const b = e.target.closest('[data-mk]'); if (!b) return; modo = b.dataset.mk; save(); apply(); });
   root.addEventListener('click', (e) => {
