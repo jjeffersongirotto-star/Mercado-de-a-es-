@@ -8,8 +8,8 @@
   state.selSet = new Set(); state.selMode = false; state.group = null;
   // Grupo simulação (criado na Previsão): {name, tickers: [], sim: {di, v0}}; o servidor simula todos os modelos desde di
   // (/api/modelos/simgrupo, mesma conta do Comparar). Resultado guardado no aparelho e pedido de novo só 1x por dia.
-  const SKEY = 'screenerB3.simgrupo.v6';  // v6: caixa máximo do Barsi; v5: ações de cada balanço; v4: modelos de método; v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
-  try { localStorage.removeItem('screenerB3.simgrupo.v1'); localStorage.removeItem('screenerB3.simgrupo.v2'); localStorage.removeItem('screenerB3.simgrupo.v3'); localStorage.removeItem('screenerB3.simgrupo.v4'); localStorage.removeItem('screenerB3.simgrupo.v5'); } catch (e) { }
+  const SKEY = 'screenerB3.simgrupo.v7';  // v7: nomes das empresas (nm); v6: caixa máximo do Barsi; v5: ações de cada balanço; v4: modelos de método; v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
+  try { localStorage.removeItem('screenerB3.simgrupo.v1'); localStorage.removeItem('screenerB3.simgrupo.v2'); localStorage.removeItem('screenerB3.simgrupo.v3'); localStorage.removeItem('screenerB3.simgrupo.v4'); localStorage.removeItem('screenerB3.simgrupo.v5'); localStorage.removeItem('screenerB3.simgrupo.v6'); } catch (e) { }
   const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
   const simK = (g) => JSON.stringify([g.sim.di, g.sim.v0, g.sim.ap || 0, g.sim.ex || [], g.sim.ret || []]), today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
   const saveSim = () => { for (const k in SIM) if (!groups.some(g => g.sim && g.name === k)) delete SIM[k]; try { localStorage.setItem(SKEY, JSON.stringify(SIM)); } catch (e) { } };
@@ -442,8 +442,8 @@
   function simModal(gn, mid, tk) {
     const g = groups.find(y => y.sim && y.name === gn), c = SIM[gn], x = c && c.d && c.d.m.find(y => y.m === mid); if (!x || !g) return false;
     const src = Object.assign({}, g.sim, { m: mid });
-    if (tk) { pvSimCompany(src, tk, `${esc(tk)} · ${esc(x.n)}`); return true; }
-    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, src }, x)) }); return true;
+    if (tk) { pvSimCompany(src, tk, `${esc((c.d.nm || {})[tk] || tk)} · ${esc(x.n)}`); return true; }
+    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, nm: c.d.nm, src }, x)) }); return true;
   }
   window.jgOpenSim = function (gn, mid, n, tk) {
     n = n || 0; const g = groups.find(x => x.sim && x.name === gn); if (!g) return;

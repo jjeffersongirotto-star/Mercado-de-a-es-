@@ -1167,6 +1167,14 @@ def api_modelos_comparar(body: dict):
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
+def _sim_nomes(out):
+    """Nome popular (snapshots.nome_popular, o mesmo do widget) de cada ticker das posições e movimentações do Grupo simulação: {ticker: nome}."""
+    by = {r["ticker"]: r for r in (cache.data or {}).get("rows") or []}; tk = set()
+    for x in out.get("m") or [out]:
+        tk |= {y.get("t") for y in (x.get("pos") or []) if isinstance(y, dict)} | {y.get("t") for y in (x.get("mov") or [])}
+    if isinstance(out.get("pos"), dict): tk.add(out["pos"].get("t"))
+    return {t: n for t in tk if t for n in [snapshots.nome_popular(t, (by.get(t) or {}).get("nome"))] if n}
+
 @app.post("/api/modelos/simgrupo")
 def api_modelos_simgrupo(body: dict):
     """Grupo simulação (aba Grupos): todos os modelos em todas as empresas (1 ticker por empresa) desde di, mesmo valor inicial,
@@ -1179,6 +1187,7 @@ def api_modelos_simgrupo(body: dict):
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
         di, v0, ap, ex, ret = modelos.sim_def(b)  # valor inicial, aporte mensal, aportes e retiradas extras da Previsão
         out = modelos.simgrupo(D, modelos.todas(D, rows), di, v0, ap, ex, ret)
+        if not out.get("error"): out = dict(out, nm=_sim_nomes(out))  # cópia: o resultado fica no cache de modelos
     except Exception:
         log.exception("modelos: grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1196,6 +1205,7 @@ def api_modelos_simmov(body: dict):
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
         di, v0, ap, ex, ret = modelos.sim_def(b)
         out = modelos.simmov(D, modelos.todas(D, rows), di, v0, str(b.get("m") or "")[:24], tk, b.get("off") or 0, b.get("n") or 50, ap, ex, ret)
+        if not out.get("error"): out = dict(out, nm=_sim_nomes(out))
     except Exception:
         log.exception("modelos: movimentações do grupo simulação"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
