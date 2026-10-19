@@ -18,6 +18,24 @@
   const card = (n) => `<a class="nw-card" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer">
       ${n.img ? `<img class="nw-img" src="${esc(n.img)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
       <div class="nw-tx"><p class="nw-meta">${esc(n.fonte || '')}${n.data ? ' · ' + dt(n.data) : ''}${(n.m || []).length ? ' · ' + n.m.map(c => esc(pais(c))).join(', ') : ''}</p><h3 class="nw-t">${esc(n.titulo)}</h3>${(n.t || []).length + (n.tf || []).length ? `<p class="nw-tk">${(n.t || []).concat((n.tf || []).map(x => x.split(':')[1])).map(t => `<span class="gchip">${esc(t)}</span>`).join('')}</p>` : ''}${n.resumo ? `<p class="nw-d">${esc(n.resumo)}</p>` : ''}<span class="nw-go">Abrir matéria ↗</span></div></a>`;
+  // Métodos de investimento: matérias do ⓘ → Métodos de investimento (.met-links, fonte única), em pasta: 1º toque destaca, 2º abre
+  const metHtml = () => {
+    const L = [...document.querySelectorAll('#infoModal .met-links li')];
+    if (!L.length) return '';
+    return `<h3 class="nw-sub">Métodos de investimento</h3><div class="mf">${L.map((li, i) => {
+      const d = li.dataset, x = li.cloneNode(true); x.querySelectorAll('b, a').forEach(n => n.remove()); const tx = x.textContent.replace(/^:\s*/, '').trim();
+      return `<a class="mf-c" style="--i:${i * 8 / Math.max(1, L.length - 1)};--h:${(i * 40) % 360};z-index:${i + 1}" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer"><span class="mf-tab">${esc(d.met)}</span><span class="mf-b"><b>${esc(d.met)}</b><small>${esc(d.src)}</small><p>${esc(tx)}</p><em>Toque de novo para abrir ↗</em></span></a>`;
+    }).join('')}</div>`;
+  };
+  document.addEventListener('click', (e) => {
+    const c = e.target.closest('.mf-c'), f = document.querySelector('.mf.sel');
+    if (c && !c.classList.contains('on')) {
+      e.preventDefault();
+      document.querySelectorAll('.mf-c.on').forEach(x => x.classList.remove('on'));
+      c.classList.add('on'); c.closest('.mf').classList.add('sel'); return;
+    }
+    if (!c && f) { f.classList.remove('sel'); f.querySelectorAll('.mf-c.on').forEach(x => x.classList.remove('on')); }
+  });
   async function load() {
     if (loaded) return; loaded = true;
     root().innerHTML = loaderHTML('Carregando notícias…');
@@ -27,7 +45,7 @@
   }
   function draw() {
     const L = ((D && D.itens) || []).filter(pass);
-    root().innerHTML = `<section class="nw-head"><h2>Notícias ${glossBtn('Notícias')}</h2><div class="pv-per nw-fil">${FIL.map(([k, l]) => `<button type="button" data-nwf="${k}" class="${k === fil ? 'on' : ''}">${l}</button>`).join('')}</div></section>`
+    root().innerHTML = `<section class="nw-head"><h2>Notícias ${glossBtn('Notícias')}</h2><div class="pv-per nw-fil">${FIL.map(([k, l]) => `<button type="button" data-nwf="${k}" class="${k === fil ? 'on' : ''}">${l}</button>`).join('')}</div></section>` + metHtml()
       + (L.length ? `<div class="nw-grid">${L.map(card).join('')}</div>` : `<p class="pvd-note">${fil === 'fav' ? 'Nenhuma notícia cita seus Favoritos por enquanto.' : 'Nenhuma notícia por enquanto.'}</p>`)
       + `<p class="pvd-note">Resumos curtos; o texto completo está no site de cada fonte (abre em nova aba). Para estudo, não é recomendação.</p>`;
   }
