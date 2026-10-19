@@ -35,6 +35,9 @@ REF = [
     {"id": "ibov", "n": "Ibovespa", "vende": False, "ref": True, "nota": "pontos do índice (retorno total: os proventos ficam reinvestidos no índice, como num fundo que acompanha o Ibovespa), custo de 0,3% em cada compra; nunca vende"},
     {"id": "idiv", "n": "IDIV", "vende": False, "ref": True, "nota": "índice de dividendos da B3 (pontos do índice, retorno total: os proventos ficam reinvestidos; série histórica da B3 desde 2005), custo de 0,3% em cada compra; nunca vende"},
 ]
+# ETFs (snapshot modelos → etf: tipo br/ext/rf/com): sem balanço nem proventos regulares -> só os modelos de preço; renda fixa: só Buy and Hold
+# (comparado com o CDB, que já entra como referência). Sem nota de qualidade e sem venda por pontos (_venda)
+ETF_MOD = {"acoes": ("hold", "medo_mercado", "medo_acao", "media200", "alg1", "alg3", "tendencia", "hibrido"), "rf": ("hold",)}
 REF_SERIE = {"ouro": "G", "ibov": "IB", "idiv": "IV"}  # série de preço de cada referência que compra cotas (CDB: rende o CDI)
 # base dos modelos = empresas listadas hoje: as que saíram da bolsa ou faliram no período não estão -> resultados longos ficam otimistas
 AVISO = "Base histórica: em Todas entram também as empresas que saíram da bolsa desde 1998 (vendidas pelo último preço); elas ficam sem proventos e, antes de 2010, sem balanços, o que pode deixar os resultados um pouco diferentes do real."
@@ -131,8 +134,12 @@ def set_metodos(D, rows):
         vol = np.array(pd.DataFrame(rr.T).rolling(52, min_periods=26).std().to_numpy(np.float32).T); del rr
         vol[np.isnan(C32)] = np.nan; np.negative(vol, out=vol)
         S, nf = np.zeros((N, T), np.float32), np.zeros((N, T), np.int8)
+        EE = D["EK"] != "" if "EK" in D else np.zeros(N, bool)  # ETFs fora da posição entre as empresas
+        def sem_etf(a):
+            if EE.any(): a = np.array(a, np.float32); a[EE] = np.nan
+            return a
         for A in (lambda: np.where(MC > 0, NI / MC, np.nan).astype(np.float32), lambda: Q, lambda: D["R12"], lambda: vol):
-            x = rk(np.asarray(A(), np.float32)); ok = ~np.isnan(x); S += np.where(ok, x, 0); nf += ok; del x, ok
+            x = rk(sem_etf(np.asarray(A(), np.float32))); ok = ~np.isnan(x); S += np.where(ok, x, 0); nf += ok; del x, ok
         del vol; FATS = np.where(nf >= M["f_min"], S / np.maximum(nf, 1), np.nan).astype(np.float32); del S, nf
         ent["FAT"] = FATS >= M["f_entra"]; sai["FAT"] = ~(FATS >= M["f_sai"])
     out = {}
@@ -148,6 +155,9 @@ def set_metodos(D, rows):
     D.update(out); D.update({"VALS": VALS, "GROS": G1, "GARPS": PEG, "FATS": FATS})
     hx = [np.ones((N, T), bool), D["FAV"]["p1"], D["FAV"]["p3"], np.nan_to_num(D["M2"]) > 0, out["VAL"], out["GRO"], out["GARP"], out["FAT"]]
     D["HX"], D["HA"], D["HP"] = _hib(Cf, D["DV"], D["cdb"], hx, D["JT"])
+    e = np.flatnonzero(D["EK"] != "") if "EK" in D else []
+    if len(e):  # ETF: sem balanço -> o híbrido usa só os 4 especialistas de preço (os de método ficariam sempre fora)
+        D["HX"][e], D["HA"][e], D["HP"][e] = _hib(Cf[e], D["DV"][e], D["cdb"], [x[e] for x in hx[:4]], D["JT"][e])
     D["_mk"] = key; _C.clear()
 
 
@@ -166,7 +176,7 @@ def set_setores(D, rows, cad=None):
         D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
     set_metodos(D, rows)
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 12       # versão das contas (12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 13       # versão das contas (13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -429,6 +439,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
         FM["Q"] = np.where(FM["QW"] >= NOTA["min_qw"], 100 * (FM["QY"] + np.nan_to_num(PAG) * wp) / qw, np.nan).astype(np.float32)
     del FM["QY"], FM["QW"]
     NT, NX = _news_mats(tick, wk, news)
+    ET = snap.get("etf") or {}; EK = np.array([ET.get(t, "") for t in tick])  # tipo do ETF ("" = ação)
     # empresas que saíram da bolsa (snapshot modelos → saiu: último pregão): SAI = semana do último preço (-1 = negociada hoje)
     sa = {t: d for t, d in (snap.get("saiu") or {}).items() if t in tick}; SAI = np.full(N, -1)
     for t, d in sa.items():
@@ -445,7 +456,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
             "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
-            "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
+            "EK": EK, "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
             "fp": hashlib.sha1(repr((snap.get("fetched_at"), len(fund or {}), len(news or []), sorted(saida or {}))).encode() + cdb.tobytes()
@@ -524,6 +535,12 @@ def _span(D, di, df):
     di = max(di, D["ini"]); ym = D["ym"]
     me = [i for i in range(len(ym)) if D["me"][i] and di <= ym[i] <= df]
     return me
+
+
+def pode(D, mid, idx):
+    """O modelo vale para cada ticker de idx? Ações: todos; ETF: só os de ETF_MOD (renda fixa: só Buy and Hold)."""
+    ek = D["EK"][np.asarray(idx, int)] if "EK" in D else np.full(len(idx), "")
+    return (ek == "") | np.where(ek == "rf", mid in ETF_MOD["rf"], mid in ETF_MOD["acoes"])
 
 
 def _signals(D, mid, idx, i):
@@ -947,6 +964,7 @@ def run(D, req):
         if t not in D["ix"] or mid not in MOD: return {"error": "Empresa ou modelo sem dados."}
         k = D["ix"][t]
         if not ok(k): return {"error": f"{t} ainda não negociava em {D['ym'][me[0]]}."}
+        if not pode(D, mid, [k])[0]: return {"error": f"{t} é ETF: o modelo {MOD[mid]['n']} não se aplica."}
         rc = simulate(D, mid, [k], me, ap, wd, tx, True, True); com = rc["rows"][0]
         sem = simulate(D, mid, [k], me, ap, wd, tx, False, True)["rows"][0]
         pm = float(rc["pm"][0])
@@ -965,15 +983,17 @@ def run(D, req):
                 if MOD[mid]["vende"] and not MOD[mid].get("frac"):  # rodízio: uma empresa por vez (o híbrido divide a exposição na própria ação)
                     for g in (req.get("grupos") or [])[:12]:
                         gi = [D["ix"][t] for t in (g.get("t") or [])[:30] if t in D["ix"]]
+                        gi = [k for k, o in zip(gi, pode(D, mid, gi)) if o]  # ETF só nos modelos de preço
                         if len(gi) < 2: continue  # empresa listada depois do início entra no rodízio quando passa a ter preço
                         r = rotate(D, mid, gi, me, ap, wd, tx)
                         rows.append({"k": "g", "m": mid, "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2),
                                      "pct": pc(r["v"]), "ra": None if r["ra"] != r["ra"] else round(r["ra"], 2), "ir": round(r["ir"], 2), "irv": round(r["irv"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
-                if not uni: continue
-                r = simulate(D, mid, uni, me, ap, wd, tx)
-                fo = fora_barsi(D, uni, me) if mid == "barsi" else np.zeros(len(uni), bool)
-                best = sorted((q for q in range(len(uni)) if not fo[q]), key=lambda q: -r["v"][q])[:10]
-                rows += [{"k": "a", "m": mid, "t": D["tick"][uni[q]], "v": round(float(r["v"][q]), 2), "pct": pc(r["v"][q]), "ra": None if np.isnan(r["ra"][q]) else round(float(r["ra"][q]), 2),
+                un = [k for k, o in zip(uni, pode(D, mid, uni)) if o]
+                if not un: continue
+                r = simulate(D, mid, un, me, ap, wd, tx)
+                fo = fora_barsi(D, un, me) if mid == "barsi" else np.zeros(len(un), bool)
+                best = sorted((q for q in range(len(un)) if not fo[q]), key=lambda q: -r["v"][q])[:10]
+                rows += [{"k": "a", "m": mid, "t": D["tick"][un[q]], "v": round(float(r["v"][q]), 2), "pct": pc(r["v"][q]), "ra": None if np.isnan(r["ra"][q]) else round(float(r["ra"][q]), 2),
                           "ir": round(float(r["ir"][q]), 2), "irv": round(float(r["irv"][q]), 2), "c": int(r["c"][q]), "s": int(r["s"][q])} for q in best]
         else:
             t = req.get("ticker")
@@ -981,6 +1001,9 @@ def run(D, req):
             k = D["ix"][t]
             if not ok(k): return {"error": f"{t} ainda não negociava em {D['ym'][me[0]]}."}
             if len(mids) == 1 and mids[0] != "hold": mids = mids + ["hold"]  # referência: comprar e segurar
+            if not pode(D, mids[0], [k])[0] and len(mids) == 2:
+                return {"error": f"{t} é ETF: {'renda fixa só entra no Buy and Hold' if D['EK'][k] == 'rf' else 'só entra nos modelos de preço'} (sem balanço)."}
+            mids = [m for m in mids if pode(D, m, [k])[0]]
             for mid in mids:
                 r = simulate(D, mid, [k], me, ap, wd, tx)
                 rows.append({"k": "a", "m": mid, "t": t, "v": round(float(r["v"][0]), 2), "pct": pc(r["v"][0]), "ra": None if np.isnan(r["ra"][0]) else round(float(r["ra"][0]), 2), "ir": round(float(r["ir"][0]), 2), "irv": round(float(r["irv"][0]), 2),
@@ -1120,6 +1143,7 @@ def _venda(D, mid, idx, i, sh, basis, P, ok, age):
     crise no mercado. Vende quando há problema e problemas − margem ≥ VENDA['limite']."""
     n = len(idx); out = np.full(n, "", dtype=object); FM = D.get("FM")
     held = (sh > 0) & ok & (age >= VENDA["posse"])
+    if "EK" in D: held &= D["EK"][np.asarray(idx, int)] == ""  # ETF: sem venda por pontos (não tem balanço)
     if not held.any(): return out
     j = max(0, i - 1); DVn = np.nan_to_num(D["DV"][idx, max(0, i - 104):i]); pm = np.where(sh > 0, basis / np.where(sh > 0, sh, 1), 0)
     z = np.zeros(n, bool); g = (lambda k: FM[k][idx, j]) if FM else (lambda k: z)
@@ -1412,6 +1436,9 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
             return hit
     R = [simulate(D, m["id"], idx, me, aps, wd, tx) for m in MODELOS]
     fora = fora_barsi(D, idx, me) if len(idx) > 1 else np.zeros(len(idx), bool)  # uma empresa só: calcula mesmo fora do método
+    for r, m in zip(R, MODELOS):  # ETF: modelos que não se aplicam ficam sem valor (como o Barsi fora do método)
+        po = pode(D, m["id"], idx)
+        if not po.all(): r["v"] = np.where(po, r["v"], np.nan); r["ra"] = np.where(po, r["ra"], np.nan)
     ib = [m["id"] for m in MODELOS].index("barsi"); R[ib]["v"] = np.where(fora, np.nan, R[ib]["v"]); R[ib]["ra"] = np.where(fora, np.nan, R[ib]["ra"])
     refs = _refs(D, me, aps, wd, apT); z = np.zeros(len(idx))
     R += [{"v": np.full(len(idx), np.nan if r["v"] is None else r["v"]), "ra": np.full(len(idx), np.nan if r["ra"] is None else r["ra"]), "ir": z, "irv": z, "c": z, "s": z} for r in refs]
@@ -1427,9 +1454,10 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
         return {"m": m["id"], "media": round(float(P[i][ok].mean()), 2), "vmedio": round(float(V[i][ok].mean()), 2), "mediana": round(float(np.median(P[i][ok])), 2),
                 "ganha": None if m["id"] == "hold" else round(float((V[i][ok] > hold[ok]).mean() * 100), 1), "pior": int(rk[i].max()) + 1, "pos": cnt[i].tolist(),
                 "pts": int(pts[i]), "ptsm": round(float(pts[i]) / k, 2), "n": k, **({"ref": True} if m.get("ref") else {})}
-    G = [grupo(D, m["id"], idx, me, aps) for m in MODELOS]  # modo Grupo: uma carteira por modelo (mesmo aporte de uma empresa)
+    gi = {m["id"]: [k for k, o in zip(idx, pode(D, m["id"], idx)) if o] for m in MODELOS}  # ETF: só nos modelos que valem para ele
+    G = [grupo(D, m["id"], gi[m["id"]], me, aps) if gi[m["id"]] else None for m in MODELOS]  # modo Grupo: uma carteira por modelo (mesmo aporte de uma empresa)
     cart = [{"m": m["id"], "v": round(g[0], 2), "pct": round((g[0] / apT - 1) * 100, 2) if apT > 0 else None, "ir": round(g[1], 2), "c": g[2], "s": g[3]}
-            for m, g in zip(MODELOS, G)] + [{"m": r["m"], "v": r["v"], "pct": r["pct"], "ir": 0.0, "c": None, "s": None, "ref": True} for r in refs]
+            for m, g in zip(MODELOS, G) if g is not None] + [{"m": r["m"], "v": r["v"], "pct": r["pct"], "ir": 0.0, "c": None, "s": None, "ref": True} for r in refs]
     big = lambda i: -_nmean(P[i])  # ord_pts: pela média de pontos (o Método Barsi só conta nas empresas do método)
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT, "pedidas": len(dict.fromkeys(tickers)), "aviso": AVISO,
            "t": [D["tick"][k] for k in idx], "m": [m["id"] for m in M], "p": J(P), "rk": rk.tolist(),
@@ -1444,6 +1472,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
             if not m["vende"] or m.get("frac"): continue
             for g in grupos[:12]:
                 gi = [D["ix"][t] for t in (g.get("t") or [])[:30] if t in D["ix"]]
+                gi = [k for k, o in zip(gi, pode(D, m["id"], gi)) if o]
                 if len(gi) < 2: continue
                 r = rotate(D, m["id"], gi, me, aps, wd, tx)
                 out["g"].append({"m": m["id"], "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2), "pct": pc(r["v"]), "ra": None if r["ra"] != r["ra"] else round(r["ra"], 2), 
