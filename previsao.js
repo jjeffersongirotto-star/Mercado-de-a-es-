@@ -395,13 +395,26 @@ if (typeof document !== 'undefined') {
 
   // ---------- Modelos (regras e simulação no servidor: modelos.py; sinais semanais: snapshot modelos) ----------
   let MM = null, mmP = null, des = null, sel = null, seq = 0, tabX = null;  // tabX: movimentações da simulação aberta no mês a mês
-  const modMeta = () => mmP || (mmP = fetch('/api/modelos').then(r => r.json()).then(d => { if (d && d.modelos) { MM = d; fillMod(); return d; } mmP = null; return null; }).catch(() => { mmP = null; return null; }));
+  // lista de modelos (/api/modelos): servidor acordando ou recém-publicado responde "carregando" -> tenta de novo a cada 5 s por até 2 min
+  // (e de novo ao tocar na lista); quando chega depois de uma falha, refaz a conta do modelo escolhido
+  let mmT0 = 0, mmTimer = null;
+  const modMeta = () => mmP || (MM || (el('pvModInfo').textContent = 'Carregando modelos…'), mmP = fetch('/api/modelos').then(r => r.json()).then(d => {
+    if (!(d && d.modelos)) throw new Error('carregando');
+    const late = !!mmT0; MM = d; mmT0 = 0; fillMod(); if (late && st.mod) compute(); return d;
+  }).catch(() => {
+    mmP = null; if (!mmT0) mmT0 = Date.now();
+    if (Date.now() - mmT0 < 120000 && !mmTimer) mmTimer = setTimeout(() => { mmTimer = null; modMeta(); }, 5000);
+    fillMod(); return null;
+  }));
+  el('pvMod').addEventListener('pointerdown', () => { if (!MM && !mmP) { mmT0 = Date.now(); modMeta(); fillMod(); } });
   const modName = (id) => ((MM && MM.modelos.find(m => m.id === id)) || {}).n || id;
   function fillMod() {
-    const o = [['', 'Sem modelo']].concat(MM ? MM.modelos.map(m => [m.id, m.n]) : []).concat([['*', 'Todos']]);
+    const o = [['', 'Sem modelo']].concat(MM ? MM.modelos.map(m => [m.id, m.n]) : st.mod && st.mod !== '*' ? [[st.mod, 'Carregando modelos…']] : []).concat([['*', 'Todos']]);
     el('pvMod').innerHTML = o.map(([v, l]) => `<option value="${v}"${v === st.mod ? ' selected' : ''}>${esc(l)}</option>`).join('');
-    el('pvModInfo').textContent = MM ? `Dados de ${dataBR(MM.ini)} a ${dataBR(MM.fim)}.` : '';
+    el('pvModInfo').textContent = MM ? `Dados de ${dataBR(MM.ini)} a ${dataBR(MM.fim)}.`
+      : mmP || mmTimer ? 'Carregando modelos…' : mmT0 ? 'Modelos indisponíveis agora. Toque na lista para tentar de novo.' : '';
   }
+  fillMod();  // já abre com Sem modelo e Todos; os modelos entram quando /api/modelos responde
   el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; peek = null; des = null; modDl(); st.pvt = multi() || st.mod === '*' ? 'des' : 'tab'; save(); applyMode(); compute(); });
   el('pvModI').addEventListener('click', () => infoSection('Modelos da Previsão'));
   // ⬇ do card Modelos: Planilha (.csv: Desempenho e mês a mês da tela, resumo e movimentações de cada empresa, com data, preço e motivo)
