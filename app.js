@@ -793,7 +793,7 @@ $('#onlyLiquid').addEventListener('change', apply);
 $('#fIndex') && $('#fIndex').addEventListener('change', apply);
 $('#btnClear').addEventListener('click', () => { $('#q').value = ''; clearFilters(); });
 $('#btnCsv').addEventListener('click', exportCsv);
-const infoOpen = (o) => { $('#infoModal').classList.toggle('hidden', !o); document.body.style.overflow = o ? 'hidden' : ''; };
+const infoOpen = (o) => { $('#infoModal').classList.toggle('hidden', !o); if (o && window.appVer) window.appVer(); document.body.style.overflow = o ? 'hidden' : ''; };
 $('#btnInfo').addEventListener('click', () => infoOpen(true));
 // abre o painel ⓘ já na seção com este título (ex.: ⓘ do card Modelos da Previsão)
 window.infoSection = (title) => {  // abre a seção do painel ⓘ pelo título (summary) ou por um subtítulo h3 dentro dela
