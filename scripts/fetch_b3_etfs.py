@@ -1,84 +1,86 @@
 #!/usr/bin/env python3
-"""ETFs listados na B3 (ações do Brasil, ações de fora e renda fixa; cripto e FIIs ficam fora) -> OUT/etfs.json.
-Fase de teste: grava também OUT/etfs_probe.json com o que cada fonte respondeu (a B3 e a CVM são bloqueadas na máquina de
-desenvolvimento; a rotina do GitHub alcança): lista de fundos da B3, detalhe de um ETF, linhas do COTAHIST e cadastro de fundos da CVM.
-Uso: fetch_b3_etfs.py OUT_DIR [DIR_COTAHIST]"""
-import base64, csv, io, json, os, sys, zipfile
+"""ETFs listados na B3 -> OUT/etfs.json (aba Mercado → ETFs, /api/etfs). Duas fases na rotina:
+  lista  (antes do COTAHIST): lista oficial da B3 (fundos de índice, typeFund "ETF") com código, nome do fundo e tipo pelo índice
+         do nome (TIPOS): ações do Brasil, ações de fora, renda fixa; cripto e fundos imobiliários (FII) ficam fora (FORA).
+  dados  (depois do COTAHIST): preço, variação do dia, volume médio de 30 pregões, rendimento em 1–5 anos e proventos de 12 meses
+         lidos dos históricos history4_etf/<TICKER>.json.gz que build_cotahist.py grava para os ETFs da lista (mesma base B3; pasta própria
+         para não entrarem no "mercado" do Medo e Ganância nem nos modelos).
+Taxa de administração: o detalhe do fundo da B3 não responde e o cadastro da CVM (registro_classe) não traz a taxa -> fica sem.
+Uso: fetch_b3_etfs.py lista|dados OUT_DIR"""
+import base64, gzip, json, os, re, sys, time, unicodedata
+from datetime import datetime, timezone
 import requests
 
-OUT = sys.argv[1]; ZD = sys.argv[2] if len(sys.argv) > 2 else None
 UA = {"User-Agent": "Mozilla/5.0"}
-B3 = "https://sistemaswebb3-listados.b3.com.br"
-AMOSTRA = ("BOVA11", "IVVB11", "SMAL11", "DIVO11", "IMAB11", "FIXA11", "B5P211", "NASD11", "HASH11", "XFIX11")
-probe = {}
+URL = "https://sistemaswebb3-listados.b3.com.br/fundsListedProxy/Search/GetListFunds/"
+# tipo pelo nome do fundo (sem acento, maiúsculas); a ordem importa: o primeiro que casa vale
+FORA = [("cripto", r"BITCOIN|CRIPTO|ETHEREUM|ETHER\b|BLOCKCHAIN|SOLANA|\bXRP\b|HASHDEX|WEB3|DEFI\b|NCI\b"),
+        ("fii", r"IFIX|IMOBILIARI|FUNDOS? IMOB|REAL ESTATE|\bREIT")]
+TIPOS = [("rf", r"RENDA FIXA|\bIMA[- ]?B|\bIMAB|\bIRF[- ]?M|\bIDKA|TESOURO|DEBENTURE|\bCDI\b|\bDI\b|INFLACAO|\bIPCA|PREFIXAD|TITULOS PUBLICOS|CREDITO PRIVADO|\bIDA\b|JUROS"),
+         ("ext", r"S&P|SP ?500|NASDAQ|MSCI|\bEUA\b|ESTADOS UNIDOS|EUROPA|EUROPE|CHINA|ASIA|GLOBAL|DOW JONES|WORLD|\bACWI|EMERG|JAPAO|JAPAN|INDIA|ALEMANHA|INTERNACIONAL|\bUSA?\b|\bUS\b|HANG SENG|RUSSELL|FTSE|STOXX|NYSE|AMERICAN|TREASURY|\bOURO\b|GOLD|ESG GLOBAL|ARK|INNOVATION|SEMICONDUT|NIKKEI")]
+TIPO_N = {"br": "Ações Brasil", "ext": "Ações de fora", "rf": "Renda fixa"}
 
 
 def b64(o): return base64.b64encode(json.dumps(o).encode()).decode()
+def sem_acento(s): return unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().upper()
 
 
-def get(url, n=4000):
-    try:
-        r = requests.get(url, headers=UA, timeout=60)
-        return {"status": r.status_code, "body": r.text[:n]}
-    except Exception as e:
-        return {"erro": f"{type(e).__name__}: {e}"[:300]}
+def tipo(nome):
+    n = sem_acento(nome)
+    for k, rx in FORA + TIPOS:
+        if re.search(rx, n): return k
+    return "br"
 
 
-# 1) B3: lista de fundos listados (ETF = typeFund 20 em diversos serviços; testa caminhos e tipos)
-for path in ("fundsProxy/fundsCall/GetListedFundsSIG", "fundsProxy/fundsCall/GetListFunds", "fundsListedProxy/Search/GetListFunds"):
-    for tf in (20, 21, 22, 7):
-        q = {"language": "pt-br", "typeFund": tf, "pageNumber": 1, "pageSize": 20, "keyword": ""}
-        probe[f"lista {path} tipo {tf}"] = get(f"{B3}/{path}/{b64(q)}", 3000)
-for path in ("fundsProxy/fundsCall/GetDetailFundSIG", "fundsProxy/fundsCall/GetDetailFund"):
-    for tf in (20, 21):
-        q = {"language": "pt-br", "typeFund": tf, "identifierFund": "BOVA"}
-        probe[f"detalhe {path} tipo {tf} BOVA"] = get(f"{B3}/{path}/{b64(q)}", 6000)
+def indice(nome):
+    """Índice que o ETF acompanha = nome do fundo sem a forma jurídica (… FUNDO DE ÍNDICE / CLASSE DE ÍNDICE …)."""
+    n = re.split(r"\s*[-–]?\s*(FUNDO DE [IÍ]NDICE|CLASSE DE [IÍ]NDICE|FUNDO DE INVESTIMENTO|RESPONSABILIDADE LIMITADA)", nome or "", flags=re.I)[0]
+    return re.sub(r"\s+", " ", n).strip(" -–")
 
-# 1b) outras variações da B3 (2ª rodada)
-for path in ("fundsProxy/fundsCall/GetListedFundsSIG", "fundsListedProxy/Search/GetListFunds"):
-    for q in ({"typeFund": 20, "pageNumber": 1, "pageSize": 20}, {"language": "pt-br", "typeFund": "ETF", "pageNumber": 1, "pageSize": 20},
-              {"typeFund": 20, "pageNumber": 1, "pageSize": 20, "keyword": "BOVA"}, {"language": "pt-br", "typeFund": 1, "pageNumber": 1, "pageSize": 20}):
-        probe[f"lista2 {path} {q}"] = get(f"{B3}/{path}/{b64(q)}", 1500)
-for q in ({"typeFund": 20, "identifierFund": "BOVA"}, {"language": "pt-br", "typeFund": 20, "identifierFund": "BOVA11"}, {"typeFund": 20, "cnpj": "10406511000161", "identifierFund": "BOVA"}):
-    probe[f"detalhe2 {q}"] = get(f"{B3}/fundsProxy/fundsCall/GetDetailFundSIG/{b64(q)}", 4000)
-probe["etf-page"] = get("https://sistemaswebb3-listados.b3.com.br/fundsListedProxy/Search/GetListedFundsETF/" + b64({"language": "pt-br", "pageNumber": 1, "pageSize": 20}), 1500)
 
-# 2) COTAHIST: como os ETFs aparecem (BDI, especificação, nome) no arquivo do ano mais recente
-if ZD and os.path.isdir(ZD):
-    anos = sorted(f for f in os.listdir(ZD) if f.startswith("COTAHIST_A"))
-    if anos:
-        vis, bdi = {}, {}
-        with zipfile.ZipFile(os.path.join(ZD, anos[-1])) as z, z.open(z.namelist()[0]) as f:
-            for raw in io.TextIOWrapper(f, encoding="latin1"):
-                if not raw.startswith("01") or raw[24:27] != "010": continue
-                cod = raw[12:24].strip(); b = raw[10:12]; esp = raw[39:49].strip()
-                if cod.endswith("11"): bdi.setdefault(f"{b} {esp}", set()).add(cod)
-                if cod in AMOSTRA: vis[cod] = {"bdi": b, "especi": esp, "nome": raw[27:39].strip(), "isin": raw[230:242]}
-        probe["cotahist amostra"] = vis
-        probe["cotahist BDI+especificação dos códigos terminados em 11"] = {k: [len(v)] + sorted(v)[:15] for k, v in sorted(bdi.items())}
+def lista(out):
+    res, pg = [], 1
+    while True:
+        d = requests.get(URL + b64({"language": "pt-br", "typeFund": "ETF", "pageNumber": pg, "pageSize": 120}), headers=UA, timeout=60).json()
+        res += d.get("results") or []
+        if pg >= (d.get("page") or {}).get("totalPages", 1): break
+        pg += 1; time.sleep(0.3)
+    if len(res) < 30: print("ETFs: lista da B3 veio curta:", len(res), file=sys.stderr); return 1
+    E, fora = {}, {}
+    for r in res:
+        ac = (r.get("acronym") or "").strip().upper(); nome = (r.get("fundName") or "").strip()
+        if not re.fullmatch(r"[A-Z0-9]{4}", ac): continue
+        k = tipo(nome)
+        if k in ("cripto", "fii"): fora[ac + "11"] = k; continue
+        E[ac + "11"] = {"n": r.get("tradingName") or ac, "f": nome, "i": indice(nome), "k": k}
+    json.dump({"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "fonte": "B3 (fundos de índice listados)",
+               "tipos": TIPO_N, "e": E, "fora": fora}, open(os.path.join(out, "etfs.json"), "w"), ensure_ascii=False, separators=(",", ":"))
+    cont = ", ".join(TIPO_N[k] + " " + str(sum(1 for x in E.values() if x["k"] == k)) for k in TIPO_N)
+    print(f"ETFs: {len(E)} na lista ({cont}); fora: {len(fora)} (cripto/FII)")
+    return 0
 
-# 3) CVM: cadastro de fundos (taxa de administração); ETF = fundo de índice
-for u in ("https://dados.cvm.gov.br/dados/FI/CAD/DADOS/cad_fi.csv", "https://dados.cvm.gov.br/dados/FI/CAD/DADOS/registro_fundo_classe.zip"):
-    try:
-        r = requests.get(u, headers=UA, timeout=180)
-        info = {"status": r.status_code, "bytes": len(r.content)}
-        if r.status_code == 200:
-            if u.endswith(".zip"):
-                z = zipfile.ZipFile(io.BytesIO(r.content)); info["arquivos"] = z.namelist()
-                for nm in z.namelist():
-                    t = z.read(nm).decode("latin1"); L = t.splitlines()
-                    info[nm] = {"cabecalho": L[0][:800], "etf": [l[:600] for l in L if "NDICE" in l.upper() and ("BOVA" in l.upper() or "ISHARES" in l.upper())][:5], "linhas": len(L)}
-                    if nm == "registro_classe.csv":  # todos os fundos de índice em funcionamento (nome, CNPJ, patrimônio)
-                        info["fiim"] = [l.split(";")[2] + " | " + l.split(";")[8] + " | " + l.split(";")[22] for l in L[1:] if "FIIM" in l and "Funcionamento" in l]
-                    if nm == "registro_subclasse.csv": info["amostra"] = L[1:4]
-            else:
-                t = r.content.decode("latin1"); L = t.splitlines()
-                info["cabecalho"] = L[0][:800]; info["linhas"] = len(L)
-                info["etf"] = [l[:600] for l in L if "ISHARES" in l.upper()][:8]
-                info["tipos"] = sorted({row.get("TP_FUNDO") for row in csv.DictReader(io.StringIO(t), delimiter=";")} - {None})[:30]
-        probe[f"cvm {u.rsplit('/', 1)[1]}"] = info
-    except Exception as e:
-        probe[f"cvm {u.rsplit('/', 1)[1]}"] = {"erro": f"{type(e).__name__}: {e}"[:300]}
 
-json.dump(probe, open(os.path.join(OUT, "etfs_probe.json"), "w"), ensure_ascii=False, indent=1, default=list)
-print("ETFs: teste gravado em etfs_probe.json;", ", ".join(f"{k}: {v.get('status', v.get('erro', '?')) if isinstance(v, dict) else '...'}" for k, v in probe.items())[:3000])
+def dados(out):
+    p = os.path.join(out, "etfs.json"); J = json.load(open(p)); E = J["e"]; ok = 0
+    for t, x in E.items():
+        f = os.path.join(out, "history4_etf", f"{t}.json.gz")
+        if not os.path.exists(f): continue
+        h = json.loads(gzip.decompress(open(f, "rb").read())); d = h.get("d") or {}
+        ts, c, v = d.get("t") or [], d.get("c") or [], d.get("vol") or []
+        if len(c) < 2: continue
+        x["p"] = c[-1]; x["v"] = round((c[-1] / c[-2] - 1) * 100, 2) if c[-2] else None; x["u"] = datetime.fromtimestamp(ts[-1], timezone.utc).strftime("%Y-%m-%d")
+        x["vm"] = round(sum(v[-30:]) / len(v[-30:])) if v else None  # volume médio diário de 30 pregões (R$)
+        dv = [b for a, b in (h.get("divs") or []) if a >= ts[-1] - 365 * 86400]
+        x["dy"] = round(sum(dv) / c[-1] * 100, 2) if dv and c[-1] else 0.0  # proventos de 12 meses ÷ preço (%)
+        for n in range(1, 6):  # rendimento só de preço em n anos (proventos à parte, em dy)
+            alvo = ts[-1] - n * 365.25 * 86400; j = next((i for i, a in enumerate(ts) if a >= alvo), None)
+            x[f"r{n}"] = round((c[-1] / c[j] - 1) * 100, 1) if j is not None and j > 0 and c[j] else None
+        x["ini"] = datetime.fromtimestamp(ts[0], timezone.utc).strftime("%Y-%m-%d"); ok += 1
+    J["dados_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    json.dump(J, open(p, "w"), ensure_ascii=False, separators=(",", ":"))
+    print(f"ETFs: preços de {ok} de {len(E)} (COTAHIST)")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit((lista if sys.argv[1] == "lista" else dados)(sys.argv[2]))

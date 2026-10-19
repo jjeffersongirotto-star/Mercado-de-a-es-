@@ -18,7 +18,7 @@ if [ -z "$PY" ]; then
 fi
 # Grava em blocos (commit + push ao fim de cada um): se a rotina for cortada no meio, o que já ficou pronto não se perde.
 BLOCK1="fundamentus statusinvest yfinance tradingview cvm b3prov noticias logos"                   # rápidos (logos: 1×/semana)
-BLOCK2="b3indices b3cad b3btb vol30 cotahist etfs history metrics fg fund fatos modelos modpre kb"     # B3, históricos e derivados
+BLOCK2="b3indices b3cad b3btb vol30 etfs cotahist etfsd history metrics fg fund fatos modelos modpre kb"     # B3, históricos e derivados
 BLOCK3="investidor10 dadosdemercado"                                                             # lentos (~1 h): por último
 STEPS="${ONLY:-$BLOCK1 $BLOCK2 $BLOCK3}"
 # Log persistente do dia (lista as etapas que falharam no fim)
@@ -66,7 +66,8 @@ step() {
     b3btb)          run "Aluguel e fluxo B3" "$PY" "$HERE/scripts/fetch_b3_btb.py" "$TMP/data" ;;
     vol30)          run "Volume 30 pregões B3" "$PY" "$HERE/scripts/build_vol30.py" "${COTA_DIR:-/workspace/scratch/cotahist}" "$TMP/data" ;;
     cotahist)       run "B3 COTAHIST" "$PY" "$HERE/scripts/build_cotahist.py" "${COTA_DIR:-/workspace/scratch/cotahist}" "$TMP/data" ;;
-    etfs)           run "ETFs B3" "$PY" "$HERE/scripts/fetch_b3_etfs.py" "$TMP/data" "${COTA_DIR:-/workspace/scratch/cotahist}" ;;
+    etfs)           run "ETFs B3 (lista)" "$PY" "$HERE/scripts/fetch_b3_etfs.py" lista "$TMP/data" ;;
+    etfsd)          run "ETFs B3 (preços)" "$PY" "$HERE/scripts/fetch_b3_etfs.py" dados "$TMP/data" ;;
     metrics)        run "Métricas Grupos" "$PY" "$HERE/scripts/build_metrics.py" "$TMP/data" ;;
     dadosdemercado) run "Dados de Mercado" "$PY" "$HERE/scripts/fetch_dadosdemercado.py" "$TMP/data" ;;
     fg)             run "Medo e Ganância" "$PY" "$HERE/scripts/build_fg.py" "$TMP/data" ;;
