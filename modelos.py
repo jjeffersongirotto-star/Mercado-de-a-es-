@@ -1036,7 +1036,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 5  # muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 6  # 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -1053,19 +1053,16 @@ def set_pre(snap):
 
 def ranking(V, nref=0):
     """V: (modelos + nref referências no fim) × empresas (valor final; nan = fora, ex.: Método Barsi fora do método).
-    -> posição pelo rendimento (0 = 1º; -1 = fora), contagem por posição, ordem das Colocações (mais 1º lugares; empate -> mais 2º…;
-    empate em tudo -> maior média) e pontos (PONTOS pela colocação; as referências ficam sempre com as últimas colocações)."""
-    n = V.shape[0]; ok = ~np.isnan(V)
-    def rank(K):
-        r = (-np.where(ok, K, -np.inf)).argsort(axis=0, kind="stable").argsort(axis=0)
-        return np.where(ok, r, -1)
-    rk = rank(V)
-    K = V.copy()
-    if nref: K[n - nref:] -= 1e15  # referências abaixo de todos os modelos (entre elas, pelo rendimento)
-    rp = rank(K); sc = np.array(PONTOS + (0,) * n)
-    pts = np.where(ok, sc[np.maximum(rp, 0)], 0).sum(axis=1)
-    cnt = np.array([[int((rk[i] == p).sum()) for p in range(n)] for i in range(n)])
-    order = sorted(range(n), key=lambda i: tuple(-cnt[i]) + (-_nmean(V[i]),))
+    -> posição pelo rendimento SÓ entre os modelos (0 = 1º; -1 = fora; referências sempre -1: não são modelos), contagem por posição
+    (colunas 1º…nº de modelos; referências zeradas), ordem das Colocações (mais 1º lugares; empate -> mais 2º…; empate em tudo -> maior
+    média; referências no fim) e pontos (PONTOS pela colocação entre os modelos; referências 0)."""
+    n = V.shape[0]; nm = n - nref; ok = ~np.isnan(V); ok[nm:] = False
+    r = (-np.where(ok, V, -np.inf)).argsort(axis=0, kind="stable").argsort(axis=0)
+    rk = np.where(ok, r, -1)
+    sc = np.array(PONTOS + (0,) * n)
+    pts = np.where(ok, sc[np.maximum(rk, 0)], 0).sum(axis=1)
+    cnt = np.array([[int((rk[i] == p).sum()) for p in range(nm)] for i in range(n)])
+    order = sorted(range(n), key=lambda i: (i >= nm,) + tuple(-cnt[i]) + (-_nmean(V[i]),))
     return rk, cnt, order, pts
 
 
@@ -1452,7 +1449,7 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
         ok = ~np.isnan(V[i]); k = int(ok.sum())
         if not k: return {"m": m["id"], "media": None, "vmedio": None, "mediana": None, "ganha": None, "pior": None, "pos": cnt[i].tolist(), "pts": 0, "ptsm": 0, "n": 0}
         return {"m": m["id"], "media": round(float(P[i][ok].mean()), 2), "vmedio": round(float(V[i][ok].mean()), 2), "mediana": round(float(np.median(P[i][ok])), 2),
-                "ganha": None if m["id"] == "hold" else round(float((V[i][ok] > hold[ok]).mean() * 100), 1), "pior": int(rk[i].max()) + 1, "pos": cnt[i].tolist(),
+                "ganha": None if m["id"] == "hold" else round(float((V[i][ok] > hold[ok]).mean() * 100), 1), "pior": None if m.get("ref") else int(rk[i].max()) + 1, "pos": cnt[i].tolist(),
                 "pts": int(pts[i]), "ptsm": round(float(pts[i]) / k, 2), "n": k, **({"ref": True} if m.get("ref") else {})}
     gi = {m["id"]: [k for k, o in zip(idx, pode(D, m["id"], idx)) if o] for m in MODELOS}  # ETF: só nos modelos que valem para ele
     G = [grupo(D, m["id"], gi[m["id"]], me, aps) if gi[m["id"]] else None for m in MODELOS]  # modo Grupo: uma carteira por modelo (mesmo aporte de uma empresa)
