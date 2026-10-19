@@ -1,0 +1,556 @@
+{
+ "lista fundsProxy/fundsCall/GetListedFundsSIG tipo 20": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "lista fundsProxy/fundsCall/GetListedFundsSIG tipo 21": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "lista fundsProxy/fundsCall/GetListedFundsSIG tipo 22": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "lista fundsProxy/fundsCall/GetListedFundsSIG tipo 7": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "lista fundsProxy/fundsCall/GetListFunds tipo 20": {
+  "status": 404,
+  "body": ""
+ },
+ "lista fundsProxy/fundsCall/GetListFunds tipo 21": {
+  "status": 404,
+  "body": ""
+ },
+ "lista fundsProxy/fundsCall/GetListFunds tipo 22": {
+  "status": 404,
+  "body": ""
+ },
+ "lista fundsProxy/fundsCall/GetListFunds tipo 7": {
+  "status": 404,
+  "body": ""
+ },
+ "lista fundsListedProxy/Search/GetListFunds tipo 20": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "lista fundsListedProxy/Search/GetListFunds tipo 21": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "lista fundsListedProxy/Search/GetListFunds tipo 22": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "lista fundsListedProxy/Search/GetListFunds tipo 7": {
+  "status": 200,
+  "body": "{\"page\":{\"pageNumber\":1,\"pageSize\":20,\"totalRecords\":0,\"totalPages\":0},\"results\":[]}"
+ },
+ "detalhe fundsProxy/fundsCall/GetDetailFundSIG tipo 20 BOVA": {
+  "status": 200,
+  "body": ""
+ },
+ "detalhe fundsProxy/fundsCall/GetDetailFundSIG tipo 21 BOVA": {
+  "status": 200,
+  "body": ""
+ },
+ "detalhe fundsProxy/fundsCall/GetDetailFund tipo 20 BOVA": {
+  "status": 404,
+  "body": ""
+ },
+ "detalhe fundsProxy/fundsCall/GetDetailFund tipo 21 BOVA": {
+  "status": 404,
+  "body": ""
+ },
+ "cotahist amostra": {
+  "NASD11": {
+   "bdi": "14",
+   "especi": "CI",
+   "nome": "TREND NASDAQ",
+   "isin": "BRNASDCTF007"
+  },
+  "DIVO11": {
+   "bdi": "14",
+   "especi": "CI",
+   "nome": "IT NOW IDIV",
+   "isin": "BRDIVOCTF002"
+  },
+  "BOVA11": {
+   "bdi": "14",
+   "especi": "CI  ATZ",
+   "nome": "ISHARES BOVA",
+   "isin": "BRBOVACTF003"
+  },
+  "SMAL11": {
+   "bdi": "14",
+   "especi": "CI  ATZ",
+   "nome": "ISHARES SMAL",
+   "isin": "BRSMALCTF002"
+  },
+  "XFIX11": {
+   "bdi": "14",
+   "especi": "CI",
+   "nome": "TREND IFIX-L",
+   "isin": "BRXFIXCTF004"
+  },
+  "IVVB11": {
+   "bdi": "14",
+   "especi": "CI",
+   "nome": "ISHARE SP500",
+   "isin": "BRIVVBCTF001"
+  },
+  "HASH11": {
+   "bdi": "14",
+   "especi": "CI",
+   "nome": "HASHDEX NCI",
+   "isin": "BRHASHCTF018"
+  }
+ },
+ "cotahist BDI+especificação dos códigos terminados em 11": {
+  "02 IBO/": [
+   1,
+   "IBOV11"
+  ],
+  "02 UNT": [
+   1,
+   "SANB11"
+  ],
+  "02 UNT     N1": [
+   1,
+   "IGTI11"
+  ],
+  "02 UNT     N2": [
+   7,
+   "ALUP11",
+   "BPAC11",
+   "BRBI11",
+   "ENGI11",
+   "KLBN11",
+   "SAPR11",
+   "TAEE11"
+  ],
+  "02 UNT ATZ N2": [
+   1,
+   "BPAC11"
+  ],
+  "02 UNT EB  N2": [
+   1,
+   "KLBN11"
+  ],
+  "02 UNT ED  N1": [
+   1,
+   "IGTI11"
+  ],
+  "02 UNT ED  N2": [
+   4,
+   "ALUP11",
+   "BRBI11",
+   "ENGI11",
+   "TAEE11"
+  ],
+  "02 UNT EDJ N2": [
+   1,
+   "TAEE11"
+  ],
+  "02 UNT EJ": [
+   1,
+   "SANB11"
+  ],
+  "02 UNT EJ  N2": [
+   3,
+   "BPAC11",
+   "SAPR11",
+   "TAEE11"
+  ],
+  "12 CI": [
+   412,
+   "ABCP11",
+   "ADSH11",
+   "AERO11",
+   "AFHF11",
+   "AFHI11",
+   "AIEC11",
+   "AJFI11",
+   "ALMI11",
+   "ALZC11",
+   "ALZR11",
+   "ANCR11",
+   "APTO11",
+   "APXM11",
+   "APXR11",
+   "APXU11"
+  ],
+  "12 CI  EA": [
+   24,
+   "BICE11",
+   "BRIM11",
+   "BRIP11",
+   "CYLD11",
+   "FMOF11",
+   "HBCR11",
+   "HDEL11",
+   "HOSI11",
+   "KNPR11",
+   "NSLU11",
+   "PLRI11",
+   "PNDL11",
+   "RBIR11",
+   "RBRI11",
+   "RDLI11"
+  ],
+  "12 CI  EB": [
+   2,
+   "RBFF11",
+   "VVRI11"
+  ],
+  "12 CI  EG": [
+   3,
+   "BTYU11",
+   "CARE11",
+   "SJAU11"
+  ],
+  "12 CI  ER": [
+   320,
+   "ABCP11",
+   "ADSH11",
+   "AFHF11",
+   "AFHI11",
+   "AIEC11",
+   "AJFI11",
+   "ALMI11",
+   "ALZC11",
+   "ALZR11",
+   "ANCR11",
+   "APTO11",
+   "APXM11",
+   "AROA11",
+   "ARRI11",
+   "ARTE11"
+  ],
+  "12 CI  ERA": [
+   18,
+   "AVUR11",
+   "BICE11",
+   "BVAR11",
+   "DVLP11",
+   "FISC11",
+   "HBCR11",
+   "ICNE11",
+   "IDUA11",
+   "KEVE11",
+   "KNPR11",
+   "LPLP11",
+   "NSLU11",
+   "RBIR11",
+   "RECD11",
+   "REIT11"
+  ],
+  "12 CI  ERB": [
+   1,
+   "VVRI11"
+  ],
+  "12 CI  ERS": [
+   48,
+   "AFHI11",
+   "ALZC11",
+   "ALZR11",
+   "ARTE11",
+   "BGRB11",
+   "BTLG11",
+   "CJCT11",
+   "CPLG11",
+   "CPOF11",
+   "CPTS11",
+   "EDFO11",
+   "EURO11",
+   "FATN11",
+   "GGRC11",
+   "GZIT11"
+  ],
+  "12 CI  ES": [
+   53,
+   "AFHI11",
+   "AJFI11",
+   "ALZC11",
+   "BTLG11",
+   "CJCT11",
+   "CPLG11",
+   "CPOF11",
+   "CPTS11",
+   "CPUR11",
+   "CTXT11",
+   "EURO11",
+   "FAMB11",
+   "FATN11",
+   "GGRC11",
+   "GSFI11"
+  ],
+  "12 CI  EX": [
+   1,
+   "VIUR11"
+  ],
+  "13 CI": [
+   3,
+   "BBGO11",
+   "IAAG11",
+   "LAFI11"
+  ],
+  "13 CI  ER": [
+   3,
+   "BBGO11",
+   "IAAG11",
+   "LAFI11"
+  ],
+  "14 CI": [
+   263,
+   "AAGR11",
+   "AAZQ11",
+   "ABTC11",
+   "ACWI11",
+   "AGGX11",
+   "AGRI11",
+   "AGRX11",
+   "ALUG11",
+   "ARGE11",
+   "AURO11",
+   "AUVP11",
+   "AZIN11",
+   "B3BR11",
+   "BBOI11",
+   "BBOV11"
+  ],
+  "14 CI  ATZ": [
+   4,
+   "BOVA11",
+   "BOVV11",
+   "IVVB11",
+   "SMAL11"
+  ],
+  "14 CI  EA": [
+   7,
+   "BRFT11",
+   "BRZP11",
+   "COPN11",
+   "FPOR11",
+   "INFB11",
+   "NUIF11",
+   "RBIF11"
+  ],
+  "14 CI  EB": [
+   3,
+   "BITI11",
+   "CHIP11",
+   "SPXI11"
+  ],
+  "14 CI  ER": [
+   89,
+   "AAGR11",
+   "AAZQ11",
+   "AGRX11",
+   "AURO11",
+   "AZIN11",
+   "BCDI11",
+   "BDIF11",
+   "BDIV11",
+   "BEST11",
+   "BIDB11",
+   "BINC11",
+   "BIZD11",
+   "BODB11",
+   "BODI11",
+   "BRFT11"
+  ],
+  "14 CI  ERA": [
+   7,
+   "ENDD11",
+   "KNOX11",
+   "KOPA11",
+   "RBIF11",
+   "RIFF11",
+   "VHFA11",
+   "XPIE11"
+  ],
+  "14 CI  ERB": [
+   1,
+   "RZDL11"
+  ],
+  "14 CI  ERS": [
+   9,
+   "BINC11",
+   "BTAG11",
+   "DIVS11",
+   "IFRI11",
+   "KDIF11",
+   "KNDI11",
+   "NEXG11",
+   "PREE11",
+   "SNAG11"
+  ],
+  "14 CI  ES": [
+   12,
+   "AZIN11",
+   "BINC11",
+   "BTAG11",
+   "DIVS11",
+   "IFRI11",
+   "KDIF11",
+   "KNDI11",
+   "NEXG11",
+   "PREE11",
+   "SNAG11",
+   "SNFZ11",
+   "VGIA11"
+  ],
+  "14 CI *": [
+   2,
+   "FNAM11",
+   "FNOR11"
+  ],
+  "14 FID": [
+   1,
+   "SMRT11"
+  ],
+  "14 FID EA": [
+   1,
+   "SMRT11"
+  ],
+  "14 FIDC": [
+   1,
+   "CAUT11"
+  ],
+  "14 FIDCEA": [
+   1,
+   "CAUT11"
+  ],
+  "14 TPR": [
+   1,
+   "PSVM11"
+  ],
+  "14 TPR EJ": [
+   1,
+   "PSVM11"
+  ],
+  "22 BNS": [
+   1,
+   "AZEV11"
+  ],
+  "22 BNS     N2": [
+   1,
+   "PINE11"
+  ],
+  "22 BNS ORD": [
+   3,
+   "AZTE11",
+   "BIOM11",
+   "CALI11"
+  ],
+  "22 BNS ORD MA": [
+   1,
+   "BIOM11"
+  ],
+  "22 BNS ORD N2": [
+   1,
+   "BIOM11"
+  ],
+  "22 BNS ORD NM": [
+   5,
+   "AMER11",
+   "BEEF11",
+   "ONCO11",
+   "ORVR11",
+   "TOKY11"
+  ],
+  "35 UNT": [
+   1,
+   "PPLA11"
+  ],
+  "35 UNT EG": [
+   1,
+   "PPLA11"
+  ],
+  "58 CI": [
+   3,
+   "ESUD11",
+   "ESUT11",
+   "ESUU11"
+  ]
+ },
+ "cvm cad_fi.csv": {
+  "status": 200,
+  "bytes": 17921566,
+  "cabecalho": "TP_FUNDO;CNPJ_FUNDO;DENOM_SOCIAL;DT_REG;DT_CONST;CD_CVM;DT_CANCEL;SIT;DT_INI_SIT;DT_INI_ATIV;DT_INI_EXERC;DT_FIM_EXERC;CLASSE;DT_INI_CLASSE;RENTAB_FUNDO;CONDOM;FUNDO_COTAS;FUNDO_EXCLUSIVO;TRIB_LPRAZO;PUBLICO_ALVO;ENTID_INVEST;TAXA_PERFM;INF_TAXA_PERFM;TAXA_ADM;INF_TAXA_ADM;VL_PATRIM_LIQ;DT_PATRIM_LIQ;DIRETOR;CNPJ_ADMIN;ADMIN;PF_PJ_GESTOR;CPF_CNPJ_GESTOR;GESTOR;CNPJ_AUDITOR;AUDITOR;CNPJ_CUSTODIANTE;CUSTODIANTE;CNPJ_CONTROLADOR;CONTROLADOR;INVEST_CEMPR_EXTER;CLASSE_ANBIMA",
+  "linhas": 46807,
+  "etf": [
+   "FIIM;14.521.194/0001-85;ISHARES ÍNDICE UTILIDADE PÚBLICA (UTIL) BM&FBOVESPA FUNDO DE ÍNDICE;2012-04-16;2012-04-16;132;2015-12-11;CANCELADA;2015-12-11;;2015-04-01;2016-03-31;;;;;;;;;;;;;;0.00;2016-02-24;;;;;;;;;;;;;;",
+   "FIIM;10.406.499/0001-95;ISHARES BM&FBOVESPA MIDLARGE CAP FUNDO DE INDICE;2008-11-19;2008-11-19;43;2015-07-27;CANCELADA;2015-07-27;;2015-04-01;2016-03-31;;;;;;;;;;;;;;0.00;2015-10-23;;;;;;;;;;;;;;",
+   "FIIM;11.455.392/0001-08;ISHARES ÍNDICE BM&FBOVESPA IMOBILIÁRIO FUNDO DE ÍNDICE;2009-12-23;2009-12-23;51;2015-12-11;CANCELADA;2015-12-11;;2015-04-01;2016-03-31;;;;;;;;;;;;;;0.00;2016-02-24;;;;;;;;;;;;;;",
+   "FIIM;11.455.397/0001-22;ISHARES ÍNDICE BM&FBOVESPA DE CONSUMO FUNDO DE ÍNDICE;2009-12-23;2009-12-23;60;2015-11-18;CANCELADA;2015-11-18;;2015-04-01;2016-03-31;;;;;;;;;;;;;;0.00;2016-02-17;;;;;;;;;;;;;;"
+  ],
+  "tipos": [
+   "FACFIF",
+   "FAPI",
+   "FCCE",
+   "FCCE-AI",
+   "FI",
+   "FI-FGTS",
+   "FIC-FITVM",
+   "FICART",
+   "FICE",
+   "FIDC",
+   "FIEX",
+   "FIF",
+   "FIFDIV",
+   "FII",
+   "FIIM",
+   "FIP",
+   "FIQ-FMIA",
+   "FITVM",
+   "FMAI",
+   "FMIA",
+   "FMIA-CL",
+   "FMIEE",
+   "FMP-FGTS",
+   "FMP-FGTS CL",
+   "FPCE",
+   "FPDS",
+   "FUNCINE"
+  ]
+ },
+ "cvm registro_fundo_classe.zip": {
+  "status": 200,
+  "bytes": 6834972,
+  "arquivos": [
+   "registro_classe.csv",
+   "registro_fundo.csv",
+   "registro_subclasse.csv"
+  ],
+  "registro_classe.csv": {
+   "cabecalho": "ID_Registro_Fundo;ID_Registro_Classe;CNPJ_Classe;Codigo_CVM;Data_Registro;Data_Constituicao;Data_Inicio;Tipo_Classe;Denominacao_Social;Situacao;Data_Inicio_Situacao;Classificacao;Indicador_Desempenho;Classe_Cotas;Classificacao_Anbima;Tributacao_Longo_Prazo;Entidade_Investimento;Permitido_Aplicacao_CemPorCento_Exterior;Classe_ESG;Forma_Condominio;Exclusivo;Publico_Alvo;Patrimonio_Liquido;Data_Patrimonio_Liquido;CNPJ_Auditor;Auditor;CNPJ_Custodiante;Custodiante;CNPJ_Controlador;Controlador",
+   "etf": [
+    "7850;36211;10406511000161;612;2025-04-23;2025-04-23;2025-04-23;Classes de Cotas de Fundos FIIM;ISHARES IBOVESPA CLASSE DE ÍNDICE - RESPONSABILIDADE LIMITADA;Em Funcionamento Normal;2025-04-23;;;;;;;;N;;;;17792473611.23;2026-10-08;61562112000120;PRICEWATERHOUSECOOPERS AUDITORES INDEPENDENTES LTDA.;01522368000182;BANCO BNP PARIBAS BRASIL S/A;;",
+    "7851;36212;10406600000108;620;2025-04-23;2025-04-23;2025-04-23;Classes de Cotas de Fundos FIIM;ISHARES BM&FBOVESPA SMALL CAP CLASSE DE  ÍNDICE - RESPONSABILIDADE LIMITADA;Em Funcionamento Normal;2025-04-23;;;;;;;;N;;;;5702215638.24;2026-10-08;61562112000120;PRICEWATERHOUSECOOPERS AUDITORES INDEPENDENTES LTDA.;01522368000182;BANCO BNP PARIBAS BRASIL S/A;;",
+    "7853;36214;11455378000104;639;2025-04-23;2025-04-23;2025-04-23;Classes de Cotas de Fundos FIIM;ISHARES IBRX - ÍNDICE  BRASIL (IBrX-100) CLASSE DE ÍNDICE - RESPONSABILIDADE LIMITADA;Em Funcionamento Normal;2025-04-23;;;;;;;;N;;;;293347173.66;2026-10-08;61562112000120;PRICEWATERHOUSECOOPERS AUDITORES INDEPENDENTES LTDA.;01522368000182;BANCO BNP PARIBAS BRASIL S/A;;",
+    "7862;36220;15562377000101;647;2025-04-23;2025-04-23;2025-04-23;Classes de Cotas de Fundos FIIM;ISHARES INDICE CARBONO EFICIENTE (ICO2)  BRASIL IS CLASSE DE ÍNDICE - RESPONSABILIDADE LIMITADA;Em Funcionamento Normal;2025-04-23;;;;;;;;N;;;;53442554.03;2026-10-08;61562112000120;PRICEWATERHOUSECOOPERS AUDITORES INDEPENDENTES LTDA.;01522368000182;BANCO BNP PARIBAS BRASIL S/A;;",
+    "7865;36223;19909560000191;663;2025-04-23;2025-04-23;2025-04-23;Classes de Cotas de Fundos FIIM;ISHARES S&P 500 CLASSE DE ÍNDICE EM COTAS DE CLASSES DE ÍNDICE IE - RESPONSABILIDADE LIMITADA;Em Funcionamento Normal;2025-04-23;;;;;;;;N;;;;7580191131.45;2026-10-08;61562112000120;PRICEWATERHOUSECOOPERS AUDITORES INDEPENDENTES LTDA.;01522368000182;BANCO BNP PARIBAS BRASIL S/A;;"
+   ],
+   "linhas": 36870
+  },
+  "registro_fundo.csv": {
+   "cabecalho": "ID_Registro_Fundo;CNPJ_Fundo;Codigo_CVM;Data_Registro;Data_Constituicao;Tipo_Fundo;Denominacao_Social;Data_Cancelamento;Situacao;Data_Inicio_Situacao;Data_Adaptacao_RCVM175;Data_Inicio_Exercicio_Social;Data_Fim_Exercicio_Social;Patrimonio_Liquido;Data_Patrimonio_Liquido;Diretor;CNPJ_Administrador;Administrador;Tipo_Pessoa_Gestor;CPF_CNPJ_Gestor;Gestor",
+   "etf": [
+    "7849;10406499000195;43;2008-11-19;2008-11-19;FIIM;ISHARES BM&FBOVESPA MIDLARGE CAP FUNDO DE INDICE;2015-07-27;Cancelado;2015-07-27;;2015-04-01;2016-03-31;0.00;2015-10-23;;;;;;",
+    "7850;10406511000161;27;2008-11-19;2008-11-19;FIIM;ISHARES IBOVESPA CLASSE DE ÍNDICE - RESPONSABILIDADE LIMITADA;;Em Funcionamento Normal;2008-11-19;2025-04-23;2026-04-01;2027-03-31;9498172265.94;2025-04-30;MARIA LUIZA GREGÓRIO PAIVA;01522368000182;BANCO BNP PARIBAS BRASIL S/A;PJ;10979208000158;BLACKROCK BRASIL GESTORA DE INVESTIMENTOS LTDA",
+    "7851;10406600000108;35;2008-11-19;2008-11-19;FIIM;ISHARES BM&FBOVESPA SMALL CAP CLASSE DE  ÍNDICE - RESPONSABILIDADE LIMITADA;;Em Funcionamento Normal;2008-11-19;2025-04-23;2026-04-01;2027-03-31;1821441011.57;2025-04-30;MARIA LUIZA GREGÓRIO PAIVA;01522368000182;BANCO BNP PARIBAS BRASIL S/A;PJ;10979208000158;BLACKROCK BRASIL GESTORA DE INVESTIMENTOS LTDA",
+    "7853;11455378000104;78;2009-12-23;2009-12-23;FIIM;ISHARES IBRX - ÍNDICE  BRASIL (IBrX-100) CLASSE DE ÍNDICE - RESPONSABILIDADE LIMITADA;;Em Funcionamento Normal;2010-02-22;2025-04-23;2026-04-01;2027-03-31;90276214.70;2025-04-30;MARIA LUIZA GREGÓRIO PAIVA;01522368000182;BANCO BNP PARIBAS BRASIL S/A;PJ;10979208000158;BLACKROCK BRASIL GESTORA DE INVESTIMENTOS LTDA",
+    "7854;11455392000108;51;2009-12-23;2009-12-23;FIIM;ISHARES ÍNDICE BM&FBOVESPA IMOBILIÁRIO FUNDO DE ÍNDICE;2015-12-11;Cancelado;2015-12-11;;2015-04-01;2016-03-31;0.00;2016-02-24;;;;;;"
+   ],
+   "linhas": 90647
+  },
+  "registro_subclasse.csv": {
+   "cabecalho": "ID_Registro_Classe;ID_Subclasse;Codigo_CVM;Data_Constituicao;Data_Inicio;Denominacao_Social;Situacao;Data_Inicio_Situacao;Forma_Condominio;Exclusivo;Publico_Alvo;Previdenciario;Exclusivo_INR;Exclusivo_Previdencia_Complementar",
+   "etf": [],
+   "linhas": 10721
+  }
+ }
+}
