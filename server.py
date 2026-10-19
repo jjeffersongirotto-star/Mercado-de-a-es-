@@ -910,6 +910,17 @@ def api_fgcmp(t: str, di: str, df: str):
         log.warning("fgcmp %s: %s", t, e)
         return JSONResponse({"error": "Sem dados para esta análise agora."}, status_code=502)
 
+@app.get("/api/modelos/ficha")
+def api_modelos_ficha(m: str = "*"):
+    """Arquivo do modelo (Previsão → ⬇ → Modelo (regras e código)): explicação do ⓘ → Modelos da Previsão (só os itens do modelo e os
+    gerais), parâmetros e código atuais de modelos.py (modelos.ficha). Markdown para o usuário ler, alterar e mandar de volta."""
+    import chat, modelos
+    if m != "*" and m not in modelos.FICHA: return JSONResponse({"error": "Modelo desconhecido."}, status_code=400)
+    nomes = {x["n"] for x in modelos.MODELOS}
+    keep = lambda l: m == "*" or not any(l.startswith(f"- {n}") for n in nomes - {modelos.MOD[m]["n"]})
+    guia = "\n".join(l for l in chat.guide_sections().get("Modelos da Previsão", "").split("\n") if keep(l))
+    return Response(modelos.ficha(m, guia), media_type="text/markdown; charset=utf-8", headers={"Cache-Control": "no-store"})
+
 @app.get("/api/modelos")
 def api_modelos():
     """Previsão → Modelos: lista de modelos e meses com dados (modelos.py, snapshot modelos)."""

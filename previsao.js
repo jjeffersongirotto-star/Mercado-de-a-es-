@@ -394,7 +394,7 @@ if (typeof document !== 'undefined') {
   function syncWidths() { }
 
   // ---------- Modelos (regras e simulação no servidor: modelos.py; sinais semanais: snapshot modelos) ----------
-  let MM = null, mmP = null, des = null, sel = null, seq = 0;
+  let MM = null, mmP = null, des = null, sel = null, seq = 0, tabX = null;  // tabX: movimentações da simulação aberta no mês a mês
   const modMeta = () => mmP || (mmP = fetch('/api/modelos').then(r => r.json()).then(d => { if (d && d.modelos) { MM = d; fillMod(); return d; } mmP = null; return null; }).catch(() => { mmP = null; return null; }));
   const modName = (id) => ((MM && MM.modelos.find(m => m.id === id)) || {}).n || id;
   function fillMod() {
@@ -404,10 +404,19 @@ if (typeof document !== 'undefined') {
   }
   el('pvMod').addEventListener('change', () => { st.mod = el('pvMod').value; sel = null; peek = null; des = null; modDl(); st.pvt = multi() || st.mod === '*' ? 'des' : 'tab'; save(); applyMode(); compute(); });
   el('pvModI').addEventListener('click', () => infoSection('Modelos da Previsão'));
-  // ⬇ planilha (.csv) do modelo escolhido (em Todos não aparece): o Desempenho e o mês a mês que estão na tela, nos mesmos valores
-  const modDl = () => el('pvModD').classList.toggle('hidden', !st.mod || isAll() || !des);
-  el('pvModD').addEventListener('click', () => {
-    if (!des) return;
+  // ⬇ do card Modelos: Planilha (.csv: Desempenho e mês a mês da tela, resumo e movimentações de cada empresa, com data, preço e motivo)
+  // ou Modelo (regras e código, .md gerado de modelos.py: /api/modelos/ficha); em Todos só o Modelo (todos os modelos)
+  const modDl = () => el('pvModD').classList.toggle('hidden', !st.mod || (!isAll() && !des));
+  el('pvModD').addEventListener('click', async () => {
+    const c = isAll() ? 'ficha' : await uiChoose('O que baixar?', [{ label: 'Planilha (resultados)', value: 'csv' }, { label: 'Modelo (regras e código)', value: 'ficha' }]);
+    if (c === 'ficha') {
+      try {
+        const r = await fetch('/api/modelos/ficha?m=' + encodeURIComponent(st.mod)); if (!r.ok) throw new Error('HTTP ' + r.status);
+        saveFile(await r.text(), `modelo_${st.mod === '*' ? 'todos' : st.mod}.md`, 'text/markdown;charset=utf-8');
+      } catch (e) { uiAlert('Não foi possível baixar o modelo: ' + e.message); }
+      return;
+    }
+    if (c !== 'csv' || !des) return;
     const L = [[`Modelo: ${modName(st.mod)}`], [`Empresa: ${MULTI[st.ticker] || st.ticker}`, `Período: ${dataBR(des.ini)} a ${dataBR(des.fim)}`, `Aportado: ${brl.format(des.apT)}`], [],
       ['Desempenho'], ['Tipo', 'Nome', 'Empresa', 'Valor final (R$)', 'Rendimento (%)', 'TIR anual (%)', 'Imposto (R$)', 'Compras', 'Vendas']];
     for (const r of des.rows) L.push([r.k === 'g' ? 'Grupo (rodízio)' : r.k === 'r' ? 'Referência' : 'Modelo', r.k === 'g' ? `${modName(r.m)} · ${r.n}` : r.k === 'r' ? r.t : modName(r.m),
@@ -416,6 +425,20 @@ if (typeof document !== 'undefined') {
       L.push([], [`Mês a mês: ${el('pvMode').textContent}`], ['Mês', 'Aporte (R$)', 'Aporte total (R$)', 'Retirada (R$)', 'Rentabilidade no mês (R$)', 'Proventos no mês (R$)', 'Imposto no mês (R$)', 'Patrimônio sem proventos (R$)', 'Patrimônio com proventos (R$)', 'No CDB (R$)', 'Posição']);
       for (const x of rows) L.push([x.ym, x.ap, x.apT, x.w, x.rent, x.div, x.tax, x.sem, x.com, x.cdb, x.pos]);
     }
+    // movimentações de cada empresa do Desempenho (mesma simulação do mês a mês) e dos grupos (rodízio)
+    uiToast('Montando a planilha…');
+    const b = modBody(), sims = [];
+    for (const r of des.rows.filter(r => r.k === 'a')) {
+      try { const d = tabX && tabX.t === r.t && tabX.m === r.m ? tabX : await post(Object.assign({ tab: { t: r.t, m: r.m } }, b)); sims.push({ t: r.t, m: r.m, mov: d.mov || [], res: d.res || {} }); } catch (e) { }
+    }
+    const nk = (k) => ({ compra: 'Compra', venda: 'Venda', provento: 'Provento', aporte: 'Aporte', retirada: 'Retirada', imposto: 'Imposto' })[k] || k;
+    L.push([], ['Resumo por empresa'], ['Empresa', 'Modelo', 'Compras', 'Vendas', 'Ações no fim', 'Preço médio (R$)', 'Proventos recebidos (R$)', 'Vende?']);
+    for (const x of sims) L.push([x.t, modName(x.m), x.mov.filter(e => e.k === 'compra').length, x.mov.filter(e => e.k === 'venda').length, x.res.sh, x.res.pm,
+      x.res.div, x.res.vende ? 'sim, quando o sinal fica desfavorável' : 'não vende por regra (só compra)']);
+    L.push([], ['Movimentações'], ['Data', 'Empresa', 'Modelo', 'Tipo', 'Qtd. de ações', 'Preço da ação (R$)', 'Valor (R$)', 'Preço médio depois (R$)', '% na ação', 'Motivo']);
+    for (const x of sims) for (const e of x.mov) L.push([dataBR(e.d), e.t || x.t, modName(x.m), nk(e.k), e.q, e.p, e.v, e.pm, e.pc, e.x]);
+    for (const r of des.rows.filter(r => r.k === 'g' && r.hist && r.hist.mov))
+      for (const e of r.hist.mov) L.push([dataBR(e.d), e.t || '', `${modName(r.m)} · ${r.n}`, nk(e.k), e.q, e.p, e.v, '', '', e.x]);
     saveCsv(L, `modelo_${st.mod}_${(MULTI[st.ticker] ? st.ticker : st.ticker || 'empresa').replace(/[^\w]/g, '')}_${new Date().toISOString().slice(0, 10)}.csv`);
   });
   // Comparar → Modelos: tocar numa empresa abre aqui a simulação mês a mês (mesmo valor inicial, aporte e período)
@@ -681,6 +704,7 @@ if (typeof document !== 'undefined') {
           pos: (S0.m !== '' ? x.pos : '') + (ops ? ' · ' + ops : ''), cdb: x.cdb, cj: x.cj, dcdb: x.cdb == null ? 0 : x.cdb - pcd };
         pcd = x.cdb || 0; ps = x.sem; pd = x.div; pt = x.tax; pc0 = x.c; pv0 = x.s; return o;
       });
+      tabX = { t: S0.t, m: S0.m, mov: d.mov || [], res: d.res || {} };
       modRows = true; el('pvMode').textContent = `Simulação histórica com ${S0.t ? S0.t + ' · ' : ''}${modName(S0.m)}${peek && peek.body ? ' (valores do Comparar)' : ''}`;
     } catch (e) { rows = []; modRows = false; el('pvTabMsg').textContent = 'Tabela indisponível: ' + e.message; el('pvTabMsg').classList.remove('hidden'); }
     shownRows = PAGE_ROWS; renderAll();

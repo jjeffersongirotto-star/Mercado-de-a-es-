@@ -41,7 +41,7 @@ AVISO = "Base histórica: em Todas entram também as empresas que saíram da bol
 MOD = {m["id"]: m for m in MODELOS + REF}
 # Método Barsi: só setores perenes (fonte única; o chat e o painel ⓘ leem daqui): subsetor do site ou segmento oficial da B3
 PERENE_RX = r"^(Bancos|Energia Elétrica|Água e Saneamento|Seguradoras|Resseguradoras|Corretoras de Seguros|Telecomunicações|Papel e Celulose|Químicos)"
-PERENE_TXT = "bancos, energia elétrica, saneamento, seguros, telecomunicações, papel e celulose e químicos"
+PERENE_TXT = "bancos, energia elétrica, saneamento, seguros, telecomunicações, papel e celulose e químicos"  # setores perenes do Método Barsi, em texto (ⓘ e chat); a regra é PERENE_RX
 # teto = média dos proventos por ação dos 5 anos completos anteriores ÷ 6% (pagou em pelo menos 4 deles); compra com todo o caixa
 # só com o preço no teto ou abaixo; acima, aporte e proventos esperam no CDB
 BARSI_DY, BARSI_ANOS = .06, 5
@@ -147,6 +147,8 @@ ENGINE = 10       # versão das contas (10: modelos de método e híbrido com el
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
 # modelos de segurar (venda_motivo). Explicação no painel ⓘ → Modelos da Previsão.
 REGRAS = {"max": 30, "liq": 1e6, "conc": 3, "min_compra": 100.0, "venda": True}
+# venda ocasional dos modelos de segurar: prejuízo grande (fração do patrimônio), setor em crise (fração das empresas com prejuízo),
+# histórico (anos, fração com lucro), posse mínima e sem recompra (semanas), queda sobre o preço médio, limite de pontos, crise do mercado
 VENDA = {"pl_prej": .15, "setor_crise": .40, "hist_anos": 10, "hist_lucro": .8, "posse": 52, "sem_recompra": 52, "queda": .30,
          "limite": 1.5, "crise_dd": .25, "crise_anos": 3, "medo_extremo": 25}
 # Venda por pontos (_venda): problemas somam, margem desconta; vende quando problemas − margem ≥ VENDA['limite']
@@ -160,7 +162,7 @@ PORTE_N = ("pequena", "média", "grande", "gigante")
 # por semana); janela de semanas lida pelos modelos (só as já publicadas); nota ≤ 'ruim' bloqueia compra e vira problema na venda
 NOTICIA = {"oficial": 1.0, "jornal": .5, "suposicao": .25, "sup_max": .25, "semanas": 4, "ruim": -1.0, "prob_max": 2.0, "marg_max": 1.0}
 CUSTO = 0.003      # corretagem + emolumentos + diferença de preço, por operação
-IR, ISENTO = 0.15, 20000.0
+IR, ISENTO = 0.15, 20000.0  # IR de 15% sobre o lucro das vendas do mês; isento se o total vendido no mês for até R$ 20 mil
 MEDO = 45          # abaixo disso o índice está em Medo (faixas de fg.json)
 MED_SEM = 52       # chance do algoritmo "favorável" = acima da mediana das últimas 52 semanas da própria ação
 TROCA_SEM = 12     # rodízio: semanas mínimas na empresa antes de trocar por outra melhor
@@ -506,6 +508,73 @@ def _signal(D, mid, idx, i):
     return D["FAV"][MOD[mid]["p"]][idx, i]
 
 
+# Arquivo do modelo (⬇ → Modelo (regras e código) na Previsão): parâmetros e funções de cada modelo; o texto vem do próprio código
+# (valor atual e comentário de cada parâmetro, fonte de cada função) e do painel ⓘ → Modelos da Previsão (server.api_modelos_ficha)
+FICHA_COMUM = (("CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
+               ("_signals", "_signal", "motivo", "simulate", "Conta", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
+FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
+         "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
+         "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")), "barsi": (("BARSI_DY", "BARSI_ANOS", "PERENE_TXT"), ("perene", "build")),
+         **{m: (("METODO",), ("set_metodos", "_fund_mats")) for m in ("value", "growth", "garp", "fatores")}}
+
+
+def ficha(mid, guia=""):
+    """Arquivo do modelo em Markdown: como funciona (guia = texto do ⓘ), parâmetros que dá para alterar, código das funções que decidem."""
+    import inspect, re
+    src = open(__file__, encoding="utf-8").read().split("\n")
+    def doc(nome):  # comentários junto da definição do parâmetro no código (acima e na mesma linha)
+        j = next((k for k, l in enumerate(src) if re.match(rf"(\w+\s*,\s*)*{nome}\s*(,[^=]*)?=", l)), None)
+        if j is None: return ""
+        c = []; k = j - 1
+        while k >= 0 and src[k].startswith("#"): c.insert(0, src[k][1:].strip()); k -= 1
+        if "#" in src[j]: c.append(src[j].split("#", 1)[1].strip())
+        return " ".join(c)
+    ms = [m["id"] for m in MODELOS] if mid == "*" else [mid]
+    pars, funcs = list(FICHA_COMUM[0]), list(FICHA_COMUM[1])
+    for m in ms:
+        pars += [x for x in FICHA[m][0] if x not in pars]; funcs += [x for x in FICHA[m][1] if x not in funcs]
+    nome = "Todos os modelos" if mid == "*" else MOD[mid]["n"]
+    L = [f"# Modelo: {nome}", "", f"Gerado do código do site (versão das contas {ENGINE}). Para estudo, não é recomendação de investimento.", "",
+         "## Como funciona", "", guia.strip() or "(explicação no painel ⓘ → Modelos da Previsão)", "",
+         "## Ficha", "", *[f"- {MOD[m]['n']} (id `{m}`): vende = {'sim' if MOD[m]['vende'] else 'não (nunca vende por regra; só compra)'}"
+                         + (f"; tempo mínimo em cada posição: {MOD[m]['min']} semanas" if MOD[m].get("min") else "")
+                         + ("; só compra com lucro no último balanço anual publicado" if MOD[m].get("lucro") else "") for m in ms], "",
+         "## Parâmetros que você pode alterar", "", "Mude o valor na coluna Valor e me mande o arquivo.", "",
+         "| Parâmetro | Valor | O que faz |", "|---|---|---|"]
+    for x in pars:
+        v = globals().get(x)
+        L.append(f"| {x} | `{json.dumps(v, ensure_ascii=False) if not isinstance(v, (set, frozenset)) else sorted(v)}` | {doc(x).replace('|', '/')} |")
+    L += ["", "## Código que decide (modelos.py)", ""]
+    for f in funcs:
+        try: L += [f"### {f}", "", "```python", inspect.getsource(globals()[f]).rstrip(), "```", ""]
+        except Exception: pass
+    L += ["## Minhas mudanças", "", "Escreva aqui, em português, o que quer mudar no modelo (ex.: \"vender quando cair 15%\", \"comprar só bancos\").", "", ""]
+    return "\n".join(L)
+
+
+def motivo(D, mid, k, i):
+    """Texto do sinal do modelo na empresa k com os dados da semana i (o que fez comprar ou vender): planilha da Previsão."""
+    br = lambda x, d=1: f"{x:.{d}f}".replace(".", ",")
+    lucro = "" if not MOD[mid].get("lucro") or D["LP"][k, i] else " · prejuízo no último balanço (não compra)"
+    if mid == "hold": return "compra sempre (aporte e proventos)"
+    if mid == "medo_mercado": return f"Medo e Ganância do mercado {br(D['MI'][i], 0)} (entra abaixo de {MEDO})"
+    if mid == "medo_acao": return f"Medo e Ganância da ação {br(D['SI'][k, i], 0)} (entra abaixo de {MEDO})"
+    if mid in ("media200", "tendencia"): return ("preço acima" if D["M2"][k, i] > 0 else "preço abaixo") + f" da média de 200 dias · alta em 12 meses {br(D['R12'][k, i] / 10)}%" + lucro
+    if MOD[mid].get("p"): pk = MOD[mid]["p"]; return f"chance de alta {br(D['P'][pk][k, i] / 10)}% (mediana do último ano {br(D['MED'][pk][k, i] / 10)}%)" + lucro
+    if mid == "barsi": return f"preço R$ {br(D['Cf'][k, i], 2)} · preço teto R$ {br(D['TETO'][k, i], 2)}" + lucro
+    if mid == "hibrido":
+        w = D["HW"][:, k, i]; j = int(np.argmax(w))
+        return f"exposição-alvo {br(100 * D['HX'][k, i], 0)}% · segue {MOD[HIB[j]]['n']} (peso {int(w[j])}%)"
+    sc = MOD[mid].get("sc")
+    if sc in D:
+        v = float(D[sc][k, i]); FM = D["FM"]
+        if mid == "value": return f"margem sobre o valor justo de Graham {br(100 * v, 0)}%"
+        if mid == "growth": return f"lucro {br(100 * v, 0)}% no ano · {br(100 * float(FM['G3'][k, i]), 0)}% ao ano em 3 anos"
+        if mid == "garp": return f"PEG {br(-v, 2)}"
+        return f"nota dos fatores {br(v, 2)}"
+    return "sem sinal do método (sem valor de mercado)"
+
+
 class Conta:
     """Carteira de uma ou várias ações em paralelo (vetores): ações, caixa no CDB, custo, IR do mês e prejuízo a compensar."""
 
@@ -585,14 +654,27 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None; vm = []; cj = np.zeros(n)  # cj: rendimento do CDB no mês
     meset = {w: j for j, w in enumerate(me)}
     A.cash += ap[0]
+    mov = [[{"d": D["w"][s], "k": "aporte", "v": round(float(ap[0]), 2), "x": "valor inicial"}] for _ in range(n)] if rec else None
+
+    def log(sh0, i, P, x):  # rec: compras/vendas da semana (mudança no nº de ações), uma linha por empresa, com o motivo
+        if not rec: return
+        for q in np.flatnonzero(A.sh != sh0):
+            dq = A.sh[q] - sh0[q]; v = A.sh[q] * P[q] + A.cash[q]
+            mov[q].append({"d": D["w"][i], "k": "compra" if dq > 0 else "venda", "t": D["tick"][idx[q]], "q": int(abs(dq)), "p": round(float(P[q]), 2),
+                           "v": round(float(abs(dq) * P[q] / (1 - CUSTO) if dq > 0 else -dq * P[q] * (1 - CUSTO)), 2),
+                           "x": x if isinstance(x, str) else x(q), "pm": round(float(A.basis[q] / A.sh[q]), 2) if A.sh[q] > 0 else None,
+                           "pc": round(float(100 * A.sh[q] * P[q] / v), 1) if v > 0 else None})
     for i in range(s, e + 1):
         p = C[idx, i]; ok = ~np.isnan(p); lastp = np.where(ok, p, lastp); P = lastp
         if i > s:
             cj += A.cash * (D["cdb"][i] - 1); A.cash *= D["cdb"][i]
             if divs:
                 d = A.sh * np.nan_to_num(DV[idx, i]); A.cash += d; A.mdiv += d; A.divT += d; A.dtax += A.sh * D["JT"][idx, i]
-        gone = _saiu(D, idx, i) & (A.sh > 0)
-        if gone.any(): A.sell(gone, P)  # saiu da bolsa: vende pelo último preço; o dinheiro fica no CDB
+                if rec:
+                    for q in np.flatnonzero(d >= 0.005):
+                        mov[q].append({"d": D["w"][i], "k": "provento", "t": D["tick"][idx[q]], "q": int(A.sh[q]), "p": round(float(P[q]), 2), "v": round(float(d[q]), 2), "x": tipo(D, idx[q], i)})
+        gone = _saiu(D, idx, i) & (A.sh > 0); sh0 = A.sh.copy()
+        if gone.any(): A.sell(gone, P); log(sh0, i, P, "saiu da bolsa: vendida pelo último preço")  # o dinheiro fica no CDB
         sig = _signals(D, mid, idx, i - 1) if i > s else sig0
         sig = np.nan_to_num(sig, nan=0).astype(bool)
         if mod.get("frac"):  # híbrido: ajusta a parte na ação à exposição alvo (vende ou compra só a diferença)
@@ -605,16 +687,24 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         if mod.get("frac"):
             e = D["HX"][idx, i - 1] if i > 0 else np.ones(n)
         elif i > s:
-            A.sell(~want & (A.sh > 0) & ok, P)
+            sh0 = A.sh.copy(); A.sell(~want & (A.sh > 0) & ok, P); log(sh0, i, P, lambda q: "venda: " + motivo(D, mid, idx[q], i - 1))
         tax = 0
         j = meset.get(i)
         if j is not None and i > s:
-            tax = A.close_month(P, ap[j] if j < len(ap) else 0, wd[j] if j < len(wd) else 0, tx)
+            sh0 = A.sh.copy(); a_, w_ = (ap[j] if j < len(ap) else 0), (wd[j] if j < len(wd) else 0)
+            tax = A.close_month(P, a_, w_, tx); log(sh0, i, P, "para retirada ou imposto")
+            if rec:
+                for q in range(n):
+                    if w_ > 0: mov[q].append({"d": D["w"][i], "k": "retirada", "v": round(float(w_), 2)})
+                    if tax[q] >= 0.005: mov[q].append({"d": D["w"][i], "k": "imposto", "v": round(float(tax[q]), 2)})
+                    if a_ > 0: mov[q].append({"d": D["w"][i], "k": "aporte", "v": round(float(a_), 2), "x": "aporte do mês"})
+        sh0 = A.sh.copy()
         if mod.get("frac"):
             V = A.sh * P + A.cash; falta = e * V - A.sh * P
             A.buy(ok & (falta > np.maximum(HIB_COMPRA * V, 100)), P, falta)  # só compra quando a diferença para o alvo é relevante
         else:
             A.buy(buy & ok, P)
+        log(sh0, i, P, lambda q: "compra: " + motivo(D, mid, idx[q], i - 1))
         if j is not None: vm.append(A.sh * P + A.cash)
         if rec and j is not None:
             v = A.sh * P + A.cash
@@ -627,7 +717,8 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             cj = np.zeros(n)
         mi += 1
     v = A.sh * lastp + A.cash
-    return {"v": v, "ir": A.ir + A.dtax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows, "ra": anual(vm, ap, wd)}
+    return {"v": v, "ir": A.ir + A.dtax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows, "ra": anual(vm, ap, wd),
+            **({"mov": mov, "sh": A.sh, "pm": np.where(A.sh > 0, A.basis / np.where(A.sh > 0, A.sh, 1), np.nan), "div": A.divT} if rec else {})}
 
 
 def simulate_ref(D, rid, me, ap, wd, rec=False):
@@ -817,9 +908,11 @@ def run(D, req):
         if t not in D["ix"] or mid not in MOD: return {"error": "Empresa ou modelo sem dados."}
         k = D["ix"][t]
         if not ok(k): return {"error": f"{t} ainda não negociava em {D['ym'][me[0]]}."}
-        com = simulate(D, mid, [k], me, ap, wd, tx, True, True)["rows"][0]
+        rc = simulate(D, mid, [k], me, ap, wd, tx, True, True); com = rc["rows"][0]
         sem = simulate(D, mid, [k], me, ap, wd, tx, False, True)["rows"][0]
-        out = dict(ini, tab=[dict(c, sem=x["v"], com=c.pop("v")) for c, x in zip(com, sem)])
+        pm = float(rc["pm"][0])
+        out = dict(ini, tab=[dict(c, sem=x["v"], com=c.pop("v")) for c, x in zip(com, sem)], mov=rc["mov"][0],  # planilha: movimentações e resumo
+                   res={"sh": int(rc["sh"][0]), "pm": None if pm != pm else round(pm, 2), "div": round(float(rc["div"][0]), 2), "vende": MOD[mid]["vende"]})
     else:
         mids = [m["id"] for m in MODELOS] if req.get("modelo") == "*" else [req.get("modelo")]
         if any(m not in MOD for m in mids): return {"error": "Modelo desconhecido."}

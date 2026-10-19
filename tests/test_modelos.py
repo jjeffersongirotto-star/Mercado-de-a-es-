@@ -453,6 +453,21 @@ def test_metodos_value_e_hibrido():
     assert list(modelos._signal(D, "value", [0, 1], 60)) == [True, False]
     assert D["HW"].shape[0] == len(modelos.HIB)  # híbrido estuda também os modelos de método
 
+
+def test_ficha_e_movimentacoes():
+    # arquivo do modelo: todo modelo tem ficha; cada parâmetro citado existe e tem explicação (comentário no código)
+    assert set(modelos.FICHA) == {m["id"] for m in modelos.MODELOS}
+    for m in list(modelos.FICHA) + ["*"]:
+        t = modelos.ficha(m)
+        for l in t.split("\n"):
+            if l.startswith("| ") and not l.startswith(("| Parâmetro", "|---")): assert not l.rstrip().endswith("|  |"), l
+        assert "## Minhas mudanças" in t and "def _signal" in t
+    # planilha: movimentações da simulação de uma empresa com data, quantidade, preço e motivo
+    D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi())
+    me = months(D, "2020-02", "2020-06"); r = modelos.simulate(D, "hold", [0], me, [1000.0] + [100.0] * (len(me) - 1), [0.0] * len(me), rec=True)
+    cp = [e for e in r["mov"][0] if e["k"] == "compra"]
+    assert len(cp) == len(me) and cp[0]["q"] == 99 and cp[0]["p"] == 10.0 and cp[0]["x"].startswith("compra:") and r["sh"][0] == sum(e["q"] for e in cp)
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
