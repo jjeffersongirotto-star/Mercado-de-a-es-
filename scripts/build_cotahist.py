@@ -29,7 +29,7 @@ except Exception:
 TICK += sorted(ETF - set(TICK))
 if os.environ.get("COTA_ONLY"): TICK = [t for t in TICK if t in os.environ["COTA_ONLY"].split(",")]
 FORA_BDI = ("96", "10", "14", "22")
-ok_bdi = lambda l: l[10:12] not in FORA_BDI or (l[10:12] == "14" and l[12:24].strip() in ETF)  # BDI 14 só para os ETFs
+ok_bdi = lambda l: l[10:12] not in FORA_BDI or l[12:24].strip() in ETF  # ETFs: qualquer BDI (ações 14; os de renda fixa vêm em outro)
 UA = {"User-Agent": "Mozilla/5.0"}
 
 def lines(path):
@@ -46,8 +46,10 @@ def rec(l):
 years = sorted(int(f[10:14]) for f in os.listdir(ZD) if f.startswith("COTAHIST_A"))
 # ISIN atual de cada ticker (arquivo mais recente)
 isin, seen = {}, {}
+etf_onde = {}  # ETF -> (mercado, BDI) no arquivo atual (log: onde estão os que não vierem no à vista)
 for l in lines(os.path.join(ZD, f"COTAHIST_A{years[-1]}.ZIP")):
     r = rec(l)
+    if r["cod"] in ETF: etf_onde.setdefault(r["cod"], set()).add((r["tp"], r["bdi"]))
     if r["tp"] == "010":
         seen[r["cod"]] = max(seen.get(r["cod"], ""), r["d"])
         if r["cod"] in TICK:
@@ -58,6 +60,7 @@ lim = (datetime.strptime(max(seen.values()), "%Y%m%d") - timedelta(days=90)).str
 json.dump({"date": max(seen.values()), "source": "B3 COTAHIST", "tickers": sorted(k for k, v in seen.items() if v >= lim)},
           open(os.path.join(OUT, "b3_listed.json"), "w"), separators=(",", ":"))
 want = {v: k for k, v in isin.items()}
+if ETF: print("ETFs sem negócio no à vista:", {t: sorted(etf_onde.get(t, [])) for t in sorted(ETF - set(isin))}, file=sys.stderr)
 print("tickers", len(TICK), "com ISIN no arquivo atual", len(isin), file=sys.stderr)
 data = {t: {} for t in isin}
 last_day = "00000000"
