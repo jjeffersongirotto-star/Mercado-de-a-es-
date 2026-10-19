@@ -294,7 +294,7 @@
         d.ord_pts.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${R[i].pos.map(c => td(c, c || '—')).join('')}${td(R[i].pts, `<b>${R[i].pts}</b>`)}${td(R[i].ptsm, F2.format(R[i].ptsm))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}</tr>`).join(''));
     }
     const ord = R.map((_, i) => i).sort((a, b) => (R[b].mediana ?? -1e9) - (R[a].mediana ?? -1e9)), ps = posOf(ord);
-    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Comprar e segurar', 'g'], ['Pior colocação', 'w']], ord.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior ?? 99, R[i].pior == null ? '—' : RKN(R[i].pior - 1))}</tr>`).join(''));
+    return tab([['Modelo', 'm'], ['Lucro mediano', 'md'], ['Ganha de Buy and Hold', 'g'], ['Pior colocação', 'w']], ord.map(i => `${TR(i)}${td(NV(i), RK(ps[i]) + N(i))}${td(R[i].mediana, pp(R[i].mediana), cl(R[i].mediana))}${td(R[i].ganha ?? -1, R[i].ganha == null ? '—' : F0.format(R[i].ganha) + '% das empresas')}${td(R[i].pior ?? 99, R[i].pior == null ? '—' : RKN(R[i].pior - 1))}</tr>`).join(''));
   };
   // CDB e Ouro: ⓘ com a explicação curta (Glossário); a nota só aparece quando o ouro começa depois do início do período
   window.refInfo = (m) => glossBtn(({ cdb: 'CDB', ouro: 'Ouro', ibov: 'Ibovespa', idiv: 'IDIV' })[m] + ' nos modelos');

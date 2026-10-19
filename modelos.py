@@ -11,13 +11,13 @@ import numpy as np
 
 # id, nome, vende? e regras (o painel ⓘ → Modelos explica cada um com estas regras)
 MODELOS = [
-    {"id": "hold", "n": "Comprar e segurar", "vende": False},
+    {"id": "hold", "n": "Buy and Hold", "vende": False},
     {"id": "medo_mercado", "n": "Aporta com medo do mercado", "vende": False},
     {"id": "medo_acao", "n": "Aporta com medo da ação", "vende": False},
     {"id": "media200", "n": "Aporta acima da média de 200 dias", "vende": False},
     {"id": "alg1", "n": "Algoritmo 1 mês", "vende": True, "p": "p1", "min": 12},
     {"id": "alg3", "n": "Algoritmo 3 meses", "vende": True, "p": "p3", "min": 12, "lucro": True},
-    {"id": "tendencia", "n": "Tendência", "vende": True, "min": 4, "lucro": True},
+    {"id": "tendencia", "n": "Análise técnica", "vende": True, "min": 4, "lucro": True},
     {"id": "hibrido", "n": "Híbrido adaptativo", "vende": False, "frac": True},
     {"id": "barsi", "n": "Método Barsi", "vende": False, "lucro": True},
 ]
@@ -98,7 +98,7 @@ HIB = ("hold", "alg1", "alg3", "media200")
 # no teste com IR e custos, vender (mesmo em parte ou dentro da isenção) sempre rendeu menos que manter.
 HIB_SEM, HIB_ETA = 52, 5  # janela do acerto recente (semanas) e o quanto o melhor recebe mais peso
 HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
-FORTE_R12 = 100   # Tendência: entrada no rodízio só com alta de pelo menos 10% em 12 meses (×1000)
+FORTE_R12 = 100   # Análise técnica: entrada no rodízio só com alta de pelo menos 10% em 12 meses (×1000)
 # "lucro": só compra se o último balanço anual publicado teve lucro (fund.json); no teste 2006–2026 ajudou só estes dois modelos
 MARGEM = {"alg1": 20, "alg3": 20, "tendencia": 100}  # rodízio: vantagem mínima para trocar (chance ×1000; alta 12 m ×1000)
 
@@ -618,7 +618,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         if alg: return D["P"][mod["p"]][g, i], bool(D["FAV"][mod["p"]][g, i]) and ok
         return D["R12"][g, i], bool(D["M2"][g, i] > 0) and ok
 
-    def strong(g, i):  # bom momento para comprar: chance bem acima da mediana do ano (algoritmos) ou alta forte em 12 meses (Tendência)
+    def strong(g, i):  # bom momento para comprar: chance bem acima da mediana do ano (algoritmos) ou alta forte em 12 meses (Análise técnica)
         if alg: return D["P"][mod["p"]][g, i] - D["MED"][mod["p"]][g, i] >= MARGEM[mid]
         return D["M2"][g, i] > 0 and D["R12"][g, i] >= FORTE_R12
 
@@ -821,7 +821,7 @@ def ranking(V, nref=0):
 
 # ---------- Modo Grupo (Comparar → Modelos → Grupo): uma carteira por modelo ----------
 # Nunca vendem: dividem aporte e proventos entre as empresas que o sinal permite (Barsi: no teto ou abaixo, mais peso para o maior
-# rendimento; Híbrido: pela exposição alvo); sem sinal, esperam no CDB. Algoritmos e Tendência: até GRUPO_K empresas de melhor sinal,
+# rendimento; Híbrido: pela exposição alvo); sem sinal, esperam no CDB. Algoritmos e Análise técnica: até GRUPO_K empresas de melhor sinal,
 # vendem quando o sinal fica desfavorável (respeitando o tempo mínimo). Custos e IR da carteira (isenção de R$ 20 mil no mês).
 GRUPO_K = 5  # modelos que vendem: até K empresas ao mesmo tempo (as de melhor sinal)
 def _gtargets(D, mid, idx, i):

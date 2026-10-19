@@ -85,10 +85,10 @@ def test_rodizio_troca_com_motivo_e_vai_para_cdb():
 def test_hibrido_nunca_vende_e_segue_quem_acerta():
     c = [10.0 * 1.01 ** k for k in range(NW)]  # ação subindo sempre: o especialista "comprar e segurar" ganha peso
     D = modelos.build(snap({"AAA3": {"c": c, "p1": 400, "p3": 400, "m2": -10}}), cdi(0.01))
-    assert D["HX"][0, 60] == 1 and D["HW"][:, 0, 60].argmax() == 0  # 100% na ação, seguindo Comprar e segurar
+    assert D["HX"][0, 60] == 1 and D["HW"][:, 0, 60].argmax() == 0  # 100% na ação, seguindo Buy and Hold
     me = months(D, "2020-09", "2021-12")
     r = modelos.simulate(D, "hibrido", [0], me, [1000.0] + [100.0] * (len(me) - 1), [0.0] * len(me), rec=True)
-    assert r["s"][0] == 0 and r["ir"][0] == 0 and "Comprar e segurar" in r["rows"][0][-1]["pos"]
+    assert r["s"][0] == 0 and r["ir"][0] == 0 and "Buy and Hold" in r["rows"][0][-1]["pos"]
 
 
 def test_colocacoes_desempate_pelo_segundo_lugar():
