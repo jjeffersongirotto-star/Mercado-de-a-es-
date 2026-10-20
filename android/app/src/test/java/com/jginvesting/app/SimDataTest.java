@@ -15,6 +15,11 @@ public class SimDataTest {
         SimData.Sim f = SimData.sims("[{\"id\":\"G\",\"di\":\"2025-03\",\"v0\":12000,\"f\":{\"ap\":500,\"ex\":[],\"ret\":[]}}]").get(0);
         assertTrue(SimData.query(f).startsWith("di=2025-03&v0=12000&f=%7B"));
         assertEquals(" + R$ 500,00/mês", SimData.monthly(f));
+        // data inicial com dia (Previsão desde 10/2026): o widget aceita e mostra DD/MM/AAAA; grupos antigos seguem MM/AAAA
+        SimData.Sim dd = SimData.sims("[{\"id\":\"G\",\"di\":\"2025-04-07\",\"v0\":22000}]").get(0);
+        assertEquals("di=2025-04-07&v0=22000", SimData.query(dd));
+        assertEquals("07/04/2025", SimData.since(dd.di)); assertEquals("03/2025", SimData.since("2025-03"));
+        assertTrue(SimData.sims("[{\"id\":\"G\",\"di\":\"2025-04-7\",\"v0\":1}]").isEmpty());
         assertEquals("Simulação 03-2025 2026-10-18.xlsx", SimData.fileName("Simulação 03/2025", "2026-10-18"));  // planilha do ⬇
         assertEquals("Grupo simulação 2026-10-18.xlsx", SimData.fileName("  ", "2026-10-18"));
         // linhas inteiras ao diminuir o widget: N linhas de modelo esticadas até a borda (nunca meia linha); aberto = linha base

@@ -124,7 +124,7 @@ public class SimWidget extends AppWidgetProvider {
                 android.graphics.Bitmap bm = FavWidget.brandBitmap(c, Math.round((WidgetData.brandRoom(bn, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens));
                 if (bm != null) v.setImageViewBitmap(R.id.s_brand, bm);
             }
-            String sub = s == null ? "" : "Desde " + s.di.substring(5) + "/" + s.di.substring(0, 4) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
+            String sub = s == null ? "" : "Desde " + SimData.since(s.di) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
             v.setTextViewText(R.id.s_sub, sub);
             v.setViewVisibility(R.id.s_sub, sub.isEmpty() ? View.GONE : View.VISIBLE);
             v.setTextViewText(R.id.s_empty, c.getString(s == null ? R.string.sim_empty : R.string.sim_wait));

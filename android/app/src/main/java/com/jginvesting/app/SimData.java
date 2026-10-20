@@ -14,7 +14,7 @@ import java.util.Locale;
 public final class SimData {
     private SimData() { }
 
-    /** Um grupo de simulação da aba Grupos: nome (= id), data inicial (AAAA-MM), valor inicial e (1.17+) f = JSON {ap, ex, ret} com
+    /** Um grupo de simulação da aba Grupos: nome (= id), data inicial (AAAA-MM-DD; grupos antigos AAAA-MM), valor inicial e (1.17+) f = JSON {ap, ex, ret} com
      *  aporte mensal, aportes e retiradas extraordinários da Previsão ("" = grupo antigo, só o valor inicial). */
     public static final class Sim {
         public final String id, name, di, f; public final double v0;
@@ -36,10 +36,10 @@ public final class SimData {
         }
     }
 
-    private static final String DI = "\\d{4}-\\d{2}", MID = "[a-z0-9_]{1,24}";
+    private static final String DI = "\\d{4}-\\d{2}(-\\d{2})?", MID = "[a-z0-9_]{1,24}";
     public static boolean validModel(String m) { return m != null && m.matches(MID); }
 
-    /** JSON [{id, n, di, v0}] do site -> grupos válidos (nome até 80 letras, data AAAA-MM, valor > 0), sem repetir o id. */
+    /** JSON [{id, n, di, v0}] do site -> grupos válidos (nome até 80 letras, data AAAA-MM-DD ou, grupos antigos, AAAA-MM; valor > 0), sem repetir o id. */
     public static List<Sim> sims(String json) {
         List<Sim> out = new ArrayList<>();
         try {
@@ -56,6 +56,11 @@ public final class SimData {
             }
         } catch (Exception e) { /* sem grupos */ }
         return out;
+    }
+
+    /** Data inicial para o "Desde…" do widget: AAAA-MM-DD -> DD/MM/AAAA; AAAA-MM (grupos antigos) -> MM/AAAA. */
+    public static String since(String di) {
+        return di.length() >= 10 ? di.substring(8, 10) + "/" + di.substring(5, 7) + "/" + di.substring(0, 4) : di.substring(5) + "/" + di.substring(0, 4);
     }
 
     public static Sim find(String id, List<Sim> ss) { for (Sim s : ss) if (s.id.equals(id)) return s; return null; }
