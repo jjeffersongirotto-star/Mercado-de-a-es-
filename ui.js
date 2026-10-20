@@ -269,7 +269,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   if (window.JGApp) document.documentElement.classList.add('in-app');
   // App até a 1.13 (JGInvestingApp/x no user agent): a oferta nativa podia não aparecer (trava de 10 min, "Depois" de 24 h).
   // O site confere /app/version.json ao abrir e ao voltar e oferece baixar pelo navegador (dl: mesmo APK fora deste endereço).
-  const av = (navigator.userAgent.match(/JGInvestingApp\/([\d.]+)/) || [])[1];
+  const av = window.APP_V = (navigator.userAgent.match(/JGInvestingApp\/([\d.]+)/) || [])[1];  // versão do app (grupos.js → pushSims)
   // dentro do app: topo do ⓘ diz a versão instalada e se é a mais recente (o Baixar APK do site mostra sempre a publicada)
   // e, no site e no app, a versão do site (window.SITE_AT do servidor) ou o aviso de versão nova com Atualizar (window.siteCheck)
   const appVer = async () => {

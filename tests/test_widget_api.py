@@ -90,6 +90,22 @@ def test_widget_simgrupo_live_values():
     assert abs(b["dv"] - 300 * 1.2 / 101.2) < 0.01 and b["pos"][0] == {"t": "PETR4", "q": 10, "inv": 250.0, "v": 300.0, "s": "Petrobras"}
 
 
+def test_widget_simgrupo_dia_app_antigo():
+    """Widget até a 1.18 (data só AAAA-MM): o site manda o dia em f.d e o servidor simula desde o dia (o mesmo grupo da aba Grupos)."""
+    import modelos
+    setup()
+    vis = []; sg = {"d0": "2025-04-07", "d1": "2026-10", "v0": 1000.0, "m": []}
+    od, os_, oss, ou = modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe
+    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; server.universe.universe = lambda rows: rows
+    modelos.simgrupo = lambda D, tk, di, *a: (vis.append(di), sg)[1]
+    try:
+        server.api_widget_simgrupo("2025-04", 1000, json.dumps({"ap": 0, "ex": [], "ret": [], "d": "2025-04-07"}))
+        server.api_widget_simgrupo("2025-04", 1000, json.dumps({"d": "2024-01-02"}))  # dia de outro mês: ignora
+    finally:
+        modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe = od, os_, oss, ou
+    assert vis == ["2025-04-07", "2025-04"]
+
+
 def test_widget_simgrupo_xlsx():
     """Planilha do ⬇ do widget: Resumo com todos os modelos, uma aba por modelo com resumo, posições (preço médio) e TODAS as movimentações."""
     import io, modelos, openpyxl
