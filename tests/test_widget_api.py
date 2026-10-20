@@ -87,7 +87,7 @@ def test_widget_simgrupo_live_values():
     assert [x["m"] for x in r["r"]] == ["barsi"] and r["v0"] == 1000.0  # referência (ibov) fora
     b = r["r"][0]
     assert b["v"] == 100 + 10 * 30.0 + 5 * 12.0 and b["np"] == 2 and b["ap"] == 1000.0  # PETR4 ao vivo (30), ZZZZ3 sem cotação: preço da simulação
-    assert abs(b["dv"] - 300 * 1.2 / 101.2) < 0.01 and b["pos"][0] == {"t": "PETR4", "q": 10, "inv": 250.0, "v": 300.0, "s": "Petrobras"}
+    assert abs(b["dv"] - 300 * 1.2 / 101.2) < 0.01 and b["pos"][0] == {"t": "PETR4", "q": 10, "inv": 250.0, "v": 300.0, "pm": None, "s": "Petrobras"}
 
 
 def test_widget_simgrupo_dia_app_antigo():

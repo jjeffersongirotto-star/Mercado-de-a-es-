@@ -1304,8 +1304,7 @@ def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = ""):
     err, w, _ = _simw(di, v0, f)
     if err is not None: return err
     for x in w["r"]:
-        x.pop("ir", None); x.pop("c", None); x.pop("s", None)
-        for y in x["pos"]: y.pop("pm", None)
+        x.pop("ir", None); x.pop("c", None); x.pop("s", None)  # posições com preço médio pm (widget 1.20+)
     return JSONResponse(w, headers={"Cache-Control": "no-store"})
 
 @app.get("/api/widget/simgrupo.xlsx")
