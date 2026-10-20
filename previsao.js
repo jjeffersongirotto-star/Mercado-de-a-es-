@@ -620,7 +620,7 @@ if (typeof document !== 'undefined') {
   });
   // movimentações (rodízio e Grupo simulação): uma linha por evento (compra, venda, aporte, provento, aplicação/resgate do CDI,
   // retirada, imposto), mais recentes primeiro; mostra MOV_PG por vez ("Mostrar mais" acrescenta sem redesenhar o resto)
-  // ⓘ → Modelos da Previsão → Adaptativo: "Ver o que ele aprendeu" (/api/modelos/aprendeu ← modelos._adapt)
+  // ⓘ → Modelos da Previsão → Adaptativo: "Ver o que ele aprendeu" (/api/modelos/aprendeu ← modelos._adapt; confiança nas notícias ← modelos._nconf)
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-adp]'); if (!b) return; const box = document.getElementById('adpLearn'); if (!box) return;
     box.innerHTML = loaderHTML('Carregando…');
@@ -632,7 +632,8 @@ if (typeof document !== 'undefined') {
           const lim = o ? `${F2.format(o.compra)} · ${F2.format(o.venda)}<span class="gsub">volatilidades</span>` : '—';
           const esp = !k ? '—' : k.venda && k.compra ? 'Venda e compra' : k.venda ? 'Só venda' : k.compra ? 'Só compra' : 'Não';
           return `<tr><td>${esc(c.c)}</td>${c.top.map(([n, p]) => `<td>${esc(n)}<span class="gsub">peso ${p}%</span></td>`).join('')}<td>${lim}</td><td>${esp}</td></tr>`;
-        }).join('')}</tbody></table></div>`;
+        }).join('')}</tbody></table></div>` + (d.ncf && d.ncf.length ? `<p class="pvd-note">Confiança nas notícias (todos os modelos): acerto = notícia ruim antes de a ação render menos que as outras, boa antes de render mais (4 e 12 semanas depois); peso = quanto a notícia conta nas decisões.</p>
+        <div class="pv-scroll"><table class="gtab"><thead><tr><th>Tipo de notícia</th><th>Casos</th><th>Acerto</th><th>Peso</th></tr></thead><tbody>${d.ncf.map((x) => `<tr><td>${esc(x.t)}</td><td>${F0.format(x.n)}</td><td>${F2.format(x.a)}%</td><td>${x.ok ? x.p + '%' : '100%<span class="gsub">poucos casos</span>'}</td></tr>`).join('')}</tbody></table></div>` : '');
     } catch (err) { box.innerHTML = `<p class="pvd-note">${esc(err.message)}</p>`; }
   });
   window.pvGroupHtml = groupHtml;

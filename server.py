@@ -937,14 +937,15 @@ def api_fgcmp(t: str, di: str, df: str):
 
 @app.get("/api/modelos/aprendeu")
 def api_modelos_aprendeu():
-    """Adaptativo (aprende): o que aprendeu até a última semana dos dados (pesos por cenário e acerto das notícias ruins; modelos._adapt)."""
+    """O que os modelos aprenderam até a última semana dos dados: Adaptativo (pesos por cenário e acerto das notícias ruins; modelos._adapt)
+    e confiança em cada tipo de notícia (todos os modelos; modelos._nconf → NCF)."""
     import modelos
     rows = universe.universe((cache.data or {}).get("rows") or [])
     if not rows: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
     try: D = modelos.data(); modelos.set_setores(D, rows, _cad())
     except Exception:
         log.exception("modelos: aprendeu"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
-    return JSONResponse(dict(D.get("ADPS") or {}, at=D["w"][-1]), headers={"Cache-Control": "no-store"})
+    return JSONResponse(dict(D.get("ADPS") or {}, at=D["w"][-1], ncf=D.get("NCF") or []), headers={"Cache-Control": "no-store"})
 
 @app.get("/api/modelos/ficha")
 def api_modelos_ficha(m: str = "*"):
