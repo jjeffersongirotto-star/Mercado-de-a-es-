@@ -232,10 +232,14 @@ def main(out):
     except Exception as e: marcos = []; print("noticias: sem marcos:", e)
     for m in marcos:
         m.update({"tema": "mercado", "marco": True}); m.update(cl(m))
-    for it in barsi: it.update({"m": ["br"], "tf": []}); it.setdefault("t", [])
+    for it in barsi: it.update({"tema": "mercado"}); it.update(cl(it))  # Barsi: mesma lista e mesma regra das outras (sem tema próprio)
+    try: dest = set(json.load(open(os.path.join(HERE, "noticias_marcos.json"), encoding="utf-8")).get("destaque") or [])
+    except Exception: dest = set()
     itens = sorted(barsi, key=lambda i: i.get("data") or "", reverse=True)[:MAX_BARSI] + merc + marcos
+    for it in itens:
+        if it.get("url") in dest: it["destaque"] = True  # destaque no topo da aba (escolhido à mão em noticias_marcos.json)
     itens.sort(key=lambda i: i.get("data") or "0000", reverse=True)
-    data = {"fetched_at": agora.isoformat(timespec="seconds"), "temas": {"mercado": "Mercado", "barsi": "Luiz Barsi"},
+    data = {"fetched_at": agora.isoformat(timespec="seconds"), "temas": {"mercado": "Mercado"},
             "fontes": sorted(ok_fonte), "itens": itens}
     json.dump(data, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     arquivo(out, merc)
