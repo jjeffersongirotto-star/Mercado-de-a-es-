@@ -629,6 +629,37 @@ def test_cdb_ir_iof():
     assert cd[0]["x"] == "havia R$ 0,00 no CDB" and modelos._brl(1234.5) == "R$ 1.234,50"
 
 
+def test_aporte_concentra_e_buy_and_hold_com_apostas():
+    # aporte (modelos de segurar): valor inicial concentrado em APORTE['min_emp'] empresas, até APORTE['teto'] da carteira cada
+    a = {f"A{k:02d}3": {"c": 10.0} for k in range(10)}
+    D = modelos.build(snap(a), cdi()); me = months(D, "2020-02", "2021-06")
+    h = modelos.grupo(D, "media200", list(range(10)), me, [30000.0] + [0.0] * (len(me) - 1), rec=True)[4]
+    assert len(h["pos"]) == modelos.APORTE["min_emp"] and all(p["v"] <= modelos.APORTE["teto"] * 30000 + 1 for p in h["pos"])
+    # Buy and Hold: núcleo só com pagadora regular; aposta de crescimento realiza o lucro com +30% e o dinheiro vai para as de dividendos
+    D = modelos.build(snap({"DIV3": {"c": 10.0}, "CRE3": {"c": [10.0] * 30 + [14.0] * (NW - 30)}, "NAD3": {"c": 10.0}}), cdi())
+    k, j = D["ix"]["DIV3"], D["ix"]["CRE3"]; D["TETO"][k, :] = 10.0  # rendimento médio de 6%
+    N, T = D["C"].shape; D["GRO"] = np.zeros((N, T), bool); D["GARP"] = np.zeros((N, T), bool); D["GROS"] = np.zeros((N, T), np.float32)
+    D["GRO"][j, :] = True; D["GROS"][j, :] = .3
+    assert list(modelos._hold_nucleo(D, [0, 1, 2], 10) > 0) == [False, True, False]  # CRE3, DIV3, NAD3 (ordem alfabética)
+    me = months(D, "2020-02", "2021-06"); h = modelos.grupo(D, "hold", [0, 1, 2], me, [10000.0] + [1000.0] * (len(me) - 1), rec=True)[4]
+    cb = [e for e in h["mov"] if e["k"] == "compra" and e["t"] == "CRE3"]; vd = [e for e in h["mov"] if e["k"] == "venda" and e["t"] == "CRE3"]
+    assert cb and cb[0]["v"] <= modelos.HOLD["aposta"] / modelos.HOLD["n_aposta"] * 10000 + 1
+    assert vd and "realizou o lucro" in vd[0]["x"] and not any(e["t"] == "NAD3" for e in h["mov"] if e["k"] == "compra")
+    depois = [e for e in h["mov"] if e["k"] == "compra" and e["d"] >= vd[0]["d"]]
+    assert depois and all(e["t"] == "DIV3" for e in depois)
+
+
+def test_confianca_nas_noticias():
+    # notícia ruim sempre antes de alta: o tipo perde o peso depois de NCONF['min'] casos conhecidos (nunca antes de conhecer)
+    T = 100; Cf = np.vstack([10.0 * 1.01 ** np.arange(T), np.full(T, 10.0), np.full(T, 10.0)])
+    E = [([0], i, -1.0, False, True, "multa", "multa") for i in range(40)]
+    conf, res = modelos._nconf(E, Cf, T)
+    assert conf(0, 20, True, False, -1.0, "multa") == 1.0 and conf(0, 70, True, False, -1.0, "multa") == 0.0
+    assert conf(0, 70, False, False, -1.0, "multa") == 1.0  # jornal é outro tipo: sem casos, peso cheio
+    assert any(x["t"] == "CVM · fato · ruim · multa" and x["ok"] and x["p"] == 0 for x in res)
+    assert modelos.tom_noticia("Multa aplicada pela CVM", True)[2] == "multa"
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

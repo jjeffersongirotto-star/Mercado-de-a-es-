@@ -328,7 +328,7 @@ def _set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 21       # versão das contas (21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 22       # versão das contas (22: aporte primeiro nas empresas da carteira, Buy and Hold com dividendos + apostas de crescimento, confiança nas notícias; 21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -507,39 +507,92 @@ def _fund_mats(tick, wk, fund, spl=None):
 
 
 _VOCN = None
-def tom_noticia(texto):
-    """Tom de uma notícia pelo vocabulário (vocabulario.json → noticias) -> (tom de -2 a +2, suposição?).
+def tom_noticia(texto, frase=False):
+    """Tom de uma notícia pelo vocabulário (vocabulario.json → noticias) -> (tom de -2 a +2, suposição?[, assunto: frase de maior peso]).
     Frases mais longas primeiro (uma frase usada não conta de novo nas mais curtas: "saída da recuperação judicial" não vira negativo)."""
     global _VOCN
     if _VOCN is None:
         v = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocabulario.json"), encoding="utf-8"))["noticias"]
         _VOCN = (sorted({**v["negativo"], **v["positivo"]}.items(), key=lambda x: -len(x[0])), v["suposicao"])
     t = " " + unicodedata.normalize("NFKD", texto or "").encode("ascii", "ignore").decode().lower() + " "
-    tom = 0.0
+    tom = 0.0; fr = ("", 0)
     for w, p in _VOCN[0]:
-        if w in t: tom += p; t = t.replace(w, " ")
-    return float(np.clip(tom, -2, 2)), any(w in t for w in _VOCN[1])
+        if w in t:
+            tom += p; t = t.replace(w, " ")
+            if abs(p) > abs(fr[1]): fr = (w, p)
+    r = (float(np.clip(tom, -2, 2)), any(w in t for w in _VOCN[1]))
+    return r + (fr[0],) if frase else r
 
 
-def _news_mats(tick, wk, news):
+# Confiança nas notícias (todos os modelos): o que a ação fez (contra a mediana das outras) nas NCONF['h'] semanas depois de cada notícia;
+# acertou = notícia ruim antes de queda / boa antes de alta (média das janelas). Por tipo (CVM × jornal, fato × suposição, boa × ruim) e
+# por assunto (frase do vocabulário); só casos já conhecidos na semana (sem olhar o futuro); casos antigos pesam metade a cada 'meia'
+# semanas; com pelo menos 'min' casos o peso da notícia = acerto de 'lo' (ou menos) → 0 até 'hi' (ou mais) → 1 (só perde peso o tipo que
+# erra mais do que acerta); antes disso, 1
+NCONF = {"on": True, "h": (4, 12), "meia": 104, "min": 30, "lo": .30, "hi": .50}  # testado: .40–.60 e .45–.55 tiravam peso de tipos que só empatavam e rendiam menos
+
+
+def _ncat(o, sup, tom, fr=None):
+    """Tipo da notícia (rótulo de 'Ver o que ele aprendeu')."""
+    t = f"{'CVM' if o else 'jornal'} · {'suposição' if sup else 'fato'} · {'boa' if tom > 0 else 'ruim'}"
+    return t + f" · {fr}" if fr else t
+
+
+def _news_mats(tick, wk, news, Cf=None):
     """Notícias por empresa e semana: NT = soma do tom (fato oficial NOTICIA['oficial'], de jornal NOTICIA['jornal']; suposição ou
-    previsão só como contexto: NOTICIA['suposicao'] no total, limitado a ±NOTICIA['sup_max'] na semana); NX = texto da mais forte."""
+    previsão só como contexto: NOTICIA['suposicao'] no total, limitado a ±NOTICIA['sup_max'] na semana) × confiança do tipo (NCONF,
+    com os preços Cf); NX = texto da mais forte; NCF = o que aprendeu na última semana (tipo, casos, acerto, peso)."""
     ix = {t: k for k, t in enumerate(tick)}; N, T = len(tick), len(wk)
     NT = np.zeros((N, T), np.float32); SP = np.zeros((N, T), np.float32); NX = {}
-    wd = wk.values.astype("datetime64[D]")
+    wd = wk.values.astype("datetime64[D]"); E = []
     for it in news or []:
         ks = [ix[t] for t in it.get("t") or () if t in ix]
         if not ks or not it.get("d"): continue
         i = int(np.searchsorted(wd, np.datetime64(it["d"][:10]), side="left"))
         if i >= T: continue
-        tom, sup = tom_noticia(it.get("x"))
-        if not tom: continue
+        tom, sup, fr = tom_noticia(it.get("x"), True)
+        if tom: E.append((ks, i, tom, sup, bool(it.get("o")), fr, it.get("x")))
+    conf, NCF = _nconf(E, Cf, T)
+    for ks, i, tom, sup, o, fr, x in E:
         for k in ks:
-            if sup: SP[k, i] += tom * NOTICIA["suposicao"]
+            c = conf(k, i, o, sup, tom, fr)
+            if sup: SP[k, i] += tom * NOTICIA["suposicao"] * c
             else:
-                v = tom * NOTICIA["oficial" if it.get("o") else "jornal"]; NT[k, i] += v
-                if abs(v) >= abs(NX.get((k, i), ("", 0))[1]): NX[(k, i)] = ((it.get("x") or "")[:120], v)
-    return NT + np.clip(SP, -NOTICIA["sup_max"], NOTICIA["sup_max"]), {k: v[0] for k, v in NX.items()}
+                v = tom * NOTICIA["oficial" if o else "jornal"] * c; NT[k, i] += v
+                if abs(v) >= abs(NX.get((k, i), ("", 0))[1]) and v: NX[(k, i)] = ((x or "")[:120], v)
+    return NT + np.clip(SP, -NOTICIA["sup_max"], NOTICIA["sup_max"]), {k: v[0] for k, v in NX.items()}, NCF
+
+
+def _nconf(E, Cf, T):
+    """Confiança aprendida (NCONF) -> (função peso(k, i, oficial, suposição, tom, assunto), resumo da última semana)."""
+    if Cf is None or not E or not NCONF["on"]: return (lambda *a: 1.0), []
+    import pandas as pd
+    with np.errstate(invalid="ignore", divide="ignore"):
+        L = np.log(Cf.astype(np.float32)); r = np.diff(L, axis=1); r[~np.isfinite(r)] = np.nan
+        mk = np.concatenate([[0.0], np.nancumsum(np.nan_to_num(np.nanmedian(r, axis=0)))]); del r  # mediana das ações (float32: memória)
+    H = NCONF["h"]; hm = max(H); acc = {}  # tipo -> [semana resolvida, acertou (0–1), peso pela data]
+    for ks, i, tom, sup, o, fr, _ in E:
+        if i + hm >= T: continue
+        for k in ks:
+            a = [L[k, i + h] - L[k, i] - (mk[i + h] - mk[i]) for h in H]
+            if not all(np.isfinite(a)): continue
+            hit = float(np.mean([np.sign(tom) * x > 0 for x in a]))
+            for c in (_ncat(o, sup, tom), _ncat(o, sup, tom, fr)): acc.setdefault(c, []).append((i + hm, hit, i))
+    S = {}  # tipo -> (acerto ponderado até cada semana, casos até cada semana)
+    for c, v in acc.items():
+        a = np.array(v); hs = np.zeros(T); ws = np.zeros(T); ns = np.zeros(T); pw = 2.0 ** (a[:, 2] / NCONF["meia"])
+        np.add.at(hs, a[:, 0].astype(int), a[:, 1] * pw); np.add.at(ws, a[:, 0].astype(int), pw); np.add.at(ns, a[:, 0].astype(int), 1)
+        hs, ws, ns = np.cumsum(hs), np.cumsum(ws), np.cumsum(ns)
+        S[c] = (np.where(ws > 0, hs / np.where(ws > 0, ws, 1), np.nan), ns)
+    pk = lambda x: float(np.clip((x - NCONF["lo"]) / (NCONF["hi"] - NCONF["lo"]), 0, 1))
+    def conf(k, i, o, sup, tom, fr):
+        for c in (_ncat(o, sup, tom, fr), _ncat(o, sup, tom)):
+            if c in S and S[c][1][i] >= NCONF["min"]: return pk(S[c][0][i])
+        return 1.0
+    res = [{"t": c, "n": int(S[c][1][-1]), "a": round(float(S[c][0][-1]) * 100, 1), "p": round(pk(S[c][0][-1]) * 100), "ok": bool(S[c][1][-1] >= NCONF["min"])}
+           for c in S if S[c][1][-1] >= (1 if c.count(" · ") == 2 else NCONF["min"])]
+    res.sort(key=lambda x: (x["t"].count(" · "), -x["n"]))
+    return conf, res
 
 
 def noticias_itens(fatos=None, noticias=None, arquivo=None):
@@ -638,7 +691,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     with np.errstate(invalid="ignore", divide="ignore"):
         FM["Q"] = np.where(FM["QW"] >= NOTA["min_qw"], 100 * (FM["QY"] + np.nan_to_num(PAG) * wp) / qw, np.nan).astype(np.float32)
     del FM["QY"], FM["QW"]
-    NT, NX = _news_mats(tick, wk, news)
+    NT, NX, NCF = _news_mats(tick, wk, news, Cf)
     CV, CC = _calma_mats(Cf, VW, LP, FM.get("Q"), NT)
     PLR = _pl_rel(Cf, FM)
     ET = snap.get("etf") or {}; EK = np.array([ET.get(t, "") for t in tick])  # tipo do ETF ("" = ação)
@@ -657,7 +710,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "CID": CID, "CIC": CIC, "CDI1": float(cdi["v"][-1]) if cdi.get("v") else None, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CV": CV, "CC": CC, "CVa": CV, "CCa": CC, "PLR": PLR, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "CID": CID, "CIC": CIC, "CDI1": float(cdi["v"][-1]) if cdi.get("v") else None, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "NCF": NCF, "CV": CV, "CC": CC, "CVa": CV, "CCa": CC, "PLR": PLR, "CRI": np.zeros((N, T), bool),
             "EK": EK, "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -798,9 +851,9 @@ def _signal(D, mid, idx, i):
 
 # Arquivo do modelo (⬇ → Modelo (regras e código) na Previsão): parâmetros e funções de cada modelo; o texto vem do próprio código
 # (valor atual e comentário de cada parâmetro, fonte de cada função) e do painel ⓘ → Modelos da Previsão (server.api_modelos_ficha)
-FICHA_COMUM = (("CONV", "ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "ORD_FILA", "CALMA", "CALMA_FORA", "CARO", "PERDA", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
-               ("_signals", "_signal", "motivo", "simulate", "Conta", "Ordens", "_calma", "_calma_mats", "_pl_rel", "_perda", "_gtargets", "_conviccao", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
-FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
+FICHA_COMUM = (("APORTE", "NCONF", "CONV", "ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "ORD_FILA", "CALMA", "CALMA_FORA", "CARO", "PERDA", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
+               ("_signals", "_signal", "motivo", "simulate", "Conta", "Ordens", "_calma", "_calma_mats", "_pl_rel", "_perda", "_gtargets", "_conviccao", "_regras_w", "_aporte", "_nota", "_noticia", "_news_mats", "_nconf", "_venda", "grupo", "rotate"))
+FICHA = {"hold": (("HOLD", "BARSI_DY"), ("_hold_nucleo", "_hold_apostas")), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
          "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
          "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")),
          "adapt": (("ADP", "ADP_N", "ADP_PRECO", "ADP_MEIA", "ADP_ETA", "ADP_NOTA", "ORD_KS", "HIB_COMPRA"), ("_adp_x", "_ord_ganho", "_adapt")), "barsi": (("BARSI_DY", "BARSI_ANOS", "BARSI_CAIXA", "PERENE_TXT"), ("perene", "build", "_barsi_caixa")),
@@ -1438,7 +1491,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 12  # 12: CDB com IR/IOF; 11: ordens com fila; 10: alvos caros; 9: ordens ligadas + anti-emoção; 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 13  # 13: aporte, Buy and Hold e confiança nas notícias; 12: CDB com IR/IOF; 11: ordens com fila; 10: alvos caros; 9: ordens ligadas + anti-emoção; 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -1516,7 +1569,7 @@ def _conviccao(D, mid, idx, j, w, held):
 def _gtargets(D, mid, idx, i):
     """pesos alvo (soma 1, ou 0 = espera no CDB) e 'quer manter' de cada empresa, com dados da semana i."""
     n=len(idx); ok=~np.isnan(D['C'][idx,i])
-    if mid=='hold': w=ok.astype(float)
+    if mid=='hold': w=_hold_nucleo(D,idx,i) if HOLD['on'] else ok.astype(float)
     elif MOD[mid].get('frac'): w=np.nan_to_num(D[MOD[mid]['x']][idx,i])*ok  # Híbrido/Adaptativo: exposição alvo
     elif mid=='barsi':
         T=D['TETO'][idx,i]; P=D['Cf'][idx,i]
@@ -1635,6 +1688,60 @@ def _barsi_caixa(D, idx, i, w, sh, P, ok, cash, pend, RG, ban):
     return cash - ex, pend
 
 
+# Aporte (modo Grupo, todos os modelos): primeiro reforça as empresas da carteira que estão boas para isso (o modelo ainda quer, não está
+# cara (P/L até CARO['pl'] × a mediana do próprio P/L de 5 anos), nota a partir de 'nota', sem fato ruim recente, abaixo do teto); concentra
+# na mais atrativa (nota × quão barata está, pelo sinal do modelo) até 'teto' da carteira por empresa e só passa para a próxima quando ela
+# enche; empresa nova só com menos de 'min_emp' na carteira, nenhuma boa para reforçar ou nota pelo menos 'nota_nova' acima da melhor delas
+APORTE = {"on": True, "teto": .20, "min_emp": 5, "nota": 50, "nota_nova": 15, "segurar": True, "sobra": True}
+# Buy and Hold no modo Grupo: núcleo de dividendos (proventos em 4 dos 5 últimos anos e nota a partir de 'nota'; peso ∝ rendimento médio
+# dos proventos × nota) + até 'n_aposta' apostas de crescimento (Growth ou GARP com o preço acima da média de 200 dias) com até 'aposta'
+# da carteira; aposta realiza o lucro com 'lucro' acima do preço médio (o dinheiro vai para as de dividendos), sai com 'stop' abaixo dele
+# ou quando o lucro do último ano cai (parou de crescer)
+HOLD = {"on": True, "nota": 50, "aposta": .15, "n_aposta": 3, "lucro": .30, "stop": .20}
+
+
+def _hold_nucleo(D, idx, i):
+    """Pesos do núcleo de dividendos do Buy and Hold (HOLD) na semana i; sem nenhuma pagadora regular: todas (ETFs, anos sem dados)."""
+    ok = ~np.isnan(D["C"][idx, i]); T = D["TETO"][idx, i]; P = D["Cf"][idx, i]; q, _ = _nota(D, idx, i)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        dy = np.where(ok & np.isfinite(T) & (P > 0), T * BARSI_DY / np.where(P > 0, P, 1), 0.0)  # rendimento médio dos proventos de 5 anos
+    w = np.where((dy > 0) & (np.isnan(q) | (q >= HOLD["nota"])), dy * np.nan_to_num(q, nan=50.0) / 100, 0.0)
+    return w if w.sum() > 0 else ok.astype(float)
+
+
+def _hold_apostas(D, idx, i):
+    """Candidatas a aposta de crescimento (Growth ou GARP, preço acima da média de 200 dias) e a força de cada uma (crescimento do lucro)."""
+    n = len(idx)
+    if "GRO" not in D: return np.zeros(n, bool), np.zeros(n)
+    c = (D["GRO"][idx, i] | D["GARP"][idx, i]) & (np.nan_to_num(D["M2"][idx, i]) > 0) & ~np.isnan(D["C"][idx, i])
+    return c, np.where(c, np.nan_to_num(D["GROS"][idx, i], nan=0.0), -np.inf)
+
+
+def _aporte(D, mid, idx, j, wa, caro, sh, P, pend, cash, RG, so=None, ini=False):
+    """Quanto do caixa vai para cada empresa no aporte (APORTE): até RG['conc'] empresas (valor inicial: até APORTE['min_emp']);
+    so = só estas podem receber (Buy and Hold: núcleo de dividendos)."""
+    n = len(idx); tv = (sh * P).sum() + pend.sum() + cash; held = (sh > 0) | (pend > 0); mc = RG.get("min_compra", 0) or 0
+    alvo = (wa > 0) & ~caro & (True if so is None else so)
+    if not alvo.any(): return np.zeros(n)
+    q, _ = _nota(D, idx, j); qn = np.nan_to_num(q, nan=50.0)
+    pr = D["PLR"][idx, j] if "PLR" in D else np.full(n, np.nan); nv, _ = _noticia(D, idx, j)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ok_pr = np.isfinite(pr) & (pr > 0); barata = np.where(ok_pr, np.clip(1 / np.where(ok_pr, pr, 1), .5, 2), 1.0); cara = ok_pr & (pr > CARO["pl"])
+    sc = qn / 100 * barata * wa / wa[alvo].max()
+    room = np.maximum(0.0, APORTE["teto"] * tv - sh * P - pend)
+    boa = alvo & held & ~cara & (qn >= APORTE["nota"]) & (nv > NOTICIA["ruim"]) & (room >= mc)
+    nova = alvo & ~held & (room >= mc); nh = int((held & (True if so is None else so)).sum()); kmax = RG["conc"]
+    if ini: kmax = max(kmax, int(APORTE["min_emp"]))
+    if nh < APORTE["min_emp"]: pass
+    elif boa.any(): nova &= qn >= qn[boa].max() + APORTE["nota_nova"]
+    cand = np.flatnonzero(boa | nova); al = np.zeros(n); r = cash
+    for k in cand[np.argsort(-sc[cand], kind="stable")][:kmax]:
+        a = min(room[k], r)
+        if a >= mc: al[k] = a; r -= a
+        if r < mc: break
+    return al
+
+
 def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     """Modo Grupo (Comparar e Grupo simulação): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
     Ações inteiras: o dinheiro destinado a cada empresa fica numa reserva dela, rendendo CDB, até dar para comprar pelo menos 1 ação;
@@ -1645,6 +1752,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     d0=getattr(me,"d0",None)  # data inicial com dia: valor inicial nela; ordens da 1ª semana só depois dela
     ev=[{"d":d0 or W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
+    ho=mid=='hold' and HOLD['on'] and bool(RG);bet=np.zeros(n,bool)  # Buy and Hold: apostas de crescimento (HOLD)
     nc=0;skc=np.zeros(n);pc_=np.zeros(n,bool);hw=np.zeros(n);cj=ca=0.0;cx=Caixa(1)  # CDB: rendimento recebido e total aplicado no período, aplicações (Caixa: IR/IOF no resgate)  # alvos caros: semanas com todas caras; semanas que cada uma ficou sem aporte por estar cara; reserva de quem estava cara
     dc,dv=("ODc","ODv") if mid=="adapt" else ("ODI","ODI")  # Adaptativo: distância aprendida por cenário
     Oc,Ov,Ov2=Ordens(D,idx,"c",dc,_calma(mid,"c"),d0),Ordens(D,idx,"v",dv,_calma(mid,"v"),d0),Ordens(D,idx,"v",dv,None,d0)  # ordens com preço limite: compra, venda do modelo, venda ocasional (por problema: sem espera)
@@ -1673,8 +1781,8 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
         w=_gtargets(D,mid,idx,i-1 if i>0 else i); age+=1; ban-=1
         if "SAI" in D: w=np.where(_saiu(D,idx,i+1),0,w);tw=w.sum();w=w/tw if tw>0 else w  # na semana do último pregão em diante: não recebe aporte
         if RG: w=_regras_w(D,mid,idx,i,w,sh,pend,RG,ban)
-        rel=(w==0)&(pend>0)
-        if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa
+        bet&=(sh>0)|(pend>0);rel=(w==0)&(pend>0)&~bet
+        if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa (aposta do Buy and Hold: não)
         if CONV["on"]: fica=_conviccao(D,mid,idx,max(0,i-1),w,(sh>0)|(pend>0))[2]; w=np.where((sh>0)&~fica,0,w)  # convicção baixa: o que vende, vende
         if sell and i>s:
             cand=(sh>0)&(w==0)&ok&(age>=mod['min']);mo=_perda(D,mid,idx,i,cand,sh,basis,P,ok,hw);cand&=mo!="-"  # no prejuízo: só empresa ruim
@@ -1686,7 +1794,12 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             for q in np.flatnonzero(out): addf(olim(Ov,i,q,px,tc)[0],v[q])
             sh=np.where(out,0,sh);basis=np.where(out,0,basis)
         if RG.get('venda') and not sell and i>s:  # venda ocasional dos modelos de segurar
-            mo=_venda(D,mid,idx,i,sh,basis,P,ok,age);out,px,tc=Ov2(i,mo!="",P)
+            mo=_venda(D,mid,idx,i,sh,basis,P,ok,age)
+            if ho and bet.any():  # apostas de crescimento: realiza o lucro, stop, parou de crescer
+                pm=np.where(sh>0,basis/np.where(sh>0,sh,1),0);g1=D['FM']['G1'][idx,max(0,i-1)] if 'FM' in D else np.full(n,np.nan);b_=bet&(sh>0)&ok
+                with np.errstate(invalid='ignore'): bx=np.where(b_&(P>=(1+HOLD['lucro'])*pm),f"aposta de crescimento: realizou o lucro (+{HOLD['lucro']*100:.0f}%), dinheiro para as de dividendos",np.where(b_&(P<=(1-HOLD['stop'])*pm),f"aposta de crescimento: caiu {HOLD['stop']*100:.0f}% abaixo do preço médio",np.where(b_&(g1<0),"aposta de crescimento: o lucro parou de crescer","")))
+                mo=np.where(bx!="",bx,mo)
+            out,px,tc=Ov2(i,mo!="",P)
             if out.any():
                 v=sh*px*(1-CUSTO);g=np.where(out,v-basis,0)
                 if rec:
@@ -1697,8 +1810,11 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                 w=np.where(out,0,w);tw=w.sum();w=w/tw if tw>0 else w  # vendida não recebe o aporte da mesma semana
                 rel=out&(pend>0)
                 if rel.any(): cash+=pend[rel].sum();pend[rel]=0
+                if ho and (out&bet).any():  # dinheiro da aposta vendida vai já para as de dividendos
+                    vb=float((v*(out&bet)).sum());bet&=~out;al=_aporte(D,mid,idx,max(0,i-1),w,np.zeros(n,bool),sh,P,pend,min(vb,cash),RG,~bet)
+                    pend+=al;cash-=al.sum()
         wa=_conviccao(D,mid,idx,max(0,i-1),w,(sh>0)|(pend>0))[0] if CONV["on"] else w  # aporte pelo peso de convicção; venda pelo sinal (w)
-        rel=(wa==0)&(pend>0)
+        rel=(wa==0)&(pend>0)&~bet
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # fora dos pesos de convicção: a reserva volta ao caixa
         j=meset.get(i)
         if j is not None and i>s:
@@ -1732,10 +1848,18 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                     if nc>=CARO['espera']: caro=caro&(np.nan_to_num(pr,nan=0)>np.nanmin(np.where(caro,pr,np.inf)))
                 else: nc=0
                 skc=np.where(caro&(gap>0),skc+1,np.where(w>0,skc,0));gap=np.where(caro,0,gap)
-                top=np.argsort(-gap,kind="stable")[:RG['conc']];top=top[gap[top]>0]
-                if len(top):
-                    al=np.zeros(n);gs=gap[top].sum();al[top]=gap[top]*min(1.0,cash/gs);al=np.where(al>=RG.get('min_compra',0),al,0)
-                    if al.sum()>0: pend+=al;cash-=al.sum();pc_=np.where(al>0,skc>0,pc_);skc=np.where(al>0,0,skc)
+                if ho:  # Buy and Hold: aposta de crescimento nova (uma por mês) até HOLD['aposta'] da carteira e HOLD['n_aposta'] apostas
+                    tv=(sh*P).sum()+pend.sum()+cash;want=min(cash,HOLD['aposta']*tv-((sh*P+pend)*bet).sum(),HOLD['aposta']/HOLD['n_aposta']*tv)
+                    if want>=RG.get('min_compra',0) and want>0 and bet.sum()<HOLD['n_aposta']:
+                        c,sb=_hold_apostas(D,idx,max(0,i-1));q_,_=_nota(D,idx,max(0,i-1));nv_,_=_noticia(D,idx,max(0,i-1));vl_=D['VL'][idx,max(0,i-1)] if 'VL' in D else np.full(n,np.nan)
+                        c&=~((sh>0)|(pend>0))&(ban<=0)&(wa<=0)&(np.isnan(q_)|(q_>=NOTA['min_compra']))&(nv_>NOTICIA['ruim'])&(np.isnan(vl_)|(vl_>=RG.get('liq',0)))
+                        if c.any(): k=int(np.argmax(np.where(c,sb,-np.inf)));pend[k]+=want;cash-=want;bet[k]=True
+                al=_aporte(D,mid,idx,max(0,i-1),wa,caro,sh,P,pend,cash,RG,~bet if ho else None,i==s) if APORTE['on'] and not (sell and APORTE['segurar']) else np.zeros(n)
+                gap=np.where(bet,0,np.maximum(0,gap-al));c2=cash-al.sum()  # sobra (nenhuma boa com espaço): pela regra antiga, as mais abaixo da meta
+                top=np.argsort(-gap,kind="stable")[:max(0,(max(RG['conc'],int(APORTE['min_emp'])) if i==s else RG['conc'])-int((al>0).sum()))];top=top[gap[top]>0]
+                if len(top) and c2>=RG.get('min_compra',0) and (APORTE['sobra'] or not al.any()):
+                    gs=gap[top].sum();a2=np.zeros(n);a2[top]=gap[top]*min(1.0,c2/gs);al=al+np.where(a2>=RG.get('min_compra',0),a2,0)
+                if al.sum()>0: pend+=al;cash-=al.sum();pc_=np.where(al>0,skc>0,pc_);skc=np.where(al>0,0,skc)
         elif cash>0.005 and wa.sum()>0:
             pend+=cash*wa;cash=0.0
         if mid=='barsi' and j is not None and i>s: cash,pend=_barsi_caixa(D,idx,i,w,sh,P,ok,cash,pend,RG,ban)
