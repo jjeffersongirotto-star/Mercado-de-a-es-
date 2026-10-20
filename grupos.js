@@ -482,7 +482,10 @@
   // App 1.15+: grupos de simulação (nome, data inicial e valor inicial) para o widget Grupo simulação, que pede /api/widget/simgrupo
   function pushSims() {
     if (!window.JGApp || !window.JGApp.setSims) return;
-    try { window.JGApp.setSims(JSON.stringify(groups.filter(g => g.sim).map(g => ({ id: g.name, n: g.name, di: g.sim.di, v0: g.sim.v0, f: { ap: g.sim.ap || 0, ex: g.sim.ex || [], ret: g.sim.ret || [] } })))); } catch (e) { }
+    // widget até a 1.18 só aceita data AAAA-MM: manda o mês em di e o dia completo em f.d (o servidor usa f.d: server._simw)
+    const velho = !window.APP_V || window.verCmp(window.APP_V, '1.19') < 0;
+    try { window.JGApp.setSims(JSON.stringify(groups.filter(g => g.sim).map(g => { const di = String(g.sim.di || ''), cd = velho && di.length > 7;
+      return { id: g.name, n: g.name, di: cd ? di.slice(0, 7) : di, v0: g.sim.v0, f: { ap: g.sim.ap || 0, ex: g.sim.ex || [], ret: g.sim.ret || [], ...(cd ? { d: di } : {}) } }; }))); } catch (e) { }
   }
   // App Android (window.JGApp): manda os grupos da aba Grupos (mesmas ações e ordem dos quadros: groupData) para o seletor do widget
   function pushGroups() {

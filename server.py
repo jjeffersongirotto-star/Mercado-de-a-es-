@@ -1251,7 +1251,10 @@ def _simw(di, v0, f):
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
         try: fx = json.loads(f) if f and len(f) <= 8000 else {}  # app 1.17+: aporte mensal, extras e retiradas do grupo ({ap, ex, ret})
         except Exception: fx = {}
-        _, v0, ap, ex, ret = modelos.sim_def(dict(fx if isinstance(fx, dict) else {}, di=di, v0=v0))
+        fx = fx if isinstance(fx, dict) else {}
+        d = str(fx.pop("d", "") or "")  # widget até a 1.18: di = AAAA-MM e o dia completo em f.d (grupos.js → pushSims)
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) and d[:7] == str(di or "")[:7]: di = d
+        _, v0, ap, ex, ret = modelos.sim_def(dict(fx, di=di, v0=v0))
         tk = modelos.todas(D, rows); di = str(di or "")[:10]
         sg = modelos.simgrupo(D, tk, di, v0, ap, ex, ret)
     except Exception:
