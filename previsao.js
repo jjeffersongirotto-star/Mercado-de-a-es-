@@ -647,7 +647,7 @@ if (typeof document !== 'undefined') {
     const cdi = x.k === 'cdi_ap' || x.k === 'cdi_res', neg = x.k === 'compra' || x.k === 'retirada' || x.k === 'imposto';
     const org = x.t ? `<b>${esc(nmOf(x.t))}</b>` : cdi ? 'CDB' : '—', det = x.x ? `<br><span class="pvd-note">${esc(x.x)}</span>` : '';
     const px = x.p != null && !cdi && x.k !== 'imposto' && x.k !== 'aporte' ? brl.format(x.p) : '—';
-    return `<tr class="mv-${x.k}"><td>${dataBR(x.d).replace(/\/(\d\d)(\d\d)$/, '/$2')}</td><td>${MOV_N[x.k] || esc(x.k)}</td><td class="mv-o">${org}${det}</td><td>${px}</td>` +
+    return `<tr class="mv-${x.k}"><td>${dataBR(x.d).replace(/\/(\d\d)(\d\d)$/, '/$2')}${x.h ? `<br><span class="gsub">${esc(x.h)}</span>` : ''}</td><td>${MOV_N[x.k] || esc(x.k)}</td><td class="mv-o">${org}${det}</td><td>${px}</td>` +
       `<td>${x.q != null ? F0.format(x.q) : '—'}</td><td class="${neg || cdi ? '' : 'up'}">${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`;
   };
   // mov: as que vieram (mais antigas primeiro); nmov: total; src {di, v0, m}: o resto vem do servidor em páginas (/api/modelos/simmov)

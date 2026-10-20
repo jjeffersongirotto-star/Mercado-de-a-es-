@@ -660,6 +660,21 @@ def test_confianca_nas_noticias():
     assert modelos.tom_noticia("Multa aplicada pela CVM", True)[2] == "multa"
 
 
+def test_primeiro_dia_compra_a_mercado():
+    # 1º dia (data com dia): compra a mercado pelo fechamento do dia (dc), sem preço limite; preço visto ao vivo (p1) com o horário,
+    # só se ficou entre a mínima e a máxima reais (senão o fechamento, com o mesmo horário)
+    sn = snap({"AAA3": {"c": 10.0}}); sn["dd"] = [W[50]]; sn["a"]["AAA3"]["dc"] = [9.5]
+    D = modelos.build(sn, cdi()); me = modelos._span(D, W[50], D["fim"])
+    h = modelos.grupo(D, "hold", [0], me, [1000.0] + [0.0] * (len(me) - 1), rec=True)[4]
+    c = [e for e in h["mov"] if e["k"] == "compra"][0]
+    assert c["d"] == W[50] and c["p"] == 9.5 and "a mercado" in c["x"] and "h" not in c
+    h = modelos.grupo(D, "hold", [0], me, [1000.0] + [0.0] * (len(me) - 1), rec=True, p1=modelos.sim_p1({"AAA3": [9.8, "11:32"]}))[4]
+    c = [e for e in h["mov"] if e["k"] == "compra"][0]; assert c["p"] == 9.8 and c["h"] == "11:32"
+    D["LO"][0, me[0]], D["HI"][0, me[0]] = 9.0, 9.6  # 9,80 fora da mínima/máxima: fica o fechamento, com o horário
+    h = modelos.grupo(D, "hold", [0], me, [1000.0] + [0.0] * (len(me) - 1), rec=True, p1=modelos.sim_p1({"AAA3": [9.8, "11:32"]}))[4]
+    c = [e for e in h["mov"] if e["k"] == "compra"][0]; assert c["p"] == 9.5 and c["h"] == "11:32"
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()

@@ -126,7 +126,15 @@ def test_widget_simgrupo_xlsx():
     assert R["D4"].value == 400.0 and abs(R["G4"].value - (400 / 1500 - 1)) < 1e-9 and "R$" in R["D4"].number_format and "%" in R["G4"].number_format
     M = wb["Método Barsi"]; rows = [[c.value for c in r] for r in M.iter_rows()]
     i = next(k for k, x in enumerate(rows) if x[0] == "Empresa"); assert rows[i + 1][:4] == ["Petrobras", "PETR4", 10, 25.0]
-    j = next(k for k, x in enumerate(rows) if x[0] == "Data"); assert len(rows) - j - 1 == 301 and rows[-1][1] == "Aporte" and rows[j + 1][2] == "PETR4"
+    j = next(k for k, x in enumerate(rows) if x[0] == "Data"); assert len(rows) - j - 1 == 301 and rows[-1][2] == "Aporte" and rows[j + 1][3] == "PETR4" and rows[0 + j][1] == "Hora"
+
+def test_horario_das_ordens_ao_vivo():
+    # hora vista ao vivo (_PROV) vai para a compra/venda do mesmo dia nas movimentações; sem cópia no cache dos modelos
+    server._PROV[("2026-01-05", 1000.0, "hold", "PETR4", "c", "2026-01-07")] = "11:32"
+    mov = [{"d": "2026-01-07", "k": "compra", "t": "PETR4", "q": 10}, {"d": "2026-01-07", "k": "venda", "t": "PETR4", "q": 10}]
+    out = server._horas("2026-01-05", 1000.0, "hold", mov)
+    assert out[0]["h"] == "11:32" and "h" not in out[1] and "h" not in mov[0]
+
 
 if __name__ == "__main__":
     n = 0

@@ -20,6 +20,7 @@ TRAIN0 = "1998-01-01"
 F = ["si", "mi", "dsi20", "dmi20", "r5", "r20", "r60", "r120", "r250", "dd", "up52", "ma50", "ma200", "cross", "brk_hi", "brk_lo", "bb",
      "vol20", "volr", "vlr", "rsi", "streak_w", "dy12", "ddy", "rs60", "rs250"]
 HS = (20, 60)  # horizontes do algoritmo (pregões): 1 e 3 meses
+DIAS = 260  # pregões com o fechamento de cada dia no snapshot (compra a mercado no 1º dia do Grupo simulação)
 
 
 TIPO = (("J", "JRS CAP PROPRIO"), ("D", "DIVIDENDO"), ("R", "RENDIMENTO"), ("K", "REST CAP DIN"))  # rótulos da lista da B3
@@ -169,7 +170,8 @@ def main(out):
     except Exception as e: EJ = {}; print("modelos: sem ETFs (etfs.json):", e)
     Ce, Ve = load_hist(out, "history4_etf") if EJ and os.path.isdir(os.path.join(out, "history4_etf")) else (pd.DataFrame(), pd.DataFrame())
     Ce = Ce[[t for t in Ce.columns if t in EJ]]; Ce, Ve = Ce[Ce.index >= TRAIN0], Ve.reindex(columns=Ce.columns)[Ve.index >= TRAIN0]
-    rows, series = [], {}
+    rows, series, DCS = [], {}, {}
+    DDX = C.index[-DIAS:]  # últimos pregões: fechamento de cada dia (1º dia do Grupo simulação: modelos._dia0)
     for t, CC, VV, sub in ([(t, C, V, "history4") for t in C.columns] + [(t, Cs, Vs, "history4_saiu") for t in Cs.columns]
                            + [(t, Ce, Ve, "history4_etf") for t in Ce.columns]):
         c = CC[t].dropna()
@@ -190,6 +192,7 @@ def main(out):
         dw = dd.groupby(dd.index.to_period("W-FRI")).sum()
         dw.index = dw.index.map(lambda p: weeks.get(p, pd.NaT)); dw = dw[dw.index.notna()].reindex(W).fillna(0)
         series[t] = (cw, dw, X, splits(out, t, sub), hilo(out, t, c, W, weeks, sub))
+        DCS[t] = [None if x != x else round(float(x), 4) for x in c.reindex(DDX)]
         print(f"  {t}: {len(c)} pregões ({time.time() - t0:.0f}s)", flush=True) if len(series) % 50 == 0 else None
     P = pd.concat(rows).sort_index()
     pred, acerto = {}, {}
@@ -208,6 +211,7 @@ def main(out):
              "tp": {str(i - i0): "".join(c for c, x in zip(TC, r) if x > 0) for i, r in enumerate(dw[TC].to_numpy()) if i >= i0 and r.max() > 0},
              "si": q(Xw.si), "m2": q(Xw.ma200, 1000), "r12": q(Xw.r250, 1000), "lp": lucro(FD.get(t), W[i0:]), "vl": [None if x != x else int(round(x)) for x in Xw.vl]}
         if sp: a["sp"] = sp
+        if any(x is not None for x in DCS.get(t) or []): a["dc"] = DCS[t]
         a["lo"], a["hi"], a["ol"], a["oh"] = (x[i0:] for x in hl)  # mínima/máxima da semana (‰ do fechamento) e dias antes do fim da semana
         for H, k in zip(HS, ("p1", "p3")):
             p = pred[H].xs(t, level=1) if t in pred[H].index.get_level_values(1) else pd.Series(dtype=float)
@@ -218,6 +222,7 @@ def main(out):
            "acerto": {"p1": acerto[20], "p3": acerto[60]},
            "etf": {t: EJ[t] for t in A if t in EJ},  # ETFs nos modelos: tipo (br, ext, rf, com; modelos.ETF_MOD)
            "saiu": {t: d.strftime("%Y-%m-%d") for t, d in SAI.items() if t in A},  # empresas que saíram: último pregão
+           "dd": [d.strftime("%Y-%m-%d") for d in DDX],  # dias de "dc" de cada ação
            "w": [d.strftime("%Y-%m-%d") for d in W], "mi": [None if x != x else int(x) for x in mi.reindex(W, method="ffill")], "a": A}
     json.dump(res, open(os.path.join(out, "modelos.json"), "w"), separators=(",", ":"))
     print(f"modelos: {len(A)} ações, {len(W)} semanas ({res['w'][0]} a {res['w'][-1]}), acerto {res['acerto']}, "
