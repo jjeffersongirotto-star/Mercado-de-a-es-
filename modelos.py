@@ -182,6 +182,20 @@ def _ord_ganho(D, k, compra):
     return G
 
 
+def _pl_rel(Cf, FM):
+    """P/L de cada semana ÷ mediana do próprio P/L nas últimas CARO['anos'] (preço × ações do último balanço ÷ lucro anual; o fator
+    da classe de ação se cancela na divisão) -> matriz N × T float32 (NaN: sem lucro ou sem histórico). > CARO['pl'] = cara agora."""
+    import pandas as pd
+    if "NIW" not in FM: return np.full(Cf.shape, np.nan, np.float32)
+    # ações: as do balanço da época; antes do 1º balanço com composição do capital, as do 1º (sem nenhum: constante, se cancela)
+    SH = pd.DataFrame(FM["SHW"].T).ffill().bfill().fillna(1.0).to_numpy(np.float32).T if "SHW" in FM else 1.0
+    with np.errstate(invalid="ignore", divide="ignore"):
+        NI = FM["NIW"]; pl = np.where(NI > 0, Cf.astype(np.float32) * SH / NI, np.nan).astype(np.float32); del SH
+        med = pd.DataFrame(pl.T).rolling(52 * CARO["anos"], min_periods=52 * CARO["min_anos"]).median().to_numpy(np.float32).T
+        pl /= med
+    return pl
+
+
 def _calma_mats(Cf, VW, LP, Q, NT):
     """Anti-emoção (CALMA): na semana d, a variação foi rápida (|var| > CALMA['vol'] volatilidades)? -> CV (venda espera: queda rápida
     com a empresa bem ou o mercado caindo junto) e CC (compra espera: alta rápida), matrizes N × T de bool (coluna = semana dos dados)."""
@@ -372,6 +386,15 @@ ORD_MAX = .08     # distância máxima do limite (8%)
 # ruim) ou se o mercado (mediana das ações) caiu junto (≥ 'mercado' da queda dela); alta rápida não compra no topo. Fora: modelos que
 # reagem rápido por estratégia (CALMA_FORA); vendas por problema (_venda) e saída da bolsa não esperam
 CALMA = {"vol": 2.0, "nota": 50, "mercado": .5}
+# Alvos baratos × caros (modo Grupo): empresa do alvo está "cara agora" com P/L acima de 'pl' × a mediana do próprio P/L nas últimas
+# 'anos' (mínimo 'min_anos' de histórico; sem lucro = não dá para dizer); o aporte vai só para as baratas; se todas as alvo estiverem
+# caras, o dinheiro espera no CDB até 'espera' semanas e então compra a menos cara. Só nos modelos de 'modelos' — desligado (nenhum):
+# nos testes de 2011, 2016 e 2021 piorou os de tendência (compram o que sobe, de P/L alto) e não melhorou os outros de forma consistente
+CARO = {"pl": 1.3, "anos": 5, "min_anos": 2, "espera": 13, "modelos": ()}
+# Prejuízo (_perda): os modelos em 'modelos' seguram a ação abaixo do preço médio (sem aporte) até 'espera' semanas esperando voltar,
+# e só realizam o prejuízo antes disso com empresa ruim (_venda). Desligado (nenhum modelo): nos testes de 2011, 2016 e 2021 segurar
+# no prejuízo piorou muito os modelos que vendem em grupo (eles cortam perdas por estratégia)
+PERDA = {"espera": 26, "modelos": ()}
 CALMA_FORA = ("tendencia", "alg1", "medo_mercado", "medo_acao")  # modelos que não esperam: reagir rápido é a estratégia deles
 ORD_KS = (0.0, 0.25, 0.5, 1.0)  # Adaptativo: distâncias (em volatilidades) que ele testa no histórico e escolhe por cenário
 HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
@@ -608,6 +631,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     del FM["QY"], FM["QW"]
     NT, NX = _news_mats(tick, wk, news)
     CV, CC = _calma_mats(Cf, VW, LP, FM.get("Q"), NT)
+    PLR = _pl_rel(Cf, FM)
     ET = snap.get("etf") or {}; EK = np.array([ET.get(t, "") for t in tick])  # tipo do ETF ("" = ação)
     # empresas que saíram da bolsa (snapshot modelos → saiu: último pregão): SAI = semana do último preço (-1 = negociada hoje)
     sa = {t: d for t, d in (snap.get("saiu") or {}).items() if t in tick}; SAI = np.full(N, -1)
@@ -624,7 +648,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CV": CV, "CC": CC, "CVa": CV, "CCa": CC, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CV": CV, "CC": CC, "CVa": CV, "CCa": CC, "PLR": PLR, "CRI": np.zeros((N, T), bool),
             "EK": EK, "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -752,8 +776,8 @@ def _signal(D, mid, idx, i):
 
 # Arquivo do modelo (⬇ → Modelo (regras e código) na Previsão): parâmetros e funções de cada modelo; o texto vem do próprio código
 # (valor atual e comentário de cada parâmetro, fonte de cada função) e do painel ⓘ → Modelos da Previsão (server.api_modelos_ficha)
-FICHA_COMUM = (("ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "CALMA", "CALMA_FORA", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
-               ("_signals", "_signal", "motivo", "simulate", "Conta", "Ordens", "_calma", "_calma_mats", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
+FICHA_COMUM = (("ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "CALMA", "CALMA_FORA", "CARO", "PERDA", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
+               ("_signals", "_signal", "motivo", "simulate", "Conta", "Ordens", "_calma", "_calma_mats", "_pl_rel", "_perda", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
 FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
          "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
          "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")),
@@ -820,6 +844,22 @@ def motivo(D, mid, k, i):
 
 
 CALMA_TXT = " · esperou 1 semana para confirmar (oscilação rápida)"
+
+
+def _perda(D, mid, idx, i, cand, sh, basis, P, ok, hw=None):
+    """Venda pelo sinal no prejuízo (preço abaixo do preço médio com custos): só se a análise (_venda, sem posse mínima) achar empresa
+    ruim. -> por empresa: "" = venda normal (no lucro), "-" = segura (sem aporte até recuperar ou o sinal voltar), texto = realiza o
+    prejuízo com o motivo."""
+    n = len(idx); mo = np.full(n, "", dtype=object)
+    if mid not in PERDA["modelos"]: return mo
+    pm = np.where(sh > 0, basis / np.where(sh > 0, sh, 1), 0); perda = cand & (P < pm)
+    if not perda.any(): return mo
+    an = _venda(D, mid, idx, i, np.where(perda, sh, 0), basis, P, ok, None, posse=False)
+    for q in np.flatnonzero(perda): mo[q] = f"realizou prejuízo: {an[q]}" if an[q] else "-"
+    if hw is not None:  # semanas segurando no prejuízo: sem voltar ao preço médio em PERDA['espera'], não deve retomar o patamar
+        hw[:] = np.where(mo == "-", hw + 1, 0)
+        for q in np.flatnonzero((mo == "-") & (hw > PERDA["espera"])): mo[q] = f"realizou prejuízo: não voltou ao preço médio em {PERDA['espera']} semanas"
+    return mo
 
 
 def _calma(mid, lado):
@@ -940,6 +980,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     st, k = np.nan_to_num(sig0, nan=0).astype(bool), np.full(n, 10 ** 6)
     lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None; vm = []; cj = np.zeros(n)  # cj: rendimento do CDB no mês
     meset = {w: j for j, w in enumerate(me)}
+    hw = np.zeros(n)  # semanas segurando no prejuízo (_perda)
     A.cash += ap[0]; dc, dv = ("ODc", "ODv") if mid == "adapt" else ("ODI", "ODI")  # Adaptativo: distância aprendida por cenário
     Oc, Ov = Ordens(D, idx, "c", dc, _calma(mid, "c")), Ordens(D, idx, "v", dv, _calma(mid, "v"))  # ordens com preço limite (compra e venda)
     mov = [[{"d": D["w"][s], "k": "aporte", "v": round(float(ap[0]), 2), "x": "valor inicial"}] for _ in range(n)] if rec else None
@@ -975,8 +1016,9 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         if mod.get("frac"):
             e = D[mod["x"]][idx, i - 1] if i > 0 else np.ones(n)
         elif i > s:  # venda com preço limite (executa no dia em que a máxima toca o limite, ou no fim do prazo)
-            vai, px, toc = Ov(i, ~want & (A.sh > 0) & ok, P)
-            sh0 = A.sh.copy(); A.sell(vai, px); log(sh0, i, px, lambda q: "venda: " + motivo(D, mid, idx[q], i - 1), Ov, toc)
+            cand = ~want & (A.sh > 0) & ok; mo = _perda(D, mid, idx, i, cand, A.sh, A.basis, P, ok, hw); cand &= mo != "-"  # no prejuízo: só empresa ruim
+            vai, px, toc = Ov(i, cand, P)
+            sh0 = A.sh.copy(); A.sell(vai, px); log(sh0, i, px, lambda q: mo[q] or "venda: " + motivo(D, mid, idx[q], i - 1), Ov, toc)
         tax = 0
         j = meset.get(i)
         if j is not None and i > s:
@@ -1370,14 +1412,16 @@ def _desc(q, po):
     return ", ".join(t)
 
 
-def _venda(D, mid, idx, i, sh, basis, P, ok, age):
+def _venda(D, mid, idx, i, sh, basis, P, ok, age, posse=True):
     """Venda ocasional dos modelos de segurar (REGRAS['venda']) por pontos -> motivo por empresa ('' = mantém). Só com ≥ VENDA['posse'] semanas.
     Problemas (VPROB): prejuízo nos 2 últimos balanços (grande: GRANDE), prejuízo no último; sem proventos há 2 anos e 30% abaixo do
     preço médio; Método Barsi: corte forte de dividendos (mediana de 2 anos < metade da de 5) com rendimento sobre o custo
     (12 meses ÷ preço médio) < 6%. Margem (VMARG): nota de qualidade de antes da crise, porte, histórico forte de lucro, crise do setor,
-    crise no mercado. Vende quando há problema e problemas − margem ≥ VENDA['limite']."""
+    crise no mercado. Vende quando há problema e problemas − margem ≥ VENDA['limite']. No prejuízo (preço abaixo do preço médio) um
+    balanço ruim isolado não conta: só problema que indica empresa ruim, que não deve voltar ao patamar (posse=False: análise do
+    prejuízo dos modelos que vendem, sem posse mínima)."""
     n = len(idx); out = np.full(n, "", dtype=object); FM = D.get("FM")
-    held = (sh > 0) & ok & (age >= VENDA["posse"])
+    held = (sh > 0) & ok & ((age >= VENDA["posse"]) if posse else True)
     if "EK" in D: held &= D["EK"][np.asarray(idx, int)] == ""  # ETF: sem venda por pontos (não tem balanço)
     if not held.any(): return out
     j = max(0, i - 1); DVn = np.nan_to_num(D["DV"][idx, max(0, i - 104):i]); pm = np.where(sh > 0, basis / np.where(sh > 0, sh, 1), 0)
@@ -1388,7 +1432,9 @@ def _venda(D, mid, idx, i, sh, basis, P, ok, age):
     p2, gr = g("PREJ2"), g("GRANDE")
     prob(p2 & gr, VPROB["prej_grande"], "prejuízo grande em 2 balanços seguidos")
     prob(p2 & ~gr, VPROB["prej2"], "prejuízo em 2 balanços seguidos")
-    prob(g("PREJ") & ~p2, VPROB["prej"], "prejuízo no último balanço")
+    perda = P < pm
+    prob(g("PREJ") & ~p2 & ~(perda & (mid in PERDA["modelos"])), VPROB["prej"], "prejuízo no último balanço")
+    qn, po = _nota(D, idx, j)
     prob((DVn.sum(axis=1) <= 0) & (P < (1 - VENDA["queda"]) * pm), VPROB["sem_prov"], "sem proventos há 2 anos e 30% abaixo do preço médio")
     if FM and "DIV" in FM:
         dx = FM["DLX"][idx, j]
@@ -1403,11 +1449,11 @@ def _venda(D, mid, idx, i, sh, basis, P, ok, age):
     for k in np.flatnonzero(held & (nv <= NOTICIA["ruim"])):
         pr[k] += min(NOTICIA["prob_max"], -nv[k]); txt[k].append(f"notícia: {ntx[k]}" if ntx[k] else "notícia negativa")
     if not pr.any(): return out
-    q, po = _nota(D, idx, j); cri = D["CRI"][idx, j]; cg = bool(D["CG"][j]) if "CG" in D else False
-    mg = np.where(np.isnan(q), 0, (q - 50) / VMARG["nota"]) + np.array([VMARG["porte"][x] if x >= 0 else 0 for x in po])
+    cri = D["CRI"][idx, j]; cg = bool(D["CG"][j]) if "CG" in D else False
+    mg = np.where(np.isnan(qn), 0, (qn - 50) / VMARG["nota"]) + np.array([VMARG["porte"][x] if x >= 0 else 0 for x in po])
     mg += VMARG["forte"] * g("FORTE") + VMARG["setor"] * cri + VMARG["mercado"] * cg + np.clip(nv, 0, NOTICIA["marg_max"])
     for k in np.flatnonzero((pr > 0) & (pr - mg >= VENDA["limite"])):
-        ctx = [_desc(q[k], po[k])] + (["sem histórico forte de lucro"] if not g("FORTE")[k] else []) + ["sem crise no setor nem no mercado"]
+        ctx = [_desc(qn[k], po[k])] + (["sem histórico forte de lucro"] if not g("FORTE")[k] else []) + ["sem crise no setor nem no mercado"]
         out[k] = "; ".join(txt[k]) + " — " + ", ".join(c for c in ctx if c)
     return out
 
@@ -1436,6 +1482,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
+    nc=0;skc=np.zeros(n);pc_=np.zeros(n,bool);hw=np.zeros(n)  # alvos caros: semanas com todas caras; semanas que cada uma ficou sem aporte por estar cara; reserva de quem estava cara
     dc,dv=("ODc","ODv") if mid=="adapt" else ("ODI","ODI")  # Adaptativo: distância aprendida por cenário
     Oc,Ov,Ov2=Ordens(D,idx,"c",dc,_calma(mid,"c")),Ordens(D,idx,"v",dv,_calma(mid,"v")),Ordens(D,idx,"v",dv)  # ordens com preço limite: compra, venda do modelo, venda ocasional (por problema: sem espera)
     olim=lambda O,i,q,px,t: (O.dia(i,q) if t[q] else W[i], (CALMA_TXT if O.conf[q] else "")+(f" · ordem com preço limite R$ {px[q]:.2f}".replace(".",",") if t[q] else ""))
@@ -1463,10 +1510,11 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
         rel=(w==0)&(pend>0)
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa
         if sell and i>s:
-            out,px,tc=Ov(i,(sh>0)&(w==0)&ok&(age>=mod['min']),P)  # venda com preço limite (máxima do dia) ou no fim do prazo
+            cand=(sh>0)&(w==0)&ok&(age>=mod['min']);mo=_perda(D,mid,idx,i,cand,sh,basis,P,ok,hw);cand&=mo!="-"  # no prejuízo: só empresa ruim
+            out,px,tc=Ov(i,cand,P)  # venda com preço limite (máxima do dia) ou no fim do prazo
             v=sh*px*(1-CUSTO);g=np.where(out,v-basis,0)
             if rec:
-                for q in np.flatnonzero(out): d_,x_=olim(Ov,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":motivo+x_})
+                for q in np.flatnonzero(out): d_,x_=olim(Ov,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":(mo[q] or motivo)+x_})
             cash+=(v*out).sum();msales+=(sh*px*out).sum();mgain+=g.sum();ns+=out.sum()
             sh=np.where(out,0,sh);basis=np.where(out,0,basis)
         if RG.get('venda') and not sell and i>s:  # venda ocasional dos modelos de segurar
@@ -1504,10 +1552,18 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             if rec and a>0: ev.append({"d":W[i],"k":"aporte","v":round(float(a),2),"x":"aporte do mês"})
         if cash>0.005 and w.sum()>0 and RG.get('conc'):
             if j is not None:  # aporte do mês para até RG['conc'] empresas mais abaixo da meta (compra mínima RG['min_compra']); a sobra fica no CDB
-                tv=(sh*P).sum()+pend.sum()+cash;gap=np.where(w>0,w*tv-sh*P-pend,0);top=np.argsort(-gap,kind="stable")[:RG['conc']];top=top[gap[top]>0]
+                tv=(sh*P).sum()+pend.sum()+cash;gap=np.where(w>0,w*tv-sh*P-pend,0)
+                pr=D['PLR'][idx,max(0,i-1)] if 'PLR' in D and mid in CARO['modelos'] else np.full(n,np.nan)
+                with np.errstate(invalid='ignore'): caro=(w>0)&(pr>CARO['pl'])  # alvo boa mas cara agora: espera; o aporte vai para as baratas
+                if caro.any() and not ((gap>0)&~caro).any():  # todas as alvo caras: espera no CDB até CARO['espera'] semanas, depois a menos cara
+                    nc+=1
+                    if nc>=CARO['espera']: caro=caro&(np.nan_to_num(pr,nan=0)>np.nanmin(np.where(caro,pr,np.inf)))
+                else: nc=0
+                skc=np.where(caro&(gap>0),skc+1,np.where(w>0,skc,0));gap=np.where(caro,0,gap)
+                top=np.argsort(-gap,kind="stable")[:RG['conc']];top=top[gap[top]>0]
                 if len(top):
                     al=np.zeros(n);gs=gap[top].sum();al[top]=gap[top]*min(1.0,cash/gs);al=np.where(al>=RG.get('min_compra',0),al,0)
-                    if al.sum()>0: pend+=al;cash-=al.sum()
+                    if al.sum()>0: pend+=al;cash-=al.sum();pc_=np.where(al>0,skc>0,pc_);skc=np.where(al>0,0,skc)
         elif cash>0.005 and w.sum()>0:
             pend+=cash*w;cash=0.0
         if mid=='barsi' and j is not None and i>s: cash,pend=_barsi_caixa(D,idx,i,w,sh,P,ok,cash,pend,RG,ban)
@@ -1521,9 +1577,10 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                     for k in np.flatnonzero(m):
                         d_,x_=olim(Oc,i,k,px,tc);e={"d":d_,"k":"compra","t":nm[idx[k]],"q":int(q[k]),"p":round(float(px[k]),2),"v":round(float(cost[k]),2)}
                         if RG and _desc(qn[k],po[k]): e["x"]=_desc(qn[k],po[k])
+                        if pc_[k]: e["x"]=(e.get("x","")+" · estava cara, comprou depois da queda").lstrip(" ·")
                         if x_: e["x"]=(e.get("x","") + x_).lstrip(" ·")
                         ev.append(e)
-                sh+=np.where(m,q,0);basis+=cost;pend=np.maximum(0,pend-cost);nb+=m.sum()
+                sh+=np.where(m,q,0);basis+=cost;pend=np.maximum(0,pend-cost);nb+=m.sum();pc_=np.where(m,False,pc_)
         if rec: _cdi(ev,W[i],cash+pend.sum()-b0)
     L=np.nan_to_num(lastp);res=cash+pend.sum();v=float((sh*L).sum()+res)
     if not rec: return v, float(ir), int(nb), int(ns)
