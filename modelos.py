@@ -328,7 +328,7 @@ def _set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 18       # versão das contas (18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 19       # versão das contas (19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -739,7 +739,7 @@ def meta(D):
     return {"modelos": [{"id": m["id"], "n": m["n"], "vende": m["vende"], **({"ref": True, "nota": m["nota"]} if m.get("ref") else {})} for m in MODELOS + REF], "ini": D["ini"], "fim": D["fim"], "at": D["at"], "tick": D["tick"]}
 
 
-def _span(D, di, df):
+def _span(D, di, df, mesmo=False):
     """Semanas de aporte entre di e df. AAAA-MM: fins de mês (mês 1 = fim de di). AAAA-MM-DD: 1ª semana dos dados a partir do dia
     (valor inicial) + fins dos meses seguintes; df com dia termina na última semana até ele. Vazio: nenhuma semana a partir de di."""
     ym, W, ME = D["ym"], D["w"], D["me"]
@@ -747,7 +747,7 @@ def _span(D, di, df):
         di = max(di, D["ini"] + "-01")
         s = next((i for i in range(len(W)) if W[i] >= di), None)
         if s is None: return []
-        me = [s] + [i for i in range(s + 1, len(ym)) if ME[i] and ym[i] > ym[s] and ym[i] <= df[:7]]
+        me = [s] + [i for i in range(s + 1, len(ym)) if ME[i] and (ym[i] > ym[s] or mesmo) and ym[i] <= df[:7]]  # mesmo: + fim do 1º mês
     else:
         di = max(di, D["ini"])
         me = [i for i in range(len(ym)) if ME[i] and di <= ym[i] <= df[:7]]
@@ -1681,15 +1681,27 @@ def sim_flows(v0, ap, ex, ret, n):
     return aps, wd
 
 
+def _simspan(D, di, v0, ap, ex, ret):
+    """Semanas e fluxos do Grupo simulação: da data inicial até a última semana dos dados, incluindo as semanas do 1º mês (um grupo que
+    começa no mês atual anda até hoje, não para na 1ª semana); aporte e retirada de cada mês na sua semana de fim de mês (o 1º mês só tem
+    o valor inicial). -> (semanas, aportes, retiradas)."""
+    me = _span(D, di, D["fim"], mesmo=True)
+    mo = [D["ym"][i] for i in me]; meses = list(dict.fromkeys(mo))
+    a, w = sim_flows(v0, ap, list(ex), list(ret), len(meses))
+    aps, wd, vis = [], [], set()
+    for x in mo:
+        k = meses.index(x); um = x not in vis; vis.add(x)
+        aps.append(a[k] if um else 0.0); wd.append(w[k] if um else 0.0)
+    return me, aps, wd
+
+
 def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
     """Grupo simulação (aba Grupos): uma carteira por modelo com as mesmas empresas e o mesmo valor inicial desde di até a última semana
     dos dados (a mesma conta de grupo(), igual ao Comparar/Previsão com data final = hoje). Recalcula do início a cada versão dos dados
     (os preços antigos são ajustados por proventos e desdobramentos) e guarda o resultado em _C."""
-    me = _span(D, di, D["fim"])
+    v0 = max(0.0, float(v0 or 0)); me, aps, wd = _simspan(D, di, v0, ap, ex, ret)
     if not me: return {"error": _curto(D, di), "pend": len(di) > 7 and di > D["w"][-1]}
-    v0 = max(0.0, float(v0 or 0))
     if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
-    aps, wd = sim_flows(v0, ap, list(ex), list(ret), len(me))
     key = _simkey(D, tickers, di, aps, wd)
     if key in _C: _C.move_to_end(key); return _C[key]
     idx = _simidx(D, tickers, me)
@@ -1729,9 +1741,8 @@ def sim_hist(D, tickers, di, v0, mid, ap=0.0, ex=(), ret=()):
     """Histórico completo de um modelo do Grupo simulação (movimentações das mais antigas às mais recentes, posições, proventos por
     empresa), do cache comprimido _MZ; se saiu da memória, refaz só esse modelo."""
     if mid not in MOD or mid not in {m["id"] for m in MODELOS}: return {"error": "Modelo desconhecido."}
-    me = _span(D, di, D["fim"]); v0 = max(0.0, float(v0 or 0))
+    v0 = max(0.0, float(v0 or 0)); me, aps, wd = _simspan(D, di, v0, ap, ex, ret)
     if not me or v0 <= 0: return {"error": "Simulação inválida."}
-    aps, wd = sim_flows(v0, ap, list(ex), list(ret), len(me))
     k = (_simkey(D, tickers, di, aps, wd), mid)
     if k not in _MZ:
         idx = _simidx(D, tickers, me)
