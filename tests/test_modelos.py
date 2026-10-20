@@ -88,7 +88,7 @@ def test_hibrido_nunca_vende_e_segue_quem_acerta():
     assert D["HX"][0, 60] == 1 and D["HA"][0, 60] == 0  # 100% na ação, seguindo Buy and Hold
     me = months(D, "2020-09", "2021-12")
     r = modelos.simulate(D, "hibrido", [0], me, [1000.0] + [100.0] * (len(me) - 1), [0.0] * len(me), rec=True)
-    assert r["s"][0] == 0 and r["ir"][0] == 0 and "Buy and Hold" in r["rows"][0][-1]["pos"]
+    assert r["s"][0] == 0 and r["irv"][0] == 0 and "Buy and Hold" in r["rows"][0][-1]["pos"]  # sem venda: sem IR de vendas (o CDB paga o seu no resgate)
 
 
 def test_colocacoes_desempate_pelo_segundo_lugar():
@@ -610,6 +610,20 @@ def test_simgrupo_mes_atual():
     di = D["w"][-3]; me, aps, wd = modelos._simspan(D, di, 1000.0, 100.0, [], [])
     assert me[0] == len(D["w"]) - 3 and me[-1] == len(D["w"]) - 1 or D["ym"][me[0]] != D["ym"][-1]
     assert aps[0] == 1000.0 and all(a == 0 for a, i in zip(aps[1:], me[1:]) if D["ym"][i] == D["ym"][me[0]])
+
+
+def test_cdb_ir_iof():
+    # CDB como na realidade: IR regressivo sobre o rendimento no resgate e IOF antes de 30 dias
+    c = modelos.Caixa(1); c.aplica(np.array([1000.0]), 1.0, 0)
+    assert abs(c.resgate(np.array([500.0]), 1.01, 10)[0] - 3.67) < 0.01  # 10 dias: IOF 66% + IR 22,5% sobre o rendimento
+    c = modelos.Caixa(1); c.aplica(np.array([1000.0]), 1.0, 0)
+    assert abs(c.resgate(np.array([500.0]), 1.10, 400)[0] - 8.08) < 0.01  # 400 dias: IR 17,5%
+    c = modelos.Caixa(1); c.aplica(np.array([1000.0]), 1.0, 0)
+    assert c.resgate(np.array([500.0]), 1.0, 5)[0] == 0  # sem rendimento: sem imposto
+    # no Grupo: aplicação/resgate no dia e imposto do CDB numa linha
+    D = modelos.build(snap({"AAA3": {"c": [10.0] * 40 + [10.0] * (NW - 40)}}), cdi(0.05))
+    me = months(D, "2020-02", "2021-06"); v, ir, nb, ns, h = modelos.grupo(D, "hold", [0], me, [1000.0] + [100.0] * (len(me) - 1), rec=True)
+    ks = {e["k"] for e in h["mov"]}; assert "cdi_ap" in ks and "cdi_res" in ks and h["cdb"]["j"] > 0
 
 
 if __name__ == "__main__":
