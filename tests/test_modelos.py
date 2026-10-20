@@ -547,6 +547,41 @@ def test_anti_emocao():
     CV, _ = modelos._calma_mats(D["Cf"], VW[:3], LP[:3], D["FM"]["Q"], D["NT"]); assert not CV[0, 28]
 
 
+def test_alvo_caro_espera():
+    # duas alvo; AAA3 cara (P/L bem acima da própria mediana) até a semana 60: o aporte vai para BBB3; quando AAA3 volta ao normal recebe
+    # (está abaixo da meta) e a compra diz "estava cara"; todas caras: espera no CDB até CARO['espera'] semanas e compra a menos cara
+    sn = snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}}); D = modelos.build(sn, cdi())
+    D["PLR"] = np.ones_like(D["Cf"], dtype=np.float32); D["PLR"][0, :60] = 2.0
+    me = months(D, "2020-02", "2022-01"); ap = [1000.0] * len(me); old = modelos.CARO["modelos"]; modelos.CARO["modelos"] = ("hold",)
+    try: _alvo_caro(D, me, ap)
+    finally: modelos.CARO["modelos"] = old
+
+
+def _alvo_caro(D, me, ap):
+    v, ir, nb, ns, h = modelos.grupo(D, "hold", [0, 1], me, ap, rec=True)
+    cA = [e for e in h["mov"] if e["k"] == "compra" and e["t"] == "AAA3"]
+    assert cA and cA[0]["d"] >= D["w"][60] and "estava cara" in cA[0]["x"]
+    assert any(e["k"] == "compra" and e["t"] == "BBB3" and e["d"] < D["w"][60] for e in h["mov"])
+    D["PLR"][:] = 2.0; D["PLR"][1] = 3.0  # todas caras: depois de CARO['espera'] semanas compra a menos cara (AAA3)
+    v, ir, nb, ns, h = modelos.grupo(D, "hold", [0, 1], me, ap, rec=True)
+    c = [e for e in h["mov"] if e["k"] == "compra"]
+    assert c and c[0]["t"] == "AAA3" and c[0]["d"] >= D["w"][me[0] + modelos.CARO["espera"] - 1]
+
+
+def test_prejuizo_so_empresa_ruim():
+    # PERDA ligado para o modelo: sinal sumiu no prejuízo, empresa sem problema -> segura (sem aporte) até PERDA['espera'] semanas
+    sn = snap({"AAA3": {"c": 10.0}}); D = modelos.build(sn, cdi()); cand = np.array([True]); P = np.array([8.0])
+    old = modelos.PERDA["modelos"]; modelos.PERDA["modelos"] = ("tendencia",); hw = np.zeros(1)
+    try:
+        mo = modelos._perda(D, "tendencia", [0], 50, cand, np.array([10.0]), np.array([100.0]), P, cand, hw)
+        assert mo[0] == "-" and hw[0] == 1  # abaixo do preço médio (10) e sem problema: segura
+        assert modelos._perda(D, "tendencia", [0], 50, cand, np.array([10.0]), np.array([70.0]), P, cand, hw)[0] == ""  # no lucro: vende normal
+        hw[:] = modelos.PERDA["espera"]
+        assert "não voltou" in modelos._perda(D, "tendencia", [0], 50, cand, np.array([10.0]), np.array([100.0]), P, cand, hw)[0]
+        assert modelos._perda(D, "alg1", [0], 50, cand, np.array([10.0]), np.array([100.0]), P, cand)[0] == ""  # fora da lista: como antes
+    finally: modelos.PERDA["modelos"] = old
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
