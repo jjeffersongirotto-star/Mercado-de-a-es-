@@ -20,6 +20,12 @@ public class SimDataTest {
         assertEquals("di=2025-04-07&v0=22000", SimData.query(dd));
         assertEquals("07/04/2025", SimData.since(dd.di)); assertEquals("03/2025", SimData.since("2025-03"));
         assertTrue(SimData.sims("[{\"id\":\"G\",\"di\":\"2025-04-7\",\"v0\":1}]").isEmpty());
+        // 1.20: preço médio de cada posição e, na linha do CDB, rendimento no período todo (juros ÷ tudo que já foi aplicado)
+        SimData.Row rw = SimData.rows("{\"r\":[{\"m\":\"hold\",\"n\":\"H\",\"ap\":1000,\"v\":1100,\"cash\":1000,\"np\":1,"
+                + "\"cdb\":{\"ap\":10000,\"j\":3000,\"p\":950},\"pos\":[{\"t\":\"PETR4\",\"q\":19,\"pm\":38.36,\"inv\":728.94,\"v\":1102}]}]}").get(0);
+        assertEquals("R$ 38,36", SimData.price(rw.pos.get(0).pm)); assertEquals("—", SimData.price(Double.NaN));
+        assertEquals("+51,2%", SimData.total(rw.pos.get(0).v, rw.pos.get(0).inv));
+        assertEquals("+30,0%", SimData.cdbPct(rw)); assertEquals("+5,3%", SimData.total(rw.cash, rw.cdbP));
         assertEquals("Simulação 03-2025 2026-10-18.xlsx", SimData.fileName("Simulação 03/2025", "2026-10-18"));  // planilha do ⬇
         assertEquals("Grupo simulação 2026-10-18.xlsx", SimData.fileName("  ", "2026-10-18"));
         // linhas inteiras ao diminuir o widget: N linhas de modelo esticadas até a borda (nunca meia linha); aberto = linha base
@@ -57,7 +63,7 @@ public class SimDataTest {
         assertEquals(SimData.Item.CDB, it.get(3).type); assertEquals(SimData.Item.ROW, it.get(4).type);
         assertEquals(2, SimData.items(r, "").size());
         assertEquals(56, SimData.empDp(b));  // nome curto: só o mínimo
-        b.pos.add(new SimData.Pos("TAEE11", "Transmissora Aliança de Energia", 1, 1, 1)); assertEquals(112, SimData.empDp(b));  // longo: teto (quebra em 2 linhas)
+        b.pos.add(new SimData.Pos("TAEE11", "Transmissora Aliança de Energia", 1, Double.NaN, 1, 1)); assertEquals(112, SimData.empDp(b));  // longo: teto (quebra em 2 linhas)
         java.util.HashSet<Long> ids = new java.util.HashSet<>(); for (SimData.Item x : it) ids.add(x.id()); assertEquals(5, ids.size());
         assertNull(r.get(1).dp); assertEquals("—", SimData.dayPct(r.get(1).dp));
         assertTrue(SimData.rows("{}").isEmpty());

@@ -197,8 +197,17 @@ public class SimWidget extends AppWidgetProvider {
             if (Build.VERSION.SDK_INT >= 31) pv.setViewLayoutWidth(R.id.p_emp, SimData.empDp(r), android.util.TypedValue.COMPLEX_UNIT_DIP);  // Android 7–11: 96 dp
             if (it.type == SimData.Item.CDB) {
                 pv.setTextViewText(R.id.p_name, "Caixa no CDB"); pv.setViewVisibility(R.id.p_t, View.GONE);
-                pv.setTextViewText(R.id.p_q, ""); pv.setTextViewText(R.id.p_inv, "");
+                pv.setViewVisibility(R.id.p_q, View.GONE); pv.setViewVisibility(R.id.p_pm, View.GONE);
+                boolean cd = r.cdbAp > 0;  // servidor sem os dados do CDB (antigo): só o saldo, como antes
+                pv.setViewVisibility(R.id.p_cj, cd ? View.VISIBLE : View.INVISIBLE);
+                if (cd) {  // período todo: rendeu (juros) e % sobre tudo que já foi aplicado; Investido = tudo que já foi aplicado
+                    pv.setTextViewText(R.id.p_cjv, "Rendeu " + SimData.money(r.cdbJ));
+                    pv.setTextViewText(R.id.p_cjp, SimData.cdbPct(r)); pv.setTextColor(R.id.p_cjp, c.getColor(r.cdbJ >= 0 ? R.color.c_pos : R.color.c_neg));
+                }
+                pv.setTextViewText(R.id.p_inv, cd ? SimData.money(r.cdbAp) : "");
                 pv.setTextViewText(R.id.p_v, SimData.money(r.cash)); pv.setTextColor(R.id.p_v, c.getColor(R.color.c_txt));
+                String ap = r.cdbP > 0 ? SimData.total(r.cash, r.cdbP) : "";  // saldo de hoje × parte aplicada dele
+                pv.setTextViewText(R.id.p_vp, ap); pv.setTextColor(R.id.p_vp, c.getColor(r.cash >= r.cdbP ? R.color.c_pos : R.color.c_neg));
                 pv.setOnClickFillInIntent(R.id.p_row, tap("so", sid, r.m));
                 return pv;
             }
@@ -206,10 +215,13 @@ public class SimWidget extends AppWidgetProvider {
             pv.setTextViewText(R.id.p_name, nm ? p.s : p.t);
             pv.setTextViewText(R.id.p_t, nm ? p.t : "");
             pv.setViewVisibility(R.id.p_t, nm ? View.VISIBLE : View.GONE);
+            pv.setViewVisibility(R.id.p_q, View.VISIBLE); pv.setViewVisibility(R.id.p_pm, View.VISIBLE); pv.setViewVisibility(R.id.p_cj, View.GONE);
             pv.setTextViewText(R.id.p_q, SimData.qty(p.q));
+            pv.setTextViewText(R.id.p_pm, SimData.price(p.pm));
             pv.setTextViewText(R.id.p_inv, SimData.money(p.inv));
-            pv.setTextViewText(R.id.p_v, SimData.money(p.v));
-            pv.setTextColor(R.id.p_v, c.getColor(p.v >= p.inv ? R.color.c_pos : R.color.c_neg));
+            int cor = c.getColor(p.v >= p.inv ? R.color.c_pos : R.color.c_neg);
+            pv.setTextViewText(R.id.p_v, SimData.money(p.v)); pv.setTextColor(R.id.p_v, cor);
+            pv.setTextViewText(R.id.p_vp, SimData.total(p.v, p.inv)); pv.setTextColor(R.id.p_vp, cor);  // rendimento da posição (atual ÷ investido)
             pv.setOnClickFillInIntent(R.id.p_row, tap("sp", sid, r.m).putExtra(EXTRA_TK, p.t));
             return pv;
         }

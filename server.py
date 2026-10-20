@@ -1293,7 +1293,7 @@ def _simw(di, v0, f):
         pos.sort(key=lambda y: -y["v"])
         for y in pos: y["s"] = snapshots.nome_popular(y["t"], (by.get(y["t"]) or {}).get("nome"))
         out.append({"m": x["m"], "n": x["n"], "ap": sg.get("apT", sg["v0"]), "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
-                    "cash": round(cash, 2), "np": len(pos), "pos": pos, "ir": x.get("ir"), "c": x.get("c"), "s": x.get("s"), **({"prov": prov} if prov else {})})
+                    "cash": round(cash, 2), "cdb": x.get("cdb"), "np": len(pos), "pos": pos, "ir": x.get("ir"), "c": x.get("c"), "s": x.get("s"), **({"prov": prov} if prov else {})})
     out.sort(key=lambda y: -y["v"])
     return None, {"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out}, (D, tk, di, v0, ap, ex, ret, sg)
 
