@@ -1273,12 +1273,12 @@ def _simw(di, v0, f):
             for o in x.get("ord") or []:
                 r = by.get(o["t"]) or {}; dl, dh = r.get("dl"), r.get("dh")
                 if dl is None or dh is None: continue
-                if o["lado"] == "c" and dl <= o["lim"]:
+                if o["lado"] == "c" and dl <= o["lim"] * (1 - modelos.ORD_FILA):
                     px = min(o["lim"], dh); q = int(o.get("r", 0) * (1 - modelos.CUSTO) // px) if px > 0 else 0
                     if q < 1: continue
                     cost = q * px / (1 - modelos.CUSTO); cash -= cost
                     y = pa.setdefault(o["t"], {"t": o["t"], "q": 0, "inv": 0.0, "p": px}); y["q"] += q; y["inv"] = round(y["inv"] + cost, 2)
-                elif o["lado"] == "v" and dh >= o["lim"] and o["t"] in pa:
+                elif o["lado"] == "v" and dh >= o["lim"] * (1 + modelos.ORD_FILA) and o["t"] in pa:
                     px = max(o["lim"], dl); q = pa[o["t"]]["q"]; cost = q * px * (1 - modelos.CUSTO); cash += cost; pa.pop(o["t"])
                 else: continue
                 k = (di, v0, x["m"], o["t"], o["lado"], hoje); _PROV.setdefault(k, agora)  # hora em que o servidor viu primeiro

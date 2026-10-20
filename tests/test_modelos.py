@@ -582,6 +582,28 @@ def test_prejuizo_so_empresa_ruim():
     finally: modelos.PERDA["modelos"] = old
 
 
+def test_ordem_fila_e_data_inicial():
+    # mínima que só encosta no limite não executa (fila); toque antes da data inicial não conta; valor inicial na data inicial; histórico por data
+    sn = snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}})
+    lo = [0] * NW; lo[29] = -50; lo2 = [0] * NW; lo2[29] = -100  # AAA3: −5% (= limite); BBB3: −10%, no dia 2 antes da sexta
+    sn["a"]["AAA3"].update(lo=lo, hi=[0] * NW, ol=[0] * NW, oh=[0] * NW); sn["a"]["BBB3"].update(lo=lo2, hi=[0] * NW, ol=[2] * NW, oh=[0] * NW)
+    D = modelos.build(sn, cdi()); D["ODI"][:] = .05; on = modelos.ORD_ON; modelos.ORD_ON = True
+    try:
+        me = modelos._span(D, D["w"][29], D["w"][37]); assert me[0] == 29 and me.d0 == D["w"][29]
+        r = modelos.simulate(D, "hold", [0, 1], me, [1000.0] + [0.0] * 8, [0.0] * 9, rec=True)
+        cA = [m for m in r["mov"][0] if m["k"] == "compra"][0]; cB = [m for m in r["mov"][1] if m["k"] == "compra"][0]
+        assert cA["p"] == 10.0 and "limite" not in cA["x"]  # encostou no limite: não conta, compra no fechamento
+        assert cB["p"] == 10.0 and cB["d"] == D["w"][29]  # tocou 2 dias antes da data inicial (a sexta): não conta
+        assert r["mov"][0][0] == {"d": D["w"][29], "k": "aporte", "v": 1000.0, "x": "valor inicial"}
+        me2 = modelos._span(D, D["w"][28], D["w"][37])  # começando uma semana antes: o toque de BBB3 (dia 2 antes da sexta 29) vale
+        r2 = modelos.simulate(D, "hold", [0, 1], me2, [1000.0] + [0.0] * 9, [0.0] * 10, rec=True)
+        b2 = [m for m in r2["mov"][1] if m["k"] == "compra"]
+        assert all(b2[k]["d"] <= b2[k + 1]["d"] for k in range(len(b2) - 1))
+        ev = [{"d": "2026-07-03", "k": "cdi_ap"}, {"d": "2026-07-03", "k": "aporte", "x": "valor inicial"}, {"d": "2026-07-01", "k": "compra"}, {"d": "2026-07-03", "k": "compra"}]
+        assert [e["d"] + e["k"] for e in modelos._por_data(ev)] == ["2026-07-01compra", "2026-07-03aporte", "2026-07-03cdi_ap", "2026-07-03compra"]
+    finally: modelos.ORD_ON = on
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
