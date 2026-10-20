@@ -657,6 +657,7 @@ app.mount("/static/brand", StaticFiles(directory=os.path.join(BASE, "static", "b
 @app.on_event("startup")
 def _start():
     threading.Thread(target=scheduler, daemon=True).start()
+    threading.Thread(target=_ao_vivo, daemon=True).start()
     if cache.base is not None:
         cache.tiebreak_async()
 
@@ -1217,8 +1218,9 @@ def api_modelos_simgrupo(body: dict):
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
         di, v0, ap, ex, ret = modelos.sim_def(b)  # valor inicial, aporte mensal, aportes e retiradas extras da Previsão
-        out = modelos.simgrupo(D, modelos.todas(D, rows), di, v0, ap, ex, ret)
-        if not out.get("error"): out = dict(out, nm=_sim_nomes(out))  # cópia: o resultado fica no cache de modelos
+        tk = modelos.todas(D, rows); out = modelos.simgrupo(D, tk, di, v0, ap, ex, ret, b.get("p1"))
+        if out.get("pend"): out = _sim_hoje(D, tk, di, v0, ap, ex, ret, b.get("p1")) or out  # começa hoje: compra a mercado ao vivo
+        if not out.get("error"): out = dict(out, nm=_sim_nomes(out), m=[dict(x, mov=_horas(di, v0, x["m"], x.get("mov"))) if x.get("mov") else x for x in out["m"]])  # cópia: o resultado fica no cache de modelos
     except Exception:
         log.exception("modelos: grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1234,15 +1236,91 @@ def api_modelos_simmov(body: dict):
     if tk and not WIDGET_TK.fullmatch(tk): return JSONResponse({"error": "Ticker inválido."}, status_code=400)
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())
-        di, v0, ap, ex, ret = modelos.sim_def(b)
-        out = modelos.simmov(D, modelos.todas(D, rows), di, v0, str(b.get("m") or "")[:24], tk, b.get("off") or 0, b.get("n") or 50, ap, ex, ret)
-        if not out.get("error"): out = dict(out, nm=_sim_nomes(out))
+        di, v0, ap, ex, ret = modelos.sim_def(b); mid = str(b.get("m") or "")[:24]; tks = modelos.todas(D, rows)
+        out = modelos.simmov(D, tks, di, v0, mid, tk, b.get("off") or 0, b.get("n") or 50, ap, ex, ret, b.get("p1"))
+        h = _sim_hoje(D, tks, di, v0, ap, ex, ret, b.get("p1")) if out.get("error") else None  # começa hoje: as compras ao vivo do 1º dia
+        x = next((y for y in (h or {}).get("m") or [] if y["m"] == mid), None)
+        if x:
+            L = [e for e in x["mov"][::-1] if not tk or e.get("t") == tk]
+            out = {"t": tk, "pos": next((p for p in x["pos"] if p["t"] == tk), None), "dv": 0.0, "mov": L, "nmov": len(L)} if tk else {"off": 0, "mov": L, "nmov": len(L)}
+        if not out.get("error"): out = dict(out, nm=_sim_nomes(out), mov=_horas(di, v0, mid, out.get("mov")))
     except Exception:
         log.exception("modelos: movimentações do grupo simulação"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
 
-_PROV = {}  # (simulação, modelo, ticker, lado, dia) -> hora em que a execução ao vivo foi vista pela primeira vez
-def _simw(di, v0, f):
+_PROV = {}  # (início, valor inicial, modelo, ticker, lado c/v, dia) -> hora em que a execução ao vivo foi vista pela primeira vez
+_P1 = {}  # (início, valor inicial) -> {ticker: (preço, 'HH:MM')}: compra a mercado do 1º dia vista ao vivo (simulação que começa hoje)
+_SIMS = {}  # (início, valor inicial, f) -> último pedido: simulações acompanhadas ao vivo (_ao_vivo confere as ordens com horário)
+LIVE_Q = {"at": 0.0, "q": {}}  # preço, mínima e máxima do dia (TradingView) da última conferência de _ao_vivo
+ORD_VIVO = 5 * 60   # intervalo da conferência das ordens ao vivo no pregão (s): horário das compras e vendas com até ~5 min de atraso
+SIM_DIAS = 3        # simulações pedidas nos últimos dias continuam acompanhadas
+
+def _quotes():
+    """{ticker: (preço, mínima do dia, máxima do dia)}: a conferência de _ao_vivo (até 15 min) ou /api/data."""
+    if time.time() - LIVE_Q["at"] < 900: return LIVE_Q["q"]
+    return {r["ticker"]: ((r.get("v") or {}).get("preco"), r.get("dl"), r.get("dh")) for r in (cache.data or {}).get("rows") or []}
+
+def _horas(di, v0, m, mov):
+    """Movimentações com o horário visto ao vivo (_PROV) nas compras e vendas ('h'); cópias, o cache dos modelos não muda."""
+    if not mov or not _PROV: return mov
+    out = []
+    for e in mov:
+        h = _PROV.get((di, v0, m, e.get("t"), "c" if e.get("k") == "compra" else "v", e.get("d"))) if e.get("k") in ("compra", "venda") and not e.get("h") else None
+        out.append(dict(e, h=h) if h else e)
+    return out
+
+def _sim_hoje(D, tk, di, v0, ap, ex, ret, p1):
+    """Grupo simulação que começa hoje (dia sem dados ainda) com o pregão já aberto: decide com os dados até o último fechamento (os
+    mesmos alvos e valores de modelos.simgrupo começando no último dia dos dados) e compra a mercado pelo preço ao vivo da 1ª vez que o
+    servidor viu cada ação, com o horário (_P1; o aparelho guarda em p1 e manda de volta: no dia seguinte modelos.grupo usa esses preços
+    se ficaram entre a mínima e a máxima reais). Provisório até o fechamento. -> resposta no formato de simgrupo ou None."""
+    import modelos
+    n_ = datetime.now(TZ); hoje = n_.date().isoformat()
+    if di != hoje or n_.weekday() >= 5 or (n_.hour, n_.minute) < (10, 0): return None
+    ul = D["w"][-1]; nova = datetime.fromisoformat(ul).isocalendar()[:2] != n_.isocalendar()[:2]  # semana nova: decide com a do último dia
+    sg = modelos.simgrupo(D, tk, ul, v0, ap, ex, ret, ult=nova)
+    if sg.get("error"): return None
+    P1 = _P1.setdefault((di, v0), {})
+    for t, x in modelos.sim_p1(p1).items(): P1.setdefault(t, x)
+    q, agora, C = _quotes(), n_.strftime("%H:%M"), modelos.CUSTO
+    out = dict(sg, d0=di, d1=di, hoje=True, m=[])
+    for x in sg["m"]:
+        if x.get("ref"): out["m"].append(dict(x, v=sg["apT"], pct=0.0)); continue
+        cash, pos, mov = x["cash"], [], [{"d": di, "k": "aporte", "v": round(v0, 2), "x": "valor inicial"}]
+        for y in x.get("pos") or []:
+            t = y["t"]
+            if t not in P1:
+                pr = (q.get(t) or (None,))[0]
+                if not pr: cash += y["inv"]; continue
+                P1[t] = (round(float(pr), 4), agora)
+            p, h = P1[t]; n = int(y["inv"] * (1 - C) // p); cost = n * p / (1 - C) if n > 0 else 0.0; cash += y["inv"] - cost
+            if n < 1: continue
+            pos.append({"t": t, "q": n, "p": p, "pm": round(cost / n, 2), "v": round(n * p, 2), "inv": round(cost, 2), "pct": round((n * p / cost - 1) * 100, 2), "dv": 0.0, "b": p})
+            mov.append({"d": di, "h": h, "k": "compra", "t": t, "q": n, "p": round(p, 2), "v": round(cost, 2), "x": "compra a mercado no 1º dia · provisória (confirma no fechamento)"})
+        v = cash + sum(y["v"] for y in pos); cd = dict(x.get("cdb") or {}, ap=round(cash, 2), j=0.0, p=round(cash, 2))
+        out["m"].append(dict(x, v=round(v, 2), pct=round((v / sg["apT"] - 1) * 100, 2) if sg["apT"] > 0 else None, cash=round(cash, 2), cdb=cd,
+                             pos=sorted(pos, key=lambda y: -y["v"]), mov=mov, nmov=len(mov), np=len(pos), ord=[], c=len(pos), s=0, ir=0.0))
+    out["m"].sort(key=lambda x: -(x["pct"] if x.get("pct") is not None else -1e9))
+    out["p1"] = {t: list(x) for t, x in P1.items()}
+    if len(_P1) > 500: _P1.clear()
+    return out
+
+def _ao_vivo():
+    """No pregão, a cada ORD_VIVO: preço, mínima e máxima do dia de todas as ações (uma consulta ao TradingView) e conferência das ordens
+    abertas das simulações pedidas nos últimos SIM_DIAS dias (_simw grava em _PROV a hora em que a ordem tocou o limite)."""
+    while True:
+        try:
+            agora = time.time()
+            for k, at in list(_SIMS.items()):
+                if agora - at > SIM_DIAS * 86400: _SIMS.pop(k, None)
+            if pregao() and _SIMS:
+                LIVE_Q["q"] = {t: ((r["v"] or {}).get("preco"), r["m"].get("dl"), r["m"].get("dh")) for t, r in tradingview.fetch("br").items()}; LIVE_Q["at"] = time.time()
+                for k in list(_SIMS): _simw(*k, reg=False)
+        except Exception:
+            log.exception("modelos: ordens ao vivo")
+        time.sleep(ORD_VIVO)
+
+def _simw(di, v0, f, reg=True):
     """Grupo simulação com o preço de agora (widget e planilha): -> (resposta de erro ou None, dados do widget, contexto p/ movimentações).
     Valor atual = caixa + ações × preço de agora de /api/data; variação do dia pelo var; posições com preço médio (do simgrupo)."""
     import modelos
@@ -1255,9 +1333,11 @@ def _simw(di, v0, f):
         fx = fx if isinstance(fx, dict) else {}
         d = str(fx.pop("d", "") or "")  # widget até a 1.18: di = AAAA-MM e o dia completo em f.d (grupos.js → pushSims)
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) and d[:7] == str(di or "")[:7]: di = d
-        _, v0, ap, ex, ret = modelos.sim_def(dict(fx, di=di, v0=v0))
+        p1 = fx.pop("p1", None); _, v0, ap, ex, ret = modelos.sim_def(dict(fx, di=di, v0=v0))
         tk = modelos.todas(D, rows); di = str(di or "")[:10]
-        sg = modelos.simgrupo(D, tk, di, v0, ap, ex, ret)
+        if reg: _SIMS[(di, v0, f)] = time.time()  # acompanhada ao vivo (_ao_vivo)
+        sg = modelos.simgrupo(D, tk, di, v0, ap, ex, ret, p1)
+        if sg.get("pend"): sg = _sim_hoje(D, tk, di, v0, ap, ex, ret, p1) or sg
     except Exception:
         log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502), None, None
     if sg.get("error"): return JSONResponse(sg, status_code=400, headers={"Cache-Control": "no-store"}), None, None
@@ -1266,13 +1346,14 @@ def _simw(di, v0, f):
         r = by.get(t) or {}; p = (r.get("v") or {}).get("preco")
         return (p, r.get("var")) if p else (pw, None)
     hoje = datetime.now(TZ).date().isoformat(); agora = datetime.now(TZ).strftime("%H:%M")
-    out = []
+    out, Q = [], _quotes()
     for x in sg["m"]:
         if x.get("ref"): continue
         cash, pa, prov = x["cash"], {y["t"]: dict(y) for y in x.get("pos") or []}, []
+        if sg.get("hoje"): prov = [e for e in x.get("mov") or [] if e.get("k") == "compra"]  # 1º dia hoje: compras a mercado ao vivo
         if sg["d1"] < hoje:  # ordens abertas da simulação × mínima/máxima de hoje (TradingView): executa ao vivo, provisória até o fechamento
             for o in x.get("ord") or []:
-                r = by.get(o["t"]) or {}; dl, dh = r.get("dl"), r.get("dh")
+                _, dl, dh = Q.get(o["t"]) or (None, None, None)
                 if dl is None or dh is None: continue
                 if o["lado"] == "c" and dl <= o["lim"] * (1 - modelos.ORD_FILA):
                     px = min(o["lim"], dh); q = int(o.get("r", 0) * (1 - modelos.CUSTO) // px) if px > 0 else 0
@@ -1282,21 +1363,22 @@ def _simw(di, v0, f):
                 elif o["lado"] == "v" and dh >= o["lim"] * (1 + modelos.ORD_FILA) and o["t"] in pa:
                     px = max(o["lim"], dl); q = pa[o["t"]]["q"]; cost = q * px * (1 - modelos.CUSTO); cash += cost; pa.pop(o["t"])
                 else: continue
-                k = (di, v0, x["m"], o["t"], o["lado"], hoje); _PROV.setdefault(k, agora)  # hora em que o servidor viu primeiro
+                k = (di, v0, x["m"], o["t"], o["lado"], hoje); _PROV.setdefault(k, agora)  # hora em que o servidor viu primeiro (fica para as movimentações: _horas)
                 prov.append({"d": hoje, "h": _PROV[k], "k": "compra" if o["lado"] == "c" else "venda", "t": o["t"], "q": q, "p": round(px, 2), "v": round(cost, 2),
                              "x": "ordem com preço limite · provisória (confirma no fechamento)"})
-            if len(_PROV) > 5000: _PROV.clear()
+            if len(_PROV) > 20000: _PROV.clear()
         tot, dia, pos = cash, 0.0, []
         for y in pa.values():
             t, q, inv = y["t"], y["q"], y["inv"]; p, var = live(t, y["p"]); val = q * p; tot += val
-            if var is not None and var > -100: dia += val * var / (100 + var)
+            if y.get("b"): dia += q * (p - y["b"])  # comprada hoje: variação desde a compra
+            elif var is not None and var > -100: dia += val * var / (100 + var)
             pos.append({"t": t, "q": q, "inv": inv, "v": round(val, 2), "pm": y.get("pm")})
         pos.sort(key=lambda y: -y["v"])
         for y in pos: y["s"] = snapshots.nome_popular(y["t"], (by.get(y["t"]) or {}).get("nome"))
         out.append({"m": x["m"], "n": x["n"], "ap": sg.get("apT", sg["v0"]), "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
                     "cash": round(cash, 2), "cdb": x.get("cdb"), "np": len(pos), "pos": pos, "ir": x.get("ir"), "c": x.get("c"), "s": x.get("s"), **({"prov": prov} if prov else {})})
     out.sort(key=lambda y: -y["v"])
-    return None, {"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out}, (D, tk, di, v0, ap, ex, ret, sg)
+    return None, {"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out, **({"p1": sg["p1"]} if sg.get("p1") else {})}, (D, tk, di, v0, ap, ex, ret, sg, p1)
 
 @app.get("/api/widget/simgrupo")
 def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = ""):
@@ -1316,10 +1398,10 @@ def api_widget_simgrupo_xlsx(di: str = "", v0: float = 0, f: str = "", n: str = 
     import modelos, simxlsx
     err, w, ctx = _simw(di, v0, f)
     if err is not None: return err
-    D, tk, di, v0, ap, ex, ret, sg = ctx
+    D, tk, di, v0, ap, ex, ret, sg, p1 = ctx
     name = re.sub(r"[^\w \-]", "", str(n or "Grupo simulação").replace("/", "-"), flags=re.U).strip()[:60] or "Grupo simulação"
     try:
-        data = simxlsx.build(name, w, sg, lambda m: modelos.sim_hist(D, tk, di, v0, m, ap, ex, ret)["mov"])
+        data = simxlsx.build(name, w, sg, lambda m: _horas(di, v0, m, next(x["mov"] for x in sg["m"] if x["m"] == m) if sg.get("hoje") else modelos.sim_hist(D, tk, di, v0, m, ap, ex, ret, p1)["mov"]))
     except Exception:
         log.exception("modelos: planilha do grupo simulação"); return JSONResponse({"error": "Não foi possível gerar a planilha agora."}, status_code=502)
     from urllib.parse import quote

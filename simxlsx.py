@@ -17,7 +17,7 @@ TIPO = {"compra": "Compra", "venda": "Venda", "aporte": "Aporte", "provento": "P
 RESUMO = [("Modelo", 34, None), ("Carteira", 10, INT), ("Valor aportado", 16, BRL), ("Valor atual", 16, BRL), ("Variação do dia (R$)", 18, BRL),
           ("Variação do dia (%)", 16, PCT), ("Rendimento (%)", 15, PCT)]
 POS = [("Empresa", 28, None), ("Ticker", 10, None), ("Ações", 10, INT), ("Preço médio", 14, PRC), ("Investido", 15, BRL), ("Atual", 15, BRL), ("Resultado (%)", 14, PCT)]
-MOV = [("Data", 12, "DD/MM/YYYY"), ("Tipo", 12, None), ("Origem/destino", 15, None), ("Valor ação", 13, PRC), ("Qtd. de ações", 13, INT), ("Valor", 15, BRL), ("Detalhe", 36, None)]
+MOV = [("Data", 12, "DD/MM/YYYY"), ("Hora", 8, None), ("Tipo", 12, None), ("Origem/destino", 15, None), ("Valor ação", 13, PRC), ("Qtd. de ações", 13, INT), ("Valor", 15, BRL), ("Detalhe", 36, None)]
 
 
 def _c(ws, v, fmt=None, font=None, fill=None, al=None):
@@ -82,7 +82,7 @@ def build(name, w, sg, hist):
         ws.append([]); ws.append([_c(ws, "Movimentações (todas, das mais recentes para as mais antigas)", font=Font(bold=True, size=12))]); ws.append(_head(ws, MOV))
         for e in reversed(hist(x["m"])):
             k = e.get("k"); cdi = k in ("cdi_ap", "cdi_res")
-            ws.append(_row(ws, MOV, [_date(e.get("d")), TIPO.get(k, k), e.get("t") or ("CDB" if cdi else "—"),
+            ws.append(_row(ws, MOV, [_date(e.get("d")), e.get("h") or "", TIPO.get(k, k), e.get("t") or ("CDB" if cdi else "—"),
                                      e.get("p") if e.get("p") is not None and k not in ("cdi_ap", "cdi_res", "imposto", "aporte") else None,
                                      e.get("q"), e.get("v"), e.get("x") or ""]))
     bio = io.BytesIO(); wb.save(bio); return bio.getvalue()
