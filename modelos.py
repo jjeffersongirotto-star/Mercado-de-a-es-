@@ -321,7 +321,7 @@ def set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 16       # versão das contas (16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 17       # versão das contas (17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -388,13 +388,13 @@ ORD_MAX = .08     # distância máxima do limite (8%)
 CALMA = {"vol": 2.0, "nota": 50, "mercado": .5}
 # Alvos baratos × caros (modo Grupo): empresa do alvo está "cara agora" com P/L acima de 'pl' × a mediana do próprio P/L nas últimas
 # 'anos' (mínimo 'min_anos' de histórico; sem lucro = não dá para dizer); o aporte vai só para as baratas; se todas as alvo estiverem
-# caras, o dinheiro espera no CDB até 'espera' semanas e então compra a menos cara. Só nos modelos de 'modelos' — desligado (nenhum):
-# nos testes de 2011, 2016 e 2021 piorou os de tendência (compram o que sobe, de P/L alto) e não melhorou os outros de forma consistente
-CARO = {"pl": 1.3, "anos": 5, "min_anos": 2, "espera": 13, "modelos": ()}
+# caras, o dinheiro espera no CDB até 'espera' semanas e então compra a menos cara. Só nos modelos de 'modelos' (Value e Barsi): nos
+# testes de 2011, 2016 e 2021 piorou os de tendência (compram o que sobe, de P/L alto) e não melhorou os outros de forma consistente
+CARO = {"pl": 1.3, "anos": 5, "min_anos": 2, "espera": 13, "modelos": ("value", "barsi")}
 # Prejuízo (_perda): os modelos em 'modelos' seguram a ação abaixo do preço médio (sem aporte) até 'espera' semanas esperando voltar,
-# e só realizam o prejuízo antes disso com empresa ruim (_venda). Desligado (nenhum modelo): nos testes de 2011, 2016 e 2021 segurar
-# no prejuízo piorou muito os modelos que vendem em grupo (eles cortam perdas por estratégia)
-PERDA = {"espera": 26, "modelos": ()}
+# e só realizam o prejuízo antes disso com empresa ruim (_venda; no prejuízo, um balanço ruim isolado não conta). Só os modelos de
+# segurar: nos testes de 2011, 2016 e 2021 segurar no prejuízo piorou muito os que vendem pelo sinal (cortam perdas por estratégia)
+PERDA = {"espera": 26, "modelos": ("hold", "medo_mercado", "medo_acao", "media200", "hibrido", "adapt", "barsi")}
 CALMA_FORA = ("tendencia", "alg1", "medo_mercado", "medo_acao")  # modelos que não esperam: reagir rápido é a estratégia deles
 ORD_KS = (0.0, 0.25, 0.5, 1.0)  # Adaptativo: distâncias (em volatilidades) que ele testa no histórico e escolhe por cenário
 HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
@@ -1316,7 +1316,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 9  # 9: ordens ligadas + anti-emoção; 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 10  # 10: alvos caros; 9: ordens ligadas + anti-emoção; 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
