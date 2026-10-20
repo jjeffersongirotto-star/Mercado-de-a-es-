@@ -303,8 +303,15 @@ def _segue(D, mid, k, i):
     return MOD[HIB[int(D["HA"][k, i])]]["n"], int(D["HP"][k, i])
 
 
+_slock = threading.Lock()  # set_setores: um pedido por vez (dois juntos montavam método/Adaptativo em dobro e estouravam os 512 MB)
+
+
 def set_setores(D, rows, cad=None):
     """Marca as empresas de setor perene nas matrizes (fora delas o Método Barsi fica "fora do método")."""
+    with _slock: _set_setores(D, rows, cad)
+
+
+def _set_setores(D, rows, cad=None):
     bs = {r["ticker"] for r in rows if perene(r, cad)}
     if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
     sec = {r["ticker"]: r.get("subsetor") or r.get("setor") or "" for r in rows}
@@ -319,7 +326,7 @@ def set_setores(D, rows, cad=None):
         D["SEC3"] = np.array([1 if str(sec.get(t, "")).startswith("Bancos") else 2 for t in D["tick"]])  # Adaptativo: banco × outros
     set_metodos(D, rows)
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
-    if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
+    if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
 ENGINE = 17       # versão das contas (17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
@@ -669,6 +676,14 @@ def entradas():
     return {"gold": gold, "ibov": ibov, "fund": fj.get("a") or {}, "news": news, "saida": fj.get("saida"), "idiv": idiv}
 
 
+def _trim():
+    """Devolve ao sistema a memória já solta pelo Python (glibc malloc_trim): sem isso o pico de montar as matrizes (snapshot JSON,
+    temporários) fica preso no processo e o plano gratuito (512 MB) estoura na próxima conta pesada."""
+    try:
+        import ctypes; ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception: pass
+
+
 def data():
     """Matrizes prontas (recalcula quando o snapshot muda; guarda 6 h)."""
     import snapshots, history
@@ -681,7 +696,7 @@ def data():
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
                 _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
                 _D["d"] = build(snap, history.bcb("cdi"), **E, consome=True); _D["key"] = snap.get("fetched_at")
-        snapshots.drop("modelos"); del snap; gc.collect()  # o snapshot bruto (listas JSON) não fica na memória
+        snapshots.drop("modelos"); del snap; gc.collect(); _trim()  # o snapshot bruto (listas JSON) não fica na memória
         _D["at"] = time.time()
         return _D["d"]
 
