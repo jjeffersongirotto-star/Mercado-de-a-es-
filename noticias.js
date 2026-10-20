@@ -1,19 +1,19 @@
 // ---------- Notícias: mercado e Luiz Barsi (snapshot noticias da branch data, scripts/fetch_noticias.py) ----------
-// Filtros: Todas · Mercado · Exterior (mercado de fora) · Barsi · Minhas empresas (citam um Favorito: raiz do ticker da B3 ou ticker de fora); a escolha fica no aparelho.
+// Filtros: Todas · Mercado · Exterior (mercado de fora) · Minhas empresas (as do Barsi entram junto, sem filtro próprio; destaque no topo) (citam um Favorito: raiz do ticker da B3 ou ticker de fora); a escolha fica no aparelho.
 // Nada é buscado nos sites por visita: /api/noticias só repassa o arquivo. Imagem de capa da própria matéria (og:image),
 // carregada só quando aparece na tela; se não abrir, a imagem some e o card fica só com o texto.
 (function () {
   const root = () => document.getElementById('newsRoot');
   let loaded = false, D = null;
-  const KEY = 'screenerB3.noticias.v1', FIL = [['todas', 'Todas'], ['mercado', 'Mercado'], ['ext', 'Exterior'], ['barsi', 'Barsi'], ['fav', 'Minhas empresas']];
+  const KEY = 'screenerB3.noticias.v1', FIL = [['todas', 'Todas'], ['mercado', 'Mercado'], ['ext', 'Exterior'], ['fav', 'Minhas empresas']];
   // mercado da notícia (m: "br" e/ou países de fora); nome do país = o do seletor de país (state.countries)
   const pais = (c) => (((typeof state !== 'undefined' && state.countries) || []).find(x => x.id === c) || {}).name || c.toUpperCase();
-  let fil = (() => { try { return localStorage.getItem(KEY) || 'todas'; } catch (e) { return 'todas'; } })();
+  let fil = (() => { try { const v = localStorage.getItem(KEY) || 'todas'; return FIL.some(f => f[0] === v) ? v : 'todas'; } catch (e) { return 'todas'; } })();
   const favR = () => new Set([...(typeof FAVS !== 'undefined' ? FAVS : [])].map(t => t.slice(0, 4)));
   const favs = () => new Set([...(typeof FAVS !== 'undefined' ? FAVS : [])]);
   const pass = (n) => fil === 'todas' || (fil === 'ext' ? (n.m || []).some(c => c !== 'br')
     : fil === 'fav' ? (n.t || []).some(t => favR().has(t.slice(0, 4))) || (n.tf || []).some(x => favs().has(x.split(':')[1]))
-    : (n.tema || 'barsi') === fil);
+    : fil === 'mercado' && (n.m || ['br']).includes('br'));
   const dt = (s) => !s ? '' : s.length === 7 ? `${s.slice(5, 7)}/${s.slice(0, 4)}` : `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
   const card = (n) => `<a class="nw-card" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer">
       ${n.img ? `<img class="nw-img" src="${esc(n.img)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
@@ -44,8 +44,10 @@
     } catch (e) { loaded = false; root().innerHTML = `<p class="pvd-note">Não foi possível carregar as notícias: ${esc(e.message)}</p>`; }
   }
   function draw() {
-    const L = ((D && D.itens) || []).filter(pass);
+    const dest = ((D && D.itens) || []).filter(n => n.destaque || (!('destaque' in n) && /^Preço-teto:/i.test(n.titulo || '')));
+    const L = ((D && D.itens) || []).filter(n => !dest.includes(n)).filter(pass).sort((a, b) => (b.data || '0000').localeCompare(a.data || '0000'));
     root().innerHTML = `<section class="nw-head"><h2>Notícias ${glossBtn('Notícias')}</h2><div class="pv-per nw-fil">${FIL.map(([k, l]) => `<button type="button" data-nwf="${k}" class="${k === fil ? 'on' : ''}">${l}</button>`).join('')}</div></section>` + metHtml()
+      + (dest.length ? `<h3 class="nw-sub">Destaque</h3><div class="nw-grid">${dest.map(card).join('')}</div>` : '')
       + (L.length ? `<div class="nw-grid">${L.map(card).join('')}</div>` : `<p class="pvd-note">${fil === 'fav' ? 'Nenhuma notícia cita seus Favoritos por enquanto.' : 'Nenhuma notícia por enquanto.'}</p>`)
       + `<p class="pvd-note">Resumos curtos; o texto completo está no site de cada fonte (abre em nova aba). Para estudo, não é recomendação.</p>`;
   }

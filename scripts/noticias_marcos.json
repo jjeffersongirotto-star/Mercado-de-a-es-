@@ -1,17 +1,36 @@
 {
- "_doc": "Marcos do mercado escolhidos à mão (fatos de antes da coleta diária de notícias), com data e link da fonte. Entram sempre na aba Notícias (tema mercado) pelo scripts/fetch_noticias.py; só fatos já ocorridos, nada de previsão.",
+ "_doc": "Marcos do mercado escolhidos à mão (fatos de antes da coleta diária de notícias), com data e link da fonte. Entram sempre na aba Notícias (tema mercado) pelo scripts/fetch_noticias.py; só fatos já ocorridos, nada de previsão. destaque: links das matérias que ficam em destaque no topo da aba Notícias (a de preço-teto do Barsi).",
  "itens": [
-  {"data": "2025-04-02", "titulo": "Tarifa de 10% dos EUA sobre produtos do Brasil no \"Liberation Day\"; Ibovespa fecha quase estável", "fonte": "Reuters (Investing.com Brasil)",
+  {
+   "data": "2025-04-02",
+   "titulo": "Tarifa de 10% dos EUA sobre produtos do Brasil no \"Liberation Day\"; Ibovespa fecha quase estável",
+   "fonte": "Reuters (Investing.com Brasil)",
    "resumo": "O governo Trump anunciou tarifa básica de 10% sobre importações, valor aplicado ao Brasil; a bolsa brasileira terminou o dia perto da estabilidade.",
-   "url": "https://br.investing.com/news/stock-market-news/ibovespa-fecha-quase-estavel-apos-tarifas-de-trump-1509694"},
-  {"data": "2025-07-30", "titulo": "Bolsa e dólar sobem após lista de exceções à tarifa de 50% dos EUA sobre o Brasil", "fonte": "CNN Brasil",
+   "url": "https://br.investing.com/news/stock-market-news/ibovespa-fecha-quase-estavel-apos-tarifas-de-trump-1509694"
+  },
+  {
+   "data": "2025-07-30",
+   "titulo": "Bolsa e dólar sobem após lista de exceções à tarifa de 50% dos EUA sobre o Brasil",
+   "fonte": "CNN Brasil",
    "resumo": "A tarifa sobre produtos brasileiros subiu para 50%; a Casa Branca isentou itens como petróleo, suco de laranja, celulose e aviões.",
-   "url": "https://www.cnnbrasil.com.br/economia/money/mercado/mercado-financeiro-ibovespa-dolar-30-julho-2025/"},
-  {"data": "2025-12-30", "titulo": "Ibovespa sobe 34% em 2025, melhor ano desde 2016, com 32 recordes de fechamento", "fonte": "Forbes Brasil",
+   "url": "https://www.cnnbrasil.com.br/economia/money/mercado/mercado-financeiro-ibovespa-dolar-30-julho-2025/"
+  },
+  {
+   "data": "2025-12-30",
+   "titulo": "Ibovespa sobe 34% em 2025, melhor ano desde 2016, com 32 recordes de fechamento",
+   "fonte": "Forbes Brasil",
    "resumo": "Retrospectiva: o fluxo de investidores estrangeiros puxou a alta; a Selic chegou a 15% e o ciclo de alta dos juros terminou no meio do ano.",
-   "url": "https://forbes.com.br/forbes-money/2026/01/retrospectiva-2025-como-os-investidores-internacionais-coroaram-o-ano-de-ouro-da-bolsa-brasileira/"},
-  {"data": "2026-02-24", "titulo": "Ibovespa rompe os 191 mil pontos e faz o 13º recorde de 2026", "fonte": "Suno",
+   "url": "https://forbes.com.br/forbes-money/2026/01/retrospectiva-2025-como-os-investidores-internacionais-coroaram-o-ano-de-ouro-da-bolsa-brasileira/"
+  },
+  {
+   "data": "2026-02-24",
+   "titulo": "Ibovespa rompe os 191 mil pontos e faz o 13º recorde de 2026",
+   "fonte": "Suno",
    "resumo": "Bancos e Petrobras puxaram a alta; janeiro teve a maior alta mensal desde novembro de 2020.",
-   "url": "https://www.suno.com.br/noticias/ibovespa-rompe-191-mil-pontos-13-recorde-2026-mt/"}
+   "url": "https://www.suno.com.br/noticias/ibovespa-rompe-191-mil-pontos-13-recorde-2026-mt/"
+  }
+ ],
+ "destaque": [
+  "https://www.infomoney.com.br/onde-investir/preco-teto-ate-quanto-gastar-com-as-acoes-das-maiores-pagadoras-para-garantir-dividendos-de-6-ao-ano/"
  ]
 }
