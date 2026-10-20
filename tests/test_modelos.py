@@ -515,18 +515,36 @@ def test_adaptativo_aprende_sem_olhar_o_futuro():
 
 
 def test_ordem_com_preco_limite():
-    # compra com limite abaixo do preço: executa na semana em que a mínima toca, pelo limite; sem tocar, executa no fim do prazo (ORD_SEM)
+    # compra com limite abaixo do preço: executa no dia em que a mínima da semana da decisão toca, pelo limite; sem tocar, no fechamento dela
     sn = snap({"AAA3": {"c": 10.0}, "BBB3": {"c": 10.0}})
-    lo = [0] * NW; lo[30] = -100  # AAA3: na semana 30 a mínima foi 10% abaixo do fechamento
+    lo = [0] * NW; lo[29] = -100  # AAA3: na semana 29 a mínima foi 10% abaixo do fechamento
     sn["a"]["AAA3"].update(lo=lo, hi=[0] * NW, ol=[2] * NW, oh=[0] * NW); sn["a"]["BBB3"].update(lo=[0] * NW, hi=[0] * NW, ol=[0] * NW, oh=[0] * NW)
-    D = modelos.build(sn, cdi()); D["ODI"][:] = .05; modelos.ORD_ON = True  # limite 5% abaixo
+    D = modelos.build(sn, cdi()); D["ODI"][:] = .05; on = modelos.ORD_ON; modelos.ORD_ON = True  # limite 5% abaixo
     i29 = 29; me = [i29, i29 + 8]; r = modelos.simulate(D, "hold", [0, 1], me, [1000.0, 0.0], [0.0, 0.0], rec=True)
     cA = [m for m in r["mov"][0] if m["k"] == "compra"]; cB = [m for m in r["mov"][1] if m["k"] == "compra"]
-    assert cA[0]["p"] == 9.5 and cA[0]["d"] < D["w"][30] and "preço limite" in cA[0]["x"]  # dia da mínima, pelo limite
-    assert cB[0]["p"] == 10.0 and cB[0]["d"] == D["w"][i29 + modelos.ORD_SEM - 1]  # não tocou: fechamento na última semana do prazo
+    assert cA[0]["p"] == 9.5 and cA[0]["d"] < D["w"][29] and "preço limite" in cA[0]["x"]  # dia da mínima, pelo limite
+    assert cB[0]["p"] == 10.0 and cB[0]["d"] == D["w"][i29 + modelos.ORD_SEM - 1]  # não tocou: fechamento da semana da decisão
     assert r["c"].tolist() == [1, 1]  # mesmas compras, só preço e dia mudam
-    modelos.ORD_ON = False; r0 = modelos.simulate(D, "hold", [0, 1], me, [1000.0, 0.0], [0.0, 0.0], rec=True); modelos.ORD_ON = True
+    modelos.ORD_ON = False; r0 = modelos.simulate(D, "hold", [0, 1], me, [1000.0, 0.0], [0.0, 0.0], rec=True); modelos.ORD_ON = on
     assert [m["p"] for m in r0["mov"][0] if m["k"] == "compra"][0] == 10.0  # desligadas: no fechamento, como antes
+
+
+def test_anti_emocao():
+    # alta rápida na semana dos dados: Buy and Hold espera 1 semana para comprar (e diz por quê); Tendência (reage rápido) não espera
+    c = [10.0] * NW; c[28:] = [13.0] * (NW - 28)  # +30% na semana 28, depois parado
+    sn = snap({"AAA3": {"c": c}}); D = modelos.build(sn, cdi()); D["VW"] = np.full_like(D["VW"], .03)
+    D["CV"], D["CC"] = modelos._calma_mats(D["Cf"], D["VW"], D["LP"], D["FM"]["Q"], D["NT"])
+    assert D["CC"][0, 28] and not D["CC"][0, 29] and not D["CV"][0, 28]
+    r = modelos.simulate(D, "hold", [0], [29, 37], [1000.0, 0.0], [0.0, 0.0], rec=True)
+    cp = [m for m in r["mov"][0] if m["k"] == "compra"]
+    assert cp[0]["d"] == D["w"][30] and "esperou 1 semana" in cp[0]["x"]
+    assert modelos._calma("tendencia", "c") is None and modelos._calma("hold", "v") == "CV" and modelos._calma("adapt", "c") == "CCa"
+    # queda rápida com o mercado caindo junto: a venda espera; queda só dela com a empresa mal (prejuízo): vende na hora
+    c2 = [10.0] * NW; c2[28:] = [7.0] * (NW - 28)
+    sn = snap({"AAA3": {"c": c2}, "BBB3": {"c": c2}, "CCC3": {"c": 10.0}}); D = modelos.build(sn, cdi()); VW = np.full_like(D["VW"], .03)
+    CV, _ = modelos._calma_mats(D["Cf"], VW, D["LP"], D["FM"]["Q"], D["NT"]); assert CV[0, 28]  # mediana do mercado caiu junto
+    LP = D["LP"].copy(); LP[0] = False; sn = snap({"AAA3": {"c": c2}, "CCC3": {"c": 10.0}, "DDD3": {"c": 10.0}}); D = modelos.build(sn, cdi())
+    CV, _ = modelos._calma_mats(D["Cf"], VW[:3], LP[:3], D["FM"]["Q"], D["NT"]); assert not CV[0, 28]
 
 
 if __name__ == "__main__":
