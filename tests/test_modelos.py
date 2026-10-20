@@ -624,6 +624,9 @@ def test_cdb_ir_iof():
     D = modelos.build(snap({"AAA3": {"c": [10.0] * 40 + [10.0] * (NW - 40)}}), cdi(0.05))
     me = months(D, "2020-02", "2021-06"); v, ir, nb, ns, h = modelos.grupo(D, "hold", [0], me, [1000.0] + [100.0] * (len(me) - 1), rec=True)
     ks = {e["k"] for e in h["mov"]}; assert "cdi_ap" in ks and "cdi_res" in ks and h["cdb"]["j"] > 0
+    cd = [e for e in h["mov"] if e["k"] in ("cdi_ap", "cdi_res")]
+    assert all(e["x"].startswith("havia R$ ") and e["x"].endswith(" no CDB") for e in cd)  # saldo de antes em cada aplicação/resgate
+    assert cd[0]["x"] == "havia R$ 0,00 no CDB" and modelos._brl(1234.5) == "R$ 1.234,50"
 
 
 if __name__ == "__main__":

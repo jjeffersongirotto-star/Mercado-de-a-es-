@@ -328,7 +328,7 @@ def _set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 20       # versão das contas (20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 21       # versão das contas (21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -1226,10 +1226,16 @@ def _ult(ev):
     return ev if len(ev) <= MOV_MAX else ev[:1] + ev[-(MOV_MAX - 1):]
 
 
-def _cdi(ev, d, x):
-    """Uma linha por semana com o saldo que entrou (aplicação) ou saiu (resgate) do CDB, sem o rendimento."""
-    if x >= 0.01: ev.append({"d": d, "k": "cdi_ap", "v": round(x, 2)})
-    elif x <= -0.01: ev.append({"d": d, "k": "cdi_res", "v": round(-x, 2)})
+def _brl(v):
+    """R$ 1.234,56 (texto das movimentações)."""
+    return "R$ " + f"{v:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def _cdi(ev, d, x, s0=None):
+    """Linha de aplicação (entrou) ou resgate (saiu) do CDB, sem o rendimento; s0 = saldo no CDB antes dela."""
+    xt = {"x": f"havia {_brl(max(0.0, s0))} no CDB"} if s0 is not None else {}
+    if x >= 0.01: ev.append({"d": d, "k": "cdi_ap", "v": round(x, 2), **xt})
+    elif x <= -0.01: ev.append({"d": d, "k": "cdi_res", "v": round(-x, 2), **xt})
 
 
 def rotate(D, mid, gidx, me, ap, wd, tx=None):
@@ -1316,7 +1322,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
                 ev.append({"d": D["w"][i], "k": "compra", "t": nm[cur], "q": int(A.lq[0]), "p": round(float(P), 2), "v": round(float(A.lc[0]), 2), **({"x": why_in} if why_in else {})})
                 why_in = None
         if not cur >= 0 or A.sh[0] <= 0: cdbw += 1
-        _cdi(ev, D["w"][i], A.cash[0] - c0)
+        _cdi(ev, D["w"][i], A.cash[0] - c0, c0)
         ct = A.cdb_semana(D, i, cc0, np.zeros(1))[0]  # CDB: aplica/resgata na semana, IR/IOF no resgate
         if ct >= 0.005: ev.append({"d": D["w"][i], "k": "imposto", "v": round(float(ct), 2), "x": CDB_TXT})
         tot += 1
@@ -1709,13 +1715,14 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             if abs(F)<0.005: continue
             ci_,dia_=_ci(D,d_)
             if d_<W[i]: cr=F*_cig(D,d_,i);cash+=cr;cj+=cr
+            s0=float(cx.U[0]*ci_)  # saldo no CDB nesse dia, antes da movimentação
             if F>0:
                 cx.aplica(np.array([F]),ci_,dia_);ca+=F
-                if rec: ev.append({"d":d_,"k":"cdi_ap","v":round(F,2)})
+                if rec: _cdi(ev,d_,F,s0)
             else:
                 t=float(cx.resgate(np.array([-F]),ci_,dia_)[0]);cash-=t;ir+=t
                 if rec:
-                    ev.append({"d":d_,"k":"cdi_res","v":round(-F,2)})
+                    _cdi(ev,d_,F,s0)
                     if t>=0.005: ev.append({"d":d_,"k":"imposto","v":round(t,2),"x":CDB_TXT})
         cx.ajusta(cash+pend.sum(),_ci(D,W[i])[0])  # aplicações acompanham o saldo da carteira (arredondamentos, reservas)
     L=np.nan_to_num(lastp);res=cash+pend.sum();v=float((sh*L).sum()+res)
