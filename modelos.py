@@ -31,7 +31,7 @@ MODELOS = [
 # sempre com as últimas colocações (ranking)
 REF = [
     {"id": "cdb", "n": "CDB", "vende": False, "ref": True,
-     "nota": "sem resgate no período: no resgate paga IR de 15% sobre o rendimento (aplicação acima de 2 anos)"},
+     "nota": "100% do CDI por dia útil; nas retiradas paga IR regressivo sobre o rendimento (22,5% até 180 dias … 15% acima de 2 anos) e IOF antes de 30 dias; o valor final é o saldo antes do IR, como no extrato do banco"},
     {"id": "ouro", "n": "Ouro", "vende": False, "ref": True, "nota": "ouro em reais, custo de 0,3% em cada compra; nunca vende"},
     {"id": "ibov", "n": "Ibovespa", "vende": False, "ref": True, "nota": "pontos do índice (retorno total: os proventos ficam reinvestidos no índice, como num fundo que acompanha o Ibovespa), custo de 0,3% em cada compra; nunca vende"},
     {"id": "idiv", "n": "IDIV", "vende": False, "ref": True, "nota": "índice de dividendos da B3 (pontos do índice, retorno total: os proventos ficam reinvestidos; série histórica da B3 desde 2005), custo de 0,3% em cada compra; nunca vende"},
@@ -328,7 +328,7 @@ def _set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 19       # versão das contas (19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 20       # versão das contas (20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -595,6 +595,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     cdb = np.ones(T)
     ok = ~np.isnan(acc)
     cdb[1:] = np.where(ok[1:] & ok[:-1], acc[1:] / np.where(ok[:-1], acc[:-1], 1), 1.0)
+    CID, CIC = cs.index.values.astype("datetime64[D]"), cs.to_numpy()  # CDB dia a dia (Caixa): índice acumulado do CDI por dia útil
     # híbrido: exposição (0, 25, 50, 75 ou 100%) = média das exposições dos especialistas, pesadas pelo retorno de cada um nas últimas
     # HIB_SEM semanas (ação + proventos quando dentro, CDB quando fora); decide com dados até a semana (opera na seguinte)
     Cf = pd.DataFrame(C.T).ffill().to_numpy().T
@@ -656,7 +657,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CV": CV, "CC": CC, "CVa": CV, "CCa": CC, "PLR": PLR, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "CID": CID, "CIC": CIC, "CDI1": float(cdi["v"][-1]) if cdi.get("v") else None, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CV": CV, "CC": CC, "CVa": CV, "CCa": CC, "PLR": PLR, "CRI": np.zeros((N, T), bool),
             "EK": EK, "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -927,6 +928,58 @@ class Ordens:
         return (date.fromisoformat(s.D["w"][i]) - timedelta(days=o)).isoformat()
 
 
+# CDB dos modelos como na realidade: 100% do CDI por dia útil (taxa diária do Banco Central), liquidez diária e, no resgate, IR regressivo
+# sobre o rendimento (até 180 dias, até 360, até 720, acima) e IOF nos primeiros 30 dias (% do rendimento, dia 1 a 29; 0 a partir do 30º)
+CDB_IR = ((180, .225), (360, .20), (720, .175), (1e9, .15))
+CDB_IOF = (96, 93, 90, 86, 83, 80, 76, 73, 70, 66, 63, 60, 56, 53, 50, 46, 43, 40, 36, 33, 30, 26, 23, 20, 16, 13, 10, 6, 3, 0)
+_IOF = np.array(CDB_IOF, float)
+CDB_TXT = "IR/IOF do resgate do CDB"
+
+
+def _ci(D, d):
+    """Índice acumulado do CDI no fim do dia d (AAAA-MM-DD; último dia útil até ele) e o número do dia (idade das aplicações)."""
+    t = np.datetime64(d[:10], "D"); k = max(0, int(np.searchsorted(D["CID"], t, side="right")) - 1) if "CID" in D and len(D["CID"]) else -1
+    return (float(D["CIC"][k]) if k >= 0 else 1.0), int(t.astype(int))
+
+
+def _seg(w):
+    """Segunda-feira da semana que termina em w (AAAA-MM-DD): o aporte do mês entra no início da semana, antes das compras dela."""
+    from datetime import date, timedelta
+    x = date.fromisoformat(w); return (x - timedelta(days=x.weekday())).isoformat()
+
+
+def _cig(D, d, i):
+    """Rendimento do CDB do fim do dia d até o fim da semana i (fator − 1): dinheiro que entrou/saiu no meio da semana."""
+    a, _ = _ci(D, d); b, _ = _ci(D, D["w"][i]); return b / a - 1 if a > 0 else 0.0
+
+
+class Caixa:
+    """Aplicações no CDB de uma ou várias carteiras (vetores): cotas (valor = cotas × índice do CDI), valor aplicado e idade média das
+    aplicações. resgate -> IR (+ IOF antes de 30 dias) sobre a parte do rendimento no valor resgatado."""
+
+    def __init__(s, n):
+        s.U, s.P, s.T = np.zeros(n), np.zeros(n), np.zeros(n)
+
+    def aplica(s, v, ci, dia):
+        v = np.maximum(0.0, v); m = v > 0
+        s.T = np.where(m, (s.P * s.T + v * dia) / np.where(m, s.P + v, 1), s.T); s.U = s.U + v / ci; s.P = s.P + v
+
+    def ajusta(s, saldo, ci):
+        """Mantém as cotas iguais ao saldo do CDB na carteira (mesma proporção de rendimento)."""
+        V = s.U * ci; k = np.where(V > 0, saldo / np.where(V > 0, V, 1), 0.0); s.U = s.U * k; s.P = s.P * k
+
+    def resgate(s, liq, ci, dia):
+        """Resgata `liq` líquido (o que a carteira precisa) -> imposto pago a mais (IR + IOF), já tirado das cotas."""
+        liq = np.maximum(0.0, liq); V = s.U * ci
+        with np.errstate(invalid="ignore", divide="ignore"):
+            g = np.clip(np.where(V > 0, 1 - s.P / V, 0), 0, 1); age = np.maximum(0, dia - s.T)
+            ir = np.select([age <= a for a, _ in CDB_IR], [r for _, r in CDB_IR])
+            iof = np.where(age < 30, np.take(_IOF, np.clip(age.astype(int), 1, 30) - 1) / 100, 0.0)
+            t = g * (iof + (1 - iof) * ir); gross = np.minimum(V, liq / np.maximum(1e-9, 1 - t)); f = np.where(V > 0, gross / V, 0)
+        s.U = s.U * (1 - f); s.P = s.P * (1 - f)
+        return np.maximum(0.0, gross - liq)  # resgate maior que o saldo (arredondamento): sem imposto a mais
+
+
 class Conta:
     """Carteira de uma ou várias ações em paralelo (vetores): ações, caixa no CDB, custo, IR do mês e prejuízo a compensar."""
 
@@ -934,6 +987,20 @@ class Conta:
         z = lambda: np.zeros(n)
         s.sh, s.cash, s.basis, s.carry, s.msales, s.mgain, s.mdiv = z(), z(), z(), z(), z(), z(), z()
         s.ir, s.dtax, s.divT, s.compras, s.vendas = z(), z(), z(), z(), z()
+        s.cx, s.ctax = Caixa(n), z()  # CDB: aplicações (idade, rendimento) e IR/IOF pago nos resgates
+
+    def cdb_ini(s, D, v, d, i):
+        """Valor inicial aplicado no CDB na data inicial d (rende de d até o fim da 1ª semana i)."""
+        ci, dia = _ci(D, d); s.cx.aplica(np.broadcast_to(np.asarray(v, float), s.cash.shape).copy(), ci, dia)
+        s.cash = s.cash * (1 + _cig(D, d, i))
+
+    def cdb_semana(s, D, i, c0, cr):
+        """Fim da semana i (CDB dia a dia): o que entrou no CDB é aplicado e o que saiu é resgatado, pagando IR/IOF sobre o rendimento;
+        cr = correção do rendimento das ordens executadas antes do fim da semana (dinheiro que entrou/saiu no meio dela). -> imposto."""
+        F = s.cash - c0; s.cash = s.cash + cr; ci, dia = _ci(D, D["w"][i])
+        s.cx.aplica(np.where(F > 0, F, 0.0), ci, dia)
+        t = s.cx.resgate(np.where(F < 0, -F, 0.0), ci, dia); s.cash = s.cash - t; s.ctax = s.ctax + t
+        return t
 
     def sell(s, mask, p, frac=None):
         """Vende (tudo ou a fração frac, arredondada para cima em ações inteiras) das ações marcadas;
@@ -1009,6 +1076,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     A.cash += ap[0]; dc, dv = ("ODc", "ODv") if mid == "adapt" else ("ODI", "ODI")  # Adaptativo: distância aprendida por cenário
     d0 = getattr(me, "d0", None)  # data inicial com dia: o valor inicial entra nela; ordens da 1ª semana só depois dela
     Oc, Ov = Ordens(D, idx, "c", dc, _calma(mid, "c"), d0), Ordens(D, idx, "v", dv, _calma(mid, "v"), d0)  # ordens com preço limite (compra e venda)
+    A.cdb_ini(D, ap[0], d0 or D["w"][s], s)  # valor inicial no CDB desde a data inicial
     mov = [[{"d": getattr(me, "d0", None) or D["w"][s], "k": "aporte", "v": round(float(ap[0]), 2), "x": "valor inicial"}] for _ in range(n)] if rec else None
 
     def log(sh0, i, P, x, O=None, toc=None):  # rec: compras/vendas da semana (mudança no nº de ações), uma linha por empresa, com o motivo
@@ -1021,8 +1089,9 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
                            "pc": round(float(100 * A.sh[q] * P[q] / v), 1) if v > 0 else None})
     for i in range(s, e + 1):
         p = C[idx, i]; ok = ~np.isnan(p); lastp = np.where(ok, p, lastp); P = lastp
+        if i > s: cj += A.cash * (D["cdb"][i] - 1); A.cash *= D["cdb"][i]
+        c0, cr = A.cash.copy(), np.zeros(n)  # CDB: saldo depois do rendimento; correção das ordens executadas antes do fim da semana
         if i > s:
-            cj += A.cash * (D["cdb"][i] - 1); A.cash *= D["cdb"][i]
             if divs:
                 d = A.sh * np.nan_to_num(DV[idx, i]); A.cash += d; A.mdiv += d; A.divT += d; A.dtax += A.sh * D["JT"][idx, i]
                 if rec:
@@ -1045,6 +1114,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             cand = ~want & (A.sh > 0) & ok; mo = _perda(D, mid, idx, i, cand, A.sh, A.basis, P, ok, hw); cand &= mo != "-"  # no prejuízo: só empresa ruim
             vai, px, toc = Ov(i, cand, P)
             sh0 = A.sh.copy(); A.sell(vai, px); log(sh0, i, px, lambda q: mo[q] or "venda: " + motivo(D, mid, idx[q], i - 1), Ov, toc)
+            for q in np.flatnonzero(toc & vai): cr[q] += A.lq[q] * px[q] * (1 - CUSTO) * _cig(D, Ov.dia(i, q), i)
         tax = 0
         j = meset.get(i)
         if j is not None and i > s:
@@ -1063,15 +1133,19 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
         else:  # compra com preço limite: o dinheiro espera no CDB até a mínima do dia tocar o limite (ou o fim do prazo)
             vai, px, toc = Oc(i, buy & ok & (A.cash * (1 - CUSTO) >= P), P)
             A.buy(vai, px)
+            for q in np.flatnonzero(toc & (A.lc > 0)): cr[q] -= A.lc[q] * _cig(D, Oc.dia(i, q), i)
             if mid == "barsi" and i > 0:  # caixa acima de BARSI_CAIXA: compra mesmo acima do teto (a empresa tem teto e lucro)
                 ex = A.cash - BARSI_CAIXA * (A.sh * P + A.cash)
                 with np.errstate(invalid="ignore"): A.buy(ok & ~buy & np.isfinite(D["TETO"][idx, i - 1]) & D["LP"][idx, i - 1] & (ex > np.maximum(P, 100)), P, ex)
         log(sh0, i, px, lambda q: "compra: " + motivo(D, mid, idx[q], i - 1), Oc, toc)
+        ct = A.cdb_semana(D, i, c0, cr)  # CDB dia a dia: aplica o que entrou, resgata o que saiu (IR/IOF)
+        if rec:
+            for q in np.flatnonzero(ct >= 0.005): mov[q].append({"d": D["w"][i], "k": "imposto", "v": round(float(ct[q]), 2), "x": CDB_TXT})
         if j is not None: vm.append(A.sh * P + A.cash)
         if rec and j is not None:
             v = A.sh * P + A.cash
             for q in range(n):
-                rows[q].append({"ym": D["ym"][i], "v": float(v[q]), "div": float(A.divT[q]), "tax": float(A.ir[q] + A.dtax[q]),
+                rows[q].append({"ym": D["ym"][i], "v": float(v[q]), "div": float(A.divT[q]), "tax": float(A.ir[q] + A.dtax[q] + A.ctax[q]),
                                 "pos": (f"{F0(100 * A.sh[q] * P[q] / v[q])}% na ação · segue {_segue(D, mid, idx[q], i - 1)[0]}"
                                         if mod.get("frac") and v[q] > 0 else
                                         "Ação" if A.sh[q] > 0 and A.cash[q] < max(1, P[q]) else "CDB" if A.sh[q] <= 0 else "Ação + CDB"),
@@ -1079,7 +1153,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             cj = np.zeros(n)
         mi += 1
     v = A.sh * lastp + A.cash
-    return {"v": v, "ir": A.ir + A.dtax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows, "ra": anual(vm, ap, wd),
+    return {"v": v, "ir": A.ir + A.dtax + A.ctax, "irv": A.ir, "c": A.compras, "s": A.vendas, "rows": rows, "ra": anual(vm, ap, wd),
             **({"mov": [_por_data(m) for m in mov], "sh": A.sh, "pm": np.where(A.sh > 0, A.basis / np.where(A.sh > 0, A.sh, 1), np.nan), "div": A.divT} if rec else {})}
 
 
@@ -1089,7 +1163,7 @@ def simulate_ref(D, rid, me, ap, wd, rec=False):
     g0 = next((i for i in range(s, e + 1) if not np.isnan(G[i])), None) if px else s
     if g0 is None: return {"v": float("nan"), "rows": [] if rec else None}
     # ouro sem cotação no início do período: os aportes esperam (sem rendimento) e compram na 1ª semana com preço (nota em _refs)
-    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if px else G[s], 0.0; vm = []; cj = 0.0
+    cash, q, c, n, rows, lastg, pend = 0.0, 0.0, 0, 0, [], G[g0] if px else G[s], 0.0; vm = []; cj = 0.0; cx = Caixa(1); d0 = getattr(me, "d0", None)
     for i in range(s, e + 1):
         if rid == "cdb" and i > s: cj += cash * (D["cdb"][i] - 1); cash *= D["cdb"][i]
         if not np.isnan(G[i]): lastg = G[i]
@@ -1097,7 +1171,10 @@ def simulate_ref(D, rid, me, ap, wd, rec=False):
         j = meset.get(i)
         if j is None: continue
         a, w = (ap[j] if j < len(ap) else 0), (wd[j] if j < len(wd) else 0)
-        if rid == "cdb": cash = max(0.0, cash - w) + a
+        if rid == "cdb":  # CDB como na realidade: aplicação no dia, retirada paga IR/IOF sobre o rendimento
+            dd = d0 if i == s and d0 else D["w"][i]; ci, dia = _ci(D, dd)
+            if w > 0: wv = min(w, cash); t = float(cx.resgate(np.array([wv]), ci, dia)[0]); cash = max(0.0, cash - wv - t)
+            if a > 0: cx.aplica(np.array([a]), ci, dia); cash += a * (1 + (_cig(D, dd, i) if dd < D["w"][i] else 0))
         elif i < g0: pend = max(0.0, pend - w) + a
         else:
             if w > 0 and q > 0: sv = min(q, w / (lastg * (1 - CUSTO))); q -= sv; n += 1
@@ -1197,6 +1274,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         if i > s:
             A.cash *= D["cdb"][i]
         c0 = A.cash[0] - (ap[0] if i == s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
+        cc0 = A.cash - (ap[0] if i == s else 0)
         if i > s and cur >= 0:
             d = A.sh[0] * np.nan_to_num(DV[cur, i]); A.cash += d; A.mdiv += d; A.divT += d; per[cur]["res"] += d; pdiv += d; mdc[cur] = mdc.get(cur, 0) + d
             A.dtax += A.sh[0] * D["JT"][cur, i]
@@ -1239,6 +1317,8 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
                 why_in = None
         if not cur >= 0 or A.sh[0] <= 0: cdbw += 1
         _cdi(ev, D["w"][i], A.cash[0] - c0)
+        ct = A.cdb_semana(D, i, cc0, np.zeros(1))[0]  # CDB: aplica/resgata na semana, IR/IOF no resgate
+        if ct >= 0.005: ev.append({"d": D["w"][i], "k": "imposto", "v": round(float(ct), 2), "x": CDB_TXT})
         tot += 1
         if cur >= 0: per[cur]["sem"] += 1
         v = A.sh[0] * P + A.cash[0]
@@ -1250,7 +1330,7 @@ def rotate(D, mid, gidx, me, ap, wd, tx=None):
         per[cur]["res"] += A.sh[0] * lastp[cur] - A.basis[0]; per[cur]["n"] += 1
     emp = [dict(x, sem=round(x["sem"] / max(1, x["n"]), 1), res=round(x["res"], 2), ir=round(x["ir"], 2)) for x in per.values() if x["c"]]
     emp.sort(key=lambda x: -x["res"])
-    return {"v": float(v), "ir": float(A.ir[0] + A.dtax[0]), "irv": float(A.ir[0]), "c": int(A.compras[0]), "s": int(A.vendas[0]), "ra": float(anual(vm, ap, wd)[0]),
+    return {"v": float(v), "ir": float(A.ir[0] + A.dtax[0] + A.ctax[0]), "irv": float(A.ir[0]), "c": int(A.compras[0]), "s": int(A.vendas[0]), "ra": float(anual(vm, ap, wd)[0]),
             "hist": {"emp": emp, "trocas": trocas, "cdb": round(cdbw / max(1, tot) * 100, 1), "dd": round(dd * 100, 1), "mov": _ult(_por_data(ev)), "nmov": len(ev),
                      "cash": round(float(A.cash[0]), 2), "sh": int(A.sh[0]), "t": nm[cur] if cur >= 0 else None}}
 
@@ -1352,7 +1432,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 11  # 11: ordens com fila; 10: alvos caros; 9: ordens ligadas + anti-emoção; 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 12  # 12: CDB com IR/IOF; 11: ordens com fila; 10: alvos caros; 9: ordens ligadas + anti-emoção; 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -1519,17 +1599,20 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     d0=getattr(me,"d0",None)  # data inicial com dia: valor inicial nela; ordens da 1ª semana só depois dela
     ev=[{"d":d0 or W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
-    nc=0;skc=np.zeros(n);pc_=np.zeros(n,bool);hw=np.zeros(n);cj=ca=cp=0.0  # CDB: rendimento recebido e total aplicado no período, parte aplicada do saldo de hoje (widget: linha Caixa no CDB)  # alvos caros: semanas com todas caras; semanas que cada uma ficou sem aporte por estar cara; reserva de quem estava cara
+    nc=0;skc=np.zeros(n);pc_=np.zeros(n,bool);hw=np.zeros(n);cj=ca=0.0;cx=Caixa(1)  # CDB: rendimento recebido e total aplicado no período, aplicações (Caixa: IR/IOF no resgate)  # alvos caros: semanas com todas caras; semanas que cada uma ficou sem aporte por estar cara; reserva de quem estava cara
     dc,dv=("ODc","ODv") if mid=="adapt" else ("ODI","ODI")  # Adaptativo: distância aprendida por cenário
     Oc,Ov,Ov2=Ordens(D,idx,"c",dc,_calma(mid,"c"),d0),Ordens(D,idx,"v",dv,_calma(mid,"v"),d0),Ordens(D,idx,"v",dv,None,d0)  # ordens com preço limite: compra, venda do modelo, venda ocasional (por problema: sem espera)
     olim=lambda O,i,q,px,t: (O.dia(i,q) if t[q] else W[i], (CALMA_TXT if O.conf[q] else "")+(f" · ordem com preço limite R$ {px[q]:.2f}".replace(".",",") if t[q] else ""))
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
+        fl={}  # dinheiro que entrou (+) ou saiu (−) do CDB em cada dia da semana: aplicação/resgate no dia (liquidez diária)
+        def addf(d_,x):
+            if x: fl[d_]=fl.get(d_,0.0)+float(x)
         if i>s:
             f=D['cdb'][i];cj+=(cash+pend.sum())*(f-1);cash*=f;pend*=f
-        b0=cash+pend.sum()-(ap[0] if i==s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
+        else: addf(d0 or W[s],ap[0])
         if i>s:
-            dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdq+=dq;ir+=(sh*JT[idx,i]).sum();dvt+=dq  # JCP já líquido; o retido conta no IR
+            dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdq+=dq;ir+=(sh*JT[idx,i]).sum();dvt+=dq;addf(W[i],d)  # JCP já líquido; o retido conta no IR
             if rec:
                 for q in np.flatnonzero(dq>=0.005): ev.append({"d":W[i],"k":"provento","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(dq[q]),2),"x":tipo(D,idx[q],i)})
         gone=_saiu(D,idx,i)&(sh>0)
@@ -1537,7 +1620,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             v=sh*P*(1-CUSTO);g=np.where(gone,v-basis,0)
             if rec:
                 for q in np.flatnonzero(gone): ev.append({"d":W[i],"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(P[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":_saiu_txt(D,idx[q])})
-            cash+=(v*gone).sum();msales+=(sh*P*gone).sum();mgain+=g.sum();ns+=gone.sum()
+            cash+=(v*gone).sum();addf(W[i],(v*gone).sum());msales+=(sh*P*gone).sum();mgain+=g.sum();ns+=gone.sum()
             sh=np.where(gone,0,sh);basis=np.where(gone,0,basis)
         rel=_saiu(D,idx,i)&(pend>0)
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # reserva de quem saiu volta ao caixa
@@ -1553,6 +1636,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             if rec:
                 for q in np.flatnonzero(out): d_,x_=olim(Ov,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":(mo[q] or motivo)+x_})
             cash+=(v*out).sum();msales+=(sh*px*out).sum();mgain+=g.sum();ns+=out.sum()
+            for q in np.flatnonzero(out): addf(olim(Ov,i,q,px,tc)[0],v[q])
             sh=np.where(out,0,sh);basis=np.where(out,0,basis)
         if RG.get('venda') and not sell and i>s:  # venda ocasional dos modelos de segurar
             mo=_venda(D,mid,idx,i,sh,basis,P,ok,age);out,px,tc=Ov2(i,mo!="",P)
@@ -1561,6 +1645,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                 if rec:
                     for q in np.flatnonzero(out): d_,x_=olim(Ov2,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":mo[q]+x_})
                 cash+=(v*out).sum();msales+=(sh*px*out).sum();mgain+=g.sum();ns+=out.sum()
+                for q in np.flatnonzero(out): addf(olim(Ov2,i,q,px,tc)[0],v[q])
                 sh=np.where(out,0,sh);basis=np.where(out,0,basis);ban=np.where(out,VENDA["sem_recompra"],ban)
                 w=np.where(out,0,w);tw=w.sum();w=w/tw if tw>0 else w  # vendida não recebe o aporte da mesma semana
                 rel=out&(pend>0)
@@ -1570,7 +1655,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             tax=max(0,mgain-carry)*IR if msales>ISENTO else 0
             carry=carry-mgain if mgain<0 else (max(0,carry-max(0,mgain)) if msales>ISENTO else carry)
             dt=float((mdq*(mdq>50000)).sum())*.10  # 10% só nos proventos de cada empresa pagadora acima de R$ 50 mil no mês
-            cash-=tax+dt;ir+=tax+dt;msales=mgain=0;mdq[:]=0
+            cash-=tax+dt;ir+=tax+dt;msales=mgain=0;mdq[:]=0;addf(W[i],-(tax+dt))
             if cash<0 and pend.sum()>0:  # imposto maior que o caixa: sai das reservas
                 tk=min(-cash,pend.sum());pend*=1-tk/pend.sum();cash+=tk
             wv=float(wd[j]) if wd is not None and j<len(wd) else 0.0
@@ -1581,12 +1666,12 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                     q=np.minimum(sh,np.ceil(sh*min(1.0,(wv-cash)/tv)-1e-9));v=q*P*(1-CUSTO);f=np.where(sh>0,q/np.where(sh>0,sh,1),0);b=basis*f;g=v-b
                     if rec:
                         for k in np.flatnonzero(q>0): ev.append({"d":W[i],"k":"venda","t":nm[idx[k]],"q":int(q[k]),"p":round(float(P[k]),2),"v":round(float(v[k]),2),"pct":round(float(g[k]/b[k]*100),2) if b[k]>0 else None,"x":"para a retirada"})
-                    cash+=v.sum();msales+=(q*P).sum();mgain+=g.sum();ns+=int((q>0).sum());sh=sh-q;basis=basis-b  # preço médio não muda
-                wp=min(wv,max(0.0,cash));cash-=wp
+                    cash+=v.sum();addf(W[i],v.sum());msales+=(q*P).sum();mgain+=g.sum();ns+=int((q>0).sum());sh=sh-q;basis=basis-b  # preço médio não muda
+                wp=min(wv,max(0.0,cash));cash-=wp;addf(W[i],-wp)
                 if rec and wp>=0.005: ev.append({"d":W[i],"k":"retirada","v":round(float(wp),2)})
-            a=ap[j] if j<len(ap) else 0;cash+=a
+            a=ap[j] if j<len(ap) else 0;cash+=a;addf(_seg(W[i]),a)  # aporte do mês: entra no início da semana (antes das compras dela)
             if rec and tax+dt>=0.005: ev.append({"d":W[i],"k":"imposto","v":round(float(tax+dt),2)})
-            if rec and a>0: ev.append({"d":W[i],"k":"aporte","v":round(float(a),2),"x":"aporte do mês"})
+            if rec and a>0: ev.append({"d":_seg(W[i]),"k":"aporte","v":round(float(a),2),"x":"aporte do mês"})
         if cash>0.005 and w.sum()>0 and RG.get('conc'):
             if j is not None:  # aporte do mês para até RG['conc'] empresas mais abaixo da meta (compra mínima RG['min_compra']); a sobra fica no CDB
                 tv=(sh*P).sum()+pend.sum()+cash;gap=np.where(w>0,w*tv-sh*P-pend,0)
@@ -1617,10 +1702,22 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                         if pc_[k]: e["x"]=(e.get("x","")+" · estava cara, comprou depois da queda").lstrip(" ·")
                         if x_: e["x"]=(e.get("x","") + x_).lstrip(" ·")
                         ev.append(e)
+                for k in np.flatnonzero(m): addf(olim(Oc,i,k,px,tc)[0],-cost[k])
                 sh+=np.where(m,q,0);basis+=cost;pend=np.maximum(0,pend-cost);nb+=m.sum();pc_=np.where(m,False,pc_)
-        dq=cash+pend.sum()-b0;ca+=max(0.0,dq)  # aplicado no CDB na semana (variação do saldo sem o rendimento, só as entradas)
-        cp=cp+dq if dq>=0 else (cp*(b0+dq)/b0 if b0>0 else 0.0)  # parte aplicada do saldo de hoje: resgate tira na proporção (como o preço médio)
-        if rec: _cdi(ev,W[i],cash+pend.sum()-b0)
+        for d_ in sorted(fl):  # CDB dia a dia: aplica/resgata no dia; antes do fim da semana corrige o rendimento desses dias; resgate paga IR/IOF
+            F=fl[d_]
+            if abs(F)<0.005: continue
+            ci_,dia_=_ci(D,d_)
+            if d_<W[i]: cr=F*_cig(D,d_,i);cash+=cr;cj+=cr
+            if F>0:
+                cx.aplica(np.array([F]),ci_,dia_);ca+=F
+                if rec: ev.append({"d":d_,"k":"cdi_ap","v":round(F,2)})
+            else:
+                t=float(cx.resgate(np.array([-F]),ci_,dia_)[0]);cash-=t;ir+=t
+                if rec:
+                    ev.append({"d":d_,"k":"cdi_res","v":round(-F,2)})
+                    if t>=0.005: ev.append({"d":d_,"k":"imposto","v":round(t,2),"x":CDB_TXT})
+        cx.ajusta(cash+pend.sum(),_ci(D,W[i])[0])  # aplicações acompanham o saldo da carteira (arredondamentos, reservas)
     L=np.nan_to_num(lastp);res=cash+pend.sum();v=float((sh*L).sum()+res)
     if not rec: return v, float(ir), int(nb), int(ns)
     _por_data(ev)
@@ -1634,7 +1731,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
         for q in np.flatnonzero(~np.isnan(O.ref)):
             dd=float(D[O.dk][idx[q],me[-1]]);lim=O.ref[q]*((1-dd) if ld=="c" else (1+dd))
             if np.isfinite(lim): oa.append({"t":nm[idx[q]],"lado":ld,"lim":round(float(lim),2),"sem":int(O.sem[q]),**({"r":round(float(pend[q]),2)} if ld=="c" else {"q":int(sh[q])})})
-    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"cdb":{"ap":round(float(ca),2),"j":round(float(cj),2),"p":round(float(cp),2)},"mov":ev,"ord":oa,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
+    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"cdb":{"ap":round(float(ca),2),"j":round(float(cj),2),"p":round(float(cx.P[0]),2),"d":round(float(res)*(D.get("CDI1") or 0)/100,2)},"mov":ev,"ord":oa,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
 
 
 def _rule(rows, m):
@@ -1709,7 +1806,7 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
     apT = sum(aps) - sum(wd)  # valor aportado: cresce com cada aporte, cai com cada retirada; rendimento sobre ele
     pc = lambda v: round((v / apT - 1) * 100, 2) if apT > 0 else None
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": di if len(di) > 7 else D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "ap": ap, "apT": round(apT, 2), "aviso": AVISO,
-           "apS": round(sum(aps), 2), "wS": round(sum(wd), 2), "at": D["at"], "n": len(idx), "eng": ENGINE, "m": []}
+           "apS": round(sum(aps), 2), "wS": round(sum(wd), 2), "at": D["at"], "n": len(idx), "eng": ENGINE, "cdi": D.get("CDI1"), "m": []}
     for m in MODELOS:
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd)
         _mzput((key, m["id"]), h)  # todas as movimentações, comprimidas: páginas e histórico por empresa em simmov

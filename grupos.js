@@ -8,7 +8,7 @@
   state.selSet = new Set(); state.selMode = false; state.group = null;
   // Grupo simulação (criado na Previsão): {name, tickers: [], sim: {di, v0}}; o servidor simula todos os modelos desde di
   // (/api/modelos/simgrupo, mesma conta do Comparar). Resultado guardado no aparelho e pedido de novo só 1x por dia.
-  const SKEY = 'screenerB3.simgrupo.v12';  // v12: grupo do mês atual anda até hoje; v11: ordens com fila, nada antes da data inicial, histórico por data; v10: alvos caros (Value, Barsi) e prejuízo só com empresa ruim; v9: ordens com preço limite ligadas + anti-emoção; v8: modelo Adaptativo; v7: nomes das empresas (nm); v6: caixa máximo do Barsi; v5: ações de cada balanço; v4: modelos de método; v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
+  const SKEY = 'screenerB3.simgrupo.v13';  // v13: CDB dia a dia com IR/IOF, preço atual; v12: grupo do mês atual anda até hoje; v11: ordens com fila, nada antes da data inicial, histórico por data; v10: alvos caros (Value, Barsi) e prejuízo só com empresa ruim; v9: ordens com preço limite ligadas + anti-emoção; v8: modelo Adaptativo; v7: nomes das empresas (nm); v6: caixa máximo do Barsi; v5: ações de cada balanço; v4: modelos de método; v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
   try { localStorage.removeItem('screenerB3.simgrupo.v1'); localStorage.removeItem('screenerB3.simgrupo.v2'); localStorage.removeItem('screenerB3.simgrupo.v3'); localStorage.removeItem('screenerB3.simgrupo.v4'); localStorage.removeItem('screenerB3.simgrupo.v5'); localStorage.removeItem('screenerB3.simgrupo.v6'); localStorage.removeItem('screenerB3.simgrupo.v7'); } catch (e) { }
   const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
   const simK = (g) => JSON.stringify([g.sim.di, g.sim.v0, g.sim.ap || 0, g.sim.ex || [], g.sim.ret || []]), today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
@@ -469,8 +469,11 @@
     const lv = window.gSimLive(gn, mid), apT = c.d.apT != null ? c.d.apT : c.d.v0;  // Hoje ao vivo (preço de agora), como no quadro
     // ordens executadas hoje ao vivo (server._simw → prov): entram no topo das movimentações, marcadas como provisórias, com a hora
     const pv = (lv && lv.prov || []).map(p => Object.assign({}, p, { x: `${p.h} · ${p.x}` }));
-    const xl = lv ? Object.assign({}, x, { v: lv.v, pct: apT > 0 ? (lv.v / apT - 1) * 100 : x.pct, mov: (x.mov || []).concat(pv), nmov: (x.nmov || 0) + pv.length }) : x;
-    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, nm: c.d.nm, src }, xl)) }); return true;
+    // posições com o mesmo preço de agora do Hoje (Preço atual, Valor e Resultado batem com ele); caixa e CDB ao vivo
+    const lp = {}; (lv && lv.pos || []).forEach(y => { if (y.q > 0) lp[y.t] = y.v / y.q; });
+    const pos = (x.pos || []).map(y => lp[y.t] != null ? Object.assign({}, y, { p: lp[y.t], v: y.q * lp[y.t], pct: y.inv > 0 ? (y.q * lp[y.t] / y.inv - 1) * 100 : y.pct }) : y);
+    const xl = lv ? Object.assign({}, x, { v: lv.v, pct: apT > 0 ? (lv.v / apT - 1) * 100 : x.pct, pos, cash: lv.cash != null ? lv.cash : x.cash, cdb: lv.cdb || x.cdb, mov: (x.mov || []).concat(pv), nmov: (x.nmov || 0) + pv.length }) : x;
+    uiAlert('', { title: `${esc(gn)} · ${esc(x.n)}`, html: pvGroupHtml(Object.assign({ sim: true, d0: c.d.d0, d1: c.d.d1, v0: c.d.v0, apT: c.d.apT, ap: c.d.ap, wS: c.d.wS, nm: c.d.nm, cdi: c.d.cdi, src }, xl)) }); return true;
   }
   window.jgOpenSim = function (gn, mid, n, tk) {
     n = n || 0; const g = groups.find(x => x.sim && x.name === gn); if (!g) return;

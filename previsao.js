@@ -644,7 +644,7 @@ if (typeof document !== 'undefined') {
   const TN = {}, nmAdd = (m) => Object.assign(TN, m || {}), nmOf = (t) => TN[t] || t;
   const movRow = (x) => {
     const cdi = x.k === 'cdi_ap' || x.k === 'cdi_res', neg = x.k === 'compra' || x.k === 'retirada' || x.k === 'imposto';
-    const org = x.t ? `<b>${esc(nmOf(x.t))}</b>` : cdi ? 'CDI' : '—', det = x.x ? `<br><span class="pvd-note">${esc(x.x)}</span>` : '';
+    const org = x.t ? `<b>${esc(nmOf(x.t))}</b>` : cdi ? 'CDB' : '—', det = x.x ? `<br><span class="pvd-note">${esc(x.x)}</span>` : '';
     const px = x.p != null && !cdi && x.k !== 'imposto' && x.k !== 'aporte' ? brl.format(x.p) : '—';
     return `<tr class="mv-${x.k}"><td>${dataBR(x.d).replace(/\/(\d\d)(\d\d)$/, '/$2')}</td><td>${MOV_N[x.k] || esc(x.k)}</td><td class="mv-o">${org}${det}</td><td>${px}</td>` +
       `<td>${x.q != null ? F0.format(x.q) : '—'}</td><td class="${neg || cdi ? '' : 'up'}">${brl.format(x.v)}${x.pct != null ? `<br><span class="${x.pct < 0 ? 'dn' : 'up'}">${pc(x.pct)}</span>` : ''}</td></tr>`;
@@ -680,16 +680,17 @@ if (typeof document !== 'undefined') {
   const pclr = (x) => x == null ? '' : x < 0 ? 'dn' : 'up';
   // posição: preço médio (total pago com custos ÷ ações; vendas não mudam) e resultado = preço de agora × preço médio; toque abre o histórico da empresa
   const SIM_POS = 30;
-  const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b>${TN[x.t] ? `<span class="gsub">${esc(TN[x.t])}</span>` : ''}</td><td>${F0.format(x.q)}</td><td>${brl.format(x.pm != null ? x.pm : x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
+  const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b>${TN[x.t] ? `<span class="gsub">${esc(TN[x.t])}</span>` : ''}</td><td>${F0.format(x.q)}</td><td>${brl.format(x.pm != null ? x.pm : x.p)}</td><td>${brl.format(x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
   function simHtml(r) {
     nmAdd(r.nm);
-    // linha CDI (caixa no CDB) no fim: quanto está aplicado em ações e quanto está parado no CDB
-    const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('') + (r.cash > 0 ? `<tr class="simcdi"><td><b>CDI</b><span class="gsub">caixa no CDB</span></td><td>—</td><td>—</td><td>${brl.format(r.cash)}</td><td>—</td></tr>` : '');
+    // linha CDB (caixa) no fim: saldo parado no CDB, quanto rendeu no último dia útil e a taxa em vigor (100% do CDI, modelos.Caixa)
+    const cd = r.cdb || {}, aa = r.cdi != null ? (Math.pow(1 + r.cdi / 100, 252) - 1) * 100 : null;
+    const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('') + (r.cash > 0 ? `<tr class="simcdi"><td><b>CDB</b><span class="gsub">liquidez diária</span></td><td>—</td><td>—</td><td>—</td><td>${brl.format(r.cash)}${cd.d ? `<span class="gsub">rendeu hoje ${brl.format(cd.d)}</span>` : ''}</td><td>${aa != null ? `${F2.format(aa)}% a.a.<span class="gsub">100% do CDI</span>` : '—'}</td></tr>` : '');
     return tiles([['Aportado', brl.format(r.apT != null ? r.apT : r.v0), r.apT != null && r.apT !== r.v0 ? `${brl.format(r.v0)} iniciais${r.ap > 0 ? ` + ${brl.format(r.ap)}/mês` : ''}${r.wS > 0 ? ` − ${brl.format(r.wS)} retirados` : ''}` : 'desde ' + dataBR(r.d0)], ['Hoje', brl.format(r.v), `<span class="pct ${pclr(r.pct)}">${pc(r.pct)}</span>`],
         ['Compras / vendas', `${F0.format(r.c)} <span class="s2">/</span> ${F0.format(r.s)}`], ['Imposto', brl.format(r.ir)],
         ['Posição', `${r.np} empresa${r.np === 1 ? '' : 's'}`, `+ ${brl.format(r.cash)} no CDB`, 'w2']]) + `<p class="sumd">dados até ${dataBR(r.d1)}</p>
       <p class="pvd-note">Toque numa empresa para ver as compras, vendas e proventos dela.</p>
-      <table class="gtab simpos"><thead><tr><th>Ativo</th><th>Ações</th><th>Preço<br>médio</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="5">Nada aplicado.</td></tr>'}</tbody></table>
+      <table class="gtab simpos"><thead><tr><th>Ativo</th><th>Ações</th><th>Preço<br>médio</th><th>Preço<br>atual</th><th>Valor</th><th>Resultado</th></tr></thead><tbody>${pos || '<tr><td colspan="6">Nada aplicado.</td></tr>'}</tbody></table>
       ${r.pos.length > SIM_POS ? `<button type="button" class="btn mv-more" data-simall="1">Mostrar todas (${r.pos.length})</button>` : ''}
       ${movHtml(r.mov, r.nmov, src)}`;
   }

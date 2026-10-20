@@ -82,7 +82,7 @@ def build(name, w, sg, hist):
         ws.append([]); ws.append([_c(ws, "Movimentações (todas, das mais recentes para as mais antigas)", font=Font(bold=True, size=12))]); ws.append(_head(ws, MOV))
         for e in reversed(hist(x["m"])):
             k = e.get("k"); cdi = k in ("cdi_ap", "cdi_res")
-            ws.append(_row(ws, MOV, [_date(e.get("d")), TIPO.get(k, k), e.get("t") or ("CDI" if cdi else "—"),
+            ws.append(_row(ws, MOV, [_date(e.get("d")), TIPO.get(k, k), e.get("t") or ("CDB" if cdi else "—"),
                                      e.get("p") if e.get("p") is not None and k not in ("cdi_ap", "cdi_res", "imposto", "aporte") else None,
                                      e.get("q"), e.get("v"), e.get("x") or ""]))
     bio = io.BytesIO(); wb.save(bio); return bio.getvalue()
