@@ -798,8 +798,8 @@ def _signal(D, mid, idx, i):
 
 # Arquivo do modelo (⬇ → Modelo (regras e código) na Previsão): parâmetros e funções de cada modelo; o texto vem do próprio código
 # (valor atual e comentário de cada parâmetro, fonte de cada função) e do painel ⓘ → Modelos da Previsão (server.api_modelos_ficha)
-FICHA_COMUM = (("ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "ORD_FILA", "CALMA", "CALMA_FORA", "CARO", "PERDA", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
-               ("_signals", "_signal", "motivo", "simulate", "Conta", "Ordens", "_calma", "_calma_mats", "_pl_rel", "_perda", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
+FICHA_COMUM = (("CONV", "ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "ORD_FILA", "CALMA", "CALMA_FORA", "CARO", "PERDA", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
+               ("_signals", "_signal", "motivo", "simulate", "Conta", "Ordens", "_calma", "_calma_mats", "_pl_rel", "_perda", "_gtargets", "_conviccao", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
 FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
          "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
          "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")),
@@ -1472,7 +1472,47 @@ def ranking(V, nref=0):
 # Nunca vendem: dividem aporte e proventos entre as empresas que o sinal permite (Barsi: no teto ou abaixo, mais peso para o maior
 # rendimento; Híbrido: pela exposição alvo); sem sinal, esperam no CDB. Algoritmos e Análise técnica: até GRUPO_K empresas de melhor sinal,
 # vendem quando o sinal fica desfavorável (respeitando o tempo mínimo). Custos e IR da carteira (isenção de R$ 20 mil no mês).
-GRUPO_K = 5  # modelos que vendem: até K empresas ao mesmo tempo (as de melhor sinal)
+GRUPO_K = 5  # modelos que vendem: até K empresas de melhor sinal (0 = sem limite fixo: o peso por convicção decide quantas, CONV)
+# Peso por convicção (modo Grupo; desligado: nos testes de 2011, 2016 e 2021 rendeu menos e não concentrou o bastante): nota 0–1 de cada empresa que passa no critério = metade a força do sinal do próprio modelo (posição
+# entre as candidatas) e metade a nota de qualidade (só a nota nos modelos sem sinal por empresa); abaixo de 'min' não recebe aporte;
+# empresa nova só entra com convicção perto da melhor do momento (até 'faixa' abaixo dela); quem já está fica enquanto a convicção não cai
+# abaixo de 'min' (os modelos que vendem vendem aí); peso ∝ convicção^p (as melhores pesam bem mais); 'nucleo' ou mais = núcleo, abaixo =
+# aposta (peso até 'aposta'); empresa nova só entra se a fatia der pelo menos 'wmin' da carteira. O número de empresas sai da convicção e
+# do tamanho da carteira (REGRAS['max'] só protege)
+CONV = {"on": False, "min": .35, "faixa": .15, "p": 3, "nucleo": .7, "aposta": .05, "wmin": .05}
+
+
+def _conviccao(D, mid, idx, j, w, held):
+    """Pesos alvo por convicção (CONV) a partir dos alvos do modelo w (> 0 = passa no critério); held = já na carteira.
+    -> (pesos, convicção, fica: quem está na carteira e continua com convicção mínima)."""
+    n = len(idx); c = w > 0
+    if not c.any(): return w, np.zeros(n), np.zeros(n, bool)
+    sig = None
+    if mid in ("alg1", "alg3"): sig = D["P"][MOD[mid]["p"]][idx, j]
+    elif mid == "tendencia": sig = D["R12"][idx, j]
+    elif MOD[mid].get("sc") and MOD[mid]["sc"] in D: sig = D[MOD[mid]["sc"]][idx, j]
+    elif mid == "medo_acao": sig = -D["SI"][idx, j]
+    elif mid in ("barsi", "hibrido", "adapt"): sig = w
+    q, _ = _nota(D, idx, j); q = np.nan_to_num(q, nan=50.0) / 100
+    if sig is not None:
+        sg = np.where(c, np.nan_to_num(np.asarray(sig, float), nan=-1e9), -np.inf); k = np.flatnonzero(c)
+        r = np.empty(len(k)); r[np.argsort(sg[k], kind="stable")] = np.arange(len(k)); pct = np.zeros(n)
+        pct[k] = r / max(1, len(k) - 1) if len(k) > 1 else 1.0
+        cv = np.where(c, .5 * pct + .5 * q, 0.0)
+    else: cv = np.where(c, q, 0.0)
+    fica = held & c & (cv >= CONV["min"]); entra = c & (cv >= max(CONV["min"], cv.max() - CONV["faixa"]))
+    x = np.where(fica | entra, cv ** CONV["p"], 0.0)
+    if not x.any(): x = np.where(cv == cv.max(), 1.0, 0.0) * c  # nenhuma com convicção mínima: só a melhor
+    for _ in range(3):  # aposta com peso limitado
+        t = x.sum(); x = x / t if t > 0 else x
+        x = np.where((cv < CONV["nucleo"]) & (x > CONV["aposta"]), CONV["aposta"], x)
+    while True:  # empresa nova só se a fatia fizer diferença: tira a nova de menor peso até todas terem pelo menos 'wmin'
+        t = x.sum(); nov = np.flatnonzero(~held & (x > 0))
+        if t <= 0 or not len(nov): break
+        k = nov[np.argmin(x[nov])]
+        if x[k] / t >= CONV["wmin"]: break
+        x[k] = 0.0
+    t = x.sum(); return (x / t if t > 0 else x), cv, fica
 def _gtargets(D, mid, idx, i):
     """pesos alvo (soma 1, ou 0 = espera no CDB) e 'quer manter' de cada empresa, com dados da semana i."""
     n=len(idx); ok=~np.isnan(D['C'][idx,i])
@@ -1487,7 +1527,7 @@ def _gtargets(D, mid, idx, i):
         sig=_signals(D,mid,idx,i)&ok
         sc=(D[MOD[mid]['sc']][idx,i] if MOD[mid].get('sc') else D['P'][MOD[mid]['p']][idx,i] if mid!='tendencia' else D['R12'][idx,i]).astype(float)
         sc=np.where(sig,np.nan_to_num(sc,nan=-1e9),-np.inf)
-        top=np.argsort(-sc)[:GRUPO_K]; w=np.zeros(n); w[top[np.isfinite(sc[top])]]=1
+        top=np.argsort(-sc)[:GRUPO_K] if GRUPO_K else np.argsort(-sc); w=np.zeros(n); w[top[np.isfinite(sc[top])]]=1
     else: w=(_signals(D,mid,idx,i)&ok).astype(float)
     s=w.sum(); return (w/s if s>0 else w)
 def _regras_w(D, mid, idx, i, w, sh, pend, RG, ban):
@@ -1635,6 +1675,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
         if RG: w=_regras_w(D,mid,idx,i,w,sh,pend,RG,ban)
         rel=(w==0)&(pend>0)
         if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # empresa fora do alvo: a reserva dela volta ao caixa
+        if CONV["on"]: fica=_conviccao(D,mid,idx,max(0,i-1),w,(sh>0)|(pend>0))[2]; w=np.where((sh>0)&~fica,0,w)  # convicção baixa: o que vende, vende
         if sell and i>s:
             cand=(sh>0)&(w==0)&ok&(age>=mod['min']);mo=_perda(D,mid,idx,i,cand,sh,basis,P,ok,hw);cand&=mo!="-"  # no prejuízo: só empresa ruim
             out,px,tc=Ov(i,cand,P)  # venda com preço limite (máxima do dia) ou no fim do prazo
@@ -1656,6 +1697,9 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                 w=np.where(out,0,w);tw=w.sum();w=w/tw if tw>0 else w  # vendida não recebe o aporte da mesma semana
                 rel=out&(pend>0)
                 if rel.any(): cash+=pend[rel].sum();pend[rel]=0
+        wa=_conviccao(D,mid,idx,max(0,i-1),w,(sh>0)|(pend>0))[0] if CONV["on"] else w  # aporte pelo peso de convicção; venda pelo sinal (w)
+        rel=(wa==0)&(pend>0)
+        if rel.any(): cash+=pend[rel].sum();pend[rel]=0  # fora dos pesos de convicção: a reserva volta ao caixa
         j=meset.get(i)
         if j is not None and i>s:
             tax=max(0,mgain-carry)*IR if msales>ISENTO else 0
@@ -1678,11 +1722,11 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
             a=ap[j] if j<len(ap) else 0;cash+=a;addf(_seg(W[i]),a)  # aporte do mês: entra no início da semana (antes das compras dela)
             if rec and tax+dt>=0.005: ev.append({"d":W[i],"k":"imposto","v":round(float(tax+dt),2)})
             if rec and a>0: ev.append({"d":_seg(W[i]),"k":"aporte","v":round(float(a),2),"x":"aporte do mês"})
-        if cash>0.005 and w.sum()>0 and RG.get('conc'):
+        if cash>0.005 and wa.sum()>0 and RG.get('conc'):
             if j is not None:  # aporte do mês para até RG['conc'] empresas mais abaixo da meta (compra mínima RG['min_compra']); a sobra fica no CDB
-                tv=(sh*P).sum()+pend.sum()+cash;gap=np.where(w>0,w*tv-sh*P-pend,0)
+                tv=(sh*P).sum()+pend.sum()+cash;gap=np.where(wa>0,wa*tv-sh*P-pend,0)
                 pr=D['PLR'][idx,max(0,i-1)] if 'PLR' in D and mid in CARO['modelos'] else np.full(n,np.nan)
-                with np.errstate(invalid='ignore'): caro=(w>0)&(pr>CARO['pl'])  # alvo boa mas cara agora: espera; o aporte vai para as baratas
+                with np.errstate(invalid='ignore'): caro=(wa>0)&(pr>CARO['pl'])  # alvo boa mas cara agora: espera; o aporte vai para as baratas
                 if caro.any() and not ((gap>0)&~caro).any():  # todas as alvo caras: espera no CDB até CARO['espera'] semanas, depois a menos cara
                     nc+=1
                     if nc>=CARO['espera']: caro=caro&(np.nan_to_num(pr,nan=0)>np.nanmin(np.where(caro,pr,np.inf)))
@@ -1692,8 +1736,8 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                 if len(top):
                     al=np.zeros(n);gs=gap[top].sum();al[top]=gap[top]*min(1.0,cash/gs);al=np.where(al>=RG.get('min_compra',0),al,0)
                     if al.sum()>0: pend+=al;cash-=al.sum();pc_=np.where(al>0,skc>0,pc_);skc=np.where(al>0,0,skc)
-        elif cash>0.005 and w.sum()>0:
-            pend+=cash*w;cash=0.0
+        elif cash>0.005 and wa.sum()>0:
+            pend+=cash*wa;cash=0.0
         if mid=='barsi' and j is not None and i>s: cash,pend=_barsi_caixa(D,idx,i,w,sh,P,ok,cash,pend,RG,ban)
         m,px,tc=Oc(i,ok&(P>0)&(pend*(1-CUSTO)>=P),P)  # compra com preço limite: a reserva espera no CDB até a mínima do dia tocar o limite
         if m.any():
