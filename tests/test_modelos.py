@@ -604,6 +604,14 @@ def test_ordem_fila_e_data_inicial():
     finally: modelos.ORD_ON = on
 
 
+def test_simgrupo_mes_atual():
+    # grupo que começa no último mês dos dados anda até a última semana (não para na 1ª); o 1º mês só tem o valor inicial
+    D = modelos.build(snap({"AAA3": {"c": 10.0}}), cdi())
+    di = D["w"][-3]; me, aps, wd = modelos._simspan(D, di, 1000.0, 100.0, [], [])
+    assert me[0] == len(D["w"]) - 3 and me[-1] == len(D["w"]) - 1 or D["ym"][me[0]] != D["ym"][-1]
+    assert aps[0] == 1000.0 and all(a == 0 for a, i in zip(aps[1:], me[1:]) if D["ym"][i] == D["ym"][me[0]])
+
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
