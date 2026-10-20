@@ -627,7 +627,12 @@ if (typeof document !== 'undefined') {
     try {
       const d = await getRetry('/api/modelos/aprendeu');
       box.innerHTML = `<p class="pvd-note">Até ${dataBR(d.at)}. Notícias ruins: em ${d.news && d.news.acerto != null ? F2.format(d.news.acerto) + '%' : '—'} das ${F0.format((d.news || {}).n || 0)} vezes a ação rendeu menos que a mediana nas 4 semanas seguintes.</p>
-        <div class="pv-scroll"><table class="gtab"><thead><tr><th>Cenário</th><th>1º</th><th>2º</th><th>3º</th></tr></thead><tbody>${(d.ctx || []).map(c => `<tr><td>${esc(c.c)}</td>${c.top.map(([n, p]) => `<td>${esc(n)}<span class="gsub">peso ${p}%</span></td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+        <div class="pv-scroll"><table class="gtab"><thead><tr><th>Cenário</th><th>1º</th><th>2º</th><th>3º</th><th>Preço limite<br>compra · venda</th><th>Espera 1 semana<br>(oscilação rápida)</th></tr></thead><tbody>${(d.ctx || []).map((c, i) => {
+          const o = (d.ordem || [])[i], k = (d.calma || [])[i];  // mesma ordem de cenários (modelos.ADP_CTX)
+          const lim = o ? `${F2.format(o.compra)} · ${F2.format(o.venda)}<span class="gsub">volatilidades</span>` : '—';
+          const esp = !k ? '—' : k.venda && k.compra ? 'Venda e compra' : k.venda ? 'Só venda' : k.compra ? 'Só compra' : 'Não';
+          return `<tr><td>${esc(c.c)}</td>${c.top.map(([n, p]) => `<td>${esc(n)}<span class="gsub">peso ${p}%</span></td>`).join('')}<td>${lim}</td><td>${esp}</td></tr>`;
+        }).join('')}</tbody></table></div>`;
     } catch (err) { box.innerHTML = `<p class="pvd-note">${esc(err.message)}</p>`; }
   });
   window.pvGroupHtml = groupHtml;

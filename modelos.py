@@ -182,6 +182,24 @@ def _ord_ganho(D, k, compra):
     return G
 
 
+def _calma_mats(Cf, VW, LP, Q, NT):
+    """Anti-emoção (CALMA): na semana d, a variação foi rápida (|var| > CALMA['vol'] volatilidades)? -> CV (venda espera: queda rápida
+    com a empresa bem ou o mercado caindo junto) e CC (compra espera: alta rápida), matrizes N × T de bool (coluna = semana dos dados)."""
+    import pandas as pd
+    N, T = Cf.shape; CV = np.zeros((N, T), bool); CC = np.zeros((N, T), bool)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        r = np.full((N, T), np.nan, np.float32); r[:, 1:] = Cf[:, 1:] / Cf[:, :-1] - 1
+        v0 = np.full((N, T), np.nan, np.float32); v0[:, 1:] = VW[:, :-1]  # volatilidade antes da semana
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore"); mk = np.nanmedian(r, axis=0) if N else np.zeros(T, np.float32)  # mercado: mediana das ações
+        lim = CALMA["vol"] * v0
+        nt = pd.DataFrame(NT.T).rolling(NOTICIA["semanas"], min_periods=1).sum().to_numpy(np.float32).T
+        bem = LP & ~(np.nan_to_num(Q, nan=100) < CALMA["nota"]) & (nt > NOTICIA["ruim"])  # sem nota (ETF, sem balanço): conta como bem
+        junto = mk[None, :] <= CALMA["mercado"] * r
+        CV[:] = (r < -lim) & (bem | junto); CC[:] = r > lim
+    return CV, CC
+
+
 def _adp_x(D, i, NTc):
     """Exposição (0/1) de cada especialista de ADP na semana i, só com dados até a semana i -> matriz K × N."""
     N = D["C"].shape[0]; z = np.zeros(N, bool); g = lambda k: D[k][:, i] if k in D else z; LP = D["LP"][:, i]
@@ -212,6 +230,7 @@ def _adapt(D):
     GB = [_ord_ganho(D, k, True) for k in ORD_KS] if tem_hl else None; GS = [_ord_ganho(D, k, False) for k in ORD_KS] if tem_hl else None
     SB, SS = np.zeros((len(ADP_CTX), len(ORD_KS))), np.zeros((len(ADP_CTX), len(ORD_KS))); dko = .5 ** (1 / ADP_MEIA)
     ODc, ODv = D["ODI"].copy(), D["ODI"].copy(); CX = np.zeros((N, T), np.uint8)  # distância escolhida por ação/semana; cenário de cada semana
+    CVa, CCa = D["CV"].copy(), D["CC"].copy(); SC = np.zeros((len(ADP_CTX), 2))  # anti-emoção: esperar rende? (venda, compra) por cenário
     from collections import deque
     nb = nh = 0; Xp = None; pre = np.arange(K) < ADP_PRECO; kn = ADP.index("noticias"); hn = deque(maxlen=5)
     for i in range(T):
@@ -226,6 +245,15 @@ def _adapt(D):
                     M *= dko; M += np.array([np.bincount(cx, weights=np.nan_to_num(g[v, d]), minlength=len(ADP_CTX)) for g in G]).T / np.maximum(cnt, 1)
             kb, ks = np.array(ORD_KS)[SB.argmax(axis=1)][ctx], np.array(ORD_KS)[SS.argmax(axis=1)][ctx]
             ODc[:, i] = np.clip(kb * D["VW"][:, i], ORD_MIN, ORD_MAX); ODv[:, i] = np.clip(ks * D["VW"][:, i], ORD_MIN, ORD_MAX)
+        if i >= 2:  # anti-emoção: oscilação rápida na semana d = i − 2; esperar 1 semana (executar em d+2 e não em d+1) rendeu?
+            d = i - 2
+            with np.errstate(invalid="ignore", divide="ignore"): g = np.log(C[:, i] / C[:, i - 1])
+            for j, M, sg in ((0, D["CV"], 1), (1, D["CC"], -1)):
+                v = M[:, d] & np.isfinite(g) & ~EK
+                if v.any():
+                    cnt = np.bincount(CX[v, d], minlength=len(ADP_CTX))
+                    SC[:, j] = SC[:, j] * dko + np.bincount(CX[v, d], weights=sg * g[v], minlength=len(ADP_CTX)) / np.maximum(cnt, 1)
+            CVa[:, i] &= SC[ctx, 0] > 0; CCa[:, i] &= SC[ctx, 1] > 0
         if Xp is not None:  # aprende com a semana que acabou: exposições da semana anterior × resultado desta
             with np.errstate(invalid="ignore", divide="ignore"): r = (Cf[:, i] + DVg[:, i]) / Cf[:, i - 1] - 1
             ok = ~np.isnan(C[:, i]) & ~np.isnan(C[:, i - 1]) & np.isfinite(r) & ~EK; c = D["cdb"][i] - 1
@@ -244,10 +272,11 @@ def _adapt(D):
             v = np.isfinite(f) & ~EK; b = (hn[0] == 0) & v
             if b.any(): nb += int(b.sum()); nh += int((f[b] < np.median(f[v])).sum())
     W = np.exp(ADP_ETA * (S - S.max(axis=1, keepdims=True))); W /= W.sum(axis=1, keepdims=True)
-    D["AX"], D["AA"], D["AP"] = AX, AA, AP; D["ODc"], D["ODv"] = ODc, ODv
+    D["AX"], D["AA"], D["AP"] = AX, AA, AP; D["ODc"], D["ODv"] = ODc, ODv; D["CVa"], D["CCa"] = CVa, CCa
     del GB, GS
     D["ADPS"] = {"ctx": [{"c": ADP_CTX[c], "top": [[_adp_nome(ADP[k]), round(100 * float(W[c, k]))] for k in np.argsort(-W[c])[:3]]} for c in range(len(ADP_CTX))],
                  "news": {"n": nb, "acerto": round(100 * nh / nb, 1) if nb else None},
+                 "calma": [{"c": ADP_CTX[c], "venda": bool(SC[c, 0] > 0), "compra": bool(SC[c, 1] > 0)} for c in range(len(ADP_CTX))],
                  "ordem": [{"c": ADP_CTX[c], "compra": ORD_KS[int(SB[c].argmax())], "venda": ORD_KS[int(SS[c].argmax())]} for c in range(len(ADP_CTX))] if tem_hl else []}
 
 
@@ -278,7 +307,7 @@ def set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 15       # versão das contas (15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 16       # versão das contas (16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -333,11 +362,17 @@ ADP_CTX = [f"{m} · {t} · {s}" for m in ("medo", "neutro", "ganância") for t i
 # distância = ORD_K × volatilidade semanal da ação (26 semanas, só dados até a decisão), entre ORD_MIN e ORD_MAX; executa no dia em que a
 # mínima (compra) ou a máxima (venda) do dia toca o limite; sem tocar em ORD_SEM semanas, executa no fechamento; o modelo mudou de
 # ideia: cancela. Não aumenta o número de compras e vendas (são as mesmas decisões, só o dia e o preço mudam)
-ORD_ON = False    # ordens com preço limite ligadas (desligadas: tudo no fechamento da semana, como antes)
-ORD_SEM = 4       # prazo da ordem (semanas): sem tocar o limite, executa no fechamento da última
+ORD_ON = True     # ordens com preço limite ligadas (desligadas: tudo no fechamento da semana)
+ORD_SEM = 1       # prazo da ordem (semanas): vale só na semana da decisão; sem tocar o limite, executa no fechamento dela
 ORD_K = 0.5       # distância do limite em volatilidades semanais da ação
 ORD_MIN = .01     # distância mínima do limite (1%)
 ORD_MAX = .08     # distância máxima do limite (8%)
+# Anti-emoção (Ordens com calma): sinal que nasce de uma oscilação rápida (variação da semana maior que 'vol' volatilidades semanais da
+# ação) espera 1 semana para confirmar; queda rápida não vende se a empresa está bem (lucro no último balanço, nota ≥ 'nota', sem notícia
+# ruim) ou se o mercado (mediana das ações) caiu junto (≥ 'mercado' da queda dela); alta rápida não compra no topo. Fora: modelos que
+# reagem rápido por estratégia (CALMA_FORA); vendas por problema (_venda) e saída da bolsa não esperam
+CALMA = {"vol": 2.0, "nota": 50, "mercado": .5}
+CALMA_FORA = ("tendencia", "alg1", "medo_mercado", "medo_acao")  # modelos que não esperam: reagir rápido é a estratégia deles
 ORD_KS = (0.0, 0.25, 0.5, 1.0)  # Adaptativo: distâncias (em volatilidades) que ele testa no histórico e escolhe por cenário
 HIB_COMPRA = .125  # compra quando a parte na ação está pelo menos 12,5 pontos abaixo do alvo (no teste rendeu mais que comprar aos poucos)
 FORTE_R12 = 100   # Análise técnica: entrada no rodízio só com alta de pelo menos 10% em 12 meses (×1000)
@@ -572,6 +607,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
         FM["Q"] = np.where(FM["QW"] >= NOTA["min_qw"], 100 * (FM["QY"] + np.nan_to_num(PAG) * wp) / qw, np.nan).astype(np.float32)
     del FM["QY"], FM["QW"]
     NT, NX = _news_mats(tick, wk, news)
+    CV, CC = _calma_mats(Cf, VW, LP, FM.get("Q"), NT)
     ET = snap.get("etf") or {}; EK = np.array([ET.get(t, "") for t in tick])  # tipo do ETF ("" = ação)
     # empresas que saíram da bolsa (snapshot modelos → saiu: último pregão): SAI = semana do último preço (-1 = negociada hoje)
     sa = {t: d for t, d in (snap.get("saiu") or {}).items() if t in tick}; SAI = np.full(N, -1)
@@ -588,7 +624,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     JT = np.minimum(JC * JCP_IR, np.nan_to_num(DV)); del JC  # IR retido na fonte do JCP (por ação)
     # DV = provento líquido por ação (o que cai no caixa); sinais e preço teto acima usam o bruto
     return {"w": W, "ym": ym, "tick": tick, "ix": {t: k for k, t in enumerate(tick)}, "C": C, "DV": DV - JT, "JT": JT, "DT": DT, "SI": SI, "M2": M2, "R12": R12,
-            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CRI": np.zeros((N, T), bool),
+            "P": {"p1": P1, "p3": P3}, "FAV": fav, "MED": MED, "HX": HX, "LP": LP, "HA": HA, "HP": HP, "LO": LO, "HI": HI, "OL": OL, "OH": OH, "ODI": ODI, "VW": VW, "ODc": ODI, "ODv": ODI, "AX": HX, "AA": np.zeros((N, T), np.uint8), "AP": np.full((N, T), 100, np.uint8), "MI": MI, "CG": CG, "cdb": cdb, "G": G, "IB": IB, "IV": IV, "TETO": TETO, "Cf": Cf, "BS": np.zeros(N, bool), "VL": VL * 1000.0, "FM": FM, "NT": NT, "NX": NX, "CV": CV, "CC": CC, "CVa": CV, "CCa": CC, "CRI": np.zeros((N, T), bool),
             "EK": EK, "SAI": SAI, "SAIX": {k: (saida or {}).get(t) or "" for t, k in ((t, tick.index(t)) for t in sa)}, "saiu": sorted(sa),
             "me": np.array([i == T - 1 or ym[i + 1] != ym[i] for i in range(T)]), "ini": ym[first], "fim": ym[-1],
             "acerto": snap.get("acerto") or {}, "at": snap.get("fetched_at"),
@@ -716,8 +752,8 @@ def _signal(D, mid, idx, i):
 
 # Arquivo do modelo (⬇ → Modelo (regras e código) na Previsão): parâmetros e funções de cada modelo; o texto vem do próprio código
 # (valor atual e comentário de cada parâmetro, fonte de cada função) e do painel ⓘ → Modelos da Previsão (server.api_modelos_ficha)
-FICHA_COMUM = (("ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
-               ("_signals", "_signal", "motivo", "simulate", "Conta", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
+FICHA_COMUM = (("ORD_ON", "ORD_SEM", "ORD_K", "ORD_MIN", "ORD_MAX", "CALMA", "CALMA_FORA", "CUSTO", "IR", "ISENTO", "JCP_IR", "REGRAS", "VENDA", "VPROB", "VMARG", "NOTA", "NOTICIA", "GRUPO_K", "TROCA_SEM"),
+               ("_signals", "_signal", "motivo", "simulate", "Conta", "Ordens", "_calma", "_calma_mats", "_gtargets", "_regras_w", "_nota", "_noticia", "_venda", "grupo", "rotate"))
 FICHA = {"hold": ((), ()), "medo_mercado": (("MEDO",), ()), "medo_acao": (("MEDO",), ()), "media200": ((), ()),
          "alg1": (("MED_SEM", "MARGEM"), ()), "alg3": (("MED_SEM", "MARGEM"), ()), "tendencia": (("FORTE_R12", "MARGEM"), ()),
          "hibrido": (("HIB", "HIB_SEM", "HIB_ETA", "HIB_COMPRA"), ("_hib", "set_metodos")),
@@ -783,16 +819,29 @@ def motivo(D, mid, k, i):
     return "sem sinal do método (sem valor de mercado)"
 
 
+CALMA_TXT = " · esperou 1 semana para confirmar (oscilação rápida)"
+
+
+def _calma(mid, lado):
+    """Matriz anti-emoção de cada modelo e lado (None = não espera): Adaptativo usa a que aprendeu por cenário (CVa/CCa)."""
+    if mid in CALMA_FORA: return None
+    return ("CCa" if lado == "c" else "CVa") if mid == "adapt" else ("CC" if lado == "c" else "CV")
+
+
 class Ordens:
     """Ordens com preço limite de várias ações ao mesmo tempo (ORD_*): cada lado guarda o preço de referência do dia da decisão e há quantas
     semanas a ordem espera. lado(i, quer, P) -> (executa, preço, tocou): executa = tocou o limite na semana i ou venceu o prazo."""
 
-    def __init__(s, D, idx, lado, dist="ODI"):
-        s.D, s.idx, s.c, s.dk = D, np.asarray(idx, int), lado == "c", dist; n = len(s.idx)
+    def __init__(s, D, idx, lado, dist="ODI", calma=None):
+        s.D, s.idx, s.c, s.dk, s.ck = D, np.asarray(idx, int), lado == "c", dist, calma; n = len(s.idx)
         s.ref, s.sem = np.full(n, np.nan), np.zeros(n)
+        s.esp, s.conf = np.zeros(n, bool), np.zeros(n, bool)  # anti-emoção: esperou nesta semana / executa depois de esperar
 
     def __call__(s, i, quer, P):
         D, k = s.D, s.idx
+        if s.ck and i > 0 and s.ck in D:  # anti-emoção (CALMA): oscilação rápida na semana dos dados -> espera 1 semana para confirmar
+            bl = quer & np.isnan(s.ref) & D[s.ck][k, i - 1] & ~s.esp
+            s.conf = quer & s.esp; s.esp = bl; quer = quer & ~bl
         if i == 0 or "LO" not in D or not ORD_ON: return quer, P, np.zeros(len(k), bool)
         ref0 = D["Cf"][k, i - 1]; nova = quer & np.isnan(s.ref)
         s.ref = np.where(nova, ref0, np.where(quer, s.ref, np.nan))
@@ -892,7 +941,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
     lastp = C[idx, s].copy(); mi = 0; rows = [[] for _ in range(n)] if rec else None; vm = []; cj = np.zeros(n)  # cj: rendimento do CDB no mês
     meset = {w: j for j, w in enumerate(me)}
     A.cash += ap[0]; dc, dv = ("ODc", "ODv") if mid == "adapt" else ("ODI", "ODI")  # Adaptativo: distância aprendida por cenário
-    Oc, Ov = Ordens(D, idx, "c", dc), Ordens(D, idx, "v", dv)  # ordens com preço limite (compra e venda)
+    Oc, Ov = Ordens(D, idx, "c", dc, _calma(mid, "c")), Ordens(D, idx, "v", dv, _calma(mid, "v"))  # ordens com preço limite (compra e venda)
     mov = [[{"d": D["w"][s], "k": "aporte", "v": round(float(ap[0]), 2), "x": "valor inicial"}] for _ in range(n)] if rec else None
 
     def log(sh0, i, P, x, O=None, toc=None):  # rec: compras/vendas da semana (mudança no nº de ações), uma linha por empresa, com o motivo
@@ -901,7 +950,7 @@ def simulate(D, mid, idx, me, ap, wd, tx=None, divs=True, rec=False):
             dq = A.sh[q] - sh0[q]; v = A.sh[q] * P[q] + A.cash[q]; lim = O is not None and toc[q]
             mov[q].append({"d": O.dia(i, q) if lim else D["w"][i], "k": "compra" if dq > 0 else "venda", "t": D["tick"][idx[q]], "q": int(abs(dq)), "p": round(float(P[q]), 2),
                            "v": round(float(abs(dq) * P[q] / (1 - CUSTO) if dq > 0 else -dq * P[q] * (1 - CUSTO)), 2),
-                           "x": (x if isinstance(x, str) else x(q)) + (f" · ordem com preço limite R$ {P[q]:.2f}".replace(".", ",") if lim else ""), "pm": round(float(A.basis[q] / A.sh[q]), 2) if A.sh[q] > 0 else None,
+                           "x": (x if isinstance(x, str) else x(q)) + (CALMA_TXT if O is not None and O.conf[q] else "") + (f" · ordem com preço limite R$ {P[q]:.2f}".replace(".", ",") if lim else ""), "pm": round(float(A.basis[q] / A.sh[q]), 2) if A.sh[q] > 0 else None,
                            "pc": round(float(100 * A.sh[q] * P[q] / v), 1) if v > 0 else None})
     for i in range(s, e + 1):
         p = C[idx, i]; ok = ~np.isnan(p); lastp = np.where(ok, p, lastp); P = lastp
@@ -1225,7 +1274,7 @@ def _nmean(x):
 # 5/10/15/20 anos e todo o período. Só é usado quando TODA a entrada bate (sinais, CDB, ouro, empresas, setores perenes, período e aportes).
 PRE_INI, PRE_AP, PRE_ANOS = 20000.0, 500.0, (5, 10, 15, 20, None)  # valores padrão do Comparar (comparar.js); None = todo o período
 _PRE = {"at": None, "e": {}}
-PRE_VER = 8  # 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
+PRE_VER = 9  # 9: ordens ligadas + anti-emoção; 8: ordens com preço limite; 7: modelo Adaptativo; 6: colocações só entre os modelos; muda quando a resposta do compare ganha campos (respostas antigas deixam de valer)
 
 
 def pre_key(D, tickers, idx, me, aps):
@@ -1388,8 +1437,8 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
     dc,dv=("ODc","ODv") if mid=="adapt" else ("ODI","ODI")  # Adaptativo: distância aprendida por cenário
-    Oc,Ov,Ov2=Ordens(D,idx,"c",dc),Ordens(D,idx,"v",dv),Ordens(D,idx,"v",dv)  # ordens com preço limite: compra, venda do modelo, venda ocasional
-    olim=lambda O,i,q,px,t: (O.dia(i,q) if t[q] else W[i], f" · ordem com preço limite R$ {px[q]:.2f}".replace(".",",") if t[q] else "")
+    Oc,Ov,Ov2=Ordens(D,idx,"c",dc,_calma(mid,"c")),Ordens(D,idx,"v",dv,_calma(mid,"v")),Ordens(D,idx,"v",dv)  # ordens com preço limite: compra, venda do modelo, venda ocasional (por problema: sem espera)
+    olim=lambda O,i,q,px,t: (O.dia(i,q) if t[q] else W[i], (CALMA_TXT if O.conf[q] else "")+(f" · ordem com preço limite R$ {px[q]:.2f}".replace(".",",") if t[q] else ""))
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
         if i>s:
