@@ -25,6 +25,7 @@
     <string name="sim_col_d">Variação\ndo dia</string>
     <string name="sim_pos_t">Empresa</string>
     <string name="sim_pos_q">Ações</string>
+    <string name="sim_pos_pm">Preço médio</string>
     <string name="sim_pos_inv">Investido</string>
     <string name="sim_pos_v">Atual</string>
     <string name="sim_dl">Baixar planilha do grupo</string>

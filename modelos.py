@@ -1497,14 +1497,14 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     ev=[{"d":W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
-    nc=0;skc=np.zeros(n);pc_=np.zeros(n,bool);hw=np.zeros(n)  # alvos caros: semanas com todas caras; semanas que cada uma ficou sem aporte por estar cara; reserva de quem estava cara
+    nc=0;skc=np.zeros(n);pc_=np.zeros(n,bool);hw=np.zeros(n);cj=ca=cp=0.0  # CDB: rendimento recebido e total aplicado no período, parte aplicada do saldo de hoje (widget: linha Caixa no CDB)  # alvos caros: semanas com todas caras; semanas que cada uma ficou sem aporte por estar cara; reserva de quem estava cara
     dc,dv=("ODc","ODv") if mid=="adapt" else ("ODI","ODI")  # Adaptativo: distância aprendida por cenário
     Oc,Ov,Ov2=Ordens(D,idx,"c",dc,_calma(mid,"c")),Ordens(D,idx,"v",dv,_calma(mid,"v")),Ordens(D,idx,"v",dv)  # ordens com preço limite: compra, venda do modelo, venda ocasional (por problema: sem espera)
     olim=lambda O,i,q,px,t: (O.dia(i,q) if t[q] else W[i], (CALMA_TXT if O.conf[q] else "")+(f" · ordem com preço limite R$ {px[q]:.2f}".replace(".",",") if t[q] else ""))
     for i in range(s,e+1):
         p=C[idx,i];ok=~np.isnan(p);lastp=np.where(ok,p,lastp);P=np.nan_to_num(lastp)
         if i>s:
-            f=D['cdb'][i];cash*=f;pend*=f
+            f=D['cdb'][i];cj+=(cash+pend.sum())*(f-1);cash*=f;pend*=f
         b0=cash+pend.sum()-(ap[0] if i==s else 0)  # saldo no CDB depois do rendimento (base da linha de aplicação/resgate)
         if i>s:
             dq=sh*np.nan_to_num(DV[idx,i]);d=dq.sum();cash+=d;mdq+=dq;ir+=(sh*JT[idx,i]).sum();dvt+=dq  # JCP já líquido; o retido conta no IR
@@ -1596,6 +1596,8 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
                         if x_: e["x"]=(e.get("x","") + x_).lstrip(" ·")
                         ev.append(e)
                 sh+=np.where(m,q,0);basis+=cost;pend=np.maximum(0,pend-cost);nb+=m.sum();pc_=np.where(m,False,pc_)
+        dq=cash+pend.sum()-b0;ca+=max(0.0,dq)  # aplicado no CDB na semana (variação do saldo sem o rendimento, só as entradas)
+        cp=cp+dq if dq>=0 else (cp*(b0+dq)/b0 if b0>0 else 0.0)  # parte aplicada do saldo de hoje: resgate tira na proporção (como o preço médio)
         if rec: _cdi(ev,W[i],cash+pend.sum()-b0)
     L=np.nan_to_num(lastp);res=cash+pend.sum();v=float((sh*L).sum()+res)
     if not rec: return v, float(ir), int(nb), int(ns)
@@ -1609,7 +1611,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None):
         for q in np.flatnonzero(~np.isnan(O.ref)):
             dd=float(D[O.dk][idx[q],me[-1]]);lim=O.ref[q]*((1-dd) if ld=="c" else (1+dd))
             if np.isfinite(lim): oa.append({"t":nm[idx[q]],"lado":ld,"lim":round(float(lim),2),"sem":int(O.sem[q]),**({"r":round(float(pend[q]),2)} if ld=="c" else {"q":int(sh[q])})})
-    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"mov":ev,"ord":oa,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
+    return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"cdb":{"ap":round(float(ca),2),"j":round(float(cj),2),"p":round(float(cp),2)},"mov":ev,"ord":oa,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
 
 
 def _rule(rows, m):
@@ -1677,7 +1679,7 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=()):
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd)
         _mzput((key, m["id"]), h)  # todas as movimentações, comprimidas: páginas e histórico por empresa em simmov
         out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
-                         "cash": h["cash"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"]), "ord": h.get("ord") or []})
+                         "cash": h["cash"], "cdb": h["cdb"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"]), "ord": h.get("ord") or []})
     out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": pc(r["v"]) if r["v"] is not None else None, "ref": True} for r in _refs(D, me, aps, wd, apT)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
     _C[key] = out

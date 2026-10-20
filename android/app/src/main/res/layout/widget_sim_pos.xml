@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- uma posição do modelo aberto (toque: janela só com essa empresa no app) ou a linha final do CDB: nome popular (ticker embaixo) | nº de ações | valor investido | valor atual -->
+<!-- uma posição do modelo aberto (toque: janela só com essa empresa no app) ou a linha final do CDB: nome popular (ticker embaixo) | nº de ações | preço médio | valor investido | valor atual (rendimento % embaixo);
+     CDB: Ações + Preço médio dão lugar a "Rendeu" no período (p_cj), Investido = tudo que já foi aplicado, Atual = saldo de hoje -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/p_row"
     android:layout_width="match_parent"
@@ -17,10 +18,21 @@
         <TextView android:id="@+id/p_t" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1"
             android:textColor="@color/c_mut" android:textSize="9.5sp" />
     </LinearLayout>
-    <TextView android:id="@+id/p_q" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center"
-        android:maxLines="1" android:textColor="@color/c_txt" android:textSize="11.5sp" />
+    <TextView android:id="@+id/p_q" android:layout_width="0dp" android:layout_weight="0.8" android:layout_height="wrap_content" android:gravity="center"
+        android:maxLines="1" android:textColor="@color/c_txt" android:textSize="11sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="8sp" android:autoSizeMaxTextSize="11sp" android:autoSizeStepGranularity="0.5sp" />
+    <TextView android:id="@+id/p_pm" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center"
+        android:maxLines="1" android:textColor="@color/c_dim" android:textSize="11sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="8sp" android:autoSizeMaxTextSize="11sp" android:autoSizeStepGranularity="0.5sp" />
+    <LinearLayout android:id="@+id/p_cj" android:layout_width="0dp" android:layout_weight="1.8" android:layout_height="wrap_content" android:gravity="center"
+        android:orientation="vertical" android:visibility="gone">
+        <TextView android:id="@+id/p_cjv" android:layout_width="match_parent" android:gravity="center" android:layout_height="wrap_content" android:maxLines="1"
+            android:textColor="@color/c_txt" android:textSize="11sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="8sp" android:autoSizeMaxTextSize="11sp" android:autoSizeStepGranularity="0.5sp" />
+        <TextView android:id="@+id/p_cjp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:textSize="9.5sp" />
+    </LinearLayout>
     <TextView android:id="@+id/p_inv" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center"
-        android:maxLines="1" android:textColor="@color/c_dim" android:textSize="11.5sp" />
-    <TextView android:id="@+id/p_v" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center"
-        android:maxLines="1" android:textSize="11.5sp" android:textStyle="bold" />
+        android:maxLines="1" android:textColor="@color/c_dim" android:textSize="11sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="8sp" android:autoSizeMaxTextSize="11sp" android:autoSizeStepGranularity="0.5sp" />
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:orientation="vertical">
+        <TextView android:id="@+id/p_v" android:layout_width="match_parent" android:gravity="center" android:layout_height="wrap_content"
+            android:maxLines="1" android:textSize="11sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="8sp" android:autoSizeMaxTextSize="11sp" android:autoSizeStepGranularity="0.5sp" android:textStyle="bold" />
+        <TextView android:id="@+id/p_vp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:textSize="9.5sp" />
+    </LinearLayout>
 </LinearLayout>

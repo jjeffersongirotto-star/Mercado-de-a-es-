@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- modelo aberto no widget Grupo simulação: "Posições atuais · N empresas" no centro e "↗ abrir" à direita; títulos: Empresa à esquerda (largura do maior nome, SimData.empDp), Ações/Investido/Atual centralizados dividindo o resto -->
+<!-- modelo aberto no widget Grupo simulação: "Posições atuais · N empresas" no centro e "↗ abrir" à direita; títulos: Empresa à esquerda (largura do maior nome, SimData.empDp), Ações/Preço médio/Investido/Atual centralizados dividindo o resto (mesmos pesos de widget_sim_pos) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -17,7 +17,9 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="2dp">
         <TextView android:id="@+id/h_emp" android:layout_width="@dimen/sim_emp" android:layout_height="wrap_content" android:gravity="start" android:text="@string/sim_pos_t"
             android:textColor="@color/c_mut" android:textSize="9.5sp" android:textStyle="bold" />
-        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="@string/sim_pos_q"
+        <TextView android:layout_width="0dp" android:layout_weight="0.8" android:layout_height="wrap_content" android:gravity="center" android:text="@string/sim_pos_q"
+            android:textColor="@color/c_mut" android:textSize="9.5sp" android:textStyle="bold" />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="@string/sim_pos_pm"
             android:textColor="@color/c_mut" android:textSize="9.5sp" android:textStyle="bold" />
         <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="@string/sim_pos_inv"
             android:textColor="@color/c_mut" android:textSize="9.5sp" android:textStyle="bold" />

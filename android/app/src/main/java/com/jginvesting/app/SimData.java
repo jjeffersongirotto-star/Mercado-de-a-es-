@@ -21,16 +21,18 @@ public final class SimData {
         Sim(String id, String name, String di, double v0, String f) { this.id = id; this.name = name; this.di = di; this.v0 = v0; this.f = f; }
     }
 
-    /** Uma posição de um modelo: ticker, nome popular (ou null), nº de ações, valor investido e valor atual. */
+    /** Uma posição de um modelo: ticker, nome popular (ou null), nº de ações, preço médio (1.20+; NaN sem dado), valor investido e valor atual. */
     public static final class Pos {
-        public final String t, s; public final long q; public final double inv, v;
-        Pos(String t, String s, long q, double inv, double v) { this.t = t; this.s = s; this.q = q; this.inv = inv; this.v = v; }
+        public final String t, s; public final long q; public final double pm, inv, v;
+        Pos(String t, String s, long q, double pm, double inv, double v) { this.t = t; this.s = s; this.q = q; this.pm = pm; this.inv = inv; this.v = v; }
     }
 
     /** Uma linha do widget: modelo, valor aportado, valor atual, variação do dia (R$ e %), caixa no CDB e as maiores posições. */
     public static final class Row {
         public final String m, n; public final double ap, v, dv, cash; public final Double dp; public final int np;
         public final List<Pos> pos = new ArrayList<>();
+        /** CDB no período (servidor: modelos.grupo → cdb): total aplicado, rendimento recebido e parte aplicada do saldo de hoje (1.20+; 0 sem dado). */
+        public double cdbAp, cdbJ, cdbP;
         Row(String m, String n, double ap, double v, double dv, Double dp, double cash, int np) {
             this.m = m; this.n = n; this.ap = ap; this.v = v; this.dv = dv; this.dp = dp; this.cash = cash; this.np = np;
         }
@@ -94,8 +96,10 @@ public final class SimData {
                     JSONObject q = p.getJSONObject(k);
                     String t = q.optString("t", "");
                     if (!WidgetData.validTicker(t)) continue;
-                    row.pos.add(new Pos(t, q.isNull("s") ? null : q.optString("s", null), q.optLong("q", 0), q.optDouble("inv", 0), q.optDouble("v", 0)));
+                    row.pos.add(new Pos(t, q.isNull("s") ? null : q.optString("s", null), q.optLong("q", 0), q.optDouble("pm", Double.NaN), q.optDouble("inv", 0), q.optDouble("v", 0)));
                 }
+                JSONObject cd = o.optJSONObject("cdb");
+                if (cd != null) { row.cdbAp = cd.optDouble("ap", 0); row.cdbJ = cd.optDouble("j", 0); row.cdbP = cd.optDouble("p", 0); }
                 out.add(row);
             }
         } catch (Exception e) { /* sem dados */ }
@@ -126,6 +130,12 @@ public final class SimData {
         double p = (v / ap - 1) * 100;
         return (p >= 0 ? "+" : "−") + df("0.0").format(Math.abs(p)) + "%";
     }
+
+    /** Preço médio da posição: R$ 38,46 (sempre com centavos; "—" sem dado). */
+    public static String price(double p) { return p > 0 ? "R$ " + df("#,##0.00").format(p) : "—"; }
+
+    /** Linha Caixa no CDB: rendimento no período todo (juros ÷ tudo que já foi aplicado), "" sem dado. */
+    public static String cdbPct(Row r) { return r.cdbAp > 0 ? total(r.cdbAp + r.cdbJ, r.cdbAp) : ""; }
 
     /** Nº de ações: 1.234. */
     public static String qty(long q) { return df("#,##0").format(q); }
