@@ -214,6 +214,17 @@ public class WidgetDataTest {
         assertNull(WidgetData.logoFile(ic.get(1), all::contains));
     }
 
+    // 1.22: celular reiniciou — o número do pedido é um contador guardado (Store.nextReq), não o System.nanoTime (que volta a zero);
+    // com nanoTime, depois do reinício toda resposta parecia mais antiga que a guardada e o widget ficava parado
+    @Test public void phoneRebootDoesNotFreezeWidget() {
+        long antesNano = 9_000_000_000_000L, depoisNano = 5_000_000L;      // nanoTime antes e depois do reinício
+        assertFalse(WidgetData.accept(depoisNano, antesNano));             // o defeito da 1.21: resposta nova descartada
+        FakeStore st = new FakeStore(); long seq = 0;                       // 1.22: chave nova (dseq_), contador que só sobe
+        st.offer("A", ++seq, "antes"); /* reinício: o contador continua de onde parou */ st.offer("A", ++seq, "depois");
+        assertEquals("depois", st.data.get("A"));
+        assertTrue(WidgetData.accept(1, Long.MIN_VALUE));                   // quem estava preso: 1ª resposta na chave nova é aceita
+    }
+
     @Test public void loadingClearedOnlyByLatestRefresh() {  // ⟳ / troca A→B→A: a primeira busca a terminar não apaga o "Atualizando…" da última
         assertFalse(WidgetData.ownsLoading(100, 200));
         assertTrue(WidgetData.ownsLoading(200, 200));

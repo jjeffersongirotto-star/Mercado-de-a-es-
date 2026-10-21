@@ -18,10 +18,18 @@ final class Store {
     /** Última resposta de /api/widget de cada lista ("fav" ou id do grupo). */
     static String data(Context c, String sel) { return sp(c).getString("data_" + sel, "{}"); }
     static void setData(Context c, String sel, String json) { sp(c).edit().putString("data_" + sel, json).apply(); }
-    /** Guarda a resposta pedida em req (System.nanoTime no início do pedido) só se for mais nova que a guardada (WidgetData.accept). */
+    /** Número do próximo pedido de dados: contador guardado no aparelho, que só sobe (1.22: antes era System.nanoTime, que volta a
+     *  zero quando o celular reinicia — depois disso toda resposta parecia antiga e o widget ficava parado no último horário). */
+    static synchronized long nextReq(Context c) {
+        long n = sp(c).getLong("reqseq", 0) + 1;
+        sp(c).edit().putLong("reqseq", n).commit();
+        return n;
+    }
+    /** Guarda a resposta pedida em req (Store.nextReq no início do pedido) só se for mais nova que a guardada (WidgetData.accept).
+     *  Chave "dseq_" nova na 1.22: o "dreq_" antigo (nanoTime) é ignorado, então quem ficou preso destrava na 1ª atualização. */
     static synchronized boolean setDataIfNewer(Context c, String sel, String json, long req) {
-        if (!WidgetData.accept(req, sp(c).getLong("dreq_" + sel, Long.MIN_VALUE))) return false;
-        sp(c).edit().putString("data_" + sel, json).putLong("dreq_" + sel, req).putLong("fat_" + sel, System.currentTimeMillis()).commit();  // hora em que os dados chegaram
+        if (!WidgetData.accept(req, sp(c).getLong("dseq_" + sel, Long.MIN_VALUE))) return false;
+        sp(c).edit().putString("data_" + sel, json).putLong("dseq_" + sel, req).remove("dreq_" + sel).putLong("fat_" + sel, System.currentTimeMillis()).commit();  // hora em que os dados chegaram
         return true;
     }
     /** Quando a última resposta de /api/widget desta lista chegou (ms; 0 = nunca): é o horário que o widget mostra. */

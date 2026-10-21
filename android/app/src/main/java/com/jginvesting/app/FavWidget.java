@@ -62,7 +62,7 @@ public class FavWidget extends AppWidgetProvider {
                 for (String sel : sels) {
                     List<String> tk = WidgetData.tickers(sel, Store.favs(c), gs);
                     if (tk.isEmpty()) continue;
-                    long req = System.nanoTime();  // resposta mais antiga que a guardada é descartada (troca rápida de grupo)
+                    long req = Store.nextReq(c);  // resposta mais antiga que a guardada é descartada (troca rápida de grupo); contador que sobrevive ao reinício
                     String j = Api.widget(tk, pr != null ? 8000 : 30000);  // broadcast: o Android dá ~10 s
                     if (j != null) Store.setDataIfNewer(c, sel, j, req);
                     // logos que faltam no aparelho (só na primeira vez de cada um; ficam guardados)
