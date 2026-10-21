@@ -136,6 +136,13 @@ def test_horario_das_ordens_ao_vivo():
     assert out[0]["h"] == "11:32" and "h" not in out[1] and "h" not in mov[0]
 
 
+def test_assuntos_das_noticias():
+    # assunto de cada notícia da aba Notícias: palavras de vocabulario.json → noticias.assuntos; Alertas pelo tom dos modelos; Destaque = Dividendos
+    A = server.noticia_assuntos
+    assert A({"titulo": "Itaú anuncia JCP"}) == ["div"] and A({"titulo": "Copom mantém a Selic"}) == ["eco"] and A({"titulo": "Lucro do 3T sobe"}) == ["res"]
+    assert A({"titulo": "Empresa pede recuperação judicial"}) == ["al"] and A({"titulo": "Preço-teto", "destaque": True})[0] == "div" and A({"titulo": "nada"}) == []
+
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):

@@ -905,9 +905,28 @@ def api_metrics():
 
 @app.get("/api/noticias")
 def api_noticias():
-    """Aba Notícias: repassa o snapshot noticias (scripts/fetch_noticias.py); nada é buscado por visita."""
+    """Aba Notícias: repassa o snapshot noticias (scripts/fetch_noticias.py) com o assunto de cada notícia (a); nada é buscado por visita."""
     d, _ = snapshots.load("noticias", max_mem_age=3 * 3600)
-    return JSONResponse(d or {"itens": []}, headers={"Cache-Control": "public, max-age=1800"})
+    if not d: return JSONResponse({"itens": []}, headers={"Cache-Control": "public, max-age=1800"})
+    if _NWA.get("d") is not d:
+        _NWA.update(d=d, out=dict(d, itens=[dict(it, a=noticia_assuntos(it)) for it in d.get("itens") or []]))
+    return JSONResponse(_NWA["out"], headers={"Cache-Control": "public, max-age=1800"})
+
+_NWA, _NWV = {}, {}  # notícias com assunto (por versão do snapshot); palavras de vocabulario.json → noticias.assuntos
+
+def noticia_assuntos(it):
+    """Assuntos de uma notícia da aba Notícias: div (dividendos; o Destaque é sempre), res, eco, neg (palavras de vocabulario.json →
+    noticias.assuntos, no título e no resumo) e al (Alertas: tom negativo de modelos.tom_noticia, o mesmo dos modelos)."""
+    import modelos, unicodedata
+    if not _NWV:
+        v = json.load(open(os.path.join(BASE, "vocabulario.json"), encoding="utf-8"))["noticias"]["assuntos"]
+        _NWV.update({k: re.compile("(?<![a-z0-9])(" + "|".join(re.escape(w) for w in L) + ")(?![a-z0-9])") for k, L in v.items() if not k.startswith("_")})
+    x = f"{it.get('titulo') or ''}. {it.get('resumo') or ''}"
+    t = unicodedata.normalize("NFKD", x).encode("ascii", "ignore").decode().lower()
+    out = [k for k, rx in _NWV.items() if rx.search(t)]
+    if it.get("destaque") and "div" not in out: out.insert(0, "div")
+    if modelos.tom_noticia(x)[0] < 0: out.append("al")
+    return out
 
 @app.get("/api/etfs")
 def api_etfs():
