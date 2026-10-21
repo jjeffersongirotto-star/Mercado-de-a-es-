@@ -86,8 +86,65 @@ public final class WidgetData {
      *  nem em 11, 12 sp em até 2 linhas (o layout permite 2) — nunca cortado no meio de uma palavra curta. */
     public static float nameSp(String s, float roomDp) {
         int n = s == null ? 0 : s.length();
-        for (float sp = 14f; sp >= 11f; sp -= 0.5f) if (n * 0.52f * sp <= roomDp) return sp;
+        if (n * 0.52f * 14f <= roomDp) return 14f;
+        if (s.trim().contains(" ")) return 12f;  // 1.21: mais de uma palavra que não cabe → 2 linhas (BB Seguridade como Caixa Seguridade)
+        for (float sp = 13.5f; sp >= 11f; sp -= 0.5f) if (n * 0.52f * sp <= roomDp) return sp;
         return 12f;
+    }
+
+    /** Largura (dp) de um texto no tamanho sp (negrito ou não); no aparelho mede com Paint, nos testes por estimativa. */
+    public interface Meas { float dp(String s, float sp, boolean bold); }
+
+    /** Menor largura (dp) do nome em 2 linhas a 12 sp: a melhor quebra entre palavras. */
+    static float twoLineDp(String s, Meas m) {
+        String[] w = s.trim().split("\\s+");
+        float best = m.dp(s, 12f, true);
+        for (int i = 1; i < w.length; i++)
+            best = Math.min(best, Math.max(m.dp(String.join(" ", java.util.Arrays.copyOfRange(w, 0, i)), 12f, true),
+                    m.dp(String.join(" ", java.util.Arrays.copyOfRange(w, i, w.length)), 12f, true)));
+        return best;
+    }
+
+    /** 1.21: coluna Ação do tamanho do maior nome. text = largura (dp) do texto da coluna (nome e ticker, sem o logo), sp = tamanho
+     *  do nome de cada linha. Cada nome precisa de: 14 sp numa linha, ou (mais de uma palavra) 2 linhas a 12 sp se for mais estreito;
+     *  a coluna = o maior desses (até room); depois cada nome usa 14 sp se couber numa linha, senão 2 linhas a 12 sp, senão (uma
+     *  palavra) o maior de 13,5 a 11 sp que cabe. extra = o que sobra para as outras 4 colunas (dividido igualmente). */
+    public static final class Cols {
+        public final float text, extra; public final float[] sp;
+        Cols(float text, float extra, float[] sp) { this.text = text; this.extra = extra; this.sp = sp; }
+    }
+
+    public static Cols cols(List<String> names, List<String> tickers, float room, Meas m) {
+        int n = names.size(); float need = 0;
+        float[] w14 = new float[n], w2 = new float[n];
+        for (int i = 0; i < n; i++) {
+            String s = names.get(i) == null ? "" : names.get(i);
+            w14[i] = m.dp(s, 14f, true);
+            w2[i] = s.trim().contains(" ") ? twoLineDp(s, m) : Float.MAX_VALUE;
+            need = Math.max(need, Math.min(w14[i], w2[i]));
+            String t = tickers.get(i);
+            if (t != null && !t.isEmpty()) need = Math.max(need, m.dp(t, 10.5f, false));
+        }
+        float text = Math.min(room, (float) Math.ceil(need) + 2);  // +2: arredondamento da medida
+        float[] sp = new float[n];
+        for (int i = 0; i < n; i++) {
+            String s = names.get(i) == null ? "" : names.get(i);
+            if (w14[i] <= text) sp[i] = 14f;
+            else if (w2[i] != Float.MAX_VALUE) sp[i] = 12f;
+            else { sp[i] = 11f; for (float x = 13.5f; x >= 11f; x -= 0.5f) if (m.dp(s, x, true) <= text) { sp[i] = x; break; } }
+        }
+        return new Cols(text, Math.max(0, room - text), sp);
+    }
+
+    /** 1.21: alturas (dp) das versões do widget, uma para cada altura real possível perto da informada pelo launcher (que pode errar):
+     *  o Android escolhe a maior que cabe no tamanho de verdade, e a lista fecha em linhas inteiras nela. */
+    public static int[] heightVariants(int hDp) {
+        int[] o = {16, 0, -12, -24, -36, -48};
+        List<Integer> r = new ArrayList<>();
+        for (int x : o) if (hDp + x >= 80) r.add(hDp + x);
+        int[] a = new int[r.size()];
+        for (int i = 0; i < a.length; i++) a[i] = r.get(i);
+        return a.length == 0 ? new int[]{hDp} : a;
     }
 
     /** Arquivo de logo válido de /api/widget (hash de 12 dígitos .png) ou null. */

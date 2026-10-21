@@ -92,71 +92,83 @@ public class SimWidget extends AppWidgetProvider {
             SimData.Sim s = simOf(c, id, ss);
             String key = SimData.key(s), data = s == null ? "{}" : Store.simData(c, key);
             List<SimData.Row> rows = SimData.rows(data);
-            RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_sim);
-            String nm = s == null ? c.getString(R.string.sim_widget_name) : s.name, selT = nm + (ss.size() > 1 ? "  ▾" : "");
-            v.setTextViewText(R.id.s_sel, selT); v.setTextViewText(R.id.s_sel2, selT);
-            if (ss.size() > 1) {  // seletor só com mais de um Grupo simulação (como o dos Favoritos)
-                Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra(PickerActivity.EXTRA_SIM, true)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-                pick.setData(Uri.parse("jg://simpick/" + id));
-                v.setOnClickPendingIntent(R.id.s_sel, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
-                v.setOnClickPendingIntent(R.id.s_sel2, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
-            } else { v.setOnClickPendingIntent(R.id.s_sel, openApp(c, s, null, 600 + id)); v.setOnClickPendingIntent(R.id.s_sel2, openApp(c, s, null, 600 + id)); }
-            v.setOnClickPendingIntent(R.id.s_logo, openApp(c, null, null, 0)); v.setOnClickPendingIntent(R.id.s_brand, openApp(c, null, null, 0));
-            boolean busy = System.currentTimeMillis() - Store.simLoading(c) < 90_000;
-            long at = s == null ? 0 : Store.simAt(c, key);
-            String up = busy ? c.getString(R.string.widget_loading) : at > 0 ? WidgetData.fetched(at, java.util.TimeZone.getDefault()) : "";
-            v.setTextViewText(R.id.s_time, up);
-            v.setViewVisibility(R.id.s_time, up.isEmpty() ? View.GONE : View.VISIBLE);
-            // marca comprida "JG Investing" até o seletor (como no widget Favoritos) ou, com nome de grupo longo, o logo quadrado
-            android.os.Bundle op = m.getAppWidgetOptions(id);
-            android.content.res.Configuration cf = c.getResources().getConfiguration();
-            int hw = WidgetData.widthDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
-                    cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
-            float dens = c.getResources().getDisplayMetrics().density;
-            String bn = ss.size() > 1 ? nm : nm.substring(0, Math.max(0, nm.length() - 3));  // sem ▾ o chip é ~3 letras menor
-            boolean brand = WidgetData.longLogo(bn, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
-            v.setViewVisibility(R.id.s_brand, brand ? View.VISIBLE : View.GONE);
-            v.setViewVisibility(R.id.s_sel2, brand ? View.VISIBLE : View.GONE);
-            v.setViewVisibility(R.id.s_logo, brand ? View.GONE : View.VISIBLE);
-            v.setViewVisibility(R.id.s_mid, brand ? View.GONE : View.VISIBLE);
-            if (brand) {
-                android.graphics.Bitmap bm = FavWidget.brandBitmap(c, Math.round((WidgetData.brandRoom(bn, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens));
-                if (bm != null) v.setImageViewBitmap(R.id.s_brand, bm);
-            }
-            String sub = s == null ? "" : "Desde " + SimData.since(s.di) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
-            v.setTextViewText(R.id.s_sub, sub);
-            v.setViewVisibility(R.id.s_sub, sub.isEmpty() ? View.GONE : View.VISIBLE);
-            v.setTextViewText(R.id.s_empty, c.getString(s == null ? R.string.sim_empty : R.string.sim_wait));
-            Intent rf = new Intent(c, SimWidget.class).setAction(ACTION_REFRESH);
-            v.setOnClickPendingIntent(R.id.s_refresh, PendingIntent.getBroadcast(c, 11, rf, flagsImm));
-            Intent dl = new Intent(c, SimWidget.class).setAction(ACTION_XLSX).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-            v.setOnClickPendingIntent(R.id.s_dl, PendingIntent.getBroadcast(c, 700 + id, dl, flagsImm));
-            v.setViewVisibility(R.id.s_dl, s == null ? View.GONE : View.VISIBLE);
-            Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
-                    | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-            v.setPendingIntentTemplate(R.id.s_list, PendingIntent.getActivity(c, 12, tpl, flagsMut));
-            v.setEmptyView(R.id.s_list, R.id.s_empty);
-            if (Build.VERSION.SDK_INT >= 31) {
-                // linhas inteiras: títulos e "Desde…" com altura fixa; com tudo fechado as linhas que cabem esticam até a borda
-                int hDp = WidgetData.heightDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0),
+            android.os.Bundle op0 = m.getAppWidgetOptions(id);
+            int h0 = WidgetData.heightDp(op0.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0), op0.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0),
+                    c.getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
+            int[] hs = Build.VERSION.SDK_INT >= 31 && h0 > 0 ? WidgetData.heightVariants(h0) : new int[]{h0};
+            java.util.Map<android.util.SizeF, RemoteViews> sized = new java.util.LinkedHashMap<>();
+            android.graphics.Bitmap[] bmc = {null};
+            RemoteViews v1 = null;
+            for (int hv : hs) {
+                RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_sim);
+                String nm = s == null ? c.getString(R.string.sim_widget_name) : s.name, selT = nm + (ss.size() > 1 ? "  ▾" : "");
+                v.setTextViewText(R.id.s_sel, selT); v.setTextViewText(R.id.s_sel2, selT);
+                if (ss.size() > 1) {  // seletor só com mais de um Grupo simulação (como o dos Favoritos)
+                    Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra(PickerActivity.EXTRA_SIM, true)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+                    pick.setData(Uri.parse("jg://simpick/" + id));
+                    v.setOnClickPendingIntent(R.id.s_sel, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
+                    v.setOnClickPendingIntent(R.id.s_sel2, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
+                } else { v.setOnClickPendingIntent(R.id.s_sel, openApp(c, s, null, 600 + id)); v.setOnClickPendingIntent(R.id.s_sel2, openApp(c, s, null, 600 + id)); }
+                v.setOnClickPendingIntent(R.id.s_logo, openApp(c, null, null, 0)); v.setOnClickPendingIntent(R.id.s_brand, openApp(c, null, null, 0));
+                boolean busy = System.currentTimeMillis() - Store.simLoading(c) < 90_000;
+                long at = s == null ? 0 : Store.simAt(c, key);
+                String up = busy ? c.getString(R.string.widget_loading) : at > 0 ? WidgetData.fetched(at, java.util.TimeZone.getDefault()) : "";
+                v.setTextViewText(R.id.s_time, up);
+                v.setViewVisibility(R.id.s_time, up.isEmpty() ? View.GONE : View.VISIBLE);
+                // marca comprida "JG Investing" até o seletor (como no widget Favoritos) ou, com nome de grupo longo, o logo quadrado
+                android.os.Bundle op = m.getAppWidgetOptions(id);
+                android.content.res.Configuration cf = c.getResources().getConfiguration();
+                int hw = WidgetData.widthDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
                         cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
-                v.setViewLayoutHeight(R.id.s_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
-                if (!sub.isEmpty()) v.setViewLayoutHeight(R.id.s_sub, SimData.subDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
-                String om = openModel(c, s); boolean anyOpen = false; for (SimData.Row r : rows) if (r.m.equals(om)) anyOpen = true;
-                int rp = SimData.rowPx(hDp, dens, cf.fontScale, !sub.isEmpty(), rows.size(), anyOpen);
-                RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(VIEW_TYPES);
-                for (SimData.Item it : SimData.items(rows, om)) {
-                    RemoteViews iv = item(c, s, it);
-                    if (rp > 0 && it.type == SimData.Item.ROW) iv.setViewLayoutHeight(R.id.q_main, rp, android.util.TypedValue.COMPLEX_UNIT_PX);
-                    b.addItem(it.id(), iv);
+                float dens = c.getResources().getDisplayMetrics().density;
+                String bn = ss.size() > 1 ? nm : nm.substring(0, Math.max(0, nm.length() - 3));  // sem ▾ o chip é ~3 letras menor
+                boolean brand = WidgetData.longLogo(bn, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
+                v.setViewVisibility(R.id.s_brand, brand ? View.VISIBLE : View.GONE);
+                v.setViewVisibility(R.id.s_sel2, brand ? View.VISIBLE : View.GONE);
+                v.setViewVisibility(R.id.s_logo, brand ? View.GONE : View.VISIBLE);
+                v.setViewVisibility(R.id.s_mid, brand ? View.GONE : View.VISIBLE);
+                if (brand) {
+                    if (bmc[0] == null) bmc[0] = FavWidget.brandBitmap(c, Math.round((WidgetData.brandRoom(bn, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens));
+                    android.graphics.Bitmap bm = bmc[0];  // o mesmo bitmap em todas as versões de altura
+                    if (bm != null) v.setImageViewBitmap(R.id.s_brand, bm);
                 }
-                v.setRemoteAdapter(R.id.s_list, b.build());
-            } else {
-                Intent svc = new Intent(c, SimWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-                svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
-                legacyAdapter(v, svc);
+                String sub = s == null ? "" : "Desde " + SimData.since(s.di) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
+                v.setTextViewText(R.id.s_sub, sub);
+                v.setViewVisibility(R.id.s_sub, sub.isEmpty() ? View.GONE : View.VISIBLE);
+                v.setTextViewText(R.id.s_empty, c.getString(s == null ? R.string.sim_empty : R.string.sim_wait));
+                Intent rf = new Intent(c, SimWidget.class).setAction(ACTION_REFRESH);
+                v.setOnClickPendingIntent(R.id.s_refresh, PendingIntent.getBroadcast(c, 11, rf, flagsImm));
+                Intent dl = new Intent(c, SimWidget.class).setAction(ACTION_XLSX).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+                v.setOnClickPendingIntent(R.id.s_dl, PendingIntent.getBroadcast(c, 700 + id, dl, flagsImm));
+                v.setViewVisibility(R.id.s_dl, s == null ? View.GONE : View.VISIBLE);
+                Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                        | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                v.setPendingIntentTemplate(R.id.s_list, PendingIntent.getActivity(c, 12, tpl, flagsMut));
+                v.setEmptyView(R.id.s_list, R.id.s_empty);
+                if (Build.VERSION.SDK_INT >= 31) {
+                    // linhas inteiras: títulos e "Desde…" com altura fixa; com tudo fechado as linhas que cabem esticam até a borda
+                    int hDp = hv;  // 1.21: uma versão por altura possível (FavWidget: WidgetData.heightVariants)
+                    v.setViewLayoutHeight(R.id.s_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                    if (!sub.isEmpty()) v.setViewLayoutHeight(R.id.s_sub, SimData.subDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                    String om = openModel(c, s); boolean anyOpen = false; for (SimData.Row r : rows) if (r.m.equals(om)) anyOpen = true;
+                    int rp = SimData.rowPx(hDp, dens, cf.fontScale, !sub.isEmpty(), rows.size(), anyOpen);
+                    RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(VIEW_TYPES);
+                    for (SimData.Item it : SimData.items(rows, om)) {
+                        RemoteViews iv = item(c, s, it);
+                        if (rp > 0 && it.type == SimData.Item.ROW) iv.setViewLayoutHeight(R.id.q_main, rp, android.util.TypedValue.COMPLEX_UNIT_PX);
+                        b.addItem(it.id(), iv);
+                    }
+                    v.setRemoteAdapter(R.id.s_list, b.build());
+                } else {
+                    Intent svc = new Intent(c, SimWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+                    svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
+                    legacyAdapter(v, svc);
+                }
+                if (hs.length > 1) sized.put(new android.util.SizeF(1f, hv), v);
+                v1 = v;
             }
+            RemoteViews v = hs.length > 1 ? new RemoteViews(sized) : v1;
             m.updateAppWidget(id, v);
         }
         if (Build.VERSION.SDK_INT < 31) legacyNotify(m, ids);
