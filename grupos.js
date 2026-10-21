@@ -62,12 +62,16 @@
     return L && L.k === k ? L.m : null;
   }
   window.gSimLive = (gn, mid) => { const L = LIVE[gn]; return L && L.m ? L.m[mid] : null; };
+  // resultado do grupo com Hoje/Dia ao vivo (preço de agora) — o mesmo do quadro e do chat (gSim.resumo)
+  function simView(c, g) {
+    const lv = simLive(g) || {}, apT = c.d.apT != null ? c.d.apT : c.d.v0;
+    return [Object.assign({}, c.d, { m: c.d.m.map(x => lv[x.m] ? Object.assign({}, x, { v: lv[x.m].v, pct: apT > 0 ? (lv[x.m].v / apT - 1) * 100 : null, dp: lv[x.m].dp }) : x) }), lv];
+  }
   function simBody(g, full) {
     const c = simData(g);
     if (!c) return loaderHTML('Simulando os modelos…');
     if (!c.d) return `<p class="gt-empty">${esc(c.err || '')}</p>`;
-    const lv = simLive(g) || {}, apT = c.d.apT != null ? c.d.apT : c.d.v0;
-    const d = Object.assign({}, c.d, { m: c.d.m.map(x => lv[x.m] ? Object.assign({}, x, { v: lv[x.m].v, pct: apT > 0 ? (lv[x.m].v / apT - 1) * 100 : null, dp: lv[x.m].dp }) : x) });
+    const [d, lv] = simView(c, g);
     const L = full ? d.m : d.m.filter(x => !x.ref);
     const apx = d.apT != null && d.apT !== d.v0 ? ` · aportado até hoje ${brl.format(d.apT)}` : '';
     return `<p class="gt-help">Desde ${dataBR(d.d0)} · ${brl.format(d.v0)}${d.ap > 0 ? ` + ${brl.format(d.ap)}/mês` : ''} em cada modelo${apx} · ${d.n} empresas${full ? ` · dados até ${dataBR(d.d1)}` : ''}</p>
@@ -77,6 +81,9 @@
   }
   window.gSim = {
     has: (n) => groups.some(g => g.name === n),
+    // chat → Previsão e modelos → Meu Grupo simulação: cada grupo com os modelos do maior para o menor rendimento
+    resumo: () => groups.filter(g => g.sim).map(g => { const c = SIM[g.name]; if (!c || !c.d) return { n: g.name, err: (c && c.err) || 'Abra a aba Grupos para simular.' };
+      const [d] = simView(c, g); return { n: g.name, d0: d.d0, L: d.m.map(x => ({ n: modN(x), pct: x.pct, v: x.v, ref: x.ref })).sort((a, b) => (b.pct ?? -1e9) - (a.pct ?? -1e9)) }; }),
     next: (n) => { let i = 2; while (groups.some(g => g.name === `${n} ${i}`)) i++; return `${n} ${i}`; },
     create: (name, sim) => {
       // criado no próprio dia de início, num dia útil, antes do fim do pregão (18:30): o 1º dia começa a partir do preço da hora da criação (cr)

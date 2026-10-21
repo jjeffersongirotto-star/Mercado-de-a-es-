@@ -243,7 +243,7 @@ def test_ai_open_question_and_complaint_web():
         return _gem("A PETR4 tem P/L menor.")
     old = _with_ai(fake)
     try:
-        a1 = chat.answer2("vale a pena comprar PETR4?", [], D, ret_fn, {})
+        a1 = chat.answer2("qual a estratégia da PETR4 para o futuro?", [], D, ret_fn, {})
         a2 = chat.answer2("o roe do banco do brasil ta errado", [], D, ret_fn, {})
         a3 = chat.answer2("ROE do Banco do Brasil e por que diverge", [], D, ret_fn, {})  # indicador sem maioria -> busca web
     finally:
@@ -269,7 +269,7 @@ def test_ai_failure_falls_back_to_rules_and_respects_deadline():
 def test_no_ai_gives_suggestions():
     chat._QA.clear(); chat.LOG_FILE = os.path.join(tempfile.mkdtemp(), "chat_log.jsonl")
     out = chat.answer2("qual empresa tem o maior lucro", [], D, ret_fn, {})
-    assert out["mode"] == "regras" and out["a"].startswith("Não consegui entender") and len(out["sug"]) >= 3
+    assert out["mode"] == "regras" and out["a"].startswith("Não entendi direito. Você quis dizer:") and len(out["sug"]) >= 3 and out["sug"][-1]["nav"] == "inicio"
     assert chat.read_log(10, "sem_resposta")[0]["q"] == "qual empresa tem o maior lucro"
 
 
@@ -455,6 +455,27 @@ def test_fair_value_and_fear_greed():
     finally:
         chat.fg_data = old
     G = chat.glossary(); assert "barato/caro" in G and "medo" in G and "Medo e Ganância" in chat.guide_sections()
+
+
+def test_menu_guiado_e_escrita_livre():
+    M = chat.menu(D); N = M["nos"]
+    assert len(M["inicio"]["op"]) == 9 and all(o in N for o in M["inicio"]["op"])
+    for k, n in N.items():  # opções existem, o que pede é conhecido e todo caminho termina numa resposta
+        assert all(o in N for o in n.get("op") or []), k
+        assert set(n.get("pede") or []) <= {"empresa", "empresa2", "ind", "periodo", "setor", "secao", "escopo", "escopo2"}, k
+        assert n.get("op") or n.get("f"), k
+    assert M["listas"]["ind"] and M["listas"]["setor"] and "Chat" in M["listas"]["secao"]
+    assert chat.intencao("noticias de dividendos", D)[0][0] == "n_div"
+    assert chat.intencao("medo e ganancia do mercado", D)[0][0] == "m_fg"
+    assert chat.intencao("destaqes do dia", D)[0][0] == "m_dest"  # erro de digitação
+    assert chat.stem("dividendos") == chat.stem("dividendo")
+    a = chat.guiada("encontrar", {"o": "div", "esc2": "geral"}, D)
+    assert a.startswith("Maiores Div. Yield") and "Não é recomendação" in a
+    assert chat.guiada("destaques", {"esc": "fav", "fav": []}, D).startswith("Você ainda não tem Favoritos")
+    assert chat.guiada("div", {}, D) == "Escolha a empresa primeiro."
+    s = chat.sugestoes_menu("algo sem sentido nenhum", D)
+    assert s[-1] == {"l": "Abrir o menu", "nav": "inicio"}
+    assert chat.answer2("vale a pena comprar PETR4?", [], D, ret_fn, {})["mode"] == "guia"  # caminho Uma empresa → Resumo, sem IA
 
 
 if __name__ == "__main__":

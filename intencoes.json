@@ -1,0 +1,67 @@
+{
+  "_sobre": "Chat guiado (fonte única do menu e das frases de exemplo): cada nó tem rótulo (l), pergunta (p), opções (op), o que pede antes de responder (pede: empresa, empresa2, ind, periodo, setor, secao, escopo = geral/empresa/favoritos, escopo2 = geral/setor/favoritos), a resposta (f, em chat.guiada; argumentos fixos em a) e frases de exemplo (ex) usadas para entender a escrita livre (chat.intencao). Rótulos de indicadores, setores e seções vêm do site (chat.menu). Sem acento não precisa: o texto é normalizado.",
+  "inicio": {"p": "Sobre o que quer falar?", "op": ["empresa", "mercado", "encontrar", "setor", "noticias", "carteira", "modelos", "site", "outro"]},
+  "escopo": {"p": "De quem?", "op": [["geral", "No geral"], ["empresa", "Uma empresa"], ["fav", "Meus favoritos"]]},
+  "escopo2": {"p": "Onde procurar?", "op": [["geral", "No mercado todo"], ["setor", "Num setor"], ["fav", "Nos meus favoritos"]]},
+  "periodo": {"p": "Qual período?", "op": [["hoje", "Hoje"], ["1 mes", "1 mês"], ["6 meses", "6 meses"], ["1 ano", "1 ano"], ["5 anos", "5 anos"]]},
+  "nos": {
+    "empresa": {"l": "Uma empresa", "pede": ["empresa"], "p": "O que quer saber de {empresa}?", "op": ["e_resumo", "e_ind", "e_div", "e_ret", "e_cmp", "e_not", "e_mod"],
+      "ex": ["quero saber de uma empresa", "me fala da empresa", "informacoes da acao", "dados da empresa"]},
+    "e_resumo": {"l": "Resumo", "f": "resumo", "ex": ["como esta", "resumo", "cotacao", "quanto custa", "vale a pena", "barata ou cara", "preco", "situacao", "como anda"]},
+    "e_ind": {"l": "Indicadores", "pede": ["ind"], "f": "ind", "ex": ["indicador", "p/l", "roe", "dy", "p/vp", "divida", "margem", "lucro por acao", "valor de mercado"]},
+    "e_div": {"l": "Dividendos", "f": "div", "ex": ["dividendos", "proventos", "jcp", "quanto paga", "quanto pagou", "rendimento", "dividend yield", "preco teto", "paga bem"]},
+    "e_ret": {"l": "Rendimento num período", "pede": ["periodo"], "f": "ret", "ex": ["quanto subiu", "quanto caiu", "rendeu", "rentabilidade", "valorizacao", "variacao", "desempenho", "subiu quanto"]},
+    "e_cmp": {"l": "Comparar", "p": "Comparar com o quê?", "op": ["e_cmp_emp", "e_cmp_ibov", "e_cmp_cdb"], "ex": ["comparar", "versus", "vs", "comparacao", "melhor que", "contra"]},
+    "e_cmp_emp": {"l": "Outra empresa", "pede": ["empresa2"], "f": "cmp", "ex": ["comparar com outra empresa", "qual melhor entre"]},
+    "e_cmp_ibov": {"l": "Ibovespa", "pede": ["periodo"], "f": "cmpidx", "a": {"i": "@ibov"}, "ex": ["comparar com o ibovespa", "contra o ibov", "bateu o ibovespa"]},
+    "e_cmp_cdb": {"l": "CDB", "pede": ["periodo"], "f": "cmpidx", "a": {"i": "@cdi"}, "ex": ["comparar com o cdb", "rendeu mais que o cdi", "melhor que renda fixa"]},
+    "e_not": {"l": "Notícias da empresa", "f": "noticias", "a": {"a": "todas", "de": "empresa"}, "ex": ["noticias da empresa", "o que aconteceu com", "novidades sobre", "fato relevante"]},
+    "e_mod": {"l": "O que os modelos fazem com ela", "f": "modelos_emp", "ex": ["modelos", "algoritmo", "compra ou vende", "o que o modelo diz", "sinal", "previsao da acao"]},
+
+    "mercado": {"l": "Mercado hoje", "p": "O que quer ver?", "op": ["m_dest", "m_fg", "m_macro"],
+      "ex": ["mercado hoje", "como esta o mercado", "como esta a bolsa", "bolsa hoje", "mercado"]},
+    "m_dest": {"l": "Destaques do dia", "pede": ["escopo"], "f": "destaques",
+      "ex": ["destaque do dia", "destaques do dia", "destaques de hoje", "o que bombou hoje", "quem mais subiu", "quem mais caiu", "maiores altas", "maiores baixas", "maiores quedas", "resumo do dia", "o que aconteceu hoje", "como fechou", "como fechou a bolsa", "maiores altas de hoje"]},
+    "m_fg": {"l": "Medo e Ganância", "pede": ["escopo"], "f": "fg", "ex": ["medo e ganancia", "sentimento do mercado", "humor do mercado", "termometro", "mercado esta com medo", "ganancia"]},
+    "m_macro": {"l": "Ibovespa, dólar e juros", "f": "macro", "ex": ["ibovespa hoje", "dolar hoje", "cotacao do dolar", "selic", "juros", "cdi hoje", "quanto esta o ibovespa", "pontos do ibovespa"]},
+
+    "encontrar": {"l": "Encontrar ações", "p": "Qual o objetivo?", "op": ["q_div", "q_bar", "q_cre", "q_qual", "q_divida"],
+      "ex": ["encontrar acoes", "quais acoes comprar", "sugestao de acoes", "melhores acoes", "ranking", "procurar acoes", "indica acoes", "boas acoes"]},
+    "q_div": {"l": "Dividendos", "pede": ["escopo2"], "f": "encontrar", "a": {"o": "div"}, "ex": ["melhores pagadoras", "maiores dividendos", "maior dy", "acoes para renda", "boas pagadoras", "dividendeiras"]},
+    "q_bar": {"l": "Baratas (Graham)", "pede": ["escopo2"], "f": "encontrar", "a": {"o": "bar"}, "ex": ["acoes baratas", "mais baratas", "descontadas", "abaixo do valor justo", "subvalorizadas", "graham"]},
+    "q_cre": {"l": "Crescimento", "pede": ["escopo2"], "f": "encontrar", "a": {"o": "cre"}, "ex": ["acoes de crescimento", "que mais crescem", "growth", "crescimento de lucro", "crescimento de receita"]},
+    "q_qual": {"l": "Qualidade (ROE alto)", "pede": ["escopo2"], "f": "encontrar", "a": {"o": "qual"}, "ex": ["maior roe", "melhores empresas", "qualidade", "rentaveis", "mais lucrativas"]},
+    "q_divida": {"l": "Pouca dívida", "pede": ["escopo2"], "f": "encontrar", "a": {"o": "divida"}, "ex": ["pouca divida", "menos endividadas", "sem divida", "caixa liquido", "baixa alavancagem"]},
+
+    "setor": {"l": "Um setor", "pede": ["setor"], "p": "O que quer ver de {setor}?", "op": ["s_maiores", "s_div", "s_bar", "s_not", "s_fav"],
+      "ex": ["setor", "segmento", "bancos", "energia", "varejo", "saneamento", "seguradoras", "mineracao"]},
+    "s_maiores": {"l": "Maiores empresas", "f": "setor", "a": {"o": "maiores"}, "ex": ["maiores do setor", "principais empresas"]},
+    "s_div": {"l": "Melhores pagadoras", "f": "setor", "a": {"o": "div"}, "ex": ["pagadoras do setor", "dividendos do setor"]},
+    "s_bar": {"l": "Mais baratas", "f": "setor", "a": {"o": "bar"}, "ex": ["baratas do setor"]},
+    "s_not": {"l": "Notícias do setor", "f": "noticias", "a": {"a": "todas", "de": "setor"}, "ex": ["noticias do setor"]},
+    "s_fav": {"l": "Meus favoritos do setor", "f": "setor", "a": {"o": "fav"}, "ex": ["favoritos do setor"]},
+
+    "noticias": {"l": "Notícias", "pede": ["escopo"], "p": "Qual assunto?", "op": ["n_todas", "n_div", "n_res", "n_eco", "n_neg", "n_al"],
+      "ex": ["noticias", "ultimas noticias", "novidades", "o que saiu", "manchetes", "jornal"]},
+    "n_todas": {"l": "Todas", "f": "noticias", "a": {"a": "todas"}, "ex": ["todas as noticias"]},
+    "n_div": {"l": "Dividendos", "f": "noticias", "a": {"a": "div"}, "ex": ["noticias de dividendos", "anuncio de jcp"]},
+    "n_res": {"l": "Resultados", "f": "noticias", "a": {"a": "res"}, "ex": ["balancos", "resultados do trimestre", "noticias de lucro"]},
+    "n_eco": {"l": "Economia", "f": "noticias", "a": {"a": "eco"}, "ex": ["noticias de economia", "selic noticias", "inflacao"]},
+    "n_neg": {"l": "Negócios", "f": "noticias", "a": {"a": "neg"}, "ex": ["fusoes", "aquisicoes", "ipo", "recompra de acoes"]},
+    "n_al": {"l": "Alertas", "f": "noticias", "a": {"a": "al"}, "ex": ["noticias ruins", "recuperacao judicial", "alertas", "problemas"]},
+
+    "carteira": {"l": "Minha carteira", "p": "O que quer ver da sua carteira?", "op": ["c_hoje", "c_prov"],
+      "ex": ["minha carteira", "minhas acoes", "meus investimentos", "como esta minha carteira"]},
+    "c_hoje": {"l": "Como estão hoje", "f": "carteira", "a": {"o": "hoje"}, "ex": ["carteira hoje", "minhas acoes hoje"]},
+    "c_prov": {"l": "Proventos no ano", "f": "carteira", "a": {"o": "prov"}, "ex": ["meus proventos", "dividendos da carteira", "quanto recebi"]},
+
+    "modelos": {"l": "Previsão e modelos", "p": "O que quer saber?", "op": ["mo_como", "mo_mais", "mo_sim"],
+      "ex": ["modelos", "previsao", "simulacao", "qual modelo", "estrategias"]},
+    "mo_como": {"l": "Como funcionam", "f": "guia", "a": {"sec": "Modelos da Previsão"}, "ex": ["como funcionam os modelos", "o que e cada modelo", "explica os modelos"]},
+    "mo_mais": {"l": "Qual rendeu mais", "pede": ["escopo"], "f": "modelos_rank", "ex": ["qual modelo rendeu mais", "melhor modelo", "modelo campeao", "ranking dos modelos"]},
+    "mo_sim": {"l": "Meu Grupo simulação", "f": "sim", "ex": ["minha simulacao", "grupo simulacao", "como esta minha simulacao"]},
+
+    "site": {"l": "Como usar o site", "pede": ["secao"], "f": "guia", "ex": ["como usar", "como funciona o site", "ajuda", "passo a passo", "onde fica", "como faco para"]},
+    "outro": {"l": "Outro assunto", "f": "livre", "ex": []}
+  }
+}

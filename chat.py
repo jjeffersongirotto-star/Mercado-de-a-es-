@@ -1086,6 +1086,284 @@ def rules(q, D, ret_fn, P=None):
     return "Não consegui entender essa pergunta só com as regras do site." + extra + frase("nao_entendi", P["hist"])
 
 
+
+# ============================================================ chat guiado (intencoes.json) e escrita livre por intenção
+INT = json.load(open(os.path.join(BASE, "intencoes.json"), encoding="utf-8"))  # menu guiado e frases de exemplo (fonte única)
+
+
+def menu(D):
+    """Menu do chat guiado: intencoes.json + listas lidas do site (indicadores de /api/data, setores do chat, seções do painel ⓘ)."""
+    ind = [[k, f["label"]] for k, f in D["F"].items() if k not in ("preco",)]
+    secs = [k for k in guide_sections() if k and k not in ("Glossário",)]
+    return dict(INT, listas={"ind": ind, "setor": list(SECTORS), "secao": secs})
+
+
+def _P0(D, **kw):
+    P = parse("", D); P.update(kw); return P
+
+
+def _top(D, rows, k, n, asc=False, f=None):
+    """[(linha, valor)] dos n primeiros por k (1 ticker por empresa, com liquidez), f = filtro extra."""
+    L = [(r, val(D, r, k) if k != "var" else r.get("var")) for r in rows if (val(D, r, "liq2m") or 0) >= 5e5 and (f is None or f(r))]
+    L = [(r, x) for r, x in L if isinstance(x, (int, float))]
+    seen, out = set(), []
+    for r, x in sorted(L, key=lambda z: z[1], reverse=not asc):
+        if r["ticker"][:4] in seen: continue
+        seen.add(r["ticker"][:4]); out.append((r, x))
+        if len(out) >= n: break
+    return out
+
+
+def _linhas(D, L, k):
+    return "\n".join(f"{i + 1}. {r['ticker']} ({(r.get('nome') or '')[:28]}): " + (_sgn(x) if k == "var" else fmt(D, k, x)) for i, (r, x) in enumerate(L))
+
+
+def _fg_acao(D, t):
+    v = (D["by"][t].get("fg") or [None])[0]
+    if v is None: return f"{t}: sem Medo e Ganância da ação."
+    d = fg_data(); fx = (d or {}).get("faixas")
+    return f"{t}: Medo e Ganância da ação **{v}" + (f" — {fg_band(v, fx)}" if fx else "") + "**"
+
+
+def _noticias(itens, a="todas", T=None, n=5):
+    """Últimas n notícias (aba Notícias) do assunto a e que citam as empresas T (raízes) — None = todas."""
+    rt = {t[:4] for t in T} if T is not None else None
+    L = [x for x in itens or [] if (a == "todas" or a in (x.get("a") or [])) and (rt is None or any(t[:4] in rt for t in x.get("t") or []))]
+    L.sort(key=lambda x: x.get("data") or "", reverse=True)
+    if not L: return "Nenhuma notícia encontrada com esse filtro agora."
+    return "\n".join(f"• {dbr(x.get('data'))} — {x.get('titulo')} ({x.get('fonte') or ''}) {x.get('url') or ''}" for x in L[:n])
+
+
+def _pre_todas(pre, meses=121):
+    """Comparar → Modelos pré-calculado (snapshot modelos_pre): o de Todas com o período pedido (121 meses = 10 anos)."""
+    E = [x for x in ((pre or {}).get("e") or {}).values() if x.get("meses") == meses]
+    return max(E, key=lambda x: x.get("pedidas") or 0) if E else None
+
+
+def guiada(f, a, D, ret_fn=None, quote_fn=None, fx=None):
+    """Resposta de um caminho do chat guiado (intencoes.json → f) com os dados do site. a: empresa (e), empresa2 (e2), indicador (k),
+    período (per), escopo (esc: geral/empresa/fav), escopo2 (esc2: geral/setor/fav), setor, secao, favoritos (fav), carteira (cart) e os
+    argumentos fixos do nó (o, i, a; de = empresa/setor nas notícias). -> texto."""
+    import modelos
+    fx = fx or {}; T = [t for t in (a.get("e") or []) if t in D["by"]]; FAV = [t for t in (a.get("fav") or []) if t in D["by"]]
+    esc = a.get("esc") or ("empresa" if T else "geral")
+    alvo = T if esc == "empresa" else FAV if esc == "fav" else None
+    if esc == "fav" and not FAV: return "Você ainda não tem Favoritos (☆ nos cards da aba Mercado)."
+    if f in ("resumo", "ind", "div", "ret", "cmp", "cmpidx", "modelos_emp") and not T: return "Escolha a empresa primeiro."
+    P = _P0(D, tickers=T)
+    if f == "resumo":
+        r = D["by"][T[0]]
+        return "\n".join(x for x in [values(_P0(D, tickers=T), D, ["preco", "dy", "pl", "pvp", "roe"]), fair_answer(P, D).split("\n\n")[0], _fg_acao(D, T[0])] if x)
+    if f == "ind":
+        k = a.get("k") if a.get("k") in D["F"] else "pl"
+        return values(_P0(D, tickers=T, metrics=[k]), D, [k])
+    if f == "div":
+        m = D["M"].get(T[0]) or {}; r = D["by"][T[0]]
+        s = values(P, D, ["dy"]) + "".join(f"\n{MX[k][0]}: {fmt(D, k, m[k])}" for k in ("dy1", "prov12") if m.get(k) is not None)
+        if m.get("ytd"): s += "\nProventos no ano: " + "; ".join(f"{e[0]} R$ {br(e[1], 4)} ({e[2]})" for e in m["ytd"][:8])
+        return s + "\n" + fair_answer(P, D).split("\n\n")[0]
+    if f in ("ret", "cmpidx"):
+        per = _period(norm(a.get("per") or "1 ano")) or _period("1 ano")
+        return returns(_P0(D, tickers=T, idx=[a["i"]] if f == "cmpidx" else [], period=per), D, ret_fn)
+    if f == "cmp":
+        T2 = T + [t for t in (a.get("e2") or []) if t in D["by"] and t not in T]
+        if len(T2) < 2: return "Escolha a outra empresa."
+        P2 = _P0(D, tickers=T2[:4])
+        return compare(P2, D) + "\n\n" + returns(dict(P2, period=_period("1 ano")), D, ret_fn)
+    if f == "noticias":
+        itens = (fx.get("news") or (lambda: []))()
+        if a.get("de") == "setor" or (a.get("setor") and esc == "geral"): alvo = [r["ticker"] for r in _sector_rows(D, a.get("setor"))] if a.get("setor") else None
+        if a.get("de") == "empresa": alvo = T
+        return _noticias(itens, a.get("a") or "todas", alvo)
+    if f == "destaques":
+        if esc == "geral":
+            rows = D["rows"]; up, dn = _top(D, rows, "var", 5), _top(D, rows, "var", 5, asc=True)
+            d = fg_data(); fg = f"\n\nMedo e Ganância (B3): {d['v'][-1]} — {fg_band(d['v'][-1], d['faixas'])}" if d and d.get("v") else ""
+            nw = (fx.get("news") or (lambda: []))()
+            return "Maiores altas de hoje:\n" + _linhas(D, up, "var") + "\n\nMaiores baixas de hoje:\n" + _linhas(D, dn, "var") + fg + ("\n\nÚltimas notícias:\n" + _noticias(nw, n=3) if nw else "")
+        L = sorted(((t, D["by"][t].get("var")) for t in alvo), key=lambda z: -(z[1] if z[1] is not None else -1e9))
+        s = "Hoje:\n" + "\n".join(f"• {t}: {_sgn(x) if x is not None else 'sem variação'}" + (f" (R$ {br(val(D, D['by'][t], 'preco'))})" if val(D, D["by"][t], "preco") is not None else "") for t, x in L)
+        nw = (fx.get("news") or (lambda: []))()
+        return s + ("\n\nNotícias:\n" + _noticias(nw, T=alvo, n=3) if nw else "")
+    if f == "fg":
+        if esc == "geral": return fg_answer()
+        return "\n".join(_fg_acao(D, t) for t in alvo)
+    if f == "macro":
+        s = quote(_P0(D, idx=["@ibov", "@usd", "@gold"]), quote_fn) or ""
+        return (s + "\n\n" + returns(_P0(D, idx=["@ibov", "@usd"], period=_period("hoje")), D, ret_fn)).strip()
+    if f in ("encontrar", "setor"):
+        o = a.get("o"); sec = a.get("setor") if (f == "setor" or a.get("esc2") == "setor") else None
+        rows = _sector_rows(D, sec) if sec else list(D["rows"])
+        if f == "encontrar" and a.get("esc2") == "fav" or o == "fav":
+            if not FAV: return "Você ainda não tem Favoritos (☆ nos cards da aba Mercado)."
+            rows = [r for r in rows if r["ticker"] in FAV]
+            if o == "fav": return f"Seus favoritos em {sec}:\n" + ("\n".join(f"• {r['ticker']}: R$ {br(val(D, r, 'preco'))} ({_sgn(r['var'])} hoje)" if r.get("var") is not None else f"• {r['ticker']}" for r in rows) or "nenhum.")
+        tit = f" — {sec}" if sec else " — seus favoritos" if a.get("esc2") == "fav" else ""
+        if o in ("bar",):
+            L = []
+            for r in rows:
+                fr = fair(D, r)
+                if fr and (val(D, r, "liq2m") or 0) >= 5e5: L.append((r, fr[1]))
+            L = sorted(L, key=lambda z: -z[1])[:10]
+            return (f"Mais baratas pelo valor justo{tit} (% até o valor justo):\n" + "\n".join(f"{i + 1}. {r['ticker']}: {'+' if x >= 0 else '−'}{br(abs(x), 0)}%" for i, (r, x) in enumerate(L))) if L else "Nenhuma com valor justo calculado."
+        k, asc, fl = {"div": ("dy", False, lambda r: (val(D, r, "dy") or 0) < 40), "cre": ("cresc5a", False, lambda r: (val(D, r, "lpa") or 0) > 0), "qual": ("roe", False, lambda r: (val(D, r, "roe") or 0) > 0),
+                      "divida": ("dlebit", True, None), "maiores": ("valmerc", False, None)}.get(o, ("dy", False, None))
+        if k not in D["F"]: return "O site não tem esse indicador agora."
+        L = _top(D, rows, k, 10, asc, fl)
+        return (f"{'Menores' if asc else 'Maiores'} {label(D, k)}{tit}:\n" + _linhas(D, L, k) + "\n(1 ticker por empresa, liquidez ≥ R$ 500 mil/dia. Não é recomendação.)") if L else "Nenhuma empresa atende agora."
+    if f == "carteira":
+        C = [t for t in (a.get("cart") or []) if t in D["by"]]
+        if not C: return "Sua Carteira está vazia (aba Carteira → registre suas compras)."
+        if a.get("o") == "prov":
+            out = []
+            for t in C:
+                m = D["M"].get(t) or {}
+                out.append(f"• {t}: " + ("; ".join(f"{e[0]} R$ {br(e[1], 4)}" for e in (m.get("ytd") or [])[:6]) or "nenhum provento no ano"))
+            return "Proventos por ação no ano (veja o total recebido na aba Carteira):\n" + "\n".join(out)
+        return "Suas ações hoje:\n" + "\n".join(f"• {t}: {_sgn(D['by'][t]['var']) if D['by'][t].get('var') is not None else 'sem variação'}" for t in C)
+    if f == "modelos_emp" or f == "modelos_rank":
+        v = _pre_todas((fx.get("pre") or (lambda: None))())
+        if not v: return "O resultado dos modelos ainda não foi calculado (rotina diária). Veja na aba Comparar → Modelos."
+        nm = lambda m: (modelos.MOD.get(m) or {}).get("n", m)
+        mes = lambda x: f"{x[5:7]}/{x[:4]}" if x and len(x) >= 7 else x  # AAAA-MM → MM/AAAA
+        v = dict(v, ini=mes(v.get("ini")), fim=mes(v.get("fim")))
+        ms = [m for m in v["m"] if not (modelos.MOD.get(m) or {}).get("ref")]
+        if f == "modelos_rank" and esc == "geral":
+            L = sorted((x for x in v.get("cart") or [] if x["m"] in ms), key=lambda x: -(x.get("pct") or -1e9))
+            return f"Modelos numa carteira com todas as empresas, de {v['ini']} a {v['fim']} (valores padrão do Comparar):\n" + "\n".join(f"{i + 1}. {nm(x['m'])}: {_sgn(x['pct'])}" for i, x in enumerate(L)) + "\nNão é recomendação."
+        alvo2 = T if f == "modelos_emp" else alvo
+        ix = [v["t"].index(t) for t in alvo2 if t in v["t"]]
+        if not ix: return "Essa empresa não está nos modelos pré-calculados (Comparar → Modelos com as empresas escolhidas calcula na hora)."
+        res = []
+        for j, m in enumerate(v["m"]):
+            if m not in ms: continue
+            xs = [v["p"][j][i] for i in ix if v["p"][j][i] is not None]
+            if xs: res.append((m, sum(xs) / len(xs)))
+        res.sort(key=lambda z: -z[1])
+        quem = ", ".join(v["t"][i] for i in ix)
+        return f"Rendimento de cada modelo em {quem} de {v['ini']} a {v['fim']}" + (" (média)" if len(ix) > 1 else "") + ":\n" + "\n".join(f"{i + 1}. {nm(m)}: {_sgn(x)}" for i, (m, x) in enumerate(res)) + "\nNão é recomendação."
+    if f == "guia":
+        sec = a.get("sec") or a.get("secao"); t = guide_sections().get(sec or "")
+        return f"{sec}:\n{t}" if t else "Escolha a parte do site."
+    return "Escolha uma opção."
+
+
+# ---- escrita livre: a frase vira um caminho do menu (sem IA): radical das palavras, acentos/erros de digitação e nota por palavras em comum
+_SUF = ("amentos", "imentos", "amento", "imento", "adoras", "adores", "idades", "idade", "mente", "acoes", "acao", "icoes", "icao", "eiras", "eiros",
+        "eira", "eiro", "istas", "ista", "ivas", "ivos", "iva", "ivo", "oes", "aes", "ais", "eis", "em", "am", "es", "as", "os", "s", "a", "o", "e")
+
+
+def stem(w):
+    """Radical simples em português: “dividendos”, “dividendo” e “dividendeira” ficam parecidos."""
+    if len(w) <= 3: return w
+    for x in _SUF:
+        if w.endswith(x) and len(w) - len(x) >= 3: return w[:-len(x)]
+    return w
+
+
+_IXI = {"k": None}
+def _int_index(D):
+    """Índice das intenções: rótulo + frases de exemplo de cada nó + palavras lidas do site (indicadores, setores, seções do ⓘ, assuntos)."""
+    if _IXI["k"] is D: return _IXI
+    docs = {}
+    for nid, n in INT["nos"].items():
+        txt = " ".join([n.get("l", "")] + n.get("ex", []))
+        docs[nid] = txt
+    docs["e_ind"] += " " + " ".join(f["label"] for f in D["F"].values())
+    docs["setor"] += " " + " ".join(w for w, _ in SECT_WORDS)
+    for k, nid in (("div", "n_div"), ("res", "n_res"), ("eco", "n_eco"), ("neg", "n_neg")):
+        docs[nid] += " " + " ".join(VOC["noticias"].get("assuntos", {}).get(k, []))
+    toks = {nid: [stem(w) for w in re.findall(r"[a-z0-9/]+", norm(t)) if w not in STOP] for nid, t in docs.items()}
+    N = len(toks); df = {}
+    for ts in toks.values():
+        for w in set(ts): df[w] = df.get(w, 0) + 1
+    import math
+    _IXI.update(k=D, toks={k: set(v) for k, v in toks.items()}, idf={w: math.log(1 + N / c) for w, c in df.items()}, vocab=set(df))
+    return _IXI
+
+
+def intencao(q, D):
+    """Frase -> [(nó, nota)] dos caminhos mais parecidos (nota 0–1: parte das palavras da frase que o nó explica, pesada pela raridade)."""
+    X = _int_index(D)
+    emp = lambda w: w in D["alias"] or w in D["tok"] or w.upper() in D["by"] or w.upper() in D["roots"]  # nome de empresa: é o “quem”, não o “quê”
+    ws = [w for w in re.findall(r"[a-z0-9/]+", norm(q)) if w not in STOP and not emp(w)]
+    ss = []
+    for w in ws:
+        s = stem(w)
+        if s not in X["vocab"] and len(s) >= 4:
+            c = [x for x in difflib.get_close_matches(s, X["vocab"], 3, 0.8) if x[0] == s[0] and abs(len(x) - len(s)) <= 2]  # erro de digitação
+            s = c[0] if c else s  # (mesma 1ª letra: “lance” não vira “balanço”)
+        ss.append(s)
+    if not ss: return []
+    tot = sum(X["idf"].get(s, 1.0) for s in ss) or 1
+    # nota = parte da frase que o caminho explica (0–1) + um pouco de quão específico ele é (desempate: caminho com menos palavras soltas)
+    sc = [(nid, sum(X["idf"].get(s, 1.0) for s in set(ss) if s in X["toks"][nid]) / tot) for nid in X["toks"]]
+    sc = [(nid, x + .05 * x / (1 + len(X["toks"][nid]) / 20)) for nid, x in sc]
+    return sorted([x for x in sc if x[1] > 0], key=lambda z: -z[1])
+
+
+def intencao_resposta(q, D, P, ret_fn=None, quote_fn=None, fx=None, cx=None):
+    """Escrita livre pelo menu: nota alta e tudo o que o caminho pede achado na frase -> responde; senão None. -> (texto, nó) ou None."""
+    pai = {c: k for k, x in INT["nos"].items() for c in x.get("op") or []}
+    def pede(nid):  # o que o caminho pede, com o que os nós de cima pedem
+        out = []
+        while nid: out = list(INT["nos"][nid].get("pede") or []) + out; nid = pai.get(nid)
+        return out
+    def da(nid):  # dá para responder com o que a frase tem?
+        for pd in pede(nid):
+            if pd == "empresa" and not P["tickers"] or pd == "empresa2" and len(P["tickers"]) < 2: return False
+            if pd == "ind" and not [k for k in P["metrics"] if k in D["F"]] or pd == "setor" and not P["sector"] or pd == "secao": return False
+        return True
+    usa = lambda nid: any(x in ("empresa", "empresa2", "escopo") for x in pede(nid)) or (INT["nos"][nid].get("a") or {}).get("de") == "empresa"
+    L = []
+    for nid, sc in intencao(q, D):  # caminho com resposta (f); nó de menu vale pelo 1º filho com resposta
+        n = INT["nos"][nid]
+        if not n.get("f"): nid = next((c for c in n.get("op") or [] if INT["nos"][c].get("f")), None)
+        if nid and INT["nos"][nid].get("f") not in ("livre", "sim") and da(nid) and nid not in [x[0] for x in L]: L.append((nid, sc))
+    if P["tickers"] and L:  # citou empresa: só caminhos que usam a empresa (os só da empresa antes dos com “De quem?”); nenhum -> regras/IA
+        L = [x for x in L if usa(x[0])]; so = [x for x in L if "empresa" in pede(x[0]) or (INT["nos"][x[0]].get("a") or {}).get("de") == "empresa"]
+        if so: L = so
+    if not L or L[0][1] < .5 or (len(L) > 1 and L[1][1] > L[0][1] - .1 and INT["nos"][L[1][0]].get("f") != INT["nos"][L[0][0]].get("f")): return None
+    nid = L[0][0]; n = INT["nos"][nid]; f = n.get("f")
+    a = dict(n.get("a") or {}); cx = cx or {}
+    a["fav"] = cx.get("fav") or []; a["cart"] = cx.get("cart") or []
+    for pd in pede(nid):
+        if pd == "empresa":
+            if not P["tickers"]: return None
+            a["e"] = P["tickers"][:1]
+        elif pd == "empresa2":
+            if len(P["tickers"]) < 2: return None
+            a["e"], a["e2"] = P["tickers"][:1], P["tickers"][1:2]
+        elif pd == "ind":
+            if not [k for k in P["metrics"] if k in D["F"]]: return None
+            a["k"] = [k for k in P["metrics"] if k in D["F"]][0]
+        elif pd == "setor":
+            if not P["sector"]: return None
+            a["setor"] = P["sector"]
+        elif pd == "periodo": a["per"] = (P["period"] or (None, None, "1 ano"))[2].replace("em ", "")
+        elif pd == "escopo": a["esc"] = "empresa" if P["tickers"] else "fav" if re.search(r"\bfavorit", P["nq"]) else "geral"; a["e"] = P["tickers"][:1]
+        elif pd == "escopo2": a["esc2"] = "setor" if P["sector"] else "fav" if re.search(r"\bfavorit", P["nq"]) else "geral"; a["setor"] = P["sector"]
+        elif pd == "secao": return None
+    if f in ("resumo", "ind", "div", "ret", "cmp", "cmpidx", "modelos_emp") and not P["tickers"]: return None
+    a.setdefault("e", P["tickers"][:1])
+    return guiada(f, a, D, ret_fn, quote_fn, fx), nid
+
+
+LOC_OK = {"e_resumo", "e_ind", "e_ret", "e_cmp_emp", "e_cmp_ibov", "e_cmp_cdb", "q_div", "q_cre", "q_qual", "q_divida", "s_maiores", "s_div", "m_macro", "site"}  # caminhos que as regras (local) já respondem
+
+
+def sugestoes_menu(q, D, n=3):
+    """“Você quis dizer:” os n caminhos do menu mais parecidos com a frase (botões que abrem o menu nesse ponto)."""
+    out, seen = [], set()
+    for nid, sc in intencao(q, D):
+        lab = INT["nos"][nid].get("l")
+        if nid in seen or not lab or nid == "outro": continue
+        pai = next((k for k, x in INT["nos"].items() if nid in (x.get("op") or [])), None)
+        out.append({"l": (INT["nos"][pai]["l"] + " → " if pai else "") + lab, "nav": nid}); seen.add(nid)
+        if len(out) >= n: break
+    return out + [{"l": "Abrir o menu", "nav": "inicio"}]
+
+
 # ============================================================ IA (Gemini)
 API = "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent"
 
@@ -1392,10 +1670,46 @@ def link_ext(out, q, ext_fn, hist=None):
 def _post(model, body, deadline, cap=15):
     left = deadline - time.time()
     if left < 4 or time.time() < _DOWN["until"]: raise TimeoutError("sem tempo ou IA fora do ar")
-    r = requests.post(API.format(model), headers={"x-goog-api-key": os.environ.get("GEMINI_API_KEY", ""), "Content-Type": "application/json"},
-                         json=body, timeout=min(cap, left))
+    try:
+        r = requests.post(API.format(model), headers={"x-goog-api-key": os.environ.get("GEMINI_API_KEY", ""), "Content-Type": "application/json"},
+                          json=body, timeout=min(cap, left))
+    except requests.RequestException as e:
+        AI_ST.update(t=time.time(), ok=False, m=model, e=type(e).__name__); raise
     if r.status_code in (429, 503): _DOWN["until"] = time.time() + 120
+    AI_ST.update(t=time.time(), ok=r.status_code == 200, m=model, e="" if r.status_code == 200 else _ai_err(r))
     return r
+
+
+AI_ST = {}  # última chamada à IA (Gemini): quando, deu certo, modelo, motivo do erro — mostrado no chat e no ⓘ (ai_status)
+_AI_CHK = {"t": 0.0, "d": None}
+
+
+def _ai_err(r):
+    """Motivo curto de uma resposta de erro do Gemini (sem a chave)."""
+    try: m = str(((r.json() or {}).get("error") or {}).get("message") or "")
+    except Exception: m = ""
+    c = r.status_code
+    why = ("chave inválida" if c == 400 and "key" in m.lower() else "chave sem permissão ou bloqueada" if c in (401, 403)
+           else "modelo não existe" if c == 404 else "limite de uso esgotado (cota)" if c == 429 else "serviço do Google fora do ar" if c in (500, 503) else "erro")
+    return f"{why} (http {c})" + (f": {m[:120]}" if m else "")
+
+
+def ai_status():
+    """A IA está funcionando? Chave configurada + última chamada; sem chamada nos últimos 30 min, confere os modelos no Google (cache de 10 min).
+    -> {chave, ok, t, m, e}"""
+    if not os.environ.get("GEMINI_API_KEY"): return {"chave": False, "ok": False, "e": "chave da IA não configurada no servidor"}
+    if AI_ST.get("t") and time.time() - AI_ST["t"] < 1800: return dict(AI_ST, chave=True)
+    if time.time() - _AI_CHK["t"] > 600:
+        _AI_CHK["t"] = time.time(); d = None
+        for model in _models():  # leitura do cadastro do modelo: não gasta cota de respostas
+            try:
+                r = requests.get(API.format(model).rsplit(":", 1)[0], headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, timeout=8)
+                d = {"t": time.time(), "ok": r.status_code == 200, "m": model, "e": "" if r.status_code == 200 else _ai_err(r)}
+            except requests.RequestException as e:
+                d = {"t": time.time(), "ok": False, "m": model, "e": type(e).__name__}
+            if d["ok"]: break
+        _AI_CHK["d"] = d
+    return dict(_AI_CHK["d"] or AI_ST or {"ok": False, "e": "sem conferência"}, chave=True)
 
 
 def _contents(q, hist, n=4):
@@ -1584,7 +1898,7 @@ _QA = {}  # mesma pergunta no mesmo dia (sem histórico)
 QA_MAX = 500
 
 
-def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None):
+def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None, fx=None):
     t0 = time.time(); deadline = t0 + DEADLINE_S
     cx = cx or {}
     P = parse(q, D, hist)
@@ -1601,8 +1915,16 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
     except Exception as e: log.info("local: %s", e)
     out = None
     plain = not (P["tickers"] or P["metrics"] or P["sector"] or P["idx"])  # sem ação/indicador: pode ser assunto fora do mercado
+    gi = None
+    if not topic and not P["complaint"]:  # escrita livre pelo menu guiado (intencoes.json), sem IA
+        try: gi = intencao_resposta(q, D, P, ret_fn, quote_fn, fx, cx)
+        except Exception as e: log.info("intencao: %s", e)
+        if gi and loc and (gi[1] in LOC_OK or P["define"] or P["howto"] or P["colors"]): gi = None  # as regras já respondem bem esses caminhos
+    if gi: loc = None
     if loc:
         out = {"a": loc, "mode": "regras", "tok": 0}
+    elif gi:
+        out = {"a": gi[0], "mode": "guia", "tok": 0, "nav": gi[1]}
     elif plain and not kbk and kb_ambiguous(q):  # nome em mais de uma obra: pergunta qual antes de responder
         out = kb_ambiguous(q)
     elif not has_ai:
@@ -1648,7 +1970,9 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None)
         out = link_ext(out, q, ext_fn, hist)
         if not out.get("sug") and (P["tickers"] or P["metrics"] or P["sector"] or P["idx"]): out["sug"] = suggestions(P, D)[:3]
     if out["a"].startswith("Não consegui entender") or out["mode"] == "regras" and out["a"].startswith("Não encontrei"):
-        out["sug"] = suggestions(P, D)
+        sm = sugestoes_menu(q, D)  # “Você quis dizer:” os caminhos do menu guiado mais parecidos
+        if sm and out["a"].startswith("Não consegui entender"): out["a"], out["sug"], out["sugl"] = "Não entendi direito. Você quis dizer:", sm, None
+        else: out["sug"] = suggestions(P, D)
     elif out["mode"] in ("regras", "ia+dados") and (P["tickers"] or P["metrics"] or P["sector"]):
         out["sug"] = suggestions(P, D)[:3]
     if (out["mode"] in ("gemini", "ia+dados") or loc) and not hist:
@@ -1670,7 +1994,7 @@ def _log(q, out, P, t0):
         a = out.get("a") or ""
         rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "q": q[:500], "mode": out.get("mode"),
                "cached": bool(out.get("cached")), "ms": int((time.time() - t0) * 1000),
-               "sem_resposta": a.startswith(("Não consegui entender", "Não encontrei a opção")) or any(w in norm(a) for w in MISSING),
+               "sem_resposta": a.startswith(("Não consegui entender", "Não encontrei a opção", "Não entendi direito")) or any(w in norm(a) for w in MISSING),
                "reclamacao": bool(P.get("complaint")), "entendeu": {"tickers": P.get("tickers"), "idx": P.get("idx"), "ind": P.get("metrics"),
                "setor": P.get("sector"), "filtros": P.get("filters"), "periodo": (P.get("period") or [None, None, None])[:3], "sobrou": P.get("left")},
                "a": a[:400]}
