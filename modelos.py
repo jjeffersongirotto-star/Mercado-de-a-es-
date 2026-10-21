@@ -328,7 +328,7 @@ def _set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 23       # versão das contas (23: 1º dia a mercado (fechamento do dia ou preço ao vivo com horário); 22: aporte primeiro nas empresas da carteira, Buy and Hold com dividendos + apostas de crescimento, confiança nas notícias; 21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 24       # versão das contas (24: 1º dia com ordens com preço limite, sem compra na criação; 23: 1º dia a mercado; 22: aporte primeiro nas empresas da carteira, Buy and Hold com dividendos + apostas de crescimento, confiança nas notícias; 21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -983,22 +983,25 @@ class Ordens:
         return (date.fromisoformat(s.D["w"][i]) - timedelta(days=o)).isoformat()
 
 
-def _dia0(D, idx, s, d0, p1=None):
-    """1º dia (data inicial com dia): compra a mercado, sem preço limite e sem usar preço de antes do início. Preço de cada ação no 1º pregão a
-    partir de d0 na semana s: o preço ao vivo visto na hora (p1 {ticker: (preço, 'HH:MM')}; só vale se ficou entre a mínima e a máxima da
-    semana, senão o fechamento, mantendo o horário) ou o fechamento do dia (DC: últimos pregões; antes deles, o fechamento da semana).
-    -> (preços, dia, {posição em idx: 'HH:MM'})."""
+def _dia0(D, idx, s, d0, p1=None, cr=None):
+    """1º dia (data inicial com dia): nada de antes do início e nenhuma compra no momento da criação; o modelo deixa ordens com preço limite
+    (ORD_*, distância de cada ação). cr (grupo criado no próprio dia de início, no pregão, 'HH:MM'): as ordens valem nesse dia, a partir do
+    preço da hora da criação; executam as que o servidor viu tocar o limite (p1 {ticker: (preço, 'HH:MM', dia)}; só vale se o preço ficou entre
+    a mínima e a máxima reais); as outras compram no fechamento do dia. Sem cr (data no passado ou criado fora do pregão): a referência é o
+    fechamento do dia de início (DC: últimos pregões; antes deles, o da semana) e as ordens valem nos pregões seguintes até o fim da semana
+    (w1); a que não tocar compra no fechamento da semana.
+    -> (preços do dia de início, dia, execuções {posição em idx: (preço, dia, 'HH:MM')}, semana das ordens w1 (None com cr))."""
     W = D["w"]; P = D["C"][idx, s].astype(float); dia = W[s]; DD = D.get("DD") or []
     j = next((j for j, d in enumerate(DD) if d0 <= d <= W[s]), None)
     if j is not None: dc = D["DC"][idx, j]; P = np.where(np.isnan(dc), P, dc); dia = DD[j]
-    H = {}
+    if not cr: return P, dia, {}, (s if dia < W[s] else s + 1)
+    F = {}
     for q, k in enumerate(idx):
         x = (p1 or {}).get(D["tick"][k])
-        if not x: continue
+        if not x or x[2] != dia: continue
         lo, hi = D["LO"][k, s], D["HI"][k, s]
-        if np.isnan(lo) or np.isnan(hi) or lo * .999 <= x[0] <= hi * 1.001: P[q] = x[0]
-        H[q] = x[1]
-    return P, dia, H
+        if np.isnan(lo) or np.isnan(hi) or lo * .999 <= x[0] <= hi * 1.001: F[q] = (x[0], x[2], x[1])
+    return P, dia, F, None
 
 
 # CDB dos modelos como na realidade: 100% do CDI por dia útil (taxa diária do Banco Central), liquidez diária e, no resgate, IR regressivo
@@ -1762,7 +1765,7 @@ def _aporte(D, mid, idx, j, wa, caro, sh, P, pend, cash, RG, so=None, ini=False)
     return al
 
 
-def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False):
+def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False, cr=None):
     """Modo Grupo (Comparar e Grupo simulação): o modelo cuida de UMA carteira com as empresas escolhidas, decide com a semana anterior.
     Ações inteiras: o dinheiro destinado a cada empresa fica numa reserva dela, rendendo CDB, até dar para comprar pelo menos 1 ação;
     se a empresa sai do alvo, a reserva volta ao caixa. ult: a 1ª semana decide com os dados dela mesma (começo hoje, numa semana nova
@@ -1772,7 +1775,8 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False):
     lastp=D['C'][idx,s].copy();meset={w:j for j,w in enumerate(me)};C=D['C'];DV=D['DV'];JT=D['JT'];W=D['w']
     nm=D['tick'];motivo='previsão desfavorável' if mid in('alg1','alg3') else f"saiu do critério do método {MOD[mid]['n']}" if MOD[mid].get('sig') else 'abaixo da média de 200 dias'
     d0=getattr(me,"d0",None)  # data inicial com dia: valor inicial nela; ordens da 1ª semana só depois dela
-    P0,dia0,H0=_dia0(D,idx,s,d0,p1) if d0 else (None,None,{})  # 1º dia: compra a mercado (fechamento do dia ou preço ao vivo com horário)
+    P0,dia0,F0,w1=_dia0(D,idx,s,d0,p1,cr) if d0 else (None,None,{},None)  # 1º dia: ordens com preço limite, nada antes do início (_dia0)
+    fo=np.zeros(n,bool);r0=None;T_=len(W)  # ordens do 1º dia ainda abertas (sem cr) e o preço de referência delas
     ev=[{"d":d0 or W[s],"k":"aporte","v":round(float(ap[0]),2),"x":"valor inicial"}] if rec else None;dvt=np.zeros(n)  # proventos líquidos por empresa
     ho=mid=='hold' and HOLD['on'] and bool(RG);bet=np.zeros(n,bool)  # Buy and Hold: apostas de crescimento (HOLD)
     nc=0;skc=np.zeros(n);pc_=np.zeros(n,bool);hw=np.zeros(n);cj=ca=0.0;cx=Caixa(1)  # CDB: rendimento recebido e total aplicado no período, aplicações (Caixa: IR/IOF no resgate)  # alvos caros: semanas com todas caras; semanas que cada uma ficou sem aporte por estar cara; reserva de quem estava cara
@@ -1886,8 +1890,27 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False):
         elif cash>0.005 and wa.sum()>0:
             pend+=cash*wa;cash=0.0
         if mid=='barsi' and j is not None and i>s: cash,pend=_barsi_caixa(D,idx,i,w,sh,P,ok,cash,pend,RG,ban)
-        if i==s and P0 is not None: m=ok&(P>0)&(pend*(1-CUSTO)>=P);px=P;tc=np.zeros(n,bool);oc=lambda k:(dia0," · compra a mercado no 1º dia")
-        else: m,px,tc=Oc(i,ok&(P>0)&(pend*(1-CUSTO)>=P),P);oc=lambda k:olim(Oc,i,k,px,tc)  # compra com preço limite: a reserva espera no CDB até a mínima do dia tocar o limite
+        inf={}  # 1º dia: (dia, texto, hora) de cada compra
+        if i==s and P0 is not None and w1 is None:  # criado no pregão do dia de início: as ordens que o servidor viu tocar o limite (F0) ou o fechamento
+            m=ok&(P>0)&(pend*(1-CUSTO)>=P);tc=np.zeros(n,bool);px=np.array([F0[k][0] if k in F0 else P[k] for k in range(n)])
+            for k in range(n): inf[k]=(F0[k][1],f" · 1º dia: ordem com preço limite R$ {F0[k][0]:.2f}".replace(".",","),F0[k][2]) if k in F0 else (dia0," · 1º dia: no fechamento (não tocou o limite)",None)
+        else:
+            if P0 is not None and i==s: fo=pend>0;r0=P.copy()  # sem cr: ordens a partir do fechamento do dia de início, nos pregões seguintes
+            fo&=pend>0
+            m,px,tc=Oc(i,ok&(P>0)&(pend*(1-CUSTO)>=P)&~fo,P);px=np.array(px,float)  # compra com preço limite: a reserva espera no CDB até a mínima do dia tocar o limite
+            if fo.any() and i>=w1:
+                k_=idx[fo];dd=D["ODI"][k_,max(0,s-1)];lim=r0[fo]*(1-dd);lo,hi,ol=D["LO"][k_,i],D["HI"][k_,i],D["OL"][k_,i]
+                from datetime import date as _d,timedelta as _td
+                dl_=[(_d.fromisoformat(W[i])-_td(days=int(o))).isoformat() if o<255 else "" for o in ol]
+                with np.errstate(invalid="ignore"): toc=(lo<=lim*(1-ORD_FILA))&np.array([d>dia0 for d in dl_])
+                fim=i<T_-1 or _d.fromisoformat(W[i]).weekday()==4  # semana completa (a última dos dados pode estar em andamento)
+                for a_,k in enumerate(np.flatnonzero(fo)):
+                    if toc[a_]: px[k]=min(lim[a_],hi[a_]) if hi[a_]==hi[a_] else lim[a_];inf[k]=(dl_[a_],f" · 1º dia: ordem com preço limite R$ {lim[a_]:.2f}".replace(".",","),None)
+                    elif fim: px[k]=P[k];inf[k]=(W[i]," · 1º dia: no fechamento da semana (não tocou o limite)",None)
+                    else: continue
+                    m[k]=ok[k]&(P[k]>0)&(pend[k]*(1-CUSTO)>=px[k]);fo[k]=False
+                if fim: fo[:]=False
+        oc=lambda k:inf[k][:2] if k in inf else olim(Oc,i,k,px,tc)
         if m.any():
             q=np.where(m,np.floor(pend*(1-CUSTO)/np.where(m,px,np.inf)+1e-9),0.0);m=q>=1
             if m.any():
@@ -1896,7 +1919,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False):
                     qn,po=_nota(D,idx,jd) if RG else (None,None)
                     for k in np.flatnonzero(m):
                         d_,x_=oc(k);e={"d":d_,"k":"compra","t":nm[idx[k]],"q":int(q[k]),"p":round(float(px[k]),2),"v":round(float(cost[k]),2)}
-                        if i==s and k in H0: e["h"]=H0[k]
+                        if k in inf and inf[k][2]: e["h"]=inf[k][2]
                         if RG and _desc(qn[k],po[k]): e["x"]=_desc(qn[k],po[k])
                         if pc_[k]: e["x"]=(e.get("x","")+" · estava cara, comprou depois da queda").lstrip(" ·")
                         if x_: e["x"]=(e.get("x","") + x_).lstrip(" ·")
@@ -1931,6 +1954,9 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False):
         for q in np.flatnonzero(~np.isnan(O.ref)):
             dd=float(D[O.dk][idx[q],me[-1]]);lim=O.ref[q]*((1-dd) if ld=="c" else (1+dd))
             if np.isfinite(lim): oa.append({"t":nm[idx[q]],"lado":ld,"lim":round(float(lim),2),"sem":int(O.sem[q]),**({"r":round(float(pend[q]),2)} if ld=="c" else {"q":int(sh[q])})})
+    for q in np.flatnonzero(fo&(pend>0)):  # ordens do 1º dia ainda abertas (semana em andamento): o servidor confere ao vivo
+        lim=r0[q]*(1-float(D["ODI"][idx[q],max(0,s-1)]))
+        if np.isfinite(lim): oa.append({"t":nm[idx[q]],"lado":"c","lim":round(float(lim),2),"sem":0,"r":round(float(pend[q]),2),"d1":True})
     return v, float(ir), int(nb), int(ns), {"pos":pos,"cash":round(float(res),2),"cdb":{"ap":round(float(ca),2),"j":round(float(cj),2),"p":round(float(cx.P[0]),2),"d":round(float(res)*(D.get("CDI1") or 0)/100,2)},"mov":ev,"ord":oa,"dvt":{nm[idx[q]]:round(float(dvt[q]),2) for q in np.flatnonzero(dvt>=0.005)}}
 
 
@@ -1992,14 +2018,14 @@ def _simspan(D, di, v0, ap, ex, ret):
     return me, aps, wd
 
 
-def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=(), p1=None, ult=False):
+def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=(), p1=None, ult=False, cr=None):
     """Grupo simulação (aba Grupos): uma carteira por modelo com as mesmas empresas e o mesmo valor inicial desde di até a última semana
     dos dados (a mesma conta de grupo(), igual ao Comparar/Previsão com data final = hoje). Recalcula do início a cada versão dos dados
     (os preços antigos são ajustados por proventos e desdobramentos) e guarda o resultado em _C."""
     v0 = max(0.0, float(v0 or 0)); me, aps, wd = _simspan(D, di, v0, ap, ex, ret)
     if not me: return {"error": _curto(D, di), "pend": len(di) > 7 and di > D["w"][-1]}
     if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
-    p1 = sim_p1(p1); key = _simkey(D, tickers, di, aps, wd, p1) + ("u" if ult else "")
+    p1, cr = sim_p1(p1), sim_cr(cr); key = _simkey(D, tickers, di, aps, wd, p1) + ("u" if ult else "") + (cr or "")
     if key in _C: _C.move_to_end(key); return _C[key]
     idx = _simidx(D, tickers, me)
     if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
@@ -2008,7 +2034,7 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=(), p1=None, ult=False):
     out = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "d0": di if len(di) > 7 else D["w"][me[0]], "d1": D["w"][me[-1]], "v0": v0, "ap": ap, "apT": round(apT, 2), "aviso": AVISO,
            "apS": round(sum(aps), 2), "wS": round(sum(wd), 2), "at": D["at"], "n": len(idx), "eng": ENGINE, "cdi": D.get("CDI1"), "m": []}
     for m in MODELOS:
-        v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd, p1=p1, ult=ult)
+        v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd, p1=p1, ult=ult, cr=cr)
         _mzput((key, m["id"]), h)  # todas as movimentações, comprimidas: páginas e histórico por empresa em simmov
         out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
                          "cash": h["cash"], "cdb": h["cdb"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"]), "ord": h.get("ord") or []})
@@ -2026,13 +2052,19 @@ _MZ = OrderedDict(); MZ_MAX = 12  # (simulação, modelo) -> movimentações e p
 def _simkey(D, tickers, di, aps, wd, p1=None): return repr(("sim", ENGINE, D["at"], tuple(tickers), di, tuple(round(x, 2) for x in aps), tuple(round(x, 2) for x in wd), tuple(sorted((p1 or {}).items()))))
 
 
+def sim_cr(x):
+    """Hora em que o grupo foi criado no próprio dia de início, no pregão ('HH:MM'; o aparelho guarda em sim.cr) ou None."""
+    import re
+    return str(x) if x and re.fullmatch(r"\d{2}:\d{2}", str(x)) else None
+
+
 def sim_p1(x):
-    """Preços da compra a mercado do 1º dia vistos ao vivo, guardados pelo aparelho {ticker: [preço, 'HH:MM']} -> {ticker: (preço, 'HH:MM')}."""
+    """Ordens do 1º dia que o servidor viu tocar o limite, guardadas pelo aparelho {ticker: [preço, 'HH:MM', 'AAAA-MM-DD']} -> {ticker: (preço, 'HH:MM', dia)}."""
     import re
     out = {}
     for t, v in (x.items() if isinstance(x, dict) else ()):
         try:
-            if re.fullmatch(r"[A-Z0-9.\-]{1,16}", str(t)) and float(v[0]) > 0 and re.fullmatch(r"\d{2}:\d{2}", str(v[1])): out[str(t)] = (round(float(v[0]), 4), str(v[1]))
+            if re.fullmatch(r"[A-Z0-9.\-]{1,16}", str(t)) and float(v[0]) > 0 and re.fullmatch(r"\d{2}:\d{2}", str(v[1])) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v[2])): out[str(t)] = (round(float(v[0]), 4), str(v[1]), str(v[2]))
         except Exception: continue
         if len(out) >= 200: break
     return out
@@ -2046,25 +2078,25 @@ def _mzput(k, h):
     while len(_MZ) > MZ_MAX: _MZ.popitem(last=False)
 
 
-def sim_hist(D, tickers, di, v0, mid, ap=0.0, ex=(), ret=(), p1=None):
+def sim_hist(D, tickers, di, v0, mid, ap=0.0, ex=(), ret=(), p1=None, cr=None):
     """Histórico completo de um modelo do Grupo simulação (movimentações das mais antigas às mais recentes, posições, proventos por
     empresa), do cache comprimido _MZ; se saiu da memória, refaz só esse modelo."""
     if mid not in MOD or mid not in {m["id"] for m in MODELOS}: return {"error": "Modelo desconhecido."}
     v0 = max(0.0, float(v0 or 0)); me, aps, wd = _simspan(D, di, v0, ap, ex, ret)
     if not me or v0 <= 0: return {"error": "Simulação inválida."}
-    p1 = sim_p1(p1); k = (_simkey(D, tickers, di, aps, wd, p1), mid)
+    p1, cr = sim_p1(p1), sim_cr(cr); k = (_simkey(D, tickers, di, aps, wd, p1) + (cr or ""), mid)
     if k not in _MZ:
         idx = _simidx(D, tickers, me)
         if not idx: return {"error": "Nenhuma empresa no período."}
-        _mzput(k, grupo(D, mid, idx, me, aps, rec=True, wd=wd, p1=p1)[4])
+        _mzput(k, grupo(D, mid, idx, me, aps, rec=True, wd=wd, p1=p1, cr=cr)[4])
     _MZ.move_to_end(k); return json.loads(zlib.decompress(_MZ[k]))
 
 
-def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50, ap=0.0, ex=(), ret=(), p1=None):
+def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50, ap=0.0, ex=(), ret=(), p1=None, cr=None):
     """Movimentações de um modelo do Grupo simulação (mesma conta de simgrupo), das mais recentes para as mais antigas.
     Sem tk: a página [off, off+n) e o total. Com tk: só essa empresa (todas as movimentações dela), a posição (preço médio…) e os
     proventos recebidos. Leve: guardado comprimido; se saiu da memória, refaz só esse modelo."""
-    h = sim_hist(D, tickers, di, v0, mid, ap, ex, ret, p1)
+    h = sim_hist(D, tickers, di, v0, mid, ap, ex, ret, p1, cr)
     if h.get("error"): return h
     ev = h["mov"][::-1]
     if tk:

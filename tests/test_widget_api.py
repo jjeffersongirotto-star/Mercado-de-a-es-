@@ -79,7 +79,7 @@ def test_widget_simgrupo_live_values():
         {"m": "barsi", "n": "Barsi", "cash": 100.0, "pos": [{"t": "PETR4", "q": 10, "inv": 250.0, "p": 28.0}, {"t": "ZZZZ3", "q": 5, "inv": 50.0, "p": 12.0}]},
         {"m": "ibov", "n": "Ibovespa", "ref": 1, "cash": 0, "pos": []}]}
     od, os_, oss, ou = modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe
-    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; modelos.simgrupo = lambda *a: sg; server.universe.universe = lambda rows: rows
+    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; modelos.simgrupo = lambda *a, **k: sg; server.universe.universe = lambda rows: rows
     try:
         r = json.loads(server.api_widget_simgrupo("2025-03", 1000).body)
     finally:
@@ -97,7 +97,7 @@ def test_widget_simgrupo_dia_app_antigo():
     vis = []; sg = {"d0": "2025-04-07", "d1": "2026-10", "v0": 1000.0, "m": []}
     od, os_, oss, ou = modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe
     modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; server.universe.universe = lambda rows: rows
-    modelos.simgrupo = lambda D, tk, di, *a: (vis.append(di), sg)[1]
+    modelos.simgrupo = lambda D, tk, di, *a, **k: (vis.append(di), sg)[1]
     try:
         server.api_widget_simgrupo("2025-04", 1000, json.dumps({"ap": 0, "ex": [], "ret": [], "d": "2025-04-07"}))
         server.api_widget_simgrupo("2025-04", 1000, json.dumps({"d": "2024-01-02"}))  # dia de outro mês: ignora
@@ -114,7 +114,7 @@ def test_widget_simgrupo_xlsx():
         {"m": "barsi", "n": "Método Barsi", "cash": 100.0, "ir": 5.0, "c": 2, "s": 0, "pos": [{"t": "PETR4", "q": 10, "inv": 250.0, "p": 28.0, "pm": 25.0}]}]}
     mov = [{"d": "2025-03-28", "k": "aporte", "v": 1000.0, "x": "valor inicial"}] + [{"d": "2025-04-04", "k": "compra", "t": "PETR4", "q": 1, "p": 25.0, "v": 25.08}] * 300
     od, os_, oss, oh, ou = modelos.data, modelos.set_setores, modelos.simgrupo, modelos.sim_hist, server.universe.universe
-    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; modelos.simgrupo = lambda *a: sg; modelos.sim_hist = lambda *a: {"mov": mov}; server.universe.universe = lambda rows: rows
+    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; modelos.simgrupo = lambda *a, **k: sg; modelos.sim_hist = lambda *a: {"mov": mov}; server.universe.universe = lambda rows: rows
     try:
         r = server.api_widget_simgrupo_xlsx("2025-03", 1000, '{"ap":500}', "Meu/grupo")
     finally:

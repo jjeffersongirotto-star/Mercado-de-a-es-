@@ -8,7 +8,7 @@
   state.selSet = new Set(); state.selMode = false; state.group = null;
   // Grupo simulação (criado na Previsão): {name, tickers: [], sim: {di, v0}}; o servidor simula todos os modelos desde di
   // (/api/modelos/simgrupo, mesma conta do Comparar). Resultado guardado no aparelho e pedido de novo só 1x por dia.
-  const SKEY = 'screenerB3.simgrupo.v16';  // v16: 1º dia a mercado, horário das compras e vendas ao vivo; v15: aporte primeiro na carteira, Buy and Hold novo, confiança nas notícias; v14: saldo do CDB antes de cada movimentação; v13: CDB dia a dia com IR/IOF, preço atual; v12: grupo do mês atual anda até hoje; v11: ordens com fila, nada antes da data inicial, histórico por data; v10: alvos caros (Value, Barsi) e prejuízo só com empresa ruim; v9: ordens com preço limite ligadas + anti-emoção; v8: modelo Adaptativo; v7: nomes das empresas (nm); v6: caixa máximo do Barsi; v5: ações de cada balanço; v4: modelos de método; v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
+  const SKEY = 'screenerB3.simgrupo.v17';  // v17: 1º dia com ordens com preço limite, sem compra na criação; v16: 1º dia a mercado, horário das compras e vendas ao vivo; v15: aporte primeiro na carteira, Buy and Hold novo, confiança nas notícias; v14: saldo do CDB antes de cada movimentação; v13: CDB dia a dia com IR/IOF, preço atual; v12: grupo do mês atual anda até hoje; v11: ordens com fila, nada antes da data inicial, histórico por data; v10: alvos caros (Value, Barsi) e prejuízo só com empresa ruim; v9: ordens com preço limite ligadas + anti-emoção; v8: modelo Adaptativo; v7: nomes das empresas (nm); v6: caixa máximo do Barsi; v5: ações de cada balanço; v4: modelos de método; v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
   try { localStorage.removeItem('screenerB3.simgrupo.v1'); localStorage.removeItem('screenerB3.simgrupo.v2'); localStorage.removeItem('screenerB3.simgrupo.v3'); localStorage.removeItem('screenerB3.simgrupo.v4'); localStorage.removeItem('screenerB3.simgrupo.v5'); localStorage.removeItem('screenerB3.simgrupo.v6'); localStorage.removeItem('screenerB3.simgrupo.v7'); } catch (e) { }
   const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
   const simK = (g) => JSON.stringify([g.sim.di, g.sim.v0, g.sim.ap || 0, g.sim.ex || [], g.sim.ret || []]), today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
@@ -21,18 +21,22 @@
         let d = null;
         for (let i = 0; i < 6; i++) { try { const r = await fetch('/api/modelos/simgrupo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(g.sim) }); d = await r.json(); if (r.status !== 202) break; } catch (e) { d = { error: 'Sem conexão.' }; break; } await new Promise(z => setTimeout(z, 5000)); }
         simLoad.delete(g.name);
-        if (d && !d.error && d.m) { SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); simKeep(g, d.p1); } else if (!ok) SIM[g.name] = { k: simK(g), day: d && d.pend ? today() : '', err: (d && d.error) || 'Não foi possível simular agora.' };  // começo depois dos dados: tenta de novo no dia seguinte
+        if (d && !d.error && d.m) { SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); simKeep(g, d.p1, null, d.r1); } else if (!ok) SIM[g.name] = { k: simK(g), day: d && d.pend ? today() : '', err: (d && d.error) || 'Não foi possível simular agora.' };  // começo depois dos dados: tenta de novo no dia seguinte
         window.gruposRefresh && gruposRefresh();
       })();
     }
     return ok ? c : null;
   }
-  // guardado no grupo (grupos.v1 → sim): p1 = preço e hora da compra a mercado do 1º dia vista ao vivo ({ticker: [preço, 'HH:MM']}, volta
-  // ao servidor para a simulação usar os mesmos preços: modelos._dia0); hr = horário das compras e vendas vistas ao vivo
-  // ({'modelo|ticker|compra|AAAA-MM-DD': ['HH:MM', preço, ações]}; server._simw → prov), para conferir depois do fechamento
-  function simKeep(g, p1, prov) {
+  // guardado no grupo (grupos.v1 → sim): cr = hora da criação no próprio dia de início, no pregão (1º dia com ordens a partir do preço
+  // dessa hora); r1 = preço de referência de cada ação na criação ({ticker: [preço, mínima do dia, 'HH:MM']}); p1 = ordens do 1º dia que
+  // tocaram o limite ao vivo ({ticker: [preço, 'HH:MM', 'AAAA-MM-DD']}); voltam ao servidor (server._sim_hoje, modelos._dia0);
+  // hr = horário das compras e vendas vistas ao vivo ({'modelo|ticker|compra|AAAA-MM-DD': ['HH:MM', preço, ações]}; server._simw → prov)
+  function simKeep(g, p1, prov, r1) {
     let mud = false; const hoje = today(), lim = new Date(Date.now() - 40 * 864e5).toISOString().slice(0, 10);
-    if (p1) { g.sim.p1 = g.sim.p1 || {}; for (const t in p1) if (!g.sim.p1[t]) { g.sim.p1[t] = p1[t]; mud = true; } }
+    if (g.sim.p1) for (const t in g.sim.p1) if (!Array.isArray(g.sim.p1[t]) || g.sim.p1[t].length < 3) {  // formato antigo (compra a mercado na criação): sai com os horários dela
+      delete g.sim.p1[t]; mud = true; if (g.sim.hr) for (const k in g.sim.hr) if (k.split('|')[3] === g.sim.di) delete g.sim.hr[k];
+    }
+    for (const [k, o] of [['p1', p1], ['r1', r1]]) if (o) { g.sim[k] = g.sim[k] || {}; for (const t in o) if (!g.sim[k][t]) { g.sim[k][t] = o[t]; mud = true; } }
     for (const [m, L] of prov || []) for (const e of L || []) {
       const k = `${m}|${e.t}|${e.k}|${e.d}`; g.sim.hr = g.sim.hr || {};
       if (e.h && e.d === hoje && !g.sim.hr[k]) { g.sim.hr[k] = [e.h, e.p, e.q]; mud = true; }
@@ -40,6 +44,7 @@
     if (g.sim.hr) for (const k in g.sim.hr) if (k.split('|')[3] < lim) { delete g.sim.hr[k]; mud = true; }
     if (mud) save();
   }
+  const simF = (g) => { const s = g.sim; return { ap: s.ap || 0, ex: s.ex || [], ret: s.ret || [], ...(s.p1 ? { p1: s.p1 } : {}), ...(s.r1 ? { r1: s.r1 } : {}), ...(s.cr ? { cr: s.cr } : {}) }; };  // f do widget e do ao vivo
   const modN = (m) => m.n;
   // ao vivo: valor de cada modelo com o preço de agora e a variação do dia (o mesmo /api/widget/simgrupo do widget: server._simw);
   // pede de novo a cada 2 min com a aba aberta (as decisões continuam as da simulação)
@@ -48,10 +53,10 @@
     const L = LIVE[g.name], k = simK(g);
     if (!L || L.k !== k || (Date.now() - L.at > 120000 && !L.busy)) {
       LIVE[g.name] = Object.assign(L && L.k === k ? L : { k, m: null }, { busy: true, at: Date.now() });
-      const q = new URLSearchParams({ di: g.sim.di, v0: g.sim.v0, f: JSON.stringify({ ap: g.sim.ap || 0, ex: g.sim.ex || [], ret: g.sim.ret || [], ...(g.sim.p1 ? { p1: g.sim.p1 } : {}) }) });
+      const q = new URLSearchParams({ di: g.sim.di, v0: g.sim.v0, f: JSON.stringify(simF(g)) });
       fetch('/api/widget/simgrupo?' + q).then(r => r.ok ? r.json() : null).then(w => {
         const o = LIVE[g.name]; if (!o || o.k !== k) return; o.busy = false;
-        if (w && w.r) { o.m = Object.fromEntries(w.r.map(x => [x.m, x])); o.u = w.u; simKeep(g, w.p1, w.r.map(x => [x.m, x.prov])); window.gruposRefresh && gruposRefresh(); }
+        if (w && w.r) { o.m = Object.fromEntries(w.r.map(x => [x.m, x])); o.u = w.u; o.nota = w.nota; simKeep(g, w.p1, w.r.map(x => [x.m, x.prov]), w.r1); window.gruposRefresh && gruposRefresh(); }
       }).catch(() => { const o = LIVE[g.name]; if (o) o.busy = false; });
     }
     return L && L.k === k ? L.m : null;
@@ -68,12 +73,16 @@
     return `<p class="gt-help">Desde ${dataBR(d.d0)} · ${brl.format(d.v0)}${d.ap > 0 ? ` + ${brl.format(d.ap)}/mês` : ''} em cada modelo${apx} · ${d.n} empresas${full ? ` · dados até ${dataBR(d.d1)}` : ''}</p>
       <table class="gtab gsim"><thead><tr><th>Modelo</th><th>Rendimento</th><th>Hoje</th><th>Dia</th></tr></thead><tbody>${L.map(x => `<tr class="${x.ref ? '' : 'tap'}"${x.ref ? '' : ` data-simm="${esc(g.name)}|${x.m}"`}><td style="white-space:normal">${esc(modN(x))}${x.ref ? '' : `<span class="gsub">${x.np} empresa(s)</span>`}</td>
       <td class="${x.pct == null ? '' : x.pct < 0 ? 'neg' : 'pos'}">${x.pct == null ? '—' : pc(x.pct)}</td><td>${x.v == null ? '—' : brl.format(x.v)}</td><td class="${x.dp == null ? '' : x.dp < 0 ? 'neg' : 'pos'}">${x.dp == null ? '—' : pc(x.dp)}</td></tr>`).join('')}</tbody></table>
-      ${Object.keys(lv).length ? `<p class="gt-help">Hoje e Dia: preço de agora (${esc((LIVE[g.name] || {}).u || '')}); as compras e vendas são as da simulação, até ${dataBR(c.d.d1)}.</p>` : ''}`;
+      ${c.d.nota || (LIVE[g.name] || {}).nota ? `<p class="gt-help">${esc(c.d.nota || LIVE[g.name].nota)}</p>` : ''}${Object.keys(lv).length ? `<p class="gt-help">Hoje e Dia: preço de agora (${esc((LIVE[g.name] || {}).u || '')}); as compras e vendas são as da simulação, até ${dataBR(c.d.d1)}.</p>` : ''}`;
   }
   window.gSim = {
     has: (n) => groups.some(g => g.name === n),
     next: (n) => { let i = 2; while (groups.some(g => g.name === `${n} ${i}`)) i++; return `${n} ${i}`; },
-    create: (name, sim) => { groups = groups.filter(g => g.name !== name); delete SIM[name]; groups.push({ name, tickers: [], sim: { di: sim.di, v0: sim.v0, ap: sim.ap || 0, ex: sim.ex || [], ret: sim.ret || [] }, updated: new Date().toISOString() }); groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); saveSim(); },
+    create: (name, sim) => {
+      // criado no próprio dia de início, num dia útil, antes do fim do pregão (18:30): o 1º dia começa a partir do preço da hora da criação (cr)
+      const n = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })), hm = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+      const cr = sim.di === today() && n.getDay() >= 1 && n.getDay() <= 5 && hm <= '18:30' ? hm : null;
+      groups = groups.filter(g => g.name !== name); delete SIM[name]; groups.push({ name, tickers: [], sim: { di: sim.di, v0: sim.v0, ap: sim.ap || 0, ex: sim.ex || [], ret: sim.ret || [], ...(cr ? { cr } : {}) }, updated: new Date().toISOString() }); groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); saveSim(); },
   };
   let editing = null, viewing = null;
 
@@ -505,7 +514,7 @@
     // widget até a 1.18 só aceita data AAAA-MM: manda o mês em di e o dia completo em f.d (o servidor usa f.d: server._simw)
     const velho = !window.APP_V || window.verCmp(window.APP_V, '1.19') < 0;
     try { window.JGApp.setSims(JSON.stringify(groups.filter(g => g.sim).map(g => { const di = String(g.sim.di || ''), cd = velho && di.length > 7;
-      return { id: g.name, n: g.name, di: cd ? di.slice(0, 7) : di, v0: g.sim.v0, f: { ap: g.sim.ap || 0, ex: g.sim.ex || [], ret: g.sim.ret || [], ...(cd ? { d: di } : {}), ...(g.sim.p1 ? { p1: g.sim.p1 } : {}) } }; }))); } catch (e) { }
+      return { id: g.name, n: g.name, di: cd ? di.slice(0, 7) : di, v0: g.sim.v0, f: Object.assign(simF(g), cd ? { d: di } : {}) }; }))); } catch (e) { }
   }
   // App Android (window.JGApp): manda os grupos da aba Grupos (mesmas ações e ordem dos quadros: groupData) para o seletor do widget
   function pushGroups() {
