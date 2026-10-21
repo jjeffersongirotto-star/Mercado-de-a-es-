@@ -66,7 +66,8 @@ def fonte(url):
 
 
 def curto(t, n=220):
-    t = re.sub(r"<[^>]+>", " ", html.unescape(t or ""))
+    t = re.sub(r"<!\[CDATA\[|\]\]>", " ", t or "")  # marcas do RSS no meio do texto (Valor: imagem em CDATA antes do resumo)
+    t = re.sub(r"<[^>]+>", " ", html.unescape(t))
     t = re.sub(r"\s+", " ", t).strip()
     return t if len(t) <= n else t[:n].rsplit(" ", 1)[0] + "…"
 
@@ -238,6 +239,7 @@ def main(out):
     itens = sorted(barsi, key=lambda i: i.get("data") or "", reverse=True)[:MAX_BARSI] + merc + marcos
     for it in itens:
         if it.get("url") in dest: it["destaque"] = True  # destaque no topo da aba (escolhido à mão em noticias_marcos.json)
+    for it in itens: it["resumo"] = curto(it.get("resumo") or "", 10 ** 4)  # limpa também as já guardadas (marcas "]]>" do RSS)
     itens.sort(key=lambda i: i.get("data") or "0000", reverse=True)
     data = {"fetched_at": agora.isoformat(timespec="seconds"), "temas": {"mercado": "Mercado"},
             "fontes": sorted(ok_fonte), "itens": itens}

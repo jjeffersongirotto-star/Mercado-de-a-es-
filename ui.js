@@ -25,7 +25,7 @@ if (typeof document !== 'undefined') document.addEventListener('click', (e) => {
 
 // Diálogos do site (substituem confirm/alert/prompt), toast e animação de carregamento
 (function () {
-  function modal({ title, msg, html, input, okText = 'OK', cancelText = 'Cancelar', danger = false, noCancel = false, value = '' }) {
+  function modal({ title, msg, html, input, okText = 'OK', cancelText = 'Cancelar', danger = false, noCancel = false, value = '', check = null }) {
     return new Promise((res) => {
       const w = document.createElement('div'); w.className = 'umod' + (html ? ' umod-wide' : '');
       w.innerHTML = `<div class="umod-box" role="dialog" aria-modal="true">${title ? `<h3>${title}</h3>` : ''}<p></p>
@@ -35,17 +35,23 @@ if (typeof document !== 'undefined') document.addEventListener('click', (e) => {
       document.body.appendChild(w);
       const inp = w.querySelector('.umod-in'); if (inp) { inp.value = value; setTimeout(() => { inp.focus(); inp.select(); }, 30); } else setTimeout(() => w.querySelector('.umod-ok').focus({ preventScroll: true }), 30);
       const done = (v) => { w.remove(); document.removeEventListener('keydown', key, true); res(v); };
-      const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); done(input ? null : false); } else if (e.key === 'Enter') { e.preventDefault(); done(input ? inp.value : true); } };
+      const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); done(input ? null : false); } else if (e.key === 'Enter' && !check) { e.preventDefault(); done(input ? inp.value : true); } };
       document.addEventListener('keydown', key, true);
       w.addEventListener('click', (e) => {
         if (e.target === w || e.target.closest('.umod-c')) done(input ? null : false);
-        else if (e.target.closest('.umod-ok')) done(input ? inp.value : true);
+        else if (e.target.closest('.umod-ok')) {
+          if (!check) return done(input ? inp.value : true);
+          const r = check(w); if (r && r.erro) { const er = w.querySelector('.umod-err'); if (er) er.textContent = r.erro; return; }  // formulário: fica aberto com o erro
+          done(r);
+        }
       });
     });
   }
   window.uiConfirm = (msg, o = {}) => modal({ msg, okText: o.ok || 'Confirmar', danger: !!o.danger, title: o.title, cancelText: o.cancel || 'Cancelar' });
   window.uiAlert = (msg, o = {}) => modal({ msg, html: o.html, title: o.title, noCancel: true });  // o.html: conteúdo já escapado (tabelas)
   window.uiPrompt = (msg, value = '', o = {}) => modal({ msg, input: true, value, okText: o.ok || 'Salvar', title: o.title });
+  // formulário (html com os campos e um <p class="umod-err">): check(caixa) -> valor (fecha) ou {erro} (mostra e fica aberto); Cancelar -> false
+  window.uiForm = (title, html, check, o = {}) => modal({ title, html, okText: o.ok || 'Salvar', check });
   window.uiToast = (msg) => {
     let t = document.getElementById('uiToast');
     if (!t) { t = document.createElement('div'); t.id = 'uiToast'; t.className = 'pv-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
