@@ -15,9 +15,9 @@
     : fil === 'fav' ? (n.t || []).some(t => favR().has(t.slice(0, 4))) || (n.tf || []).some(x => favs().has(x.split(':')[1]))
     : fil === 'mercado' && (n.m || ['br']).includes('br'));
   const dt = (s) => !s ? '' : s.length === 7 ? `${s.slice(5, 7)}/${s.slice(0, 4)}` : `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
-  const card = (n) => `<a class="nw-card" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer">
+  const card = (n, dst) => `<a class="nw-card${dst ? ' nw-dest' : ''}" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer">
       ${n.img ? `<img class="nw-img" src="${esc(n.img)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
-      <div class="nw-tx"><p class="nw-meta">${esc(n.fonte || '')}${n.data ? ' · ' + dt(n.data) : ''}${(n.m || []).length ? ' · ' + n.m.map(c => esc(pais(c))).join(', ') : ''}</p><h3 class="nw-t">${esc(n.titulo)}</h3>${(n.t || []).length + (n.tf || []).length ? `<p class="nw-tk">${(n.t || []).concat((n.tf || []).map(x => x.split(':')[1])).map(t => `<span class="gchip">${esc(t)}</span>`).join('')}</p>` : ''}${n.resumo ? `<p class="nw-d">${esc(n.resumo)}</p>` : ''}<span class="nw-go">Abrir matéria ↗</span></div></a>`;
+      <div class="nw-tx"><p class="nw-meta">${dst ? '<span class="nw-dst">Destaque</span> ' : ''}${esc(n.fonte || '')}${n.data ? ' · ' + dt(n.data) : ''}${(n.m || []).length ? ' · ' + n.m.map(c => esc(pais(c))).join(', ') : ''}</p><h3 class="nw-t">${esc(n.titulo)}</h3>${(n.t || []).length + (n.tf || []).length ? `<p class="nw-tk">${(n.t || []).concat((n.tf || []).map(x => x.split(':')[1])).map(t => `<span class="gchip">${esc(t)}</span>`).join('')}</p>` : ''}${n.resumo ? `<p class="nw-d">${esc(n.resumo)}</p>` : ''}<span class="nw-go">Abrir matéria ↗</span></div></a>`;
   // Métodos de investimento: matérias do ⓘ → Métodos de investimento (.met-links, fonte única), em pasta: 1º toque destaca, 2º abre
   const metHtml = () => {
     const L = [...document.querySelectorAll('#infoModal .met-links li')];
@@ -47,8 +47,9 @@
     const dest = ((D && D.itens) || []).filter(n => n.destaque || (!('destaque' in n) && /^Preço-teto:/i.test(n.titulo || '')));
     const L = ((D && D.itens) || []).filter(n => !dest.includes(n)).filter(pass).sort((a, b) => (b.data || '0000').localeCompare(a.data || '0000'));
     root().innerHTML = `<section class="nw-head"><h2>Notícias ${glossBtn('Notícias')}</h2><div class="pv-per nw-fil">${FIL.map(([k, l]) => `<button type="button" data-nwf="${k}" class="${k === fil ? 'on' : ''}">${l}</button>`).join('')}</div></section>` + metHtml()
-      + (dest.length ? `<h3 class="nw-sub">Destaque</h3><div class="nw-grid">${dest.map(card).join('')}</div>` : '')
-      + (L.length ? `<div class="nw-grid">${L.map(card).join('')}</div>` : `<p class="pvd-note">${fil === 'fav' ? 'Nenhuma notícia cita seus Favoritos por enquanto.' : 'Nenhuma notícia por enquanto.'}</p>`)
+      // Destaque é o 1º card da mesma grade: as fileiras começam cheias e só a última pode ficar incompleta
+      + (dest.length || L.length ? `<div class="nw-grid">${dest.map(n => card(n, true)).join('')}${L.map(n => card(n)).join('')}</div>` : '')
+      + (L.length ? '' : `<p class="pvd-note">${fil === 'fav' ? 'Nenhuma notícia cita seus Favoritos por enquanto.' : 'Nenhuma notícia por enquanto.'}</p>`)
       + `<p class="pvd-note">Resumos curtos; o texto completo está no site de cada fonte (abre em nova aba). Para estudo, não é recomendação.</p>`;
   }
   document.addEventListener('click', (e) => {

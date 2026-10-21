@@ -38,7 +38,9 @@ function fmtPrice(v, cur) {
 const srcInfo = (id) => (state.data?.sources || []).find(s => s.id === id) || { id, name: id, logo: '' };
 const logoImg = (id, cls = 'srclogo') => { const s = srcInfo(id); return s.logo ? `<img class="${cls}" src="${s.logo}" alt="" loading="lazy">` : ''; };
 // valor exibido/filtrado: consenso ('Todos') ou só a fonte escolhida
-function val(r, k) {
+// valor exibido: indicador criado pelo usuário que responde pela chave (indicadores.js → CI) ou o da fonte (val0)
+function val(r, k) { const c = window.CI && CI.of(k); return c ? CI.calc(r, c) : val0(r, k); }
+function val0(r, k) {
   if (state.source === 'all') return r.v[k];
   const S = r.S ? r.S[state.source] : (state.data.single_source === state.source ? r.v : null);
   const x = S ? S[k] : null;
@@ -209,10 +211,10 @@ function buildFilters() {
 function clearFilters() { prefs.values = {}; changed(); renderFilterUI(); }
 
 // ---------- Ordenação ----------
-// Opções: Alta do dia, indicadores com posição em Ordenar (campo sort do servidor) e De A a Z
+// Opções: Alta do dia, Ganância (Medo e Ganância da ação: rows.fg[0], 0–100), indicadores com posição em Ordenar (campo sort do servidor) e De A a Z
 function buildSortOptions() {
   const sel = $('#sortKey');
-  const opts = [{ key: 'var', label: 'Alta do dia (%)' }, { key: 'fair', label: 'Barato/Caro (%)' }, ...state.data.fields.filter(f => f.sort).sort((a, b) => a.sort - b.sort), { key: 'nome', label: 'De A a Z' }];
+  const opts = [{ key: 'var', label: 'Alta do dia (%)' }, { key: 'fg', label: 'Ganância (Medo e Ganância da ação)' }, { key: 'fair', label: 'Barato/Caro (%)' }, ...state.data.fields.filter(f => f.sort).sort((a, b) => a.sort - b.sort), { key: 'nome', label: 'De A a Z' }];
   sel.innerHTML = opts.map(o => `<option value="${o.key}">${esc(o.label)}</option>`).join('');
   if (!opts.some(o => o.key === state.sortKey)) { state.sortKey = 'var'; state.sortDir = -1; updateSortDir(); }
   sel.value = state.sortKey;
@@ -249,7 +251,7 @@ function conf(r) {
   return (r._cf = { p: w ? Math.round(a / w * 100) : null, N: ids.length });
 }
 const confTxt = (r) => { const c = conf(r); return c.N < 2 || c.p == null ? `${c.N} fonte${c.N === 1 ? '' : 's'}` : `${c.p}% concordam`; };
-const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : k === 'var' ? r.var : k === 'conf' ? (c => c.p == null ? null : c.p + c.N / 1000)(conf(r)) : k === 'fair' ? (f => f.why ? null : f.pct)(fairOf(r)) : val(r, k);
+const getVal = (r, k) => (k === 'ticker' || k === 'nome') ? r[k] : k === 'var' ? r.var : k === 'fg' ? (r.fg ? r.fg[0] : null) : k === 'conf' ? (c => c.p == null ? null : c.p + c.N / 1000)(conf(r)) : k === 'fair' ? (f => f.why ? null : f.pct)(fairOf(r)) : val(r, k);
 
 // Ordem das buscas: 0 ticker começa com · 1 ticker contém · 2 nome · 3 setor · 4 descrição/atividade · 9 sem relação
 function searchRank(r, q) { return ((typeof FAVS !== 'undefined' && FAVS.has(r.ticker)) ? 0 : 100) + searchRank0(r, q); }
@@ -304,27 +306,28 @@ function cardsHtml(r) {
   let cards = '';
   for (const f of fields) {
     if (f.key === 'preco' || (f.grp && f.key !== selKey(f.grp))) continue;  // grupo: só o período escolhido em Mais filtros
-    const v = val(r, f.key), st = all ? (r.st || {})[f.key] : null, src = all ? (r.src || {})[f.key] : null;
+    const v = val(r, f.key), st = all && !f.ci ? (r.st || {})[f.key] : null, src = all && !f.ci ? (r.src || {})[f.key] : null;  // criado: sem selos das fontes
     const nSrc = r.S ? Object.values(r.S).filter(d => d[f.key] != null).length : 0;
     const ag = (r.ag || {})[f.key] || [];
     const cls = ['card'];
     if (v === null || v === undefined) cls.push('na');
     else if (v < 0) cls.push('neg');
     let badge = '';
-    const cmo = all ? ((r.cm || {})[f.key] || {}) : {}, cmt = cmo.t;
+    const cmo = all && !f.ci ? ((r.cm || {})[f.key] || {}) : {}, cmt = cmo.t;
     if (cmo.aj) cls.push('aj');
-    const isBank = all && (r.bk || []).includes(f.key);
-    if (isBank) { cls.push('bank'); badge = '<span class="badge bg-blue-900 text-blue-100 font-bold border border-blue-700" title="Banco/seguradora — indicador não comparável entre fontes">banco</span>'; }
+    const isBank = all && !f.ci && (r.bk || []).includes(f.key);
+    if (f.ci) badge = '<span class="badge ci-c" title="Indicador criado por você (+ Indicadores → Criar indicador)">criado</span>';
+    else if (isBank) { cls.push('bank'); badge = '<span class="badge bg-blue-900 text-blue-100 font-bold border border-blue-700" title="Banco/seguradora — indicador não comparável entre fontes">banco</span>'; }
     else if (st === 'red') { cls.push('red'); if (cmt === 'avg') cls.push('avg'); badge = `<span class="badge bg-red-600 text-white">${cmt === 'avg' ? 'média' : cmt === 'w' ? 'pond.' : cmt === 'pri' ? '2 f.' : '≠'}</span>`; }
     else if (st === 'amb') { cls.push('res'); badge = `<span class="badge bg-amber-500 text-slate-900 font-bold">${((r.ex || {})[f.key] || []).length ? '±' : ag.length + '/' + (nSrc - (((r.xv || {})[f.key]) || []).length)}</span>`; }
     else if (cmt === 'pri') { cls.push('two'); badge = '<span class="badge bg-slate-600 text-slate-100" title="apenas 2 fontes, divergentes — exibida a de maior prioridade">2 fontes</span>'; }
     else if (src && src !== 'multi' && v != null) { badge = logoImg(src, 'srclogo opacity-80'); if (src === 'si') cls.push('si'); }
-    if (all && nSrc >= 1 && v != null || st) cls.push('tip');
+    if (!f.ci && (all && nSrc >= 1 && v != null || st)) cls.push('tip');
     cards += `<div class="${cls.join(' ')}" data-key="${f.key}">
       <div class="lbl"><span class="truncate" title="${esc(f.label)}">${esc(f.short || f.label)}</span>${glossBtn(f.gl || f.label)}${cmo.aj ? '<span class="badge bg-sky-600 text-white font-bold ml-auto mr-0.5" title="concordância via EBIT ajustado">aj</span>' : ''}${badge}</div>
       <div class="val">${v == null ? '—' : fmt(v, f.unit, f.key, r.cur)}</div><div class="detail"></div></div>`;
   }
-  return `<div class="cards p-2.5 sm:p-3">${cards}</div>`;
+  return `<div class="cards p-2.5 sm:p-3">${cards}</div>${window.CI ? CI.cardHtml(r) : ''}`;
 }
 
 function tipHtml(r, f) {
@@ -771,7 +774,9 @@ async function load() {
     if (country === 'br') { d.rowsK = universe(d.rows); d.rows = tradable(d.rows); await loadProfiles(d.rows); } // todas as classes negociadas; grupos prontos usam rowsK (1 por empresa)
     if (country === 'br' && window.etfRows) { try { d.rows = d.rows.concat(await window.etfRows()); } catch (e) { } }  // ETFs (etfs.js, /api/etfs): Comparar, Carteira, Favoritos, Grupos
     d.rows.forEach(prepRow); d.hasLiq = d.rows.some(x => x.v.liq2m != null);
+    d.fields0 = d.fields; if (window.CI) d.fields = CI.fields(d.fields0);  // + indicadores criados (indicadores.js)
     state.data = d; state.rows = d.rows; state.rowMap = Object.fromEntries(d.rows.map(x => [x.ticker, x])); state.fieldMap = Object.fromEntries(d.fields.map(f => [f.key, f]));
+    if (window.CI) CI.listHtml();
     sendPins(); pushApp();
     $('#updated').innerHTML = `<span class="max-sm:hidden">Atualizado: </span><b class="text-slate-200">${d.updated_at_sp.replace(/^(\d\d\/\d\d\/)\d\d(\d\d) (.*)$/, '$1$2 <span class="upd-t whitespace-nowrap">$3</span>')}</b> <span class="max-sm:hidden">(Brasília)</span>` + (d.refreshing ? ' · <span class="text-amber-400">atualizando…</span>' : '');
     const st = d.status || {}, c = d.counts || {};
@@ -788,6 +793,12 @@ async function load() {
     if (d.refreshing) setTimeout(load, 3000);
   } catch (e) { if (seq === loadSeq) { $('#updated').textContent = 'Erro ao carregar: ' + e; setTimeout(load, 5000); } }
 }
+// indicadores criados mudaram (indicadores.js): campos, filtros, Ordenar e cards de novo
+window.refreshFields = () => {
+  if (!state.data) return;
+  state.data.fields = CI.fields(state.data.fields0); state.fieldMap = Object.fromEntries(state.data.fields.map(f => [f.key, f]));
+  buildSortOptions(); renderFilterUI(); computeFilters(); apply();
+};
 async function init() {
   if (!state.data) $('#results').innerHTML = loaderHTML('Carregando…');
   try { state.countries = await (await fetch('/api/countries')).json(); } catch (e) { state.countries = []; }
