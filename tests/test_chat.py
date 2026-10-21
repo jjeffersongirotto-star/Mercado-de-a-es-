@@ -344,13 +344,32 @@ def test_ai_down_answers_fast_from_knowledge():
         calls.append(url); return Resp({}, 503)
     old = _with_ai(fake)
     try:
-        chat._DOWN["until"] = 0; t0 = time.time()
+        chat._DOWN.clear(); t0 = time.time()
         out = chat.answer2("E o goku?", [], D, ret_fn, {}, None)
         out2 = chat.answer2("e o naruto?", [], D, ret_fn, {}, None)
     finally:
-        _restore(old); chat._DOWN["until"] = 0
+        _restore(old); chat._DOWN.clear()
     assert "Dragon Ball" in out["a"] and "sites especializados" in out["a"] and time.time() - t0 < 5
-    assert "Naruto" in out2["a"] and len(calls) <= 2  # depois do 503, não tenta a IA de novo por 2 min
+    assert "Naruto" in out2["a"] and len(calls) <= 3  # cada modelo no máximo 1 vez: depois do 503, aquele modelo fica 2 min sem ser chamado
+
+def test_ai_model_busy_uses_next_model():
+    calls = []
+    def fake(url, headers=None, json=None, timeout=None):
+        calls.append(url)
+        if "gemini-3.5-flash" in url: return Resp({}, 503)  # o principal ocupado: usa o outro
+        if json["generationConfig"].get("responseMimeType"): return _gem('{"tipo":"analise"}')
+        return _gem("Resposta do modelo reserva.")
+    old = _with_ai(fake)
+    try:
+        chat._DOWN.clear(); chat._QA.clear()
+        out = chat.answer2("qual a estratégia da PETR4 para o futuro?", [], D, ret_fn, {})
+        n = len(calls); chat._QA.clear()
+        out2 = chat.answer2("qual a estratégia da VALE3 para o futuro?", [], D, ret_fn, {})
+    finally:
+        _restore(old); chat._DOWN.clear()
+    assert out["mode"] == "gemini" and out["a"] == "Resposta do modelo reserva." and out2["mode"] == "gemini"
+    assert not any("gemini-3.5-flash" in u for u in calls[n:])  # o ocupado fica de fora por 2 min
+    assert chat.AI_ST["ok"]
 
 def test_slang_typos_and_synonyms():
     for q, k in (("vacas leiteiras dos bancos", "dy"), ("blue chips", "valmerc"), ("ações lucrativas", "roe"), ("dy da petrobars", "dy")):

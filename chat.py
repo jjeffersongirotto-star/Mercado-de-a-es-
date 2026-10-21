@@ -17,7 +17,7 @@ log = logging.getLogger("chat")
 BASE = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE, "cache", "chat_log.jsonl")
 DEADLINE_S = 35  # tempo total da resposta no servidor; IA fora do ar não segura a pessoa por mais que isso
-_DOWN = {"until": 0.0}  # Gemini respondeu 503/429: pula a IA por 2 min e responde com o que o site tem
+_DOWN = {}  # modelo do Gemini que respondeu 503/429 -> até quando pular só ele (2 min); os outros modelos seguem tentando
 
 # ============================================================ vocabulário
 IDX = {"@ibov": ["ibovespa", "ibov", "indice bovespa"], "@usd": ["dolar", "usd", "cambio"], "@cdi": ["cdi", "cdb", "renda fixa"],
@@ -1669,15 +1669,20 @@ def link_ext(out, q, ext_fn, hist=None):
 
 def _post(model, body, deadline, cap=15):
     left = deadline - time.time()
-    if left < 4 or time.time() < _DOWN["until"]: raise TimeoutError("sem tempo ou IA fora do ar")
+    if left < 4: raise TimeoutError("sem tempo")
+    if time.time() < _DOWN.get(model, 0): raise _Pula(model + " fora do ar")  # tenta o próximo modelo
     try:
         r = requests.post(API.format(model), headers={"x-goog-api-key": os.environ.get("GEMINI_API_KEY", ""), "Content-Type": "application/json"},
                           json=body, timeout=min(cap, left))
     except requests.RequestException as e:
         AI_ST.update(t=time.time(), ok=False, m=model, e=type(e).__name__); raise
-    if r.status_code in (429, 503): _DOWN["until"] = time.time() + 120
+    if r.status_code in (429, 503): _DOWN[model] = time.time() + 120
     AI_ST.update(t=time.time(), ok=r.status_code == 200, m=model, e="" if r.status_code == 200 else _ai_err(r))
     return r
+
+
+class _Pula(requests.RequestException):
+    """Modelo pulado por estar fora do ar há pouco (503/429): quem chama passa ao próximo modelo."""
 
 
 AI_ST = {}  # última chamada à IA (Gemini): quando, deu certo, modelo, motivo do erro — mostrado no chat e no ⓘ (ai_status)
