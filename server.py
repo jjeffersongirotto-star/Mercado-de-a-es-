@@ -847,13 +847,11 @@ def period_returns(di, df, tickers):
     except Exception as e: log.warning("índices %s..%s: %s", di, df, e)
     return out
 
-@app.post("/api/chat")
-def api_chat(body: dict):
+def _chat_ctx():
+    """Dados e funções do chat (os mesmos das abas): índice do chat, retorno no período, empresa de fora, cotações, notícias, modelos."""
     import chat
-    q = str((body or {}).get("q") or "").strip()[:1000]
-    if not q: return JSONResponse({"a": "Escreva uma pergunta.", "mode": "regras"})
     rows = [r for r in ((cache.data or {}).get("rows") or [])]
-    if not rows: return JSONResponse({"a": "Os dados ainda estão carregando; tente de novo em instantes.", "mode": "regras"})
+    if not rows: return None
     MX = ((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}
     def ret_fn(di, df, T):  # mesmo cálculo da aba Comparar
         try: return period_returns(di, df, T)
@@ -862,7 +860,6 @@ def api_chat(body: dict):
     key = ((cache.data or {}).get("updated_at"), id(MX), len(CAD))
     if _chat_D.get("key") != key:  # índice de nomes/apelidos: recalcula só quando os dados mudam
         _chat_D.update(key=key, D=chat.build(rows, FIELDS, MX, CAD))
-    chat_D = _chat_D["D"]
     def ext_fn(t, c):  # empresa ligada a um assunto (qualquer país do site): mesmos dados das abas
         try:
             if c != "br" and c not in tradingview.COUNTRIES: return None
@@ -883,11 +880,54 @@ def api_chat(body: dict):
         except Exception as e:
             log.warning("chat cotação %s: %s", k, e)
         return None
+    def news_fn():  # notícias da aba Notícias com o assunto de cada uma
+        try: return json.loads(api_noticias().body).get("itens") or []
+        except Exception as e: log.warning("chat notícias: %s", e); return []
+    fx = {"news": news_fn, "pre": lambda: snapshots.load("modelos_pre", max_mem_age=6 * 3600)[0]}
+    return _chat_D["D"], ret_fn, ext_fn, quote_fn, fx
+
+@app.post("/api/chat")
+def api_chat(body: dict):
+    import chat
+    q = str((body or {}).get("q") or "").strip()[:1000]
+    if not q: return JSONResponse({"a": "Escreva uma pergunta.", "mode": "regras"})
+    c = _chat_ctx()
+    if not c: return JSONResponse({"a": "Os dados ainda estão carregando; tente de novo em instantes.", "mode": "regras"})
+    chat_D, ret_fn, ext_fn, quote_fn, fx = c
     try:
-        out = chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}, ext_fn, quote_fn, (body or {}).get("topic"))
+        out = chat.answer2(q, (body or {}).get("hist") or [], chat_D, ret_fn, (body or {}).get("ctx") or {}, ext_fn, quote_fn, (body or {}).get("topic"), fx)
     except Exception:  # nunca devolve erro 500 ao usuário: registra a causa e responde com uma mensagem
         log.exception("chat: erro na pergunta %r", q[:200])
         out = {"a": "Tive um problema para responder agora. Tente de novo em instantes ou reformule a pergunta.", "mode": "regras"}
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+@app.get("/api/chat/menu")
+def api_chat_menu():
+    """Chat guiado: menu (intencoes.json) + listas do site (indicadores, setores, seções do ⓘ)."""
+    import chat
+    c = _chat_ctx()
+    if not c: return JSONResponse({"warming": True}, status_code=202, headers={"Cache-Control": "no-store"})
+    return JSONResponse(chat.menu(c[0]), headers={"Cache-Control": "no-store"})
+
+@app.get("/api/chat/ia")
+def api_chat_ia():
+    """A IA do chat (Gemini) está funcionando? Para o topo do chat e o ⓘ; nunca mostra a chave."""
+    import chat
+    return JSONResponse(chat.ai_status(), headers={"Cache-Control": "no-store"})
+
+@app.post("/api/chat/guia")
+def api_chat_guia(body: dict):
+    """Chat guiado: resposta de um caminho do menu (chat.guiada) com os dados do site; nada de IA."""
+    import chat
+    b = body or {}; f = str(b.get("f") or "")[:20]; a = b.get("a") if isinstance(b.get("a"), dict) else {}
+    c = _chat_ctx()
+    if not c: return JSONResponse({"a": "Os dados ainda estão carregando; tente de novo em instantes."})
+    D, ret_fn, _, quote_fn, fx = c
+    for k in ("e", "e2", "fav", "cart"): a[k] = [str(t).upper()[:12] for t in (a.get(k) or [])][:60] if isinstance(a.get(k), list) else []
+    try: out = {"a": chat.guiada(f, a, D, ret_fn, quote_fn, fx)}
+    except Exception:
+        log.exception("chat guia: %s", f); out = {"a": "Tive um problema para responder agora. Tente de novo em instantes."}
+    chat._log(f"[guia] {f} {json.dumps({k: v for k, v in a.items() if v and k not in ('fav', 'cart')}, ensure_ascii=False)[:200]}", dict(out, mode="guia"), chat._P0(D), time.time())
     return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
 _chat_D = {}
