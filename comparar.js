@@ -3,12 +3,15 @@
   const $c = (s) => document.querySelector(s);
   const KEY = 'screenerB3.comparar.v1';
   const IDX = Object.entries(window.INDICES || {}).map(([k, n]) => ['@' + k, n, k]);  // nomes: history.INDICES (servidor)
-  const COLORS = ['#34d399', '#60a5fa', '#facc15', '#f472b6', '#fb923c', '#a78bfa', '#d4a373', '#22d3ee', '#f87171', '#a3e635', '#e879f9', '#94a3b8'];
-  const today = new Date().toISOString().slice(0, 10), yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+  // cores das linhas: as do gráfico do card (grafico.js → GC_LINES) e, depois delas, cores extras para mais itens
+  const COLORS = (window.GC_LINES || []).map(L => L.color).concat(['#22d3ee', '#f87171', '#a3e635', '#e879f9', '#94a3b8']);
+  const yago = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   let S = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } })();
-  S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.ct = S.ct || 'br'; S.vm = S.vm || 'pct'; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.df = S.df || today; S.qa = ''; S.qb = '';
+  // Data final: vazio = hoje (Brasília), lido a cada uso; só fica guardada quando o usuário escolhe outra data
+  const df0 = S.df; Object.defineProperty(S, 'df', { get: () => S._df || hojeSP(), set: (v) => { S._df = v && v < hojeSP() ? v : ''; }, enumerable: false }); S.df = df0;
+  S.items = S.items || []; S.min = !!S.min; S.all = !!S.all; S.ct = S.ct || 'br'; S.vm = S.vm || 'pct'; S.crit = S.crit || 'preco'; S.di = S.di || yago; S.qa = ''; S.qb = '';
   S.ini = S.ini >= 0 ? S.ini : 20000; S.ap = S.ap >= 0 ? S.ap : 500; S.mu = S.mu || 'sel'; S.mv = S.mv || 'media'; S.mg = S.mg === 'grp' ? 'grp' : 'ind';  // Modelos: valores, empresas e tabela
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S.df, min: S.min, all: S.all, ct: S.ct, vm: S.vm, fgOrd: S.fgOrd, ini: S.ini, ap: S.ap, mu: S.mu, mv: S.mv, mg: S.mg })); } catch (e) { } };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ items: S.items, crit: S.crit, di: S.di, df: S._df, min: S.min, all: S.all, ct: S.ct, vm: S.vm, fgOrd: S.fgOrd, ini: S.ini, ap: S.ap, mu: S.mu, mv: S.mv, mg: S.mg })); } catch (e) { } };
   // País da comparação (bandeiras): 'br' (padrão), outro país ou 'all' (🌐). Ação de fora = "us:AAPL"; índice do país = "@ix:us".
   // Linhas de cada país = mesmo /api/data das abas (carregadas uma vez); Brasil reaproveita state.data quando a aba Mercado está no Brasil.
   const RC = {};
@@ -74,15 +77,6 @@
     $c('#cmpMin').textContent = S.min ? '▸ Expandir gráfico' : '▾ Minimizar gráfico';
     $c('#cmpMin').setAttribute('aria-expanded', String(!S.min));
   }
-  let MET = null;
-  const metrics = async () => MET || (MET = fetch('/api/metrics').then(r => r.json()).then(d => d.metrics || {}).catch(() => { MET = null; return {}; }));
-  function monthRet(m, di, df) {
-    if (!m || !m.mc || !m.mc0) return null;
-    const [y0, m0] = m.mc0.split('-').map(Number), ix = (s) => (+s.slice(0, 4) - y0) * 12 + (+s.slice(5, 7) - m0);
-    const a = ix(di) - 1, b = Math.min(ix(df), m.mc.length - 1);
-    if (a < 0 || b <= a || !m.mc[a]) return null;
-    return (m.mc[b] / m.mc[a] - 1) * 100;
-  }
   function drop(e) {
     const box = e.target.closest('.cmp-srch'), q = norm(e.target.value).trim(), d = box.querySelector('.pv-combo');
     if (!q) { d.classList.add('hidden'); return; }
@@ -107,7 +101,6 @@
     }
     chart.classList.toggle('hidden', S.min || S.all);
     if (S.all) { $c('#cmpLess').innerHTML = loaderHTML('Comparando…'); $c('#cmpMore').innerHTML = loaderHTML('Comparando…'); requestAnimationFrame(() => ['#cmpLess', '#cmpMore'].forEach(k => { const el = $c(k); if (el && el.getAnimations) el.getAnimations({ subtree: true }).forEach(a => { try { a.startTime = 0; } catch (e) {} }); })); }
-    const t0 = performance.now();
     if (!S.items.length) { chart.querySelector('.gc-plot').innerHTML = ''; chart.querySelector('.gc-leg').innerHTML = ''; cols(); return; }
     if (S.all) {
       // Comparar tudo: uma chamada traz ações + índices (sem gráfico). Servidor aquecendo (202): mantém a animação e tenta de novo.
@@ -119,7 +112,7 @@
       if (my !== seq) return;
       S._miss = !R; R = R || {};
       for (const [id, v] of Object.entries(R)) vals[id] = v;
-      cols(); chips(); window.__cmpMs = Math.round(performance.now() - t0); return;
+      cols(); chips(); return;
     }
     const start = Date.parse(S.di), end = Date.parse(S.df) + 864e5 - 1;
     const kind = (Date.now() - start) > 5 * 365 * 864e5 ? 'm' : 'd';
@@ -156,7 +149,7 @@
       for (const [id, , k] of IDX) if (vals[id] == null) { const d = anyP[k]; if (d && !d.error) { const pts = k === 'ibov' ? gcPricePts(d, start, end) : (k === 'usd' || k === 'gold') ? gcPricePts({ t: d.d.map(x => Date.parse(x) / 1000), c: d.v }, start, end) : gcRatePts(d, start, end); if (pts.length) vals[id] = pts[pts.length - 1][1]; } }
     }
     if (!S.all) S._miss = false;
-    cols(); chips(); window.__cmpMs = Math.round(performance.now() - t0);
+    cols(); chips();
   }
   function cols() {
     const ref = S.items[0], rv = vals[ref], ind = S.crit !== 'preco';
@@ -299,7 +292,6 @@
   // CDB e Ouro: ⓘ com a explicação curta (Glossário); a nota só aparece quando o ouro começa depois do início do período
   window.refInfo = (m) => glossBtn(({ cdb: 'CDB', ouro: 'Ouro', ibov: 'Ibovespa', idiv: 'IDIV' })[m] + ' nos modelos');
   window.modRefNote = (d) => (d.ref || []).filter(r => /cotação do ouro só desde/.test(r.nota || '')).map(r => `Ouro: ${esc(r.nota.split('; ').slice(1).join('; '))}.`).join(' ') + (d.fora ? ` Método Barsi: ${d.fora} de ${d.t.length} empresas fora do método (setor não perene ou sem dividendos regulares) aparecem como — e não entram nas colocações dele.` : '');
-  window.modRK = (p) => RK(p);
   // modo Grupo: cada modelo cuida de UMA carteira com as empresas escolhidas (modelos.grupo); CDB e Ouro com o mesmo dinheiro
   window.modGrupo = (d, nm) => {
     const L = (d.cart || []).slice().sort((a, b) => (b.pct ?? -1e9) - (a.pct ?? -1e9)), cl = (v) => v == null ? '' : v < 0 ? 'dn' : 'up';
@@ -406,7 +398,7 @@
       prep();
     });
     $c('#cmpDi').addEventListener('change', () => { S.di = $c('#cmpDi').value || yago; prep(); });
-    $c('#cmpDf').addEventListener('change', () => { S.df = $c('#cmpDf').value || today; prep(); });
+    $c('#cmpDf').addEventListener('change', () => { S.df = $c('#cmpDf').value; prep(); });
     for (const [id, k] of [['#cmpIni', 'ini'], ['#cmpAp', 'ap']]) $c(id).addEventListener('change', () => { S[k] = Math.max(0, parseBR($c(id).value)); $c(id).value = F2.format(S[k]); prep(); });
     $c('#cmpMu').addEventListener('change', () => { S.mu = $c('#cmpMu').value; prep(); });
     root.addEventListener('input', (e) => { const k = e.target.dataset.q; if (k) { S[k] = e.target.value; cols(); } });

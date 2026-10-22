@@ -4,7 +4,6 @@ const view = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY) || 
 const saveView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ country: state.country, source: state.source })); } catch (e) { } };
 const state = { country: view.country || 'br', source: view.source || 'all', countries: [], expanded: new Set(), rowMap: {}, data: null, rows: [], filtered: [], shown: 0, sortKey: 'var', sortDir: -1, filters: {}, fieldMap: {} };
 const $ = (s) => document.querySelector(s);
-const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
 
 function fmtBig(v) {
   const a = Math.abs(v);
@@ -83,6 +82,8 @@ function migratePrefs(o) {  // v1: volumes e crescimento eram campos soltos (liq
 const savePrefs = () => {
   try { localStorage.setItem(LS_KEY, JSON.stringify({ ...prefs, values: {} })); sessionStorage.setItem(LS_KEY, JSON.stringify(prefs.values)); } catch (e) { /* modo privado */ }
 };
+// v1 já migrado para a v2 acima: grava a v2 (se ainda não existe) e apaga a v1
+try { if (localStorage.getItem('screenerB3.filtros.v1') != null) { if (localStorage.getItem(LS_KEY) == null) savePrefs(); if (localStorage.getItem(LS_KEY) != null) localStorage.removeItem('screenerB3.filtros.v1'); } } catch (e) { }
 
 const filterFields = () => state.data.fields.filter(f => hint(f));
 const groupFields = (g) => filterFields().filter(f => f.grp === g);
@@ -700,26 +701,21 @@ function friendlyStatus(s, upd) {
 })();
 
 // ---------- Favoritos (estrela) ----------
-function migrateTickers(all, kept) { // favorito/grupo com classe que deixou de ser a exibida -> ticker exibido da mesma empresa
-  const by = {}; for (const r of kept) by[r.ticker.slice(0, 4)] = r.ticker; const ks = new Set(kept.map(r => r.ticker)), mp = {};
-  for (const r of all) { const n = by[r.ticker.slice(0, 4)]; if (!ks.has(r.ticker) && n) mp[r.ticker] = n; }
-  let ch = false; for (const t of [...FAVS]) if (mp[t]) { FAVS.delete(t); FAVS.add(mp[t]); ch = true; }
-  if (ch) try { localStorage.setItem(FAV_KEY, JSON.stringify([...FAVS])); } catch (e) { }
-  if (window.gMigrate) window.gMigrate(mp);
-}
 const FAV_KEY = 'screenerB3.favs.v1';
 const FAVS = new Set((() => { try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) { return []; } })());
 // Ordem dos Favoritos = ordem guardada em FAV_KEY (Grupos → Favoritos → ⋮⋮ reorganiza): padrão em toda lista que mostra favoritos primeiro
-const favRank = (t) => { const k = [...FAVS].join(); if (favRank._k !== k) { favRank._k = k; favRank._m = new Map([...FAVS].map((x, i) => [x, i])); } return favRank._m.get(t) ?? 1e9; };
+// posições montadas uma vez e refeitas só quando FAVS muda (setFavOrder/toggleFav zeram favRank._m)
+const favRank = (t) => (favRank._m || (favRank._m = new Map([...FAVS].map((x, i) => [x, i])))).get(t) ?? 1e9;
 function setFavOrder(order) {
   const keep = order.filter(t => FAVS.has(t)), all = keep.concat([...FAVS].filter(t => !keep.includes(t)));
-  FAVS.clear(); all.forEach(t => FAVS.add(t));
+  FAVS.clear(); all.forEach(t => FAVS.add(t)); favRank._m = null;
   try { localStorage.setItem(FAV_KEY, JSON.stringify(all)); } catch (e) { }
   document.dispatchEvent(new CustomEvent('favs'));
   if (state.data) apply();
 }
 function toggleFav(t) {
   if (FAVS.has(t)) FAVS.delete(t); else FAVS.add(t);
+  favRank._m = null;
   try { localStorage.setItem(FAV_KEY, JSON.stringify([...FAVS])); } catch (e) { }
   document.querySelectorAll(`.star[data-fav="${t}"]`).forEach(b => { b.classList.toggle('on', FAVS.has(t)); b.textContent = FAVS.has(t) ? '★' : '☆'; b.setAttribute('aria-pressed', String(FAVS.has(t))); });
   document.dispatchEvent(new CustomEvent('favs'));
@@ -827,7 +823,9 @@ $('#btnCollapseAll').addEventListener('click', () => expandAll(false));
 $('#btnRefresh').addEventListener('click', async () => {
   if (window.siteCheck && await window.siteCheck(true)) { window.siteReload(); return; }  // versão nova do site: recarrega já com tudo novo
   $('#btnRefresh').disabled = true; if (!document.querySelector('#results > .ldr')) $('#results').insertAdjacentHTML('afterbegin', loaderHTML('Atualizando…')); $('#btnRefresh').classList.add('spin'); if (!$('#updated').textContent.includes('atualizando')) $('#updated').innerHTML += ' · <span class="text-amber-400">atualizando…</span>';
-  await fetch('/api/refresh', { method: 'POST' }); setTimeout(async () => { await load(); $('#btnRefresh').disabled = false; $('#btnRefresh').classList.remove('spin'); }, 2500);
+  const fim = () => { $('#btnRefresh').disabled = false; $('#btnRefresh').classList.remove('spin'); };
+  try { await fetch('/api/refresh', { method: 'POST' }); } catch (e) { }  // sem internet: recarrega o que der e solta o botão
+  setTimeout(async () => { try { await load(); } finally { fim(); } }, 2500);
 });
 setInterval(load, 10 * 60 * 1000);
 init();

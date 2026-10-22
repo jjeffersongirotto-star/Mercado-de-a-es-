@@ -95,8 +95,6 @@ if (typeof document !== 'undefined') (function () {
     root.querySelectorAll('.al-t').forEach(inp => window.pvCombo && pvCombo(inp, (t) => { st.draft.t = t; const r = rateOf(t); if (r != null) st.draft.rate = r; save(); render(); }));
   }
   let tm = null; const later = () => { clearTimeout(tm); tm = setTimeout(() => { save(); tables(); }, 200); };
-  function renderKeep() { const a = document.activeElement, id = a && a.id, f = a && a.dataset && (a.dataset.f || a.dataset.xf), k = a && a.closest && (a.closest('[data-k]') || a.closest('[data-x]')); const kk = k && (k.dataset.k || k.dataset.x); render();
-    let n = id ? document.getElementById(id) : f && kk != null ? root.querySelector(`[data-${a.dataset.f ? 'k' : 'x'}="${kk}"] [data-${a.dataset.f ? 'f' : 'xf'}="${f}"]`) : null; if (n) { n.focus(); try { const L = n.value.length; n.setSelectionRange(L, L); } catch (e) { } } }
   root.addEventListener('input', (e) => {
     const t = e.target, k = t.closest('[data-k]'), x = t.closest('[data-x]');
     if (t.id === 'alMes') { st.mes = t.value.replace(/\D/g, '').slice(0, 3); later(); return; }
@@ -127,7 +125,6 @@ if (typeof document !== 'undefined') (function () {
     save(); render();
   });
   document.addEventListener('pvsub', (e) => { if (e.detail === 'alug') render(); });
-  window.aluguelRender = render;
   // o evento da sub-aba pode ter disparado antes deste script carregar
   if (!root.classList.contains('hidden')) render();
 })();

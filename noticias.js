@@ -14,11 +14,15 @@
   const F = (() => { try { const v = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; return { a: ASS.some(x => x[0] === v.a) ? v.a : 'todas', o: ONDE.some(x => x[0] === v.o) ? v.o : '', s: v.s || '' }; } catch (e) { return { a: 'todas', o: '', s: '' }; } })();
   try { localStorage.removeItem('screenerB3.noticias.v1'); } catch (e) { }
   const saveF = () => { try { localStorage.setItem(KEY, JSON.stringify(F)); } catch (e) { } };
-  const favR = () => new Set([...(typeof FAVS !== 'undefined' ? FAVS : [])].map(t => t.slice(0, 4)));
-  const favs = () => new Set([...(typeof FAVS !== 'undefined' ? FAVS : [])]);
+  // raízes e tickers dos Favoritos: montados uma vez por filtragem (não a cada notícia) e refeitos na próxima
+  let FS = null;
+  const favSets = () => {
+    if (!FS) { const L = [...(typeof FAVS !== 'undefined' ? FAVS : [])]; FS = { r: new Set(L.map(t => t.slice(0, 4))), t: new Set(L) }; queueMicrotask(() => { FS = null; }); }
+    return FS;
+  };
   const setores = (n) => { const R = (typeof state !== 'undefined' && state.rowMap) || {}; return new Set((n.t || []).map(t => (R[t] || {}).macro).filter(Boolean)); };
   const onde = (n) => !F.o || (F.o === 'ext' ? (n.m || []).some(c => c !== 'br')
-    : F.o === 'fav' ? (n.t || []).some(t => favR().has(t.slice(0, 4))) || (n.tf || []).some(x => favs().has(x.split(':')[1]))
+    : F.o === 'fav' ? (n.t || []).some(t => favSets().r.has(t.slice(0, 4))) || (n.tf || []).some(x => favSets().t.has(x.split(':')[1]))
     : (n.m || ['br']).includes('br'));
   const pass = (n) => (F.a === 'todas' || (n.a || []).includes(F.a)) && onde(n) && (!F.s || setores(n).has(F.s));
   const dt = (s) => !s ? '' : s.length === 7 ? `${s.slice(5, 7)}/${s.slice(0, 4)}` : `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
