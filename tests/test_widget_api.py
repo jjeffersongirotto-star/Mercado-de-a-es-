@@ -211,3 +211,14 @@ if __name__ == "__main__":
     for k, f in list(globals().items()):
         if k.startswith("test_"): f(); n += 1
     print(n, "testes ok")
+
+
+def test_ordens_ao_vivo_so_no_pregao():
+    """Antes da abertura ou no fim de semana a mínima/máxima ainda é a do pregão anterior: nada executa ao vivo."""
+    from datetime import datetime
+    import server
+    assert server._quotes(datetime(2026, 10, 22, 7, 22, tzinfo=server.TZ)) == {}   # quinta, antes das 10:00
+    assert server._quotes(datetime(2026, 10, 24, 12, 0, tzinfo=server.TZ)) == {}   # sábado
+    assert server.hora_pregao("10:00") and server.hora_pregao("18:30") and not server.hora_pregao("08:08") and not server.hora_pregao("21:23")
+    import modelos
+    assert modelos.sim_p1({"AZZA3": [25.67, "08:08", "2026-10-21"], "PETR4": [30.0, "15:58", "2026-10-21"]}) == {"PETR4": (30.0, "15:58", "2026-10-21")}

@@ -50,12 +50,15 @@
     if (g.sim.p1) for (const t in g.sim.p1) if (!Array.isArray(g.sim.p1[t]) || g.sim.p1[t].length < 3) {  // formato antigo (compra a mercado na criação): sai com os horários dela
       delete g.sim.p1[t]; mud = true; if (g.sim.hr) for (const k in g.sim.hr) if (k.split('|')[3] === g.sim.di) delete g.sim.hr[k];
     }
-    for (const [k, o] of [['p1', p1], ['r1', r1]]) if (o) { g.sim[k] = g.sim[k] || {}; for (const t in o) if (!g.sim[k][t]) { g.sim[k][t] = o[t]; mud = true; } }
+    // só horários do pregão (10:00–18:30): uma execução "vista" fora dele usou a mínima/máxima de outro dia (sai, também as já guardadas)
+    const noPregao = (h) => typeof h === 'string' && h >= '10:00' && h <= '18:30';
+    for (const [k, o] of [['p1', p1], ['r1', r1]]) if (o) { g.sim[k] = g.sim[k] || {}; for (const t in o) if (!g.sim[k][t] && (k === 'r1' || noPregao((o[t] || [])[1]))) { g.sim[k][t] = o[t]; mud = true; } }
+    if (g.sim.p1) for (const t in g.sim.p1) if (!noPregao((g.sim.p1[t] || [])[1])) { delete g.sim.p1[t]; mud = true; }
     for (const [m, L] of prov || []) for (const e of L || []) {
       const k = `${m}|${e.t}|${e.k}|${e.d}`; g.sim.hr = g.sim.hr || {};
-      if (e.h && e.d === hoje && !g.sim.hr[k]) { g.sim.hr[k] = [e.h, e.p, e.q]; mud = true; }
+      if (noPregao(e.h) && e.d === hoje && !g.sim.hr[k]) { g.sim.hr[k] = [e.h, e.p, e.q]; mud = true; }
     }
-    if (g.sim.hr) for (const k in g.sim.hr) if (k.split('|')[3] < lim) { delete g.sim.hr[k]; mud = true; }
+    if (g.sim.hr) for (const k in g.sim.hr) if (k.split('|')[3] < lim || !noPregao((g.sim.hr[k] || [])[0])) { delete g.sim.hr[k]; mud = true; }
     if (mud) save();
   }
   const simF = (g) => { const s = g.sim; return { ap: s.ap || 0, ex: s.ex || [], ret: s.ret || [], ...(s.p1 ? { p1: s.p1 } : {}), ...(s.r1 ? { r1: s.r1 } : {}), ...(s.cr ? { cr: s.cr } : {}) }; };  // f do widget e do ao vivo
