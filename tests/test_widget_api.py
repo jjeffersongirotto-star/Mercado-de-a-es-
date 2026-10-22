@@ -222,3 +222,22 @@ def test_ordens_ao_vivo_so_no_pregao():
     assert server.hora_pregao("10:00") and server.hora_pregao("18:30") and not server.hora_pregao("08:08") and not server.hora_pregao("21:23")
     import modelos
     assert modelos.sim_p1({"AZZA3": [25.67, "08:08", "2026-10-21"], "PETR4": [30.0, "15:58", "2026-10-21"]}) == {"PETR4": (30.0, "15:58", "2026-10-21")}
+
+
+def test_proventos_do_ano_e_proximos():
+    """ⓘ da empresa: pagos e a receber do ano; as 2 próximas datas — anunciadas com valor ou estimadas pelo histórico, sem valor."""
+    from datetime import date
+    import server, snapshots
+    ev = {"BBAS3": [["2025-03-10", "2025-02-20", 0.3, "JCP"], ["2025-06-10", "2025-05-20", 0.2, "JCP"], ["2025-09-10", "2025-08-20", 0.25, "Dividendo"],
+                    ["2025-12-10", "2025-11-20", 0.3, "JCP"], ["2026-03-10", "2026-02-20", 0.31, "JCP"], ["2026-06-11", "2026-05-21", 0.2, "JCP"],
+                    ["2026-09-10", "2026-08-20", 0.26, "Dividendo"], ["2026-11-05", "2026-10-15", 0.12, "JCP"]]}
+    old = snapshots.load
+    snapshots.load = lambda n, *a, **k: ({"ev": ev, "fetched_at": "x"}, "t") if n == "b3_proventos" else old(n, *a, **k)
+    try:
+        d = server.proventos_acao("BBAS3", date(2026, 10, 22))
+        assert [x["sit"] for x in d["ano"]] == ["pago", "pago", "pago", "receber"] and d["ano"][-1]["v"] == 0.12
+        assert [x["pg"] for x in d["prox"]] == ["2026-11-05", "2026-12-10"]  # anunciada (com valor) + 1 estimada (dezembro, sem valor)
+        assert d["prox"][1]["sit"] == "estimada" and d["prox"][1]["v"] is None
+        assert server.proventos_acao("XXXX3", date(2026, 10, 22)) == {"ano": [], "prox": [], "at": "x"}
+    finally:
+        snapshots.load = old
