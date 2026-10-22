@@ -40,7 +40,8 @@ public class WidgetTap extends Activity {
                 boolean open = !t.equals(Store.expanded(this));
                 Store.setExpanded(this, open ? t : "");
                 FavWidget.render(this);
-                if (open) FavWidget.chartAsync(this, t);
+                // 1.23: a busca do gráfico vai num broadcast (goAsync), não numa thread desta tela, que fecha já
+                if (open) sendBroadcast(new Intent(this, FavWidget.class).setAction(FavWidget.ACTION_CHART).putExtra(FavWidget.EXTRA_TICKER, t));
             }
         }
         finish();

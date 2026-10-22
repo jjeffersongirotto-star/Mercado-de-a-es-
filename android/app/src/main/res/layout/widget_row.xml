@@ -2,7 +2,6 @@
 <!-- linha do widget: logo (32dp, formato original; sem logo: iniciais) + ticker e nome curto | colunas fixas (dimens.xml; preço na moeda da ação, símbolo menor e texto que encolhe para caber); aberta, gráfico de 5 anos com 16 faixas de toque -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/r_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
