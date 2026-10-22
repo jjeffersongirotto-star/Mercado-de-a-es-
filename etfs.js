@@ -6,7 +6,7 @@
   if (!pane || !seg || !root) return;
   const ORD = [['vm', 'Volume médio'], ['r1', 'Rendimento 1 ano'], ['r3', 'Rendimento 3 anos'], ['r5', 'Rendimento 5 anos'], ['dy', 'Proventos 12 meses'], ['v', 'Variação do dia'], ['t', 'Código']];
   const ls = (k, d) => { try { return JSON.parse(localStorage.getItem(KEY))[k] ?? d; } catch (e) { return d; } };
-  let modo = ls('modo', 'acoes'), fil = ls('fil', 'todos'), ord = ls('ord', 'vm'), dir = ls('dir', -1), liq = ls('liq', true), q = '', D = null, loading = false;
+  let modo = ls('modo', 'acoes'), fil = ls('fil', 'todos'), ord = ls('ord', 'vm'), dir = ls('dir', -1), liq = ls('liq', true), q = '', D = null, shown = null, loading = false;
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ modo, fil, ord, dir, liq })); } catch (e) { } };
   const br = () => typeof state === 'undefined' || !state.country || state.country === 'br';
   const P = (x) => x == null ? '—' : pc(x), cor = (x) => x == null ? 'text-slate-400' : x >= 0 ? 'text-emerald-400' : 'text-rose-400';
@@ -16,14 +16,23 @@
     for (const c of pane.children) if (c !== seg && c !== root) c.classList.toggle('etf-off', etf);
     root.classList.toggle('hidden', !etf);
     seg.querySelectorAll('[data-mk]').forEach(b => b.classList.toggle('on', b.dataset.mk === (etf ? 'etf' : 'acoes')));
-    if (etf && !D) load();  // já desenhado: a recarga de dados das ações (dataload) não refaz a lista nem fecha os gráficos abertos
+    // ainda não desenhada (D pode já ter vindo pelo etfRows do app.js): desenha; já desenhada: a recarga de dados (dataload) só
+    // refaz a lista no ouvinte de dataload abaixo, sem fechar gráficos abertos
+    if (etf && (!D || !shown)) load();
   }
   // mesma cópia para a aba e para o resto do site: app.js junta as linhas de ETF (etfRows) a state.data.rows (Comparar, Carteira, Favoritos,
   // Grupos e widget usam as mesmas funções das ações); a aba Mercado → Ações não as mostra (passes) e os grupos prontos também não (sem k1)
-  let PE = null;
-  const fetchE = () => PE || (PE = getRetry('/api/etfs').then(d => (D = d)).catch(e => { PE = null; throw e; }));
+  // novo = true (a cada carga de dados do app.js, de 10 em 10 min): pede de novo, salvo se acabou de pedir; falha (getRetry devolve null)
+  // não fica guardada: continua com a última lista boa (D) e tenta de novo na próxima carga
+  let PE = null, PEat = 0;
+  const fetchE = (novo) => {
+    if (PE && !(novo && Date.now() - PEat > 60e3)) return PE;
+    PEat = Date.now();
+    return (PE = getRetry('/api/etfs').then(d => { if (!d || !d.e) throw new Error('sem resposta do servidor'); return (D = d); })
+      .catch(e => { PE = null; if (D) return D; throw e; }));
+  };
   window.etfRows = async () => {
-    const d = await fetchE();
+    const d = await fetchE(true);
     return Object.entries(d.e || {}).map(([t, x]) => ({ ticker: t, nome: x.n, pn: [x.f, x.i].filter(Boolean).join(' | '), setor: 'ETF', subsetor: (d.tipos || {})[x.k],
       var: x.v, cur: 'BRL', v: { preco: x.p }, etf: x.k, ...(x.il ? { il: 1 } : {}) }));
   };
@@ -42,6 +51,7 @@
     <div class="etf-p"><span class="text-lg font-bold">${x.p == null ? '—' : brl.format(x.p)}</span><span class="${cor(x.v)}">${P(x.v)}</span></div>
     ${statsHtml(x)}${x.u ? '<p class="etf-u">Toque para ver o gráfico</p>' : ''}</div>`;
   function draw() {
+    shown = D;
     const E = (D && D.e) || {}, nq = norm(q);
     let L = Object.entries(E).filter(([t, x]) => (fil === 'todos' || x.k === fil) && (!liq || !x.il) && (!nq || norm(t + ' ' + (x.n || '') + ' ' + (x.f || '')).includes(nq)));
     L.sort((a, b) => ord === 't' ? dir * -a[0].localeCompare(b[0]) : ((b[1][ord] ?? -1e18) - (a[1][ord] ?? -1e18)) * -dir);
@@ -69,7 +79,15 @@
     if (e.target.id === 'etfOrd') { ord = e.target.value; save(); draw(); }
     if (e.target.id === 'etfLiq') { liq = e.target.checked; save(); draw(); }
   });
-  root.addEventListener('input', (e) => { if (e.target.id !== 'etfQ') return; q = e.target.value; const pos = e.target.selectionStart; draw(); const n = document.getElementById('etfQ'); n.focus(); n.setSelectionRange(pos, pos); });
-  document.addEventListener('dataload', apply);
+  let qt = 0;  // busca: refaz os cards só depois de 200 ms sem digitar
+  root.addEventListener('input', (e) => {
+    if (e.target.id !== 'etfQ') return; q = e.target.value; clearTimeout(qt);
+    qt = setTimeout(() => { const o = document.getElementById('etfQ'), pos = o ? o.selectionStart : q.length; draw(); const n = document.getElementById('etfQ'); n.focus(); n.setSelectionRange(pos, pos); }, 200);
+  });
+  // dados novos (preços): refaz a lista se ela está na tela, sem gráfico aberto e sem ninguém digitando na busca
+  document.addEventListener('dataload', () => {
+    apply();
+    if (br() && modo === 'etf' && D && shown && shown !== D && !root.querySelector('.gchart') && document.activeElement?.id !== 'etfQ') draw();
+  });
   apply();
 })();

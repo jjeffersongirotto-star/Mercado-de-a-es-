@@ -5,6 +5,8 @@ const F0 = nf(0), F2 = nf(2);
 const pc = (x) => (x > 0 ? '+' : '') + F2.format(x) + '%';  // variação com sinal: +1,23%
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();  // sem acento, minúsculo
+// data de hoje no horário de Brasília (AAAA-MM-DD), calculada a cada chamada (vira à meia-noite de Brasília, não às 21h do UTC)
+const hojeSP = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
 // número digitado no formato brasileiro ("1.234,56", "R$ 10", "8,5%") -> 1234.56; vazio/inválido -> 0
 const dataBR = (iso) => iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '—';  // 2026-10-12 -> 12/10/2026 (2026-10 -> 10/2026)
 const parseBR = (s) => { s = String(s ?? '').trim().replace(/\s|R\$|%/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
@@ -23,24 +25,28 @@ if (typeof document !== 'undefined') document.addEventListener('click', (e) => {
   body.append(...rows);
 });
 
+// Diálogo de cima entre os abertos (vários empilhados: Esc/Enter valem só para ele)
+const uiTopModal = (w) => { const L = document.querySelectorAll('.umod'); return L[L.length - 1] === w; };
 // Diálogos do site (substituem confirm/alert/prompt), toast e animação de carregamento
 (function () {
-  function modal({ title, msg, html, input, okText = 'OK', cancelText = 'Cancelar', danger = false, noCancel = false, value = '', check = null }) {
+  function modal({ title, msg, html, okText = 'OK', cancelText = 'Cancelar', danger = false, noCancel = false, check = null }) {
     return new Promise((res) => {
       const w = document.createElement('div'); w.className = 'umod' + (html ? ' umod-wide' : '');
       w.innerHTML = `<div class="umod-box" role="dialog" aria-modal="true">${title ? `<h3>${title}</h3>` : ''}<p></p>
-        ${input ? '<input class="umod-in" autocomplete="off" spellcheck="false" maxlength="40">' : ''}
         <div class="umod-btns">${noCancel ? '' : `<button type="button" class="umod-c">${cancelText}</button>`}<button type="button" class="umod-ok${danger ? ' dan' : ''}">${okText}</button></div></div>`;
       if (html) w.querySelector('p').outerHTML = `<div class="umod-html">${html}</div>`; else w.querySelector('p').textContent = msg || '';
       document.body.appendChild(w);
-      const inp = w.querySelector('.umod-in'); if (inp) { inp.value = value; setTimeout(() => { inp.focus(); inp.select(); }, 30); } else setTimeout(() => w.querySelector('.umod-ok').focus({ preventScroll: true }), 30);
+      setTimeout(() => w.querySelector('.umod-ok').focus({ preventScroll: true }), 30);
       const done = (v) => { w.remove(); document.removeEventListener('keydown', key, true); res(v); };
-      const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); done(input ? null : false); } else if (e.key === 'Enter' && !check) { e.preventDefault(); done(input ? inp.value : true); } };
+      const key = (e) => {
+        if (!uiTopModal(w) || (e.key !== 'Escape' && (e.key !== 'Enter' || check))) return;
+        e.preventDefault(); e.stopImmediatePropagation(); done(e.key === 'Enter');
+      };
       document.addEventListener('keydown', key, true);
       w.addEventListener('click', (e) => {
-        if (e.target === w || e.target.closest('.umod-c')) done(input ? null : false);
+        if (e.target === w || e.target.closest('.umod-c')) done(false);
         else if (e.target.closest('.umod-ok')) {
-          if (!check) return done(input ? inp.value : true);
+          if (!check) return done(true);
           const r = check(w); if (r && r.erro) { const er = w.querySelector('.umod-err'); if (er) er.textContent = r.erro; return; }  // formulário: fica aberto com o erro
           done(r);
         }
@@ -49,7 +55,6 @@ if (typeof document !== 'undefined') document.addEventListener('click', (e) => {
   }
   window.uiConfirm = (msg, o = {}) => modal({ msg, okText: o.ok || 'Confirmar', danger: !!o.danger, title: o.title, cancelText: o.cancel || 'Cancelar' });
   window.uiAlert = (msg, o = {}) => modal({ msg, html: o.html, title: o.title, noCancel: true });  // o.html: conteúdo já escapado (tabelas)
-  window.uiPrompt = (msg, value = '', o = {}) => modal({ msg, input: true, value, okText: o.ok || 'Salvar', title: o.title });
   // formulário (html com os campos e um <p class="umod-err">): check(caixa) -> valor (fecha) ou {erro} (mostra e fica aberto); Cancelar -> false
   window.uiForm = (title, html, check, o = {}) => modal({ title, html, okText: o.ok || 'Salvar', check });
   window.uiToast = (msg) => {
@@ -76,6 +81,8 @@ if (typeof document !== 'undefined') document.addEventListener('click', (e) => {
       <rect x="84" y="104" width="30" height="12" rx="1.5"/><path d="M86 101 h28 M86 98 h28"/><circle cx="99" cy="110" r="2.5"/>
       <g class="ldr-note"><rect x="84" y="92" width="30" height="5" rx="1.5" fill="rgb(6 78 59)"/></g>
     </g></svg>${txt ? `<span>${txt}</span>` : ''}</div>`;
+  // containers das abas ainda escondidas (index.html: data-ldr) começam com a mesma animação
+  if (typeof document !== 'undefined') document.querySelectorAll('[data-ldr]').forEach(e => { if (!e.children.length) e.innerHTML = loaderHTML('Carregando…'); });
 })();
 // Reorganizar (arrastar pela alça ⠿, Salvar/Cancelar): items = [{id, label}] -> nova ordem de ids, ou null se cancelar. Grupos e Comparar.
 window.uiReorder = (title, items) => new Promise((res) => {
@@ -134,7 +141,7 @@ window.uiCalendar = (value, { min = '', max = '', kind = 'date', title = '', emp
     }
   }
   const done = (v) => { w.remove(); document.removeEventListener('keydown', key); res(v); };
-  const key = (e) => { if (e.key === 'Escape') done(null); };
+  const key = (e) => { if (e.key === 'Escape' && uiTopModal(w)) { e.stopImmediatePropagation(); done(null); } };
   w.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (e.target === w) return done(null); if (!b || b.disabled) return;
     if (b.dataset.nav) { const k = +b.dataset.nav; if (years) vy += 12 * k; else if (kind === 'month') vy += k; else { vm += k; if (vm < 0) { vm = 11; vy--; } if (vm > 11) { vm = 0; vy++; } } }
@@ -246,8 +253,11 @@ if (typeof document !== 'undefined') (function () {
   let novo = false, last = 0;
   const reload = () => { try { sessionStorage.setItem(RK, JSON.stringify({ y: window.scrollY, at: Date.now() })); } catch (e) { } location.reload(); };
   const banner = () => { if (!document.getElementById('siteNew')) document.body.insertAdjacentHTML('afterbegin', '<div id="siteNew" class="site-new" role="status"><span>Nova versão do site disponível</span><button type="button" class="gbtn pri" data-sitenew>Atualizar</button></div>'); };
+  // a conferência baixa a página inteira (/ não tem ETag nem HEAD): sozinha (dados novos, 10 em 10 min, volta ao app) no máximo
+  // 1 vez a cada SITE_GAP; force (⟳ e ⓘ, pedidos pelo usuário) confere na hora
+  const SITE_GAP = 9 * 60e3;
   async function siteCheck(force) {
-    if (novo || document.readyState === 'loading' || (!force && Date.now() - last < 15000)) return novo; last = Date.now();
+    if (novo || document.readyState === 'loading' || (!force && Date.now() - last < SITE_GAP)) return novo; last = Date.now();
     try {
       const h = await (await fetch('/', { cache: 'no-store' })).text(); const vs = [...h.matchAll(/<script[^>]*\ssrc="(\/static\/[^"]+)"/g)].map(m => location.origin + m[1]).join('|');
       if (vs && vs !== mine()) { novo = true; banner(); if (window.appVer) window.appVer(); }
@@ -261,7 +271,7 @@ if (typeof document !== 'undefined') (function () {
   let hiddenAt = 0, busy = false;
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
-    siteCheck(true);
+    siteCheck();
     if (busy || !hiddenAt || Date.now() - hiddenAt < 10 * 60 * 1000) return; busy = true;
     const y = window.scrollY;
     try { if (typeof window.load === 'function') { await window.load(); requestAnimationFrame(() => window.scrollTo(0, y)); } } catch (e) { }

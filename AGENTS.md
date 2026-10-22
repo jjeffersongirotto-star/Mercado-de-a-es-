@@ -110,8 +110,8 @@ Todos os itens de um mesmo grupo vêm **da mesma fonte**. Não se mistura fonte 
 | Comparar → Medo e Ganância de uma ação (índice da ação: `medo.stock_index`, mesma nota 0–100 de `medo.rank` usada pelo índice do mercado; altas/quedas semanais, demais mensais) | `medo.py` → `analyze` (histórico diário completo `history.b3full`, snapshot `fg`, Ibovespa) → `/api/fgcmp` | aba Comparar (`comparar.js` → `fgRun`, `fgHtml`) |
 | Métodos de investimento (Barsi, Bazin, Graham, Buffett, Fórmula Mágica…) e a matéria de referência de cada um | painel ⓘ → seção **Métodos de investimento** (matérias em **Para ler**: `ul.met-links`, `li` com `data-met`/`data-src`/`data-url`) | usuário; chat (`chat.method`, critérios em `METHODS`); aba Notícias → pasta Métodos de investimento (`noticias.js` → `metHtml`) |
 | Carteira (compras e vendas) | `localStorage` `screenerB3.carteira.v2` no aparelho (`carteira.js`); posição, preço médio e proventos calculados do histórico | aba Carteira, Exportar/Importar |
-| Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
-| Diálogos, toast, carregamento, Reorganizar (arrastar ⠿), calendário | `ui.js` → `uiConfirm`, `uiAlert`, `uiPrompt`, `uiForm` (formulário com conferência), `uiChoose`, `uiToast`, `uiReorder`, `loaderHTML`, `uiCalendar` (todo `input type=date/month` vira `uiDateField` sozinho) | todas as abas |
+| Utilitários do navegador: `esc`, `nf`, `F0`, `F2`, `pc`, `brl`, `norm`, `hojeSP` (data de hoje em Brasília, AAAA-MM-DD), `dataBR`, `parseBR`, `avgLastMonths`, `getRetry`, `fileIc`, `saveJSON` (Exportar) | `ui.js` (topo) | todos os scripts |
+| Diálogos, toast, carregamento, Reorganizar (arrastar ⠿), calendário | `ui.js` → `uiConfirm`, `uiAlert`, `uiForm` (formulário com conferência), `uiChoose`, `uiToast`, `uiReorder`, `loaderHTML`, `uiCalendar` (todo `input type=date/month` vira `uiDateField` sozinho) | todas as abas |
 | Formatação de indicadores (`fmt`, `fmtPrice`, `fmtBig`, `fmtMoneyBig`) e preço exibido (`priceOf`) | `app.js` | aba Mercado, Comparar, Carteira |
 | Rendimento dos índices entre duas datas (Ibovespa, CDB…) | `server._idx_returns` | Comparar e chat (`/api/returns`), Carteira (`/api/idxret`) |
 | Lista de scripts JS | tags `<script src="/static/…">` do `index.html` | servidor (`JS_FILES` é lido delas) |
@@ -186,7 +186,7 @@ Crie arquivo novo só para um recurso novo e independente; caso contrário, este
   conteúdo de cards ficam no meio da altura (`align-items: center`; `td, th` no design system). Exceção: texto corrido longo (chat, painel ⓘ) começa no topo.
 - **Alinhamento em dúvida** (não se encaixa nas regras acima): pergunte ao dono do site antes de escolher.
 - **Botões**: `.gbtn` (secundário), `.gbtn.pri` (ação principal), `.gbtn.dan` (perigo). Campos: `.pv-in`. Abas: `.tabs`. Selos: `.hb-*`.
-- **Nunca** use `alert`, `confirm` ou `prompt` do navegador: use `uiAlert`, `uiConfirm`, `uiPrompt`, `uiChoose`, `uiToast`. Datas: `input type="date"`/`"month"` abrem o calendário do site (`uiCalendar`), não o do navegador.
+- **Nunca** use `alert`, `confirm` ou `prompt` do navegador: use `uiAlert`, `uiConfirm`, `uiForm`, `uiChoose`, `uiToast`. Datas: `input type="date"`/`"month"` abrem o calendário do site (`uiCalendar`), não o do navegador.
   Carregando: `loaderHTML('texto')`.
 - **Números** no formato brasileiro (`1.234,56`; `8,5%`; `R$ 1,2 bi`) com os utilitários do `ui.js`/`app.js`. Datas com `dataBR` (`dd/mm/aaaa`), horário de Brasília.
 - **Textos**: curtos, no imperativo para botões ("Salvar", "Criar grupo"), mesmo nome do botão em todo o site.

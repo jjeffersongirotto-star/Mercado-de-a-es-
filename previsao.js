@@ -40,7 +40,7 @@ if (typeof document !== 'undefined') {
     { ini: 5000, ap: 500, dm: (Math.pow(1.04, 1 / 12) - 1) * 100, da: 4, rm: (Math.pow(1.10, 1 / 12) - 1) * 100, ra: 10, ticker: '', di: '', df: '', ret: [], mes: '', proj: '', ex: [] };
   if (!Array.isArray(st.ex)) st.ex = [];
   // Data inicial e final com dia (AAAA-MM-DD); estado antigo só com mês: começo no dia 1, fim no último dia do mês
-  const ymOf = (s) => s ? String(s).slice(0, 7) : s, hoje = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const ymOf = (s) => s ? String(s).slice(0, 7) : s, hoje = hojeSP;
   const fimMes = (ym) => { const [y, m] = ym.split('-').map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`; };
   if (st.di && st.di.length === 7) st.di += '-01';
   if (st.df && st.df.length === 7) st.df = fimMes(st.df);
@@ -49,11 +49,7 @@ if (typeof document !== 'undefined') {
   // várias empresas: '*' = Todas · 'top5' = 5 maiores de cada setor
   const MULTI = { '*': 'Todos', top5: '5 maiores de cada setor' }, multi = () => !!MULTI[st.ticker];  // modelo ('' = Sem modelo, '*' = Todos) e aba Tabela/Desempenho
   st.ret.forEach(r => { if (r.ok === undefined) r.ok = true; }); st.ex.forEach(r => { if (r.ok === undefined) r.ok = true; });
-  function toast(msg) {
-    let t = document.getElementById('pvToast');
-    if (!t) { t = document.createElement('div'); t.id = 'pvToast'; t.className = 'pv-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-    t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1800);
-  }
+  const toast = (msg) => uiToast(msg);  // ui.js (fonte única do toast)
   // botões salvar/editar/apagar das linhas (Retiradas e Aportes extraordinários)
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-rowact]'); if (!b) return;
@@ -659,7 +655,6 @@ if (typeof document !== 'undefined') {
     return `<div class="mvwrap"><table class="gtab mvtab">${MOV_H}<tbody id="${id}">${L.slice(0, o.n).map(movRow).join('') || '<tr><td colspan="6">Nenhuma movimentação.</td></tr>'}</tbody></table></div>` +
       `<p class="pvd-note" id="${id}i">${movInfo(o)}${!src && N > L.length ? ` (as ${F0.format(L.length - 1)} mais recentes e o aporte inicial)` : ''}</p>${more}`;
   }
-  window.pvMovHtml = movHtml; window.pvMovRow = movRow; window.pvMovHead = MOV_H;
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-movmore]'); if (!b || b.disabled) return;
     const id = b.dataset.movmore, o = movStore[id], tb = document.getElementById(id); if (!o || !tb) return;
