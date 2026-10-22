@@ -17,8 +17,7 @@
     } catch (e) { return []; }
   })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(mov)); localStorage.removeItem(OLD); } catch (e) { uiAlert('Não foi possível salvar no navegador.'); } };
-  const today = new Date().toISOString().slice(0, 10);
-  const DIV = {}, IDX = {};  // cache por ticker / por data
+  const DIV = {}, IDX = {};  // cache por ticker / por data (falha não fica guardada: tenta de novo na próxima vez)
   let editing = -1, open = new Set();
 
   const cls = (v) => v > 0 ? 'up' : v < 0 ? 'dn' : '';
@@ -36,8 +35,8 @@
     }
     return { q, cost, pm: q ? cost / q : null, real, bought, neg };
   }
-  const provs = (t) => DIV[t] || (DIV[t] = getRetry(`/api/history/${encodeURIComponent(t)}`).then(h => (h && h.div) || []));
-  const idx = (d) => IDX[d] || (IDX[d] = getRetry(`/api/idxret?di=${d}&df=${today}`).then(x => x || {}));
+  const provs = (t) => DIV[t] || (DIV[t] = getRetry(`/api/history/${encodeURIComponent(t)}`).then(h => { if (!h) delete DIV[t]; return (h && h.div) || []; }));
+  const idx = (d) => { const k = d + '|' + hojeSP(); return IDX[k] || (IDX[k] = getRetry(`/api/idxret?di=${d}&df=${hojeSP()}`).then(x => { if (!x) delete IDX[k]; return x || {}; })); };
 
   async function calc(t, L) {
     const P = position(L), r = (state.rowMap || {})[t], price = r ? priceOf(r) : null;
@@ -81,14 +80,14 @@
   }
 
   function form() {
-    const m = mov[editing] || { op: 'c', d: today };
+    const m = mov[editing] || { op: 'c', d: hojeSP() };
     const tk = state.data ? state.data.rows.filter(r => !r.il).map(r => r.ticker).sort() : [];
     return `<form id="ktF" class="kt-f" autocomplete="off">
       <label>Ticker<input id="ktT" class="pv-in" list="ktL" required maxlength="12" value="${esc(m.t || '')}" placeholder="PETR4"></label>
       <label>Operação<select id="ktO" class="pv-in"><option value="c"${m.op === 'c' ? ' selected' : ''}>Compra</option><option value="v"${m.op === 'v' ? ' selected' : ''}>Venda</option></select></label>
       <label>Quantidade<input id="ktQ" class="pv-in" inputmode="decimal" required value="${m.q != null ? F0.format(m.q) : ''}"></label>
       <label>Preço<input id="ktP" class="pv-in" inputmode="decimal" required value="${m.p != null ? F2.format(m.p) : ''}"></label>
-      <label>Data<input id="ktD" class="pv-in" type="date" required max="${today}" value="${esc(m.d)}"></label>
+      <label>Data<input id="ktD" class="pv-in" type="date" required max="${hojeSP()}" value="${esc(m.d)}"></label>
       <div class="kt-fb"><button type="submit" class="gbtn pri">${editing >= 0 ? 'Salvar' : '＋ Adicionar'}</button>${editing >= 0 ? '<button type="button" class="gbtn" data-k="cancel">Cancelar</button><button type="button" class="gbtn dan" data-k="del">Excluir</button>' : ''}</div>
       <datalist id="ktL">${tk.map(t => `<option value="${t}">`).join('')}</datalist></form>`;
   }
@@ -133,7 +132,7 @@
     const t = $k('#ktT').value.toUpperCase().trim(), op = $k('#ktO').value, q = parseBR($k('#ktQ').value), p = parseBR($k('#ktP').value), d = $k('#ktD').value;
     if (!state.rowMap[t]) return uiAlert(`Ticker ${t} não encontrado na lista de ações.`);
     if (!(q > 0) || !(p > 0) || !d) return uiAlert('Preencha quantidade, preço e data.');
-    const m = { t, op, q, p, d: d > today ? today : d };
+    const today = hojeSP(), m = { t, op, q, p, d: d > today ? today : d };
     const next = mov.slice(); if (editing >= 0) next[editing] = m; else next.push(m);
     for (const tk of new Set([t, editing >= 0 ? mov[editing].t : t])) {
       const bad = position(next.filter(x => x.t === tk)).neg;  // conferido com tudo em ordem de data: aceita e marca até a compra ser lançada

@@ -2,8 +2,15 @@
 // Velocímetro no topo da aba Mercado (só Brasil). fgLoad/fgBand também servem ao Comparar.
 (function () {
   const box = document.getElementById('fgCard');
-  const cache = {};
-  window.fgLoad = (full) => cache[full ? 1 : 0] || (cache[full ? 1 : 0] = fetch('api/fg' + (full ? '?full=1' : '')).then(r => r.json()).catch(() => ({})));
+  // guardado por FG_TTL (o snapshot muda 1x por dia; a recarga de dados de 10 em 10 min pede de novo depois disso); falha não fica guardada
+  const cache = {}, at = {}, FG_TTL = 30 * 60e3;
+  window.fgLoad = (full) => {
+    const k = full ? 1 : 0;
+    if (cache[k] && Date.now() - at[k] < FG_TTL) return cache[k];
+    at[k] = Date.now();
+    return (cache[k] = fetch('/api/fg' + (full ? '?full=1' : '')).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .catch(() => { delete cache[k]; return {}; }));
+  };
   // faixa do valor: {i: 0..4, n: nome} (faixas lidas de fg.json)
   window.fgBand = (v, fx) => { const i = fx.findIndex(f => v <= f[0]); return { i: i < 0 ? fx.length - 1 : i, n: (fx[i < 0 ? fx.length - 1 : i] || [])[1] || '' }; };
   const CLS = ['fg-0', 'fg-1', 'fg-2', 'fg-3', 'fg-4'];

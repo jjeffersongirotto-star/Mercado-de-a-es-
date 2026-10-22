@@ -9,20 +9,29 @@
   // Grupo simulação (criado na Previsão): {name, tickers: [], sim: {di, v0}}; o servidor simula todos os modelos desde di
   // (/api/modelos/simgrupo, mesma conta do Comparar). Resultado guardado no aparelho e pedido de novo só 1x por dia.
   const SKEY = 'screenerB3.simgrupo.v17';  // v17: 1º dia com ordens com preço limite, sem compra na criação; v16: 1º dia a mercado, horário das compras e vendas ao vivo; v15: aporte primeiro na carteira, Buy and Hold novo, confiança nas notícias; v14: saldo do CDB antes de cada movimentação; v13: CDB dia a dia com IR/IOF, preço atual; v12: grupo do mês atual anda até hoje; v11: ordens com fila, nada antes da data inicial, histórico por data; v10: alvos caros (Value, Barsi) e prejuízo só com empresa ruim; v9: ordens com preço limite ligadas + anti-emoção; v8: modelo Adaptativo; v7: nomes das empresas (nm); v6: caixa máximo do Barsi; v5: ações de cada balanço; v4: modelos de método; v3: preço médio, todas as posições, 50 movimentações (o resto em páginas) — o resultado antigo não vale
-  try { localStorage.removeItem('screenerB3.simgrupo.v1'); localStorage.removeItem('screenerB3.simgrupo.v2'); localStorage.removeItem('screenerB3.simgrupo.v3'); localStorage.removeItem('screenerB3.simgrupo.v4'); localStorage.removeItem('screenerB3.simgrupo.v5'); localStorage.removeItem('screenerB3.simgrupo.v6'); localStorage.removeItem('screenerB3.simgrupo.v7'); } catch (e) { }
-  const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set();
-  const simK = (g) => JSON.stringify([g.sim.di, g.sim.v0, g.sim.ap || 0, g.sim.ex || [], g.sim.ret || []]), today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  try { for (let v = 1; v < +SKEY.split('.v').pop(); v++) localStorage.removeItem('screenerB3.simgrupo.v' + v); } catch (e) { }  // versões antigas
+  // simRetry: depois de uma falha, só tenta de novo após SIM_RETRY (sem isso a tela pedia de novo a cada desenho, sem parar)
+  const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set(), simRetry = {}, SIM_RETRY = 10 * 60e3;
+  const simK = (g) => JSON.stringify([g.sim.di, g.sim.v0, g.sim.ap || 0, g.sim.ex || [], g.sim.ret || []]), today = hojeSP;
   const saveSim = () => { for (const k in SIM) if (!groups.some(g => g.sim && g.name === k)) delete SIM[k]; try { localStorage.setItem(SKEY, JSON.stringify(SIM)); } catch (e) { } };
   function simData(g) {
     const c = SIM[g.name], ok = c && c.k === simK(g);
-    if ((!ok || c.day !== today()) && !simLoad.has(g.name)) {
+    if ((!ok || c.day !== today()) && !simLoad.has(g.name) && !(Date.now() < (simRetry[g.name + simK(g)] || 0))) {
       simLoad.add(g.name);
       (async () => {
         let d = null;
         for (let i = 0; i < 6; i++) { try { const r = await fetch('/api/modelos/simgrupo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(g.sim) }); d = await r.json(); if (r.status !== 202) break; } catch (e) { d = { error: 'Sem conexão.' }; break; } await new Promise(z => setTimeout(z, 5000)); }
         simLoad.delete(g.name);
-        if (d && !d.error && d.m) { SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); simKeep(g, d.p1, null, d.r1); } else if (!ok) SIM[g.name] = { k: simK(g), day: d && d.pend ? today() : '', err: (d && d.error) || 'Não foi possível simular agora.' };  // começo depois dos dados: tenta de novo no dia seguinte
-        window.gruposRefresh && gruposRefresh();
+        let mud = true;
+        if (d && !d.error && d.m) { delete simRetry[g.name + simK(g)]; SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); simKeep(g, d.p1, null, d.r1); }
+        else {
+          simRetry[g.name + simK(g)] = Date.now() + SIM_RETRY;
+          const err = (d && d.error) || 'Não foi possível simular agora.', o = SIM[g.name];
+          if (o && o.d && o.k === simK(g)) mud = false;  // falhou, mas há o resultado de outro dia: continua mostrando ele
+          else if (o && !o.d && o.k === simK(g) && o.err === err) mud = false;
+          else SIM[g.name] = { k: simK(g), day: d && d.pend ? today() : '', err };  // começo depois dos dados: tenta de novo no dia seguinte
+        }
+        if (mud) window.gruposRefresh && gruposRefresh();
       })();
     }
     return ok ? c : null;
@@ -50,6 +59,7 @@
   // pede de novo a cada 2 min com a aba aberta (as decisões continuam as da simulação)
   const LIVE = {};
   function simLive(g) {
+    for (const n in LIVE) if (!groups.some(x => x.sim && x.name === n)) delete LIVE[n];  // grupo apagado: sai da memória
     const L = LIVE[g.name], k = simK(g);
     if (!L || L.k !== k || (Date.now() - L.at > 120000 && !L.busy)) {
       LIVE[g.name] = Object.assign(L && L.k === k ? L : { k, m: null }, { busy: true, at: Date.now() });
@@ -95,16 +105,11 @@
 
   const VKEY = 'screenerB3.ordsetor.v1';
   try { const v = JSON.parse(localStorage.getItem(VKEY) || '{}'); state.ord2 = v.ord2 || ''; state.sector = v.sector || 'Todos'; } catch (e) { state.ord2 = ''; state.sector = 'Todos'; }
-  const ORD = [['', 'Padrão (barra de filtros)'], ['valmerc:-1', 'Valor de mercado: maior → menor'], ['valmerc:1', 'Valor de mercado: menor → maior'],
-    ['preco:-1', 'Preço da ação: maior → menor'], ['preco:1', 'Preço da ação: menor → maior'], ['var:-1', 'Alta do dia: maior → menor'], ['var:1', 'Alta do dia: menor → maior']];
-  const toolsOld = () => `<div class="gtools"><label>Ordenar<select id="gOrd">${ORD.map(([v, l]) => `<option value="${v}"${v === state.ord2 ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-    <label>Setor<select id="gSec">${['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label></div>`;
-  const tools = () => '';
   state.ord2 = '';
   $g('#gSec').innerHTML = ['Todos'].concat(SECTORS).map(x => `<option${x === state.sector ? ' selected' : ''}>${esc(x)}</option>`).join('');
   document.addEventListener('change', (e) => {
-    if (e.target.id !== 'gOrd' && e.target.id !== 'gSec') return;
-    if (e.target.id === 'gOrd') state.ord2 = e.target.value; else state.sector = e.target.value;
+    if (e.target.id !== 'gSec') return;
+    state.sector = e.target.value;
     try { localStorage.setItem(VKEY, JSON.stringify({ ord2: state.ord2, sector: state.sector })); } catch (er) { }
     if (state.data) apply();
   });
@@ -118,7 +123,7 @@
       b.innerHTML = `<div class="gbar mb-2"><b class="text-emerald-300 text-sm">${state.selSet.size} selecionada(s)</b>
         <input id="gName" maxlength="40" placeholder="Nome do grupo" value="${esc(editing ? editing.name : '')}" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm">
         <button type="button" class="gbtn pri" data-g="save">Salvar</button><button type="button" class="gbtn" data-g="cancel">Cancelar</button>
-        <input id="gQ" type="search" placeholder="Buscar empresa, setor ou atividade (ex.: gasol)…" value="${esc($g('#q').value)}" class="basis-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm"></div>${tools()}`;
+        <input id="gQ" type="search" placeholder="Buscar empresa, setor ou atividade (ex.: gasol)…" value="${esc($g('#q').value)}" class="basis-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm"></div>`;
     } else if (viewing) {
       b.innerHTML = `<div class="gbar mb-2"><b class="text-emerald-300">${esc(viewing.name)}</b><span class="text-xs text-slate-400">${viewing.tickers.length} empresa(s)${viewing.rank ? ' · ordem do ranking' : ''}</span>
         ${viewing.pre ? '' : `<button type="button" class="gbtn ml-auto" data-g="edit" data-n="${esc(viewing.name)}">Editar</button>`}
@@ -214,15 +219,10 @@
     const box = g.closest('.gt'), id = box.dataset.id, y0 = e.clientY, h0 = box.getBoundingClientRect().height;
     e.preventDefault(); g.setPointerCapture(e.pointerId); g.classList.add('on');
     const mv = (ev) => { const h = Math.round(Math.min(window.innerHeight * .9, Math.max(140, h0 + ev.clientY - y0))); box.style.height = h + 'px'; box.style.maxHeight = 'none'; ui.gh[id] = h; };
-    const up = () => { g.removeEventListener('pointermove', mv); g.classList.remove('on'); saveUI(); };
-    g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up, { once: true }); g.addEventListener('pointercancel', up, { once: true });
+    const up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); g.classList.remove('on'); saveUI(); };
+    g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
   });
   document.addEventListener('dblclick', (e) => { const g = e.target.closest('[data-ggrip]'); if (!g) return; const b = g.closest('.gt'); delete ui.gh[b.dataset.id]; saveUI(); b.style.height = ''; b.style.maxHeight = ''; });
-  window.gMigrate = (mp) => { // classe trocada (1 ticker por empresa) -> migra os grupos
-    let ch = false; const m = (t) => mp[t] || t;
-    for (const g of groups) { const n = [...new Set(g.tickers.map(m))]; if (n.join() !== g.tickers.join()) { g.tickers = n; ch = true; } }
-    if (ch) { save(); saveUI(); }
-  };
   let favReord = false, favSort = null, favTmp = null, favDrag = 0;  // ⋮⋮ ligado: linhas com alça; favTmp = ordem arrastada (guardada ao desligar)
   const favList = () => { const L = rowsAll().filter(r => FAVS.has(r.ticker)), rk = favTmp ? new Map(favTmp.map((t, i) => [t, i])) : null;
     return L.sort((a, b) => rk ? (rk.get(a.ticker) ?? 1e9) - (rk.get(b.ticker) ?? 1e9) : favRank(a.ticker) - favRank(b.ticker)); };  // ordem dos Favoritos (⋮⋮)
@@ -356,9 +356,9 @@
     const bi = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + 'R$ ' + (Math.abs(v) / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' bi';
     const fd = (d) => d.split('-').reverse().slice(0, 2).join('/');
     const fx = sel.map(d => (FLOW.days[d]['Investidor Estrangeiro'] || [])[2] || 0), mx = Math.max(1, ...fx.map(Math.abs)), W = 300, H = 64, bw = W / Math.max(fx.length, 1), w0 = Math.max(1, Math.min(6, bw * 0.6));
-    const bars = fx.map((v, i) => { const h = Math.abs(v) / mx * (H / 2 - 4); return `<rect x="${(i * bw + (bw - w0) / 2).toFixed(1)}" y="${(v >= 0 ? H / 2 - h : H / 2).toFixed(1)}" width="${w0.toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}" fill="${v >= 0 ? 'rgb(16 185 129)' : 'rgb(239 68 68)'}"><title>${fd(sel[i])}: ${bi(v)}</title></rect>`; }).join('');
+    const bars = fx.map((v, i) => { const h = Math.abs(v) / mx * (H / 2 - 4); return `<rect x="${(i * bw + (bw - w0) / 2).toFixed(1)}" y="${(v >= 0 ? H / 2 - h : H / 2).toFixed(1)}" width="${w0.toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}" style="fill:${v >= 0 ? 'var(--c-pos-bd)' : 'rgb(239 68 68)'}"><title>${fd(sel[i])}: ${bi(v)}</title></rect>`; }).join('');
     // 1 dia: sem gráfico (uma barra só ocupava a largura toda)
-    const chart = fx.length > 1 ? `<div class="flow-ch"><span class="gt-help">Saldo diário dos estrangeiros</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}"><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" stroke="rgb(100 116 139)" stroke-width="0.8"/>${bars}</svg>
+    const chart = fx.length > 1 ? `<div class="flow-ch"><span class="gt-help">Saldo diário dos estrangeiros</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}"><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" style="stroke:var(--c-dim)" stroke-width="0.8"/>${bars}</svg>
       <div class="flow-lb"><span>${fd(sel[0])}</span><span>máx. ${bi(mx).replace(/^[+−]/, '±')}</span><span>${fd(sel[sel.length - 1])}</span></div></div>` : '';
     const short = days.length < n ? `<p class="gt-help">Histórico disponível: ${days.length} pregões (desde ${fd(days[0])}).</p>` : '';
     return `<div class="gt gt-flow"><div class="gt-head"><span class="gt-name">Fluxo da bolsa</span></div>

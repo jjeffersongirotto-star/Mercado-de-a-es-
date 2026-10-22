@@ -14,14 +14,9 @@
   // Ação de fora do Brasil: índice do país (nome em /api/countries) na linha "ibov", dólar e ouro só nos EUA; sem índices brasileiros
   const linesFor = (c) => c === 'br' ? LINES : LINES.filter(L => ['stock', 'ibov', 'usd', 'gold'].includes(L.id))
     .map(L => L.id === 'ibov' ? { ...L, label: (((typeof state !== 'undefined' && state.countries) || []).find(x => x.id === c) || {}).index || 'Índice' } : L);
-  window.gcLinesFor = linesFor;
   const PERIODS = [['1d', '1 dia'], ['7d', '7 dias'], ['1m', '1 mês'], ['1y', '1 ano'], ['2y', '2 anos'], ['3y', '3 anos'], ['4y', '4 anos'], ['5y', '5 anos']];
   const DAY = 864e5;
   const P2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' });
-  const cache = {};
-  const getJSON = (u) => cache[u] || (cache[u] = fetch(u).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); return d; }).catch(e => { delete cache[u]; throw e; }));
-  const hist = (t, k) => getJSON(`/api/history/${encodeURIComponent(t)}?kind=${k}`);
-  const idx = (n) => getJSON(`/api/indices/${n}`);
   const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
 
   function mount(box) {
@@ -116,18 +111,39 @@
   const PKEY = 'screenerB3.chart.v1';
   const prefsAll = () => { try { return JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) { return {}; } };
   function loadPref(t) { const p = prefsAll()[t]; return p ? { per: p.per, di: p.di || '', df: p.df || '', on: p.on || { stock: true } } : {}; }
-  function savePref(t, S) { const a = prefsAll(); a[t] = { per: S.per, di: S.di, df: S.df, on: S.on }; try { localStorage.setItem(PKEY, JSON.stringify(a)); } catch (e) { } }
-  // Cache no navegador (IndexedDB): mostra na hora e atualiza depois
-  const mem = {};
+  // guarda só as PMAX ações vistas por último (at = quando), para a chave não crescer sem fim
+  const PMAX = 30;
+  function savePref(t, S) {
+    const a = prefsAll(); a[t] = { per: S.per, di: S.di, df: S.df, on: S.on, at: Date.now() };
+    const ks = Object.keys(a).sort((x, y) => (a[y].at || 0) - (a[x].at || 0)); for (const k of ks.slice(PMAX)) delete a[k];
+    try { localStorage.setItem(PKEY, JSON.stringify(a)); } catch (e) { }
+  }
+  // Cache no navegador (IndexedDB): mostra na hora e atualiza depois; entradas com mais de CDIAS dias saem ao abrir o banco,
+  // e a memória guarda só as MMAX últimas
+  const mem = new Map(), MMAX = 40, CDIAS = 30;
+  const memSet = (k, v) => { mem.delete(k); mem.set(k, v); while (mem.size > MMAX) mem.delete(mem.keys().next().value); };
   let dbp = null;
-  const db = () => dbp || (dbp = new Promise((res) => { try { try { indexedDB.deleteDatabase('screenerB3-hist'); } catch (e) { } const r = indexedDB.open('screenerB3-hist-b3', 1); r.onupgradeneeded = () => r.result.createObjectStore('c'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }));
+  const OLDDB = 'screenerB3.histdbantigo.v1';  // banco antigo 'screenerB3-hist' apagado uma vez só por aparelho
+  const db = () => dbp || (dbp = new Promise((res) => {
+    try {
+      try { if (!localStorage.getItem(OLDDB)) { indexedDB.deleteDatabase('screenerB3-hist'); localStorage.setItem(OLDDB, '1'); } } catch (e) { }
+      const r = indexedDB.open('screenerB3-hist-b3', 1); r.onupgradeneeded = () => r.result.createObjectStore('c');
+      r.onsuccess = () => { const d = r.result; res(d); prune(d); }; r.onerror = () => res(null);
+    } catch (e) { res(null); }
+  }));
+  function prune(d) {
+    try {
+      const lim = Date.now() - CDIAS * 864e5, c = d.transaction('c', 'readwrite').objectStore('c').openCursor();
+      c.onsuccess = () => { const x = c.result; if (!x) return; if (!x.value || !(x.value.at > lim)) x.delete(); x.continue(); };
+    } catch (e) { }
+  }
   async function cget(k) {
-    if (mem[k]) return mem[k];
+    if (mem.has(k)) return mem.get(k);
     const d = await db(); if (!d) return null;
-    return new Promise(res => { try { const q = d.transaction('c').objectStore('c').get(k); q.onsuccess = () => { if (q.result) mem[k] = q.result; res(q.result || null); }; q.onerror = () => res(null); } catch (e) { res(null); } });
+    return new Promise(res => { try { const q = d.transaction('c').objectStore('c').get(k); q.onsuccess = () => { if (q.result) memSet(k, q.result); res(q.result || null); }; q.onerror = () => res(null); } catch (e) { res(null); } });
   }
   async function cput(k, pay) {
-    const v = { at: Date.now(), pay }; mem[k] = v;
+    const v = { at: Date.now(), pay }; memSet(k, v);
     const d = await db(); if (!d) return; try { d.transaction('c', 'readwrite').objectStore('c').put(v, k); } catch (e) { }
   }
   // Base = último fechamento até o início do período (convenção usual: variação desde o fechamento anterior)
@@ -164,7 +180,6 @@
     }
     return out;
   }
-  window.gcPts = { pricePts, ratePts };
   // opt (Comparar): mode 'val' = legenda com preço inicial → final e %; cross = toque/arraste mostra valor e % na data
   function render(plot, leg, series, start, end, kind, base, opt) {
     const o = opt || {}, money = (v) => fmtPrice(v, o.cur || 'BRL');  // eixo na moeda da ação
@@ -221,5 +236,5 @@
   const scan = (root) => (root.querySelectorAll ? root.querySelectorAll('.gchart:not([data-m])') : []).forEach(el => io.observe(el));
   new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && (n.matches?.('.gchart') ? io.observe(n) : scan(n))))).observe(document.body, { childList: true, subtree: true });
   scan(document);
-  window.mountChart = mount; window.gcRender = render; window.gcPricePts = pricePts; window.gcRatePts = ratePts;
+  window.gcRender = render; window.gcPricePts = pricePts; window.gcRatePts = ratePts;
 })();
