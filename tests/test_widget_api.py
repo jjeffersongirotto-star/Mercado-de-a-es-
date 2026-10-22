@@ -239,5 +239,7 @@ def test_proventos_do_ano_e_proximos():
         assert [x["pg"] for x in d["prox"]] == ["2026-11-05", "2026-12-10"]  # anunciada (com valor) + 1 estimada (dezembro, sem valor)
         assert d["prox"][1]["sit"] == "estimada" and d["prox"][1]["v"] is None
         assert server.proventos_acao("XXXX3", date(2026, 10, 22)) == {"ano": [], "prox": [], "at": "x"}
+        ev["BBAS3"].append(["2026-11-05", "2026-10-15", 0.05, "Dividendo"])  # 2 anúncios no mesmo dia = 1 data: ainda vem a estimada
+        assert [x["sit"] for x in server.proventos_acao("BBAS3", date(2026, 10, 22))["prox"]] == ["receber", "receber", "estimada"]
     finally:
         snapshots.load = old
