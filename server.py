@@ -88,7 +88,6 @@ FIELDS = [
     ("patrliq",  "Patrimônio Líq.",    "R$", None,  False, "Patrim. Líq",      None,                     True,  0,    False),
     ("valmerc",  "Valor de Mercado",   "R$", None,  False, None,               " VALOR DE MERCADO",      False, 0,    False),
 ]
-FIELD_KEYS = [f[0] for f in FIELDS]
 # Campos agrupados nos filtros (um campo com Período): grp = grupo, per = período, sub = subtipo; scale = digitado em milhões.
 VOL_PER = {"voldia": "dia", "vol10": "10 pregões", "vol30": "1 mês", "liq2m": "2 meses", "vol90": "3 meses",
            "vol6m": "6 meses", "vol9m": "9 meses", "vol12m": "12 meses"}
@@ -215,7 +214,6 @@ SOURCES = [  # id, nome, logo, países
     ("ddm", "Dados de Mercado", "dadosdemercado.png", {"br"}),
     ("yf", "Yahoo Finance", "yahoo.png", {"br"}),
 ]
-SRC_NAME = {s[0]: s[1] for s in SOURCES}
 CMP_FIELDS = [(f[0], f[8], f[9]) for f in FIELDS]
 
 def _r4(x):
@@ -366,6 +364,10 @@ def build():
         "rows": rows,
     }
 
+def _cad():
+    """Cadastro oficial da B3 {raiz: [nome, segmento]} (snapshot b3_cad)."""
+    return ((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}
+
 def finalize(base, yf_store=None):
     """Aplica consenso; retorna payload para o cliente."""
     rows = []
@@ -382,7 +384,7 @@ def finalize(base, yf_store=None):
     for ix, comp in ((b3i or {}).get("indices") or {}).items():
         for cod, part in comp.items():
             IXC.setdefault(cod[:4], {}).setdefault(ix, (cod, part))
-    CAD = (((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}) if isbr else {}
+    CAD = _cad() if isbr else {}
     V30 = (((snapshots.load("b3_vol30", max_mem_age=12 * 3600)[0] or {}).get("v")) or {}) if isbr else {}
     MXB = (((snapshots.load("metrics", max_mem_age=6 * 3600)[0] or {}).get("metrics")) or {}) if isbr else {}
     FGA = (snapshots.load("fg_acoes", max_mem_age=6 * 3600)[0] or {}) if isbr else {}  # Medo e Ganância de cada ação (build_fg.acoes)
@@ -483,7 +485,6 @@ YF_FILE = os.path.join(BASE, "cache", "yfinance.json")
 # Yahoo ao vivo: o Yahoo bloqueia IPs de nuvem (401 "Invalid Crumb" em cada ticker, enchendo o log).
 # No Render (variável RENDER, definida pelo próprio Render) usa só o snapshot diário; YF_LIVE=1/0 força ligar/desligar.
 YF_LIVE = os.environ.get("YF_LIVE", "0" if os.environ.get("RENDER") else "1") not in ("0", "false", "no", "")
-ABS_THR = {f[0]: f[8] for f in FIELDS if f[9]}
 
 class Cache:
     """base = dados brutos por fonte (Brasil); data = consenso aplicado (inclui Yahoo)."""
@@ -492,6 +493,7 @@ class Cache:
         self.data = None
         self.lock = threading.Lock()
         self.refreshing = False
+        self.done_at = 0.0      # fim da última atualização (POST /api/refresh espera REFRESH_MIN depois dela)
         self.last_error = None
         self.yf = tiebreak.YFStore(YF_FILE)
         self.foreign = {}       # país -> payload
@@ -534,7 +536,7 @@ class Cache:
             log.exception("consenso falhou"); return
         d["status"] = dict(d.get("status") or {}); d["status"]["yfinance"] = self.yf.status
         self.data = d
-        try:  # grupos prontos do rodízio: histórico sempre em memória (history.PIN)
+        try:  # grupos prontos do rodízio: history.PIN (gráficos das ações de fora não saem do cache; B3: LRU com cópia no disco)
             import modelos
             history.pin([], keep={t for g in modelos.ready_groups(universe.universe(d.get("rows") or [])) for t in g["t"]})
         except Exception as e:
@@ -561,7 +563,7 @@ class Cache:
             log.exception("falha na atualização")
             return False
         finally:
-            self.refreshing = False
+            self.done_at = time.time(); self.refreshing = False
 
     def refresh_async(self):
         if not self.refreshing:
@@ -667,28 +669,32 @@ def api_countries():
              "sources": [{"id": i, "name": n, "logo": f"/static/logos/{l}"} for i, n, l, cs in SOURCES if k in cs]}
             for k, v in tradingview.COUNTRIES.items()]
 
-_JSON_CACHE = {}  # id(payload) -> (payload, json bytes, gzip bytes)
+_JSON_CACHE = {}  # país -> {"d": payload, "raw": json bytes, "gz": {cabeçalho extra: gzip bytes}}: só a versão atual de cada país
+_JSON_LK = threading.Lock()
+GZ_MAX = 4  # variações comprimidas guardadas por país (refreshing/last_error mudam o início do JSON)
 
-def _json_fast(request, d, extra=None):
+def _json_fast(request, d, extra=None, slot="br"):
     """Payload grande (~1,3 MB): converte para JSON e comprime UMA vez por versão dos dados (antes: a cada visita,
-    ~2 s de CPU no plano gratuito). `extra` = campos pequenos que mudam (refreshing/last_error), emendados no início."""
-    c = _JSON_CACHE.get(id(d))
-    if not c or c[0] is not d:
-        raw = json.dumps(d, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode()
-        c = (d, raw, None)
-        if len(_JSON_CACHE) > 6: _JSON_CACHE.clear()  # só as versões atuais (pouca RAM no plano gratuito)
-        _JSON_CACHE[id(d)] = c
-    raw = c[1]
+    ~2 s de CPU no plano gratuito). `extra` = campos pequenos que mudam (refreshing/last_error), emendados no início.
+    Guarda só a versão atual de cada país (slot): a anterior sai da memória quando os dados mudam."""
+    with _JSON_LK:
+        c = _JSON_CACHE.get(slot)
+    if not c or c["d"] is not d:
+        c = {"d": d, "raw": json.dumps(d, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode(), "gz": {}}
+        with _JSON_LK: _JSON_CACHE[slot] = c
+    raw = c["raw"]
     if extra:
         head = json.dumps(extra, ensure_ascii=False, separators=(",", ":")).encode()[:-1]
         raw = head + (b"," + raw[1:] if len(raw) > 2 else b"}")
-    gz = "gzip" in (request.headers.get("accept-encoding") or "")
-    if gz:
-        key = (id(d), raw[:200] if extra else b"")
-        hit = _JSON_CACHE.get(("gz",) + key)
-        if hit is None or hit[0] is not d:
-            hit = (d, gzip.compress(raw, 6)); _JSON_CACHE[("gz",) + key] = hit
-        return Response(hit[1], media_type="application/json", headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"})
+    if "gzip" in (request.headers.get("accept-encoding") or ""):
+        key = raw[:200] if extra else b""
+        hit = c["gz"].get(key)
+        if hit is None:
+            hit = gzip.compress(raw, 6)
+            with _JSON_LK:
+                c["gz"][key] = hit
+                while len(c["gz"]) > GZ_MAX: c["gz"].pop(next(iter(c["gz"])))
+        return Response(hit, media_type="application/json", headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"})
     return Response(raw, media_type="application/json")
 
 @app.get("/api/data")
@@ -698,7 +704,7 @@ def api_data(request: Request, country: str = "br"):
         d = cache.get_foreign(country)
         if not d["rows"]:
             return JSONResponse({"loading": False, "error": d["status"].get("tradingview")}, status_code=502)
-        return _json_fast(request, d)
+        return _json_fast(request, d, slot=country)
     if cache.data is None:
         if not cache.refreshing:
             cache.refresh_async()
@@ -716,16 +722,24 @@ def widget_should_refresh(age, now=None):
     """O ⟳ do widget pede a mesma atualização do ⟳ do site só com dados velhos no pregão; fora dele, nada pesado."""
     return age > WIDGET_STALE and pregao(now)
 
+REFRESH_MIN = 5 * 60  # ⟳ (site e widget): depois de uma atualização terminada, novos pedidos nesse intervalo só recebem o estado
+
+def refresh_recent(now=None):
+    """Uma atualização terminou há menos de REFRESH_MIN? (cada uma refaz build() inteiro: pesado no plano gratuito)"""
+    return (now or time.time()) - cache.done_at < REFRESH_MIN
+
 @app.post("/api/refresh")
 def api_refresh(src: str = ""):
     if src == "widget":  # widget: mesma atualização (uma por vez), só se os dados estão velhos no pregão; não limpa as ações de fora
-        go = widget_should_refresh(cache.age())
+        go = widget_should_refresh(cache.age()) and not refresh_recent()
         started = go and not cache.refreshing
         if go: cache.refresh_async()
         return {"started": started, "refreshing": cache.refreshing or started}
+    if refresh_recent() and not cache.refreshing:  # acabou de atualizar: devolve o estado (o site recarrega o que já está pronto)
+        return {"started": False, "refreshing": False}
     started = not cache.refreshing
     cache.refresh_async()
-    cache.foreign.clear()
+    if started: cache.foreign.clear()
     return {"started": started, "refreshing": True}
 
 @app.get("/api/status")
@@ -856,7 +870,7 @@ def _chat_ctx():
     def ret_fn(di, df, T):  # mesmo cálculo da aba Comparar
         try: return period_returns(di, df, T)
         except Exception as e: log.warning("chat ret: %s", e); return {}
-    CAD = ((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}
+    CAD = _cad()
     key = ((cache.data or {}).get("updated_at"), id(MX), len(CAD))
     if _chat_D.get("key") != key:  # índice de nomes/apelidos: recalcula só quando os dados mudam
         _chat_D.update(key=key, D=chat.build(rows, FIELDS, MX, CAD))
@@ -883,7 +897,10 @@ def _chat_ctx():
     def news_fn():  # notícias da aba Notícias com o assunto de cada uma
         try: return json.loads(api_noticias().body).get("itens") or []
         except Exception as e: log.warning("chat notícias: %s", e); return []
-    fx = {"news": news_fn, "pre": lambda: snapshots.load("modelos_pre", max_mem_age=6 * 3600)[0]}
+    def pre_fn():  # Comparar → Modelos pré-calculado: a mesma cópia dos modelos (modelos._PRE, carregada por _pre), não outra
+        import modelos
+        _pre(); return modelos._PRE
+    fx = {"news": news_fn, "pre": pre_fn}
     return _chat_D["D"], ret_fn, ext_fn, quote_fn, fx
 
 @app.post("/api/chat")
@@ -933,9 +950,14 @@ def api_chat_guia(body: dict):
 _chat_D = {}
 
 @app.get("/api/chat/log")
-def api_chat_log(n: int = 200, only: str = ""):
-    """Perguntas feitas ao chat (mais recentes primeiro). only=sem_resposta | reclamacao."""
-    import chat
+def api_chat_log(request: Request, n: int = 200, only: str = "", token: str = ""):
+    """Perguntas feitas ao chat (mais recentes primeiro). only=sem_resposta | reclamacao. Só para quem mantém o site: exige o token
+    da variável de ambiente CHAT_LOG_TOKEN (cabeçalho X-Chat-Log-Token ou ?token=); sem a variável, ninguém lê (403)."""
+    import chat, hmac
+    tok = os.environ.get("CHAT_LOG_TOKEN") or ""
+    got = request.headers.get("x-chat-log-token") or token or ""
+    if not tok or not hmac.compare_digest(got.encode(), tok.encode()):
+        return JSONResponse({"error": "acesso negado"}, status_code=403, headers={"Cache-Control": "no-store"})
     return JSONResponse(chat.read_log(max(1, min(n, 2000)), only or None), headers={"Cache-Control": "no-store"})
 
 @app.get("/api/metrics")
@@ -1029,7 +1051,8 @@ def api_modelos():
 
 @app.post("/api/pin")
 def api_pin(body: dict):
-    """Favoritos e grupos do usuário (app.js -> sendPins): o histórico dessas ações fica em memória (history.pin, limitado)."""
+    """Favoritos e grupos do usuário (app.js -> sendPins): history.pin (limitado; gráficos das ações de fora não saem do cache de
+    gráficos; o histórico da B3 fica no LRU curto de history._h4 e no disco, como o das outras ações)."""
     history.pin([str(t) for t in ((body or {}).get("t") or [])[:200]])
     return Response(status_code=204)
 
@@ -1139,16 +1162,9 @@ def logo_index():
         threading.Thread(target=go, daemon=True).start()
     return _LOGO_IDX["t"]
 
-@app.get("/api/logos")
-def api_logos():
-    """Índice dos logos (widget; e quem mais mostrar logo de empresa)."""
-    d, desc = snapshots.load("logos/index", max_mem_age=6 * 3600)
-    if not d: return JSONResponse({"error": "sem índice de logos", "detail": desc}, status_code=404, headers={"Cache-Control": "no-store"})
-    return JSONResponse(d, headers={"Cache-Control": "public, max-age=21600"})
-
 @app.get("/logos/{f}")
 def logo_file(f: str):
-    """PNG 128×128 de um logo (/api/logos ou /api/widget → l). Baixado da branch data uma vez e guardado em memória."""
+    """PNG 128×128 de um logo (/api/widget → l). Baixado da branch data uma vez e guardado em memória."""
     if not LOGO_FILE.fullmatch(f): return JSONResponse({"error": "não encontrado"}, status_code=404)
     b = _LOGO_BYTES.get(f)
     if b is None:
@@ -1195,6 +1211,14 @@ def api_widget_chart(t: str = ""):
     _WCHART[key] = out
     return JSONResponse(out, headers={"Cache-Control": "public, max-age=1800"})
 
+def _user_groups(gs):
+    """Grupos do usuário vindos do site (Previsão, Comparar) -> [{n, t}] limpos: até 9 grupos, nome de até 40 letras, até 30 tickers."""
+    return [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (gs or [])[:9] if isinstance(g, dict)]
+
+def _pin_user(grupos, fav):
+    """Grupos e Favoritos do usuário: history.pin (gráficos das ações de fora não saem do cache; os da B3 seguem no LRU com cópia no disco)."""
+    history.pin([t for g in grupos for t in g["t"]] + [str(t) for t in (fav or [])[:60]])
+
 @app.post("/api/modelos")
 def api_modelos_sim(body: dict):
     """Simulação dos modelos (Desempenho) ou a tabela mês a mês de uma empresa (tab). Grupos prontos + grupos do usuário."""
@@ -1204,8 +1228,8 @@ def api_modelos_sim(body: dict):
     body = dict(body or {})
     body["universo"] = [r["ticker"] for r in rows]
     if body.get("ticker") == "top5": body["ticker"], body["universo"] = "*", modelos.top_sector(rows)  # 5 maiores de cada setor
-    user = [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (body.get("grupos") or [])[:9]]
-    history.pin([t for g in user for t in g["t"]] + [str(t) for t in (body.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
+    user = _user_groups(body.get("grupos"))
+    _pin_user(user, body.get("fav"))
     body["grupos"] = modelos.ready_groups(rows) + user
     try:
         D = modelos.data(); modelos.set_setores(D, rows, _cad())  # setores perenes (Método Barsi)
@@ -1213,10 +1237,6 @@ def api_modelos_sim(body: dict):
     except Exception:
         log.exception("modelos: simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
-
-def _cad():
-    """Cadastro oficial da B3 {raiz: [nome, segmento]} (snapshot b3_cad)."""
-    return ((snapshots.load("b3_cad", max_mem_age=12 * 3600)[0] or {}).get("c")) or {}
 
 _PRE_T = [0.0]
 def _pre():
@@ -1243,8 +1263,8 @@ def api_modelos_comparar(body: dict):
         tx = None if tx is None else max(0.0, min(100.0, float(tx)))
         grupos = None
         if b.get("rod"):  # rodízio: grupos prontos + grupos do usuário
-            grupos = modelos.ready_groups(rows) + [{"n": str(g.get("n") or "")[:40], "t": [str(t).upper() for t in (g.get("t") or [])][:30]} for g in (b.get("grupos") or [])[:9]]
-        history.pin([t for g in (grupos or []) for t in g["t"]] + [str(t) for t in (b.get("fav") or [])[:60]])  # grupos e Favoritos do usuário: histórico fica em memória
+            grupos = modelos.ready_groups(rows) + _user_groups(b.get("grupos"))
+        _pin_user(grupos or [], b.get("fav"))
         D = modelos.data(); modelos.set_setores(D, rows, _cad()); _pre()
         if u == "all": tick = modelos.todas(D, rows)  # + as que saíram da bolsa
         out = modelos.compare(D, tick, str(b.get("di") or "")[:10], str(b.get("df") or "")[:10], aps, wd, tx, grupos)
@@ -1310,7 +1330,10 @@ def api_modelos_simmov(body: dict):
 _PROV = {}  # (início, valor inicial, modelo, ticker, lado c/v, dia) -> hora em que a execução ao vivo foi vista pela primeira vez
 _P1 = {}  # (início, valor inicial) -> {ticker: (preço, 'HH:MM', dia)}: ordens do 1º dia vistas tocando o limite (simulação que começa hoje)
 _R1 = {}  # (início, valor inicial) -> {ticker: (referência, mínima do dia nessa hora, 'HH:MM')}: preço da hora da criação (1º dia)
-_SIMS = {}  # (início, valor inicial, f) -> último pedido: simulações acompanhadas ao vivo (_ao_vivo confere as ordens com horário)
+_SIMS = {}  # (início, valor inicial, aporte, extras, retiradas) validados -> (último pedido, di, v0, f do último pedido): simulações acompanhadas ao vivo (_ao_vivo)
+SIMS_MAX = 50  # no máximo; sai a pedida há mais tempo
+PROV_MAX = 20000  # _PROV: acima disso saem os dias mais antigos
+_LIVE_LK = threading.RLock()  # _R1, _P1, _PROV e _SIMS: usados pela conferência ao vivo (_ao_vivo) e pelos pedidos ao mesmo tempo
 LIVE_Q = {"at": 0.0, "q": {}}  # preço, mínima e máxima do dia (TradingView) da última conferência de _ao_vivo
 ORD_VIVO = 5 * 60   # intervalo da conferência das ordens ao vivo no pregão (s): horário das compras e vendas com até ~5 min de atraso
 SIM_DIAS = 3        # simulações pedidas nos últimos dias continuam acompanhadas
@@ -1324,10 +1347,22 @@ def _horas(di, v0, m, mov):
     """Movimentações com o horário visto ao vivo (_PROV) nas compras e vendas ('h'); cópias, o cache dos modelos não muda."""
     if not mov or not _PROV: return mov
     out = []
-    for e in mov:
-        h = _PROV.get((di, v0, m, e.get("t"), "c" if e.get("k") == "compra" else "v", e.get("d"))) if e.get("k") in ("compra", "venda") and not e.get("h") else None
-        out.append(dict(e, h=h) if h else e)
+    with _LIVE_LK:
+        for e in mov:
+            h = _PROV.get((di, v0, m, e.get("t"), "c" if e.get("k") == "compra" else "v", e.get("d"))) if e.get("k") in ("compra", "venda") and not e.get("h") else None
+            out.append(dict(e, h=h) if h else e)
     return out
+
+def _sim_reg(key, di, v0, f):
+    """Simulação acompanhada ao vivo (_ao_vivo): uma por definição validada (o f muda a cada p1/r1: guarda o último); no máximo SIMS_MAX."""
+    with _LIVE_LK:
+        _SIMS.pop(key, None); _SIMS[key] = (time.time(), di, v0, f)
+        while len(_SIMS) > SIMS_MAX: _SIMS.pop(next(iter(_SIMS)))
+
+def _trim_dias(d, n, dia):
+    """Tira de d (chaves com o dia em dia(k)) os dias mais antigos até ficar com no máximo n itens."""
+    if len(d) <= n: return
+    for k in sorted(d, key=dia)[:len(d) - n]: d.pop(k, None)
 
 def _sim_hoje(D, tk, di, v0, ap, ex, ret, p1=None, r1=None, cr=None):
     """Grupo simulação que começa hoje (dia ainda sem dados): decide com os dados até o último fechamento (os mesmos alvos e valores de
@@ -1345,42 +1380,44 @@ def _sim_hoje(D, tk, di, v0, ap, ex, ret, p1=None, r1=None, cr=None):
     key, agora, aberto = (di, v0), n_.strftime("%H:%M"), pregao(n_)
     nota = ("Criado fora do pregão: as ordens com preço limite começam no próximo pregão, a partir do fechamento de hoje." if not cr else
             "As ordens com preço limite começam na abertura, a partir do primeiro preço do dia." if (n_.hour, n_.minute) < (10, 0) else None)
-    R, F = _R1.setdefault(key, {}), _P1.setdefault(key, {})
-    for t, x in (r1.items() if isinstance(r1, dict) else ()):
-        try: R.setdefault(str(t), (float(x[0]), None if x[1] is None else float(x[1]), str(x[2])[:5]))
-        except Exception: continue
-    for t, x in modelos.sim_p1(p1).items():
-        if x[2] == hoje: F.setdefault(t, x)
-    q, C, FI = _quotes(), modelos.CUSTO, modelos.ORD_FILA; dpos = max(0, len(D["w"]) - (1 if nova else 2))
-    out = dict(sg, d0=di, d1=di, hoje=True, m=[], **({"nota": nota} if nota else {}))
-    for x in sg["m"]:
-        if x.get("ref"): out["m"].append(dict(x, v=sg["apT"], pct=0.0)); continue
-        cash, pos, mov, oa = x["cash"], [], [{"d": di, "k": "aporte", "v": round(v0, 2), "x": "valor inicial"}], []
-        for y in x.get("ord") or []:  # alvos do 1º dia: as ordens que a simulação deixou abertas no último dia dos dados (valor reservado r)
-            if not y.get("d1"): continue
-            t, inv = y["t"], y["r"]; p_, dl, dh = q.get(t) or (None, None, None)  # o caixa da simulação já inclui a reserva
-            if nota or not p_: continue
-            if t not in R: R[t] = (round(float(p_), 4), dl, agora)
-            ref, lo0, _ = R[t]; k = D["ix"].get(t); dd = float(D["ODI"][k, dpos]) if k is not None else float("nan")
-            lim = ref * (1 - (dd if dd == dd else modelos.ORD_MIN))
-            if t not in F and dl is not None and (lo0 is None or dl < lo0) and dl <= lim * (1 - FI):  # mínima nova, depois da criação
-                F[t] = (round(min(lim, dh) if dh else lim, 4), agora, hoje)
-            if t in F: px, h, xt = F[t][0], F[t][1], f"1º dia: ordem com preço limite R$ {F[t][0]:.2f}".replace(".", ",") + " · provisória (confirma no fechamento)"
-            elif not aberto: px, h, xt = float(p_), None, "1º dia: no fechamento (não tocou o limite) · provisória"
-            else: oa.append({"t": t, "lado": "c", "lim": round(lim, 2), "sem": 0, "r": round(inv, 2), "d1": True}); continue
-            n = int(inv * (1 - C) // px); cost = n * px / (1 - C) if n > 0 else 0.0
-            if n < 1: continue
-            cash -= cost
-            pos.append({"t": t, "q": n, "p": px, "pm": round(cost / n, 2), "v": round(n * px, 2), "inv": round(cost, 2), "pct": round((n * px / cost - 1) * 100, 2), "dv": 0.0, "b": px})
-            mov.append({"d": di, **({"h": h} if h else {}), "k": "compra", "t": t, "q": n, "p": round(px, 2), "v": round(cost, 2), "x": xt})
-        v = cash + sum(y["v"] for y in pos); cd = dict(x.get("cdb") or {}, ap=round(cash, 2), j=0.0, p=round(cash, 2))
-        out["m"].append(dict(x, v=round(v, 2), pct=round((v / sg["apT"] - 1) * 100, 2) if sg["apT"] > 0 else None, cash=round(cash, 2), cdb=cd,
-                             pos=sorted(pos, key=lambda y: -y["v"]), mov=mov, nmov=len(mov), np=len(pos), ord=oa, c=len(pos), s=0, ir=0.0))
-    out["m"].sort(key=lambda x: -(x["pct"] if x.get("pct") is not None else -1e9))
-    out["p1"] = {t: list(x) for t, x in F.items()}; out["r1"] = {t: list(x) for t, x in R.items()}
-    if len(_P1) > 500: _P1.clear()
-    if len(_R1) > 500: _R1.clear()
-    return out
+    with _LIVE_LK:  # R/F (= _R1/_P1) mudam aqui e na conferência ao vivo
+        R, F = _R1.setdefault(key, {}), _P1.setdefault(key, {})
+        for t, x in (r1.items() if isinstance(r1, dict) else ()):
+            try: R.setdefault(str(t), (float(x[0]), None if x[1] is None else float(x[1]), str(x[2])[:5]))
+            except Exception: continue
+        for t, x in modelos.sim_p1(p1).items():
+            if x[2] == hoje: F.setdefault(t, x)
+        q = _quotes(); dpos = max(0, len(D["w"]) - (1 if nova else 2))
+        out = dict(sg, d0=di, d1=di, hoje=True, m=[], **({"nota": nota} if nota else {}))
+        for x in sg["m"]:
+            if x.get("ref"): out["m"].append(dict(x, v=sg["apT"], pct=0.0)); continue
+            cash, pos, mov, oa = x["cash"], [], [{"d": di, "k": "aporte", "v": round(v0, 2), "x": "valor inicial"}], []
+            for y in x.get("ord") or []:  # alvos do 1º dia: as ordens que a simulação deixou abertas no último dia dos dados (valor reservado r)
+                if not y.get("d1"): continue
+                t, inv = y["t"], y["r"]; p_, dl, dh = q.get(t) or (None, None, None)  # o caixa da simulação já inclui a reserva
+                if nota or not p_: continue
+                if t not in R: R[t] = (round(float(p_), 4), dl, agora)
+                ref, lo0, _ = R[t]; k = D["ix"].get(t); dd = float(D["ODI"][k, dpos]) if k is not None else float("nan")
+                lim = ref * (1 - (dd if dd == dd else modelos.ORD_MIN))
+                toc, pxl = modelos.ord_exec(True, lim, dl, dh)  # mesma regra de execução dos modelos
+                if t not in F and dl is not None and (lo0 is None or dl < lo0) and toc:  # mínima nova, depois da criação
+                    F[t] = (round(float(pxl), 4), agora, hoje)
+                if t in F: px, h, xt = F[t][0], F[t][1], f"1º dia: ordem com preço limite R$ {F[t][0]:.2f}".replace(".", ",") + " · provisória (confirma no fechamento)"
+                elif not aberto: px, h, xt = float(p_), None, "1º dia: no fechamento (não tocou o limite) · provisória"
+                else: oa.append({"t": t, "lado": "c", "lim": round(lim, 2), "sem": 0, "r": round(inv, 2), "d1": True}); continue
+                n, cost = modelos.compra_inteira(inv, px); n, cost = int(n), float(cost)
+                if n < 1: continue
+                cash -= cost
+                pos.append({"t": t, "q": n, "p": px, "pm": round(cost / n, 2), "v": round(n * px, 2), "inv": round(cost, 2), "pct": round((n * px / cost - 1) * 100, 2), "dv": 0.0, "b": px})
+                mov.append({"d": di, **({"h": h} if h else {}), "k": "compra", "t": t, "q": n, "p": round(px, 2), "v": round(cost, 2), "x": xt})
+            v = cash + sum(y["v"] for y in pos); cd = dict(x.get("cdb") or {}, ap=round(cash, 2), j=0.0, p=round(cash, 2))
+            out["m"].append(dict(x, v=round(v, 2), pct=round((v / sg["apT"] - 1) * 100, 2) if sg["apT"] > 0 else None, cash=round(cash, 2), cdb=cd,
+                                 pos=sorted(pos, key=lambda y: -y["v"]), mov=mov, nmov=len(mov), np=len(pos), ord=oa, c=len(pos), s=0, ir=0.0))
+        out["m"].sort(key=lambda x: -(x["pct"] if x.get("pct") is not None else -1e9))
+        out["p1"] = {t: list(x) for t, x in F.items()}; out["r1"] = {t: list(x) for t, x in R.items()}
+        for d_ in (_P1, _R1):  # só valem no dia de início (di = hoje): saem os dias mais antigos
+            _trim_dias(d_, 500, lambda k: k[0])
+        return out
 
 def _ao_vivo():
     """No pregão, a cada ORD_VIVO: preço, mínima e máxima do dia de todas as ações (uma consulta ao TradingView) e conferência das ordens
@@ -1388,11 +1425,13 @@ def _ao_vivo():
     while True:
         try:
             agora = time.time()
-            for k, at in list(_SIMS.items()):
-                if agora - at > SIM_DIAS * 86400: _SIMS.pop(k, None)
-            if pregao() and _SIMS:
+            with _LIVE_LK:
+                for k, x in list(_SIMS.items()):
+                    if agora - x[0] > SIM_DIAS * 86400: _SIMS.pop(k, None)
+                sims = [x[1:] for x in _SIMS.values()]
+            if pregao() and sims:
                 LIVE_Q["q"] = {t: ((r["v"] or {}).get("preco"), r["m"].get("dl"), r["m"].get("dh")) for t, r in tradingview.fetch("br").items()}; LIVE_Q["at"] = time.time()
-                for k in list(_SIMS): _simw(*k, reg=False)
+                for di, v0, f in sims: _simw(di, v0, f, reg=False)
         except Exception:
             log.exception("modelos: ordens ao vivo")
         time.sleep(ORD_VIVO)
@@ -1410,14 +1449,15 @@ def _simw(di, v0, f, reg=True):
         fx = fx if isinstance(fx, dict) else {}
         d = str(fx.pop("d", "") or "")  # widget até a 1.18: di = AAAA-MM e o dia completo em f.d (grupos.js → pushSims)
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) and d[:7] == str(di or "")[:7]: di = d
-        p1, r1, cr = fx.pop("p1", None), fx.pop("r1", None), fx.pop("cr", None); _, v0, ap, ex, ret = modelos.sim_def(dict(fx, di=di, v0=v0))
-        tk = modelos.todas(D, rows); di = str(di or "")[:10]
-        if reg: _SIMS[(di, v0, f)] = time.time()  # acompanhada ao vivo (_ao_vivo)
+        di0, v00 = di, v0  # como veio (o f.d dos widgets antigos fica no f): _ao_vivo repete o pedido igual
+        p1, r1, cr = fx.pop("p1", None), fx.pop("r1", None), fx.pop("cr", None); di, v0, ap, ex, ret = modelos.sim_def(dict(fx, di=di, v0=v0))
+        tk = modelos.todas(D, rows)
         sg = modelos.simgrupo(D, tk, di, v0, ap, ex, ret, p1, cr=cr)
         if sg.get("pend"): sg = _sim_hoje(D, tk, di, v0, ap, ex, ret, p1, r1, cr) or sg
     except Exception:
         log.exception("modelos: widget grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502), None, None
     if sg.get("error"): return JSONResponse(sg, status_code=400, headers={"Cache-Control": "no-store"}), None, None
+    if reg: _sim_reg((di, v0, ap, json.dumps(ex), json.dumps(ret)), di0, v00, f)  # acompanhada ao vivo (_ao_vivo), só a que deu certo
     d = cache.data or {}; by = {r["ticker"]: r for r in d.get("rows") or []}
     def live(t, pw):  # preço de agora e variação do dia (%); sem cotação: o da última semana da simulação, sem variação
         r = by.get(t) or {}; p = (r.get("v") or {}).get("preco")
@@ -1431,19 +1471,22 @@ def _simw(di, v0, f, reg=True):
         if sg["d1"] < hoje:  # ordens abertas da simulação × mínima/máxima de hoje (TradingView): executa ao vivo, provisória até o fechamento
             for o in x.get("ord") or []:
                 _, dl, dh = Q.get(o["t"]) or (None, None, None)
-                if dl is None or dh is None: continue
-                if o["lado"] == "c" and dl <= o["lim"] * (1 - modelos.ORD_FILA):
-                    px = min(o["lim"], dh); q = int(o.get("r", 0) * (1 - modelos.CUSTO) // px) if px > 0 else 0
+                if dl is None or dh is None or o["lado"] not in ("c", "v"): continue
+                toc, px = modelos.ord_exec(o["lado"] == "c", o["lim"], dl, dh); px = float(px)  # mesma regra de execução dos modelos
+                if not toc: continue
+                if o["lado"] == "c":
+                    q, cost = modelos.compra_inteira(o.get("r", 0), px) if px > 0 else (0, 0.0); q, cost = int(q), float(cost)
                     if q < 1: continue
-                    cost = q * px / (1 - modelos.CUSTO); cash -= cost
+                    cash -= cost
                     y = pa.setdefault(o["t"], {"t": o["t"], "q": 0, "inv": 0.0, "p": px}); y["q"] += q; y["inv"] = round(y["inv"] + cost, 2)
-                elif o["lado"] == "v" and dh >= o["lim"] * (1 + modelos.ORD_FILA) and o["t"] in pa:
-                    px = max(o["lim"], dl); q = pa[o["t"]]["q"]; cost = q * px * (1 - modelos.CUSTO); cash += cost; pa.pop(o["t"])
+                elif o["t"] in pa:
+                    q = pa[o["t"]]["q"]; cost = float(modelos.venda_liq(q, px)); cash += cost; pa.pop(o["t"])
                 else: continue
-                k = (di, v0, x["m"], o["t"], o["lado"], hoje); _PROV.setdefault(k, agora)  # hora em que o servidor viu primeiro (fica para as movimentações: _horas)
-                prov.append({"d": hoje, "h": _PROV[k], "k": "compra" if o["lado"] == "c" else "venda", "t": o["t"], "q": q, "p": round(px, 2), "v": round(cost, 2),
+                k = (di, v0, x["m"], o["t"], o["lado"], hoje)
+                with _LIVE_LK: h = _PROV.setdefault(k, agora)  # hora em que o servidor viu primeiro (fica para as movimentações: _horas)
+                prov.append({"d": hoje, "h": h, "k": "compra" if o["lado"] == "c" else "venda", "t": o["t"], "q": q, "p": round(px, 2), "v": round(cost, 2),
                              "x": "ordem com preço limite · provisória (confirma no fechamento)"})
-            if len(_PROV) > 20000: _PROV.clear()
+            with _LIVE_LK: _trim_dias(_PROV, PROV_MAX, lambda k: k[-1])
         tot, dia, pos = cash, 0.0, []
         for y in pa.values():
             t, q, inv = y["t"], y["q"], y["inv"]; p, var = live(t, y["p"]); val = q * p; tot += val

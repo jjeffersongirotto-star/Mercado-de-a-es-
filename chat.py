@@ -624,9 +624,6 @@ def returns(P, D, ret_fn):
 def _sgn(x): return ("+" if x >= 0 else "") + br(x) + "%"
 
 
-DEFAULT_KEYS = ["preco", "dy", "pl", "pvp", "roe", "dlpl"]
-
-
 def values(P, D, ks=None):
     ks = ks or [k for k in P["metrics"] if k != RET] or ["preco"]
     lines, red = [], False
@@ -1985,7 +1982,6 @@ def answer2(q, hist, D, ret_fn, cx=None, ext_fn=None, quote_fn=None, topic=None,
         for k in [k for k in _QA if not k.startswith(day)]: del _QA[k]  # só o dia de hoje
         while len(_QA) >= QA_MAX: del _QA[next(iter(_QA))]  # no máximo QA_MAX (sai a mais antiga)
         _QA[key] = out
-    if len(_QA) > 2000: _QA.clear()
     _log(q, out, P, t0)
     return out
 

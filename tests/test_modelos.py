@@ -1,7 +1,7 @@
 import json
 """Testes dos modelos da Previsão (modelos.py): custos, IR com isenção e prejuízo a compensar, CDB e rodízio.
 Rodar: python tests/test_modelos.py"""
-import os, sys
+import os, sys, time
 from datetime import date, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import numpy as np
@@ -678,6 +678,48 @@ def test_primeiro_dia_ordens_com_preco_limite():
     # começa no último dia dos dados: a ordem fica aberta para o servidor conferir ao vivo
     me = modelos._span(D, W[-1], D["fim"]); h = modelos.grupo(D, "hold", [0], me, [1000.0], rec=True)[4]
     assert not h["pos"] and any(o["t"] == "AAA3" and o.get("d1") for o in h["ord"])
+
+
+def test_sim_def_rejeita_inf_nan_e_exagero():
+    # valor inválido do site/app (inf, nan, acima de SIM_MAX) vira 0 (linha extra: ignorada); nunca chega à conta (JSON 500)
+    di, v0, ap, ex, ret = modelos.sim_def({"di": "2020-02-10", "v0": 1e309, "ap": "nan", "ex": [{"m": 2, "v": float("inf")}, {"m": 3, "v": 50}], "ret": [{"m": 4, "v": 1e13}]})
+    assert di == "2020-02-10" and v0 == 0.0 and ap == 0.0 and ex == [{"t": "m", "m": 3, "v": 50.0, "n": 0}] and ret == []
+    assert modelos.sim_def({"v0": "1000", "ap": -5})[1:3] == (1000.0, 0.0)
+
+
+def test_cache_de_respostas_limitado_e_por_geracao():
+    # _C: LRU de C_MAX; depois de _cclear (tabelas mudaram) a chave muda: conta que começou antes não é lida
+    modelos._C.clear()
+    for k in range(modelos.C_MAX + 5): modelos._cput(modelos._ckey("t", k), {"k": k})
+    assert len(modelos._C) == modelos.C_MAX and modelos._cget(modelos._ckey("t", 0)) is None and modelos._cget(modelos._ckey("t", modelos.C_MAX + 4)) == {"k": modelos.C_MAX + 4}
+    velha = modelos._ckey("x"); modelos._cclear(); modelos._cput(velha, {"velha": 1})
+    assert modelos._cget(modelos._ckey("x")) is None
+    modelos._C.clear()
+    assert modelos.MZ_MAX >= len(modelos.MODELOS)  # todas as movimentações de uma simulação inteira cabem (simmov não refaz)
+
+
+def test_data_so_baixa_quando_a_versao_muda():
+    # modelos.data confere só a versão (snapshots.version); GitHub fora: segue com as tabelas e confere de novo em DATA_RETRY
+    import snapshots, history
+    ov, ol, ob, oe, obcb = snapshots.version, snapshots.load, modelos.build, modelos.entradas, history.bcb
+    st = {"tag": "a", "loads": 0, "builds": 0}
+    snapshots.version = lambda n: st["tag"]
+    def load(n, max_mem_age=0): st["loads"] += 1; return {"a": {"X": 1}, "fetched_at": st["tag"]}, "teste"
+    snapshots.load = load; history.bcb = lambda n: {}
+    modelos.entradas = lambda: {}
+    def build(snap, cdi, consome=False): st["builds"] += 1; return {"n": st["builds"]}
+    modelos.build = build
+    d0 = dict(modelos._D)
+    try:
+        modelos._D.update(at=0, key=None, d=None, tag=None)
+        assert modelos.data() == {"n": 1} and st["loads"] == 1
+        modelos._D["at"] = 0; assert modelos.data() == {"n": 1} and st["loads"] == 1  # mesma versão: nem baixa
+        st["tag"] = None; modelos._D["at"] = 0; assert modelos.data() == {"n": 1} and st["loads"] == 1  # GitHub fora: segue com as atuais
+        assert time.time() - modelos._D["at"] > modelos.DATA_TTL - modelos.DATA_RETRY - 5  # e confere de novo logo
+        st["tag"] = "b"; modelos._D["at"] = 0; assert modelos.data() == {"n": 2} and st["loads"] == 2  # versão nova: monta de novo
+    finally:
+        snapshots.version, snapshots.load, modelos.build, modelos.entradas, history.bcb = ov, ol, ob, oe, obcb
+        modelos._D.clear(); modelos._D.update(d0)
 
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]

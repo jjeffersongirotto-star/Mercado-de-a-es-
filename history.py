@@ -14,14 +14,16 @@ from snapshots import RAW
 import tradingview
 KINDS = {"m": ("max", "1mo", 6 * 3600), "d": ("10y", "1d", 3 * 3600), "i": ("1d", "5m", 120)}
 from collections import OrderedDict
-_mem = OrderedDict()  # histórico em memória: no máximo MEM_MAX itens (sai o usado há mais tempo); PIN nunca sai
+_mem = OrderedDict()  # histórico em memória das ações de fora e índices (Yahoo/brapi): no máximo MEM_MAX itens (sai o usado há mais tempo); PIN nunca sai
 MEM_MAX = 150
 PIN = set()  # grupos prontos do rodízio (trocados a cada atualização dos dados): server.py -> pin(keep=...)
 PIN_USER = OrderedDict()  # grupos e Favoritos enviados pelo usuário: ficam entre atualizações; no máximo PIN_USER_MAX (sai o mais antigo)
 PIN_USER_MAX = 200
 
 def pin(tickers, keep=None):
-    """Tickers que ficam sempre em memória. keep = grupos prontos (substitui); tickers = do usuário (somam, com limite)."""
+    """Tickers com prioridade no cache. keep = grupos prontos (substitui); tickers = do usuário (somam, com limite).
+    Ações de fora/índices (_mem): o gráfico não sai do cache. B3: só não saem do LRU _h4 logo depois de all_closes; o LRU (H4_MAX)
+    vale para todas, e fora dele b3hist lê a cópia do disco."""
     if keep is not None: PIN.clear(); PIN.update(keep)
     for t in list(tickers or [])[:PIN_USER_MAX]:
         t = str(t).upper()[:12]; PIN_USER[t] = 1; PIN_USER.move_to_end(t)
@@ -142,7 +144,21 @@ def _merge(old, new):
 # ---------- Ações brasileiras: histórico oficial da B3 (COTAHIST), sem Yahoo ----------
 import re as _re, zipfile as _zf, io as _io
 _BR = _re.compile(r"[A-Z]{4}\d{1,2}")
-_h4 = {}
+_h4 = OrderedDict()  # ticker -> (instante, histórico B3 completo ~1,4 MB): LRU de H4_MAX; fora dele, a cópia no disco (_dload "h4_")
+H4_MAX = 30
+_h4b = {}  # durante all_closes: históricos tirados do arquivo único (history4_all), lidos por b3hist sem passar pelo LRU
+_h4lk = threading.Lock()
+
+def _h4get(t):
+    with _h4lk:
+        c = _h4.get(t)
+        if c is not None: _h4.move_to_end(t)
+    return c or _h4b.get(t)
+
+def _h4put(t, c):
+    with _h4lk:
+        _h4[t] = c; _h4.move_to_end(t)
+        while len(_h4) > H4_MAX: _h4.popitem(last=False)
 _cotad = {}
 
 def is_br(t):
@@ -194,12 +210,15 @@ def _h4file(t):
         r.raise_for_status()
         return json.loads(gzip.decompress(r.content))
 
-_h4f = {}
+_h4f = OrderedDict()  # b3full: LRU de H4F_MAX ações
+H4F_MAX = 10
 
 def b3full(t):
     """Fechamentos e volumes diários completos (o bundle do servidor tem só 6 anos) + os pregões novos que b3hist já juntou (sem volume).
-    Usado pelo Comparar → Medo e Ganância; guardado em memória (até 40 ações) por 12 h."""
-    c = _h4f.get(t)
+    Usado pelo Comparar → Medo e Ganância; guardado em memória (as H4F_MAX mais recentes) por 12 h."""
+    with _h4lk:
+        c = _h4f.get(t)
+        if c is not None: _h4f.move_to_end(t)
     if c and time.time() - c[0] < 12 * 3600:
         return c[1]
     d = _h4file(t)["d"]; T, Cc = list(d["t"]), list(d["c"]); Vv = list(d.get("vol") or [None] * len(T))
@@ -209,12 +228,14 @@ def b3full(t):
             if a > T[-1]: T.append(a); Cc.append(b); Vv.append(None)
     except Exception as e:
         log.info("b3full %s: %s", t, e)
-    if len(_h4f) > 40: _h4f.clear()
-    _h4f[t] = (time.time(), {"t": T, "c": Cc, "v": Vv})
-    return _h4f[t][1]
+    out = {"t": T, "c": Cc, "v": Vv}
+    with _h4lk:
+        _h4f[t] = (time.time(), out); _h4f.move_to_end(t)
+        while len(_h4f) > H4F_MAX: _h4f.popitem(last=False)
+    return out
 
 def b3hist(t):
-    c = _h4.get(t)
+    c = _h4get(t)
     if c and time.time() - c[0] < 3 * 3600:
         return c[1]
     base = c[1] if c else _dload("h4_" + t)
@@ -238,7 +259,7 @@ def b3hist(t):
                     else:
                         m["t"].append(ts); m["c"].append(f[base["isin"]])
             day += timedelta(days=1)
-    _h4[t] = (time.time(), base); _dsave("h4_" + t, base)
+    _h4put(t, (time.time(), base)); _dsave("h4_" + t, base)
     return base
 
 def b3get(t, kind):
@@ -489,11 +510,17 @@ def all_closes(tickers):
         return _all_closes(tickers)
 
 def _all_closes(tickers):
-    from concurrent.futures import ThreadPoolExecutor
     if time.time() - _allc["at"] > 6 * 3600:
         _allc["d"] = {}; _allc["at"] = time.time()
     miss = [t for t in tickers if t not in _allc["d"]]
     fresh = set()  # carregados aqui só para os retornos: saem do cache de gráficos depois (ficam no disco)
+    try:
+        return _all_closes2(tickers, miss, fresh)
+    finally:
+        _h4b.clear()  # o arquivo único não fica na memória
+
+def _all_closes2(tickers, miss, fresh):
+    from concurrent.futures import ThreadPoolExecutor
     if len(miss) > 20 and not _allc.get("bundle"):
         try:  # arquivo único com o histórico de todas as ações (um download em vez de ~360)
             r = requests.get(f"{RAW}/history4_all.json.gz", timeout=(6, 60)); r.raise_for_status()
@@ -501,7 +528,7 @@ def _all_closes(tickers):
             old = time.time() - 3 * 3600 - 1  # força só a atualização incremental (arquivos diários) depois
             want = set(miss)
             for t, h in B.items():
-                if t in want and t not in _h4: _h4[t] = (old, h); fresh.add(t)
+                if t in want and t not in _h4: _h4b[t] = (old, h); fresh.add(t)
             del B
         except Exception as e:
             log.warning("bundle de histórico: %s", e)
@@ -510,8 +537,9 @@ def _all_closes(tickers):
         with ThreadPoolExecutor(16) as ex:
             for t, v in ex.map(_load_both, miss):
                 _allc["d"][t] = v
-        for t in fresh:  # gráfico dessas ações volta a ler do disco (b3hist -> _dload) quando alguém abrir
-            if t.upper() not in PIN and t.upper() not in PIN_USER: _h4.pop(t, None)
+        with _h4lk:
+            for t in fresh:  # gráfico dessas ações volta a ler do disco (b3hist -> _dload) quando alguém abrir
+                if t.upper() not in PIN and t.upper() not in PIN_USER: _h4.pop(t, None)
     return _allc["d"]
 
 def period_return(h, start_ts, end_ts, live=None):

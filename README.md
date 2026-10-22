@@ -85,6 +85,8 @@ Assunto fora do mercado: quem é/o que é → empresa ligada (país, bolsa e ín
 Sem a IA (fora do ar ou sem chave), responde com o `conhecimento.json` + resumos da Wikipedia (snapshot `kb`) e com uma busca
 no painel ⓘ; gírias, sinônimos, apelidos e as variações de frases (para não repetir a mesma resposta) ficam em `vocabulario.json`.
 Registro de perguntas: `/api/chat/log` (`?only=sem_resposta` ou `?only=reclamacao`, `&n=500`; apagado a cada reinício do servidor).
+Só abre com o token da variável de ambiente `CHAT_LOG_TOKEN` do Render (cabeçalho `X-Chat-Log-Token: <token>` ou `&token=<token>`);
+sem a variável configurada, responde 403 para todos.
 
 ## Testes
 ```bash
