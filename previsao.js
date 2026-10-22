@@ -676,14 +676,14 @@ if (typeof document !== 'undefined') {
   const pclr = (x) => x == null ? '' : x < 0 ? 'dn' : 'up';
   // posição: preço médio (total pago com custos ÷ ações; vendas não mudam) e resultado = preço de agora × preço médio; toque abre o histórico da empresa
   const SIM_POS = 30;
-  const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b>${TN[x.t] ? `<span class="gsub">${esc(TN[x.t])}</span>` : ''}</td><td>${F0.format(x.q)}</td><td>${brl.format(x.pm != null ? x.pm : x.p)}</td><td>${brl.format(x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
+  const simPos = (x, src, i) => `<tr class="tap${i >= SIM_POS ? ' hidden' : ''}" data-simpos="${esc(x.t)}"${src ? ` data-src="${esc(JSON.stringify(src))}"` : ''}><td><b>${esc(x.t)}</b>${TN[x.t] ? `<span class="gsub">${esc(TN[x.t])}</span>` : ''}</td><td>${F0.format(x.q)}</td><td>${F2.format(x.pm != null ? x.pm : x.p)}</td><td>${F2.format(x.p)}</td><td>${brl.format(x.v)}</td><td class="${x.pct < 0 ? 'dn' : 'up'}">${x.pct == null ? '—' : pc(x.pct)}</td></tr>`;
   function simHtml(r) {
     nmAdd(r.nm);
     // linha CDB (caixa) no fim: saldo parado no CDB, quanto rendeu no último dia útil e a taxa em vigor (100% do CDI, modelos.Caixa)
     const cd = r.cdb || {}, aa = r.cdi != null ? (Math.pow(1 + r.cdi / 100, 252) - 1) * 100 : null;
     // dinheiro separado para as ordens com preço limite ainda abertas (fora do CDB e das ações): o que falta para o total bater com o Hoje
     const res = r.v - r.cash - r.pos.reduce((a, x) => a + (x.v || 0), 0);
-    const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('') + (r.cash > 0 ? `<tr class="simcdi"><td><b>CDB</b><span class="gsub">liquidez diária</span></td><td>—</td><td>—</td><td>—</td><td>${brl.format(r.cash)}${cd.d ? `<span class="gsub">rendeu hoje ${brl.format(cd.d)}</span>` : ''}</td><td>${aa != null ? `${F2.format(aa)}% a.a.<span class="gsub">100% do CDI</span>` : '—'}</td></tr>` : '');
+    const src = r.src, pos = r.pos.map((x, i) => simPos(x, src, i)).join('') + (r.cash > 0 ? `<tr class="simcdi"><td><b>CDB</b><span class="gsub">liquidez diária</span></td><td>—</td><td>—</td><td>—</td><td>${brl.format(r.cash)}${cd.d ? `<span class="gsub">rendeu hoje ${brl.format(cd.d)}</span>` : ''}</td><td class="wr">${aa != null ? `<span class="nw">${F2.format(aa)}%</span> a.a.<span class="gsub">100% do CDI</span>` : '—'}</td></tr>` : '');
     return tiles([['Aportado', brl.format(r.apT != null ? r.apT : r.v0), r.apT != null && r.apT !== r.v0 ? `${brl.format(r.v0)} iniciais${r.ap > 0 ? ` + ${brl.format(r.ap)}/mês` : ''}${r.wS > 0 ? ` − ${brl.format(r.wS)} retirados` : ''}` : 'desde ' + dataBR(r.d0)], ['Hoje', brl.format(r.v), `<span class="pct ${pclr(r.pct)}">${pc(r.pct)}</span>`],
         ['Compras / vendas', `${F0.format(r.c)} <span class="s2">/</span> ${F0.format(r.s)}`, r.cu != null ? `custos ${brl.format(r.cu)}` : null], ['Imposto', brl.format(r.ir)],
         ['Posição', `${r.np} empresa${r.np === 1 ? '' : 's'}`, `+ ${brl.format(r.cash)} no CDB${res > 1 ? ` + ${brl.format(res)} reservado em ordens` : ''}`, 'w2']]) + `<p class="sumd">dados até ${dataBR(r.d1)}</p>

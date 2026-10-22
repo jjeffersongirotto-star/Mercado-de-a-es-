@@ -336,6 +336,9 @@
   .gtab tr.gdet > td { padding: .4rem 0; white-space: normal; text-align: left; }
   .mvtab td, body .mvtab th { padding: .25rem .1rem; font-size: 10.5px; } .mvtab td.mv-o { max-width: 5.6rem; } body .mvtab th { white-space: normal; line-height: 1.1; } .mvtab td.mv-o { white-space: normal; line-height: 1.15; } .mvtab .pvd-note { margin: 0; font-size: 10px; } .mvtab td:first-child { font-size: 10.5px; }
   .gtab tr.simdet > td { background: rgb(15 23 42 / .6); padding: .3rem .2rem .5rem; } .gtab .simdet .sumg { margin-top: 0; } body .simpos th { white-space: normal; line-height: 1.1; }
+  /* posições do Grupo simulação no celular: nome composto, "liquidez diária", "rendeu hoje…" e "a.a." quebram em linhas; números numa linha só */
+  .simpos .gsub, .simpos .wr { white-space: normal; line-height: 1.15; } .simpos .nw { white-space: nowrap; }
+  @media (max-width: 480px) { body .simpos th, body .simpos td { padding-left: .15rem; padding-right: .15rem; } }
   .nova { margin-left: .35rem; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: rgb(14 165 233 / .2); color: rgb(125 211 252); border: 1px solid rgb(14 165 233 / .5); vertical-align: middle; }
   .gford { margin-left: auto; padding: .1rem .45rem; font-size: 13px; letter-spacing: -2px; } .gford.on { background: var(--c-pos-bg); border-color: var(--c-pos-bd); color: #fff; }
   .gdrag { display: inline-block; padding: 0 .4rem 0 0; color: var(--c-mut); cursor: grab; touch-action: none; font-size: 15px; } .gt-fav.reord tr { user-select: none; }
