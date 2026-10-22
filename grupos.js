@@ -14,16 +14,21 @@
   const SIM = (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } })(), simLoad = new Set(), simRetry = {}, SIM_RETRY = 10 * 60e3;
   const simK = (g) => JSON.stringify([g.sim.di, g.sim.v0, g.sim.ap || 0, g.sim.ex || [], g.sim.ret || []]), today = hojeSP;
   const saveSim = () => { for (const k in SIM) if (!groups.some(g => g.sim && g.name === k)) delete SIM[k]; try { localStorage.setItem(SKEY, JSON.stringify(SIM)); } catch (e) { } };
+  // resultado provisório (dia em andamento): ordens do 1º dia ainda abertas, começo hoje (pend) ou calculado antes do fechamento de hoje;
+  // enquanto for provisório, pede de novo a cada atualização dos dados (SIM_PROV) — depois do fechamento vem o resultado oficial
+  const SIM_PROV = 9 * 60e3;
+  const simProv = (c) => !!(c && c.d && (c.d.pend || (c.d.m || []).some(x => (x.ord || []).some(o => o.d1))
+    || (c.day === today() && (c.hm || '00:00') < '18:30' && horaSP() >= '18:45' && new Date().getDay() % 6 !== 0)));
   function simData(g) {
-    const c = SIM[g.name], ok = c && c.k === simK(g);
-    if ((!ok || c.day !== today()) && !simLoad.has(g.name) && !(Date.now() < (simRetry[g.name + simK(g)] || 0))) {
+    const c = SIM[g.name], ok = c && c.k === simK(g), velho = ok && simProv(c) && Date.now() - (c.ts || 0) > SIM_PROV;
+    if ((!ok || c.day !== today() || velho) && !simLoad.has(g.name) && !(Date.now() < (simRetry[g.name + simK(g)] || 0))) {
       simLoad.add(g.name);
       (async () => {
         let d = null;
         for (let i = 0; i < 6; i++) { try { const r = await fetch('/api/modelos/simgrupo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(g.sim) }); d = await r.json(); if (r.status !== 202) break; } catch (e) { d = { error: 'Sem conexão.' }; break; } await new Promise(z => setTimeout(z, 5000)); }
         simLoad.delete(g.name);
         let mud = true;
-        if (d && !d.error && d.m) { delete simRetry[g.name + simK(g)]; SIM[g.name] = { k: simK(g), day: today(), d }; saveSim(); simKeep(g, d.p1, null, d.r1); }
+        if (d && !d.error && d.m) { delete simRetry[g.name + simK(g)]; SIM[g.name] = { k: simK(g), day: today(), hm: horaSP(), ts: Date.now(), d }; saveSim(); simKeep(g, d.p1, null, d.r1); }
         else {
           simRetry[g.name + simK(g)] = Date.now() + SIM_RETRY;
           const err = (d && d.error) || 'Não foi possível simular agora.', o = SIM[g.name];
@@ -97,7 +102,7 @@
     next: (n) => { let i = 2; while (groups.some(g => g.name === `${n} ${i}`)) i++; return `${n} ${i}`; },
     create: (name, sim) => {
       // criado no próprio dia de início, num dia útil, antes do fim do pregão (18:30): o 1º dia começa a partir do preço da hora da criação (cr)
-      const n = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })), hm = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+      const n = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })), hm = horaSP();
       const cr = sim.di === today() && n.getDay() >= 1 && n.getDay() <= 5 && hm <= '18:30' ? hm : null;
       groups = groups.filter(g => g.name !== name); delete SIM[name]; groups.push({ name, tickers: [], sim: { di: sim.di, v0: sim.v0, ap: sim.ap || 0, ex: sim.ex || [], ret: sim.ret || [], ...(cr ? { cr } : {}) }, updated: new Date().toISOString() }); groups.sort((x, y) => x.name.localeCompare(y.name, 'pt-BR')); save(); saveSim(); },
   };
@@ -501,7 +506,8 @@
     // horário guardado no aparelho nas compras e vendas que o servidor já não tem (reinício); ordem vista ao vivo que o fechamento não confirmou
     const hr = g.sim.hr || {}, hk = (e) => `${mid}|${e.t}|${e.k}|${e.d}`, mv0 = (x.mov || []).map(e => !e.h && hr[hk(e)] ? Object.assign({}, e, { h: hr[hk(e)][0] }) : e);
     const ini = mv0.length ? mv0[0].d : '', nc = Object.keys(hr).filter(k => { const [m, t, kk, d] = k.split('|'); return m === mid && d <= c.d.d1 && d >= ini && !mv0.some(e => e.t === t && e.k === kk && e.d === d); });
-    const avs = nc.map(k => { const [, t, kk, d] = k.split('|'), v = hr[k]; return `${kk === 'compra' ? 'Compra' : 'Venda'} de ${esc((c.d.nm || {})[t] || t)} vista às ${esc(v[0])} de ${dataBR(d)} (${brl.format(v[1] || 0)}) não foi confirmada pelo fechamento oficial da B3.`; });
+    const prov = simProv(c);  // dia em andamento: o fechamento oficial ainda não chegou para conferir as ordens vistas ao vivo
+    const avs = nc.map(k => { const [, t, kk, d] = k.split('|'), v = hr[k]; return `${kk === 'compra' ? 'Compra' : 'Venda'} de ${esc((c.d.nm || {})[t] || t)} vista às ${esc(v[0])} de ${dataBR(d)} (${brl.format(v[1] || 0)}) ${prov ? 'aguarda o fechamento oficial da B3.' : 'não foi confirmada pelo fechamento oficial da B3.'}`; });
     // posições com o mesmo preço de agora do Hoje (Preço atual, Valor e Resultado batem com ele); caixa e CDB ao vivo
     const lp = {}; (lv && lv.pos || []).forEach(y => { if (y.q > 0) lp[y.t] = y.v / y.q; });
     const pos = (x.pos || []).map(y => lp[y.t] != null ? Object.assign({}, y, { p: lp[y.t], v: y.q * lp[y.t], pct: y.inv > 0 ? (y.q * lp[y.t] / y.inv - 1) * 100 : y.pct }) : y);
