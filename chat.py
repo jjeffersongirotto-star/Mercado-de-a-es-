@@ -2011,31 +2011,19 @@ def _log(q, out, P, t0):
 _SYNC = {"t": 0.0, "remote": None, "rt": 0.0}
 
 
-def _gh():
-    import snapshots
-    m = re.search(r"githubusercontent\.com/([^/]+)/([^/]+)/", snapshots.RAW)
-    return (f"https://api.github.com/repos/{m.group(1)}/{m.group(2)}/contents/data/chat_log.jsonl", snapshots.RAW + "/chat_log.jsonl") if m else (None, None)
-
-
 def sync_log(force=False):
     tok = os.environ.get("GITHUB_TOKEN")
     if not tok or not os.path.exists(LOG_FILE) or (not force and time.time() - _SYNC["t"] < 6 * 3600): return
     _SYNC["t"] = time.time()
 
     def run():
-        import base64
-        try:
-            api, _ = _gh(); h = {"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json"}
-            r = requests.get(api, params={"ref": "data"}, headers=h, timeout=20)
-            old, sha = (base64.b64decode(r.json()["content"]).decode(), r.json()["sha"]) if r.status_code == 200 else ("", None)
-            seen = set(old.splitlines())
-            new = [l for l in open(LOG_FILE, encoding="utf-8").read().splitlines() if l and l not in seen]
-            if not new: return
-            lines = (old.splitlines() + new)[-20000:]
-            requests.put(api, headers=h, timeout=30, json={"message": "Registro do chat", "branch": "data", **({"sha": sha} if sha else {}),
-                                                            "content": base64.b64encode(("\n".join(lines) + "\n").encode()).decode()})
-        except Exception as e:
-            log.warning("registro do chat no GitHub: %s", e)
+        import snapshots
+        old, sha = snapshots.gh_get("data/chat_log.jsonl")
+        old = old or ""; seen = set(old.splitlines())  # sem o arquivo (ou sem resposta): sem sha, o GitHub só aceita se ele não existir
+        new = [l for l in open(LOG_FILE, encoding="utf-8").read().splitlines() if l and l not in seen]
+        if not new: return
+        lines = (old.splitlines() + new)[-20000:]
+        snapshots.gh_put("data/chat_log.jsonl", "\n".join(lines) + "\n", sha, "Registro do chat")
     import threading
     threading.Thread(target=run, daemon=True).start()
 
@@ -2044,7 +2032,8 @@ def _remote_log():
     if time.time() - _SYNC["rt"] > 3600:
         _SYNC["rt"] = time.time()
         try:
-            r = requests.get(_gh()[1], timeout=20)
+            import snapshots
+            r = requests.get(snapshots.RAW + "/chat_log.jsonl", timeout=20)
             _SYNC["remote"] = r.text.splitlines() if r.status_code == 200 else []
         except Exception: _SYNC["remote"] = _SYNC["remote"] or []
     return _SYNC["remote"] or []

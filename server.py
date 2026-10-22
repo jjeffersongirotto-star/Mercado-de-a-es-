@@ -1336,12 +1336,57 @@ PROV_MAX = 20000  # _PROV: acima disso saem os dias mais antigos
 _LIVE_LK = threading.RLock()  # _R1, _P1, _PROV e _SIMS: usados pela conferência ao vivo (_ao_vivo) e pelos pedidos ao mesmo tempo
 LIVE_Q = {"at": 0.0, "q": {}}  # preço, mínima e máxima do dia (TradingView) da última conferência de _ao_vivo
 ORD_VIVO = 5 * 60   # intervalo da conferência das ordens ao vivo no pregão (s): horário das compras e vendas com até ~5 min de atraso
-SIM_DIAS = 3        # simulações pedidas nos últimos dias continuam acompanhadas
+SIM_DIAS = 30       # simulações pedidas (app, widget ou site) nos últimos dias continuam acompanhadas, mesmo com tudo fechado
+VIVO_ARQ = "data/sim_vivo.json"  # branch `data`: simulações acompanhadas e horários vistos ao vivo (o disco do Render zera a cada reinício)
+VIVO_SAVE = 10 * 60  # grava no GitHub no máximo a cada 10 min, só se mudou
+_VIVO = {"t": 0.0, "h": None, "sha": None}
 
-def _quotes():
-    """{ticker: (preço, mínima do dia, máxima do dia)}: a conferência de _ao_vivo (até 15 min) ou /api/data."""
-    if time.time() - LIVE_Q["at"] < 900: return LIVE_Q["q"]
-    return {r["ticker"]: ((r.get("v") or {}).get("preco"), r.get("dl"), r.get("dh")) for r in (cache.data or {}).get("rows") or []}
+def hora_pregao(h):
+    """'HH:MM' dentro do pregão (10:00–18:30): só nesse horário uma ordem pode ter executado ao vivo."""
+    return isinstance(h, str) and "10:00" <= h[:5] <= "18:30"
+
+def _quotes(now=None):
+    """{ticker: (preço, mínima do dia, máxima do dia)} só com a mínima/máxima de HOJE: dia útil depois da abertura (10:00) e cotações
+    tiradas depois dela (conferência de _ao_vivo até 15 min ou /api/data atualizado hoje). Antes da abertura, no fim de semana ou com
+    dados de ontem: {} — a mínima/máxima ainda seria a do pregão anterior e as ordens executariam no dia errado."""
+    n = (now or datetime.now(TZ)).astimezone(TZ)
+    if n.weekday() >= 5 or (n.hour, n.minute) < (10, 0): return {}
+    ab = n.replace(hour=10, minute=0, second=0, microsecond=0).timestamp()
+    if LIVE_Q["at"] >= ab and time.time() - LIVE_Q["at"] < 900: return LIVE_Q["q"]
+    try: ok = datetime.fromisoformat((cache.data or {}).get("updated_at") or "").timestamp() >= ab
+    except Exception: ok = False
+    return {r["ticker"]: ((r.get("v") or {}).get("preco"), r.get("dl"), r.get("dh")) for r in (cache.data or {}).get("rows") or []} if ok else {}
+
+def _vivo_estado():
+    with _LIVE_LK:
+        return {"sims": [[list(k), *v] for k, v in _SIMS.items()], "prov": [[list(k), h] for k, h in _PROV.items()],
+                "p1": [[list(k), {t: list(x) for t, x in v.items()}] for k, v in _P1.items()], "r1": [[list(k), {t: list(x) for t, x in v.items()}] for k, v in _R1.items()]}
+
+def _vivo_carrega():
+    """Ao iniciar: simulações acompanhadas e horários vistos ao vivo gravados no GitHub (só horários dentro do pregão)."""
+    txt, sha = snapshots.gh_get(VIVO_ARQ); _VIVO["sha"] = sha
+    if not txt: return
+    try: j = json.loads(txt)
+    except Exception: return
+    with _LIVE_LK:
+        for k, *v in j.get("sims") or []: _SIMS.setdefault(tuple(k), tuple(v))
+        for k, h in j.get("prov") or []:
+            if hora_pregao(h): _PROV.setdefault(tuple(k), h)
+        for nome, D_ in (("p1", _P1), ("r1", _R1)):
+            for k, v in j.get(nome) or []:
+                v = {t: tuple(x) for t, x in (v or {}).items() if nome == "r1" or hora_pregao(x[1])}
+                if v: D_.setdefault(tuple(k), v)
+    _VIVO["h"] = hash(json.dumps(_vivo_estado(), sort_keys=True))
+
+def _vivo_grava():
+    """Grava o estado ao vivo no GitHub se mudou (no máximo a cada VIVO_SAVE)."""
+    if time.time() - _VIVO["t"] < VIVO_SAVE: return
+    txt = json.dumps(_vivo_estado(), ensure_ascii=False, sort_keys=True); h = hash(txt)
+    if h == _VIVO["h"]: return
+    _VIVO["t"] = time.time()
+    if snapshots.gh_put(VIVO_ARQ, txt, _VIVO["sha"], "Grupo simulação: acompanhamento ao vivo"):
+        _VIVO["h"] = h; _VIVO["sha"] = snapshots.gh_get(VIVO_ARQ)[1]
+    else: _VIVO["sha"] = snapshots.gh_get(VIVO_ARQ)[1]  # outro gravou antes (sha velho): tenta de novo na próxima
 
 def _horas(di, v0, m, mov):
     """Movimentações com o horário visto ao vivo (_PROV) nas compras e vendas ('h'); cópias, o cache dos modelos não muda."""
@@ -1400,7 +1445,7 @@ def _sim_hoje(D, tk, di, v0, ap, ex, ret, p1=None, r1=None, cr=None):
                 ref, lo0, _ = R[t]; k = D["ix"].get(t); dd = float(D["ODI"][k, dpos]) if k is not None else float("nan")
                 lim = ref * (1 - (dd if dd == dd else modelos.ORD_MIN))
                 toc, pxl = modelos.ord_exec(True, lim, dl, dh)  # mesma regra de execução dos modelos
-                if t not in F and dl is not None and (lo0 is None or dl < lo0) and toc:  # mínima nova, depois da criação
+                if t not in F and aberto and dl is not None and (lo0 is None or dl < lo0) and toc:  # mínima nova, depois da criação, no pregão
                     F[t] = (round(float(pxl), 4), agora, hoje)
                 if t in F: px, h, xt = F[t][0], F[t][1], f"1º dia: ordem com preço limite R$ {F[t][0]:.2f}".replace(".", ",") + " · provisória (confirma no fechamento)"
                 elif not aberto: px, h, xt = float(p_), None, "1º dia: no fechamento (não tocou o limite) · provisória"
@@ -1421,7 +1466,10 @@ def _sim_hoje(D, tk, di, v0, ap, ex, ret, p1=None, r1=None, cr=None):
 
 def _ao_vivo():
     """No pregão, a cada ORD_VIVO: preço, mínima e máxima do dia de todas as ações (uma consulta ao TradingView) e conferência das ordens
-    abertas das simulações pedidas nos últimos SIM_DIAS dias (_simw grava em _PROV a hora em que a ordem tocou o limite)."""
+    abertas das simulações pedidas nos últimos SIM_DIAS dias (_simw grava em _PROV a hora em que a ordem tocou o limite). Funciona com o app
+    e o site fechados: a lista e os horários ficam no GitHub (VIVO_ARQ) e voltam quando o servidor reinicia."""
+    try: _vivo_carrega()
+    except Exception: log.exception("modelos: carregar acompanhamento ao vivo")
     while True:
         try:
             agora = time.time()
@@ -1432,6 +1480,7 @@ def _ao_vivo():
             if pregao() and sims:
                 LIVE_Q["q"] = {t: ((r["v"] or {}).get("preco"), r["m"].get("dl"), r["m"].get("dh")) for t, r in tradingview.fetch("br").items()}; LIVE_Q["at"] = time.time()
                 for di, v0, f in sims: _simw(di, v0, f, reg=False)
+            _vivo_grava()
         except Exception:
             log.exception("modelos: ordens ao vivo")
         time.sleep(ORD_VIVO)
@@ -1483,7 +1532,7 @@ def _simw(di, v0, f, reg=True):
                     q = pa[o["t"]]["q"]; cost = float(modelos.venda_liq(q, px)); cash += cost; pa.pop(o["t"])
                 else: continue
                 k = (di, v0, x["m"], o["t"], o["lado"], hoje)
-                with _LIVE_LK: h = _PROV.setdefault(k, agora)  # hora em que o servidor viu primeiro (fica para as movimentações: _horas)
+                with _LIVE_LK: h = _PROV.setdefault(k, agora) if pregao() else _PROV.get(k)  # hora em que o servidor viu primeiro, só no pregão (_horas)
                 prov.append({"d": hoje, "h": h, "k": "compra" if o["lado"] == "c" else "venda", "t": o["t"], "q": q, "p": round(px, 2), "v": round(cost, 2),
                              "x": "ordem com preço limite · provisória (confirma no fechamento)"})
             with _LIVE_LK: _trim_dias(_PROV, PROV_MAX, lambda k: k[-1])

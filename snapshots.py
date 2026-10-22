@@ -15,6 +15,35 @@ _mem = {}  # nome -> (instante, payload, origem)
 import threading
 HEAVY = threading.RLock()  # cargas grandes (histórico de todas as ações, tabelas dos modelos): uma de cada vez (pico de memória)
 
+def _gh_api(path):
+    """Endereço da API do GitHub para um arquivo da branch `data` (path relativo a RAW, ex. "data/chat_log.jsonl")."""
+    m = re.search(r"githubusercontent\.com/([^/]+)/([^/]+)/", RAW)
+    return f"https://api.github.com/repos/{m.group(1)}/{m.group(2)}/contents/{path}" if m else None
+
+def gh_get(path, timeout=20):
+    """Arquivo da branch `data` pela API (sem o cache do raw), com GITHUB_TOKEN -> (texto, sha) ou (None, None)."""
+    tok, api = os.environ.get("GITHUB_TOKEN"), _gh_api(path)
+    if not tok or not api: return None, None
+    import base64
+    try:
+        r = requests.get(api, params={"ref": "data"}, headers={"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json"}, timeout=timeout)
+        if r.status_code != 200: return None, None
+        j = r.json(); return base64.b64decode(j["content"]).decode(), j["sha"]
+    except Exception as e:
+        log.warning("GitHub %s: %s", path, e); return None, None
+
+def gh_put(path, text, sha=None, msg="Atualização", timeout=30):
+    """Grava um arquivo na branch `data` (GITHUB_TOKEN, variável do Render; a branch `data` não dispara publicação) -> True se gravou."""
+    tok, api = os.environ.get("GITHUB_TOKEN"), _gh_api(path)
+    if not tok or not api: return False
+    import base64
+    try:
+        r = requests.put(api, headers={"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json"}, timeout=timeout,
+                         json={"message": msg, "branch": "data", **({"sha": sha} if sha else {}), "content": base64.b64encode(text.encode()).decode()})
+        return r.status_code in (200, 201)
+    except Exception as e:
+        log.warning("GitHub %s: %s", path, e); return False
+
 def when_sp(iso):
     try:
         return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(TZ).strftime("%d/%m/%Y %H:%M")

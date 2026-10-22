@@ -2123,12 +2123,13 @@ def sim_cr(x):
 
 
 def sim_p1(x):
-    """Ordens do 1º dia que o servidor viu tocar o limite, guardadas pelo aparelho {ticker: [preço, 'HH:MM', 'AAAA-MM-DD']} -> {ticker: (preço, 'HH:MM', dia)}."""
+    """Ordens do 1º dia que o servidor viu tocar o limite, guardadas pelo aparelho {ticker: [preço, 'HH:MM', 'AAAA-MM-DD']} -> {ticker: (preço, 'HH:MM', dia)}.
+    Só horários do pregão (10:00–18:30): uma "execução" vista fora dele usou a mínima/máxima de outro dia e é descartada."""
     import re
     out = {}
     for t, v in (x.items() if isinstance(x, dict) else ()):
         try:
-            if re.fullmatch(r"[A-Z0-9.\-]{1,16}", str(t)) and float(v[0]) > 0 and re.fullmatch(r"\d{2}:\d{2}", str(v[1])) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v[2])): out[str(t)] = (round(float(v[0]), 4), str(v[1]), str(v[2]))
+            if re.fullmatch(r"[A-Z0-9.\-]{1,16}", str(t)) and float(v[0]) > 0 and re.fullmatch(r"\d{2}:\d{2}", str(v[1])) and "10:00" <= str(v[1]) <= "18:30" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v[2])): out[str(t)] = (round(float(v[0]), 4), str(v[1]), str(v[2]))
         except Exception: continue
         if len(out) >= 200: break
     return out
