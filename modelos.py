@@ -2100,7 +2100,9 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=(), p1=None, ult=False, cr=N
     for m in MODELOS:
         v, ir, nb, ns, h = grupo(D, m["id"], idx, me, aps, rec=True, wd=wd, p1=p1, ult=ult, cr=cr)
         _mzput((key, m["id"]), h)  # todas as movimentações, comprimidas: páginas e histórico por empresa em simmov
-        out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "np": len(h["pos"]),
+        cu = sum((e["v"] - e["q"] * e["p"]) if e["k"] == "compra" else (e["q"] * e["p"] - e["v"]) for e in h["mov"]
+                 if e.get("k") in ("compra", "venda") and e.get("q") and e.get("p"))  # custos pagos (CUSTO) em todas as compras e vendas
+        out["m"].append({"m": m["id"], "n": m["n"], "v": round(v, 2), "pct": pc(v), "ir": round(ir, 2), "c": nb, "s": ns, "cu": round(max(0.0, cu), 2), "np": len(h["pos"]),
                          "cash": h["cash"], "cdb": h["cdb"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"]), "ord": h.get("ord") or []})
     out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": pc(r["v"]) if r["v"] is not None else None, "ref": True} for r in _refs(D, me, aps, wd, apT)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
