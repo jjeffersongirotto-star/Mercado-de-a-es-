@@ -143,6 +143,69 @@ def test_assuntos_das_noticias():
     assert A({"titulo": "Empresa pede recuperação judicial"}) == ["al"] and A({"titulo": "Preço-teto", "destaque": True})[0] == "div" and A({"titulo": "nada"}) == []
 
 
+def test_simulacoes_ao_vivo_limitadas():
+    # _SIMS: uma por definição validada (p1/r1 no f não criam outra), só depois de dar certo, no máximo SIMS_MAX
+    import modelos
+    setup(); server._SIMS.clear()
+    sg = {"d0": "2025-03", "d1": "2026-10", "v0": 1000.0, "m": []}
+    od, os_, oss, ou = modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe
+    modelos.data = lambda: {}; modelos.set_setores = lambda *a: None; server.universe.universe = lambda rows: rows
+    modelos.simgrupo = lambda D, tk, di, v0, *a, **k: sg if v0 < 1e6 else {"error": "x"}
+    try:
+        for k in range(3): server._simw("2025-03-10", 1000, json.dumps({"p1": {"PETR4": [10 + k, "11:00", "2025-03-10"]}}))
+        assert len(server._SIMS) == 1 and json.loads(list(server._SIMS.values())[0][3])["p1"]["PETR4"][0] == 12  # guarda o último f
+        server._simw("2025-03-10", 1e7, "")  # erro: não acompanha
+        assert len(server._SIMS) == 1
+        for k in range(server.SIMS_MAX + 5): server._simw("2025-03-10", 100 + k, "")
+        assert len(server._SIMS) == server.SIMS_MAX and ("2025-03-10", 105.0, 0.0, "[]", "[]") in server._SIMS and ("2025-03-10", 104.0, 0.0, "[]", "[]") not in server._SIMS  # saem as mais antigas
+        assert all(k[0] == "2025-03-10" for k in server._SIMS)  # di validado (modelos.sim_def)
+    finally:
+        modelos.data, modelos.set_setores, modelos.simgrupo, server.universe.universe = od, os_, oss, ou
+        server._SIMS.clear()
+
+
+def test_trim_dias_tira_os_mais_antigos():
+    d = {("2026-01-0%d" % (k % 3 + 1), k): k for k in range(9)}
+    server._trim_dias(d, 4, lambda k: k[0])
+    assert len(d) == 4 and all(k[0] >= "2026-01-02" for k in d)
+
+
+def test_registro_do_chat_exige_token():
+    class Rq: headers = {}
+    old = os.environ.pop("CHAT_LOG_TOKEN", None)
+    try:
+        assert server.api_chat_log(Rq(), token="x").status_code == 403  # sem a variável: ninguém lê
+        os.environ["CHAT_LOG_TOKEN"] = "segredo"
+        assert server.api_chat_log(Rq(), token="errado").status_code == 403
+        Rq.headers = {"x-chat-log-token": "segredo"}
+        assert server.api_chat_log(Rq(), n=1).status_code == 200
+    finally:
+        os.environ.pop("CHAT_LOG_TOKEN", None)
+        if old is not None: os.environ["CHAT_LOG_TOKEN"] = old
+
+
+def test_refresh_espera_depois_de_atualizar():
+    calls = []; orig = server.cache.refresh_async, server.cache.done_at
+    server.cache.refresh_async = lambda: calls.append(1)
+    try:
+        server.cache.done_at = time.time()
+        assert server.api_refresh() == {"started": False, "refreshing": False} and not calls  # acabou de atualizar
+        server.cache.done_at = time.time() - server.REFRESH_MIN - 1
+        assert server.api_refresh()["started"] in (True, False) and calls == [1]
+    finally:
+        server.cache.refresh_async, server.cache.done_at = orig
+
+
+def test_json_pronto_so_da_versao_atual():
+    class Rq: headers = {"accept-encoding": "gzip"}
+    server._JSON_CACHE.clear()
+    a, b = {"rows": [1]}, {"rows": [2]}
+    server._json_fast(Rq(), a, {"refreshing": False}); server._json_fast(Rq(), b, {"refreshing": False}); server._json_fast(Rq(), b, {"refreshing": True})
+    assert len(server._JSON_CACHE) == 1 and server._JSON_CACHE["br"]["d"] is b and len(server._JSON_CACHE["br"]["gz"]) == 2
+    for k in range(server.GZ_MAX + 3): server._json_fast(Rq(), b, {"e": k})
+    assert len(server._JSON_CACHE["br"]["gz"]) == server.GZ_MAX
+    server._JSON_CACHE.clear()
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):
