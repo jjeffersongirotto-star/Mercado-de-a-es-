@@ -393,6 +393,15 @@ public final class WidgetData {
         return (v >= 0 ? "▲ " : "▼ ") + df("0.00").format(Math.abs(v)) + "%";
     }
 
+    /** 1.24: quanto o preço mudou no dia, embaixo da % (+0,27 / -12,45), tirado do preço e da % que a linha já tem:
+     *  p − p ÷ (1 + v/100); iene e valores de 10 mil para cima sem centavos (como price). Sem variação: "". */
+    public static String changeAbs(Double p, Double v, String cur) {
+        if (p == null || v == null || v <= -100) return "";
+        double d = p - p / (1 + v / 100), a = Math.abs(d);
+        String n = (a >= 10000 || "JPY".equals(cur)) ? df("#,##0").format(a) : df("#,##0.00").format(a);
+        return (d < 0 && !n.matches("[0,.]+") ? "-" : "+") + n;
+    }
+
     /** Barato/Caro como no card: +43% (verde: o preço precisa subir até o valor justo) ou −75% (vermelho). */
     public static String badge(Double f) { return badge(f, null); }
 
