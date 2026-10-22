@@ -16,25 +16,35 @@ import java.util.List;
 
 /** Widget JG Investing: Favoritos ou um grupo da aba Grupos (seletor no topo) com preço, variação, Barato/Caro e Medo e Ganância. Atualiza a cada 30 min (widget_info) e no ⟳. */
 public class FavWidget extends AppWidgetProvider {
-    static final String ACTION_REFRESH = "com.jginvesting.app.REFRESH";
+    static final String ACTION_REFRESH = "com.jginvesting.app.REFRESH", ACTION_CHART = "com.jginvesting.app.CHART";
     static final String EXTRA_TICKER = "ticker";
     static final String EXTRA_UPDATE = "update";
     static final String EXTRA_FORCE = "force";
 
     @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) {
+        PendingResult pr = goAsync();
         render(c);
-        refreshAsync(c, goAsync());
+        refreshAsync(c, pr);
     }
 
     @Override public void onReceive(Context c, Intent i) {
         if (ACTION_REFRESH.equals(i.getAction())) {  // ⟳ e troca de grupo (PickerActivity): "Atualizando…" já e busca na hora
-            long tk = Math.max(System.currentTimeMillis(), Store.loading(c) + 1); Store.setLoading(c, tk); render(c);
+            long tk = Store.startLoading(c); render(c);
             // ⟳: o servidor refaz os dados se estiverem velhos no pregão (RefreshJob espera e busca); troca de grupo: só busca
             if (i.getBooleanExtra(EXTRA_FORCE, false) && RefreshJob.schedule(c, tk)) return;
             refreshAsync(c, goAsync(), tk); return;
         }
+        if (ACTION_CHART.equals(i.getAction())) {  // 1.23: gráfico pedido pelo WidgetTap (que já fechou): busca dentro deste broadcast
+            String t = i.getStringExtra(EXTRA_TICKER);
+            if (WidgetData.validTicker(t)) chartAsync(c, t, goAsync());
+            return;
+        }
         super.onReceive(c, i);
     }
+
+    /** 1.23: widget removido: a escolha dele sai do aparelho; restaurado com id novo (backup): a escolha vai junto. */
+    @Override public void onDeleted(Context c, int[] ids) { Store.forgetWidgets(c, "sel_", ids); }
+    @Override public void onRestored(Context c, int[] oldIds, int[] newIds) { Store.remapWidgets(c, "sel_", oldIds, newIds); }
 
     /** Lista escolhida no widget (grupo que deixou de existir volta para Favoritos). */
     static String selOf(Context c, int id, List<WidgetData.Group> gs) {
@@ -51,31 +61,38 @@ public class FavWidget extends AppWidgetProvider {
         new Thread(() -> refreshNow(c, pr, token)).start();
     }
 
-    /** Busca e redesenha nesta thread (RefreshJob chama direto, depois de esperar o servidor). */
+    /** Busca e redesenha nesta thread (RefreshJob chama direto, depois de esperar o servidor).
+     *  1.23: um prazo só para tudo (no broadcast, Widgets.BROADCAST_MS): cada pedido recebe o que falta (WidgetData.budget);
+     *  dados na tela primeiro, depois os logos que faltam e, se ainda der tempo, a conferência de versão. pr.finish() sempre. */
     static void refreshNow(Context c, PendingResult pr, long token) {
-        final long start = System.currentTimeMillis();
-        {
-            try {
-                List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
-                java.util.LinkedHashSet<String> sels = new java.util.LinkedHashSet<>();
-                for (int id : ids(c)) sels.add(selOf(c, id, gs));
-                for (String sel : sels) {
-                    List<String> tk = WidgetData.tickers(sel, Store.favs(c), gs);
-                    if (tk.isEmpty()) continue;
-                    long req = Store.nextReq(c);  // resposta mais antiga que a guardada é descartada (troca rápida de grupo); contador que sobrevive ao reinício
-                    String j = Api.widget(tk, pr != null ? 8000 : 30000);  // broadcast: o Android dá ~10 s
-                    if (j != null) Store.setDataIfNewer(c, sel, j, req);
-                    // logos que faltam no aparelho (só na primeira vez de cada um; ficam guardados)
-                    Logos.ensure(c, WidgetData.logos(WidgetData.items(tk, Store.data(c, sel))), pr != null ? start + 8500 : 0);
-                }
-                if (token != 0) Store.endLoading(c, token);
-                render(c);  // dados novos na tela antes da conferência de versão
-                Updater.quietCheck(c, pr != null ? 6000 : 20000);  // aviso "Atualização disponível" no topo
-                render(c);
-            } finally {
-                if (token != 0 && Store.endLoading(c, token)) render(c);
-                if (pr != null) pr.finish();
+        final long deadline = System.currentTimeMillis() + (pr != null ? Widgets.BROADCAST_MS : Widgets.BACKGROUND_MS);
+        try {
+            List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
+            java.util.LinkedHashSet<String> sels = new java.util.LinkedHashSet<>();
+            for (int id : ids(c)) sels.add(selOf(c, id, gs));
+            List<String> logos = new java.util.ArrayList<>();
+            for (String sel : sels) {
+                List<String> tk = WidgetData.tickers(sel, Store.favs(c), gs);
+                if (tk.isEmpty()) continue;
+                int t = WidgetData.budget(deadline, System.currentTimeMillis(), pr != null ? 8000 : 30000, 1500);
+                if (t == 0) break;
+                long req = Store.nextReq(c);  // resposta mais antiga que a guardada é descartada (troca rápida de grupo); contador que sobrevive ao reinício
+                String j = Api.widget(tk, t);
+                if (j != null) Store.setDataIfNewer(c, sel, j, req);
+                for (String f : WidgetData.logos(WidgetData.items(tk, Store.data(c, sel)))) if (!logos.contains(f)) logos.add(f);
             }
+            if (token != 0) Store.endLoading(c, token);
+            render(c);  // dados novos na tela antes dos logos e da conferência de versão
+            // logos que faltam no aparelho (só na primeira vez de cada um; ficam guardados), dentro do mesmo prazo
+            if (Logos.ensure(c, logos, deadline)) render(c);
+            int t = WidgetData.budget(deadline, System.currentTimeMillis(), pr != null ? 6000 : 20000, 2500);
+            if (t > 0 && Updater.quietCheck(c, t)) render(c);  // aviso "Atualização disponível" no topo
+        } catch (RuntimeException | OutOfMemoryError e) {
+            Widgets.log("FavWidget.refreshNow", e);
+        } finally {
+            try { if (token != 0 && Store.endLoading(c, token)) render(c); }
+            catch (RuntimeException e) { Widgets.log("FavWidget.endLoading", e); }
+            finally { if (pr != null) pr.finish(); }
         }
     }
 
@@ -83,103 +100,129 @@ public class FavWidget extends AppWidgetProvider {
         return AppWidgetManager.getInstance(c).getAppWidgetIds(new ComponentName(c, FavWidget.class));
     }
 
-    /** Desenha todos os widgets com o que está guardado (Store). */
-    static synchronized void render(Context c) {  // um desenho por vez: o mais recente lê o grupo escolhido por último e é o último enviado
+    /** Desenha todos os widgets com o que está guardado (Store). 1.23: protegido — erro do launcher (resposta grande demais,
+     *  memória de bitmaps) fica no log e não derruba quem chamou (busca, WidgetTap, app, ponte do site). */
+    static void render(Context c) {
+        try { draw(c); } catch (RuntimeException | OutOfMemoryError e) { Widgets.log("FavWidget.render", e); }
+    }
+
+    private static synchronized void draw(Context c) {  // um desenho por vez: o mais recente lê o grupo escolhido por último e é o último enviado
         AppWidgetManager m = AppWidgetManager.getInstance(c);
         int[] ids = ids(c);
         if (ids.length == 0) return;
         List<WidgetData.Group> gs = WidgetData.groups(Store.groups(c));
-        int flagsImm = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        int flagsMut = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+        boolean busy = WidgetData.within(Store.loading(c), System.currentTimeMillis(), WidgetData.LOADING_MS);  // ⟳ / troca de grupo em andamento
         for (int id : ids) {
-            String sel = selOf(c, id, gs), data = Store.data(c, sel);
-            List<WidgetData.Item> items = WidgetData.items(WidgetData.tickers(sel, Store.favs(c), gs), data);
-            java.util.Map<String, android.graphics.Bitmap> bmp = Logos.newCache();
-            int px = Logos.px(c, items.size());
-            WidgetData.Bands bands = WidgetData.bands(data);
-            android.os.Bundle op = m.getAppWidgetOptions(id);
-            android.content.res.Configuration cf = c.getResources().getConfiguration();
-            boolean land = cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-            int hw = WidgetData.widthDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0), land);
-            float dens = c.getResources().getDisplayMetrics().density;
-            int hDp = WidgetData.heightDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0), land);
-            int wDp = op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
-            WidgetData.Cols cols = colsOf(c, items, wDp, cf.fontScale, dens);
-            int[] hs = Build.VERSION.SDK_INT >= 31 && hDp > 0 ? WidgetData.heightVariants(hDp) : new int[]{hDp};
-            java.util.Map<android.util.SizeF, RemoteViews> sized = new java.util.LinkedHashMap<>();
-            RemoteViews v1 = null;
-            for (int hv : hs) {
-                RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget);
-                String nm = WidgetData.name(sel, gs);
-                v.setTextViewText(R.id.w_sel, nm + "  ▾");
-                v.setTextViewText(R.id.w_sel2, nm + "  ▾");
-                Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-                pick.setData(Uri.parse("jg://pick/" + id));  // um PendingIntent por widget
-                v.setOnClickPendingIntent(R.id.w_sel, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
-                v.setOnClickPendingIntent(R.id.w_sel2, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
-                v.setTextViewText(R.id.w_empty, c.getString(WidgetData.FAV.equals(sel) ? R.string.widget_empty : R.string.widget_empty_group));
-                boolean busy = System.currentTimeMillis() - Store.loading(c) < WidgetData.LOADING_MS;  // ⟳ / troca de grupo em andamento
-                // horário = quando a última atualização terminou (dados chegaram); sem isso ainda, o horário dos dados no site
-                long fat = Store.fetchedAt(c, sel);
-                String up = busy ? c.getString(R.string.widget_loading) : fat > 0 ? WidgetData.fetched(fat, java.util.TimeZone.getDefault()) : WidgetData.updated(data);
-                v.setTextViewText(R.id.w_time, up);
-                v.setViewVisibility(R.id.w_time, up.isEmpty() ? View.GONE : View.VISIBLE);
-                // marca comprida "JG Investing" ou, se o nome do grupo não couber ao lado dela, o logo quadrado (refeito ao redimensionar)
-                boolean brand = WidgetData.longLogo(nm, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
-                // nome curto: marca comprida até o seletor, que fica colado ao horário; nome longo: logo quadrado e seletor no meio
-                v.setViewVisibility(R.id.w_brand, brand ? View.VISIBLE : View.GONE);
-                v.setViewVisibility(R.id.w_sel2, brand ? View.VISIBLE : View.GONE);
-                v.setViewVisibility(R.id.w_logo, brand ? View.GONE : View.VISIBLE);
-                v.setViewVisibility(R.id.w_mid, brand ? View.GONE : View.VISIBLE);
-                if (brand) {  // o mesmo bitmap em todas as versões de altura (o Android guarda uma vez só)
-                    if (!bmp.containsKey("brand:")) bmp.put("brand:", brandBitmap(c, Math.round((WidgetData.brandRoom(nm, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens)));
-                    android.graphics.Bitmap bm = bmp.get("brand:");
-                    if (bm != null) v.setImageViewBitmap(R.id.w_brand, bm);
-                }
-                Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                v.setOnClickPendingIntent(R.id.w_logo, PendingIntent.getActivity(c, 0, open, flagsImm));
-                v.setOnClickPendingIntent(R.id.w_brand, PendingIntent.getActivity(c, 0, open, flagsImm));
-                UpdateLogic.Info nu = Updater.known(c);
-                boolean upd = UpdateLogic.available(nu, BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME);
-                v.setViewVisibility(R.id.w_upd, upd ? View.VISIBLE : View.GONE);
-                if (upd) {
-                    v.setTextViewText(R.id.w_upd, c.getString(R.string.widget_update, nu.name));
-                    Intent ui = new Intent(c, MainActivity.class).putExtra(EXTRA_UPDATE, true).setAction("com.jginvesting.app.UPDATE")
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    v.setOnClickPendingIntent(R.id.w_upd, PendingIntent.getActivity(c, 3, ui, flagsImm));
-                }
-                Intent rf = new Intent(c, FavWidget.class).setAction(ACTION_REFRESH).putExtra(EXTRA_FORCE, true);
-                v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(c, 1, rf, flagsImm));
-                // toques nas linhas (abrir/fechar gráfico, marcar ponto, abrir no app): WidgetTap, sem tela; o que fazer vem no fill-in
-                Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
-                        | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-                v.setPendingIntentTemplate(R.id.w_list, PendingIntent.getActivity(c, 2, tpl, flagsMut));
-                v.setEmptyView(R.id.w_list, R.id.w_empty);
-                if (Build.VERSION.SDK_INT >= 31) {
-                    // 1.12: N linhas inteiras na altura do widget, a última rente à borda (títulos com altura fixa para a conta fechar);
-                    // 1.21: uma versão por altura possível (hv): o Android usa a maior que cabe no tamanho real
-                    v.setViewLayoutHeight(R.id.w_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
-                    // 1.21: coluna Ação do tamanho do maior nome; a sobra vai igual para Preço, Dia, Barato/Caro e Medo e Ganância
-                    for (int k = 0; k < COL_IDS.length; k++)
-                        v.setViewLayoutWidth(COL_IDS[k], colDp(c, k) + cols.extra / 4f, android.util.TypedValue.COMPLEX_UNIT_DIP);
-                    int listPx = Math.round((hv - WidgetData.headerDp(cf.fontScale, upd)) * dens);
-                    int rowPx = hv > 0 ? WidgetData.rows(listPx, dens, cf.fontScale, items.size())[1] : 0;
-                    RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
-                    for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp, px, bmp, rowPx, cols, i));
-                    v.setRemoteAdapter(R.id.w_list, b.build());
-                } else {
-                    Intent svc = new Intent(c, WidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-                    svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
-                    legacyAdapter(v, svc);
-                }
-                if (hs.length > 1) sized.put(new android.util.SizeF(1f, hv), v);
-                v1 = v;
-            }
-            RemoteViews v = hs.length > 1 ? new RemoteViews(sized) : v1;
-            m.updateAppWidget(id, v);
+            try {
+                Frame f = new Frame(c, m, id, gs, busy);
+                Widgets.update(m, id, Widgets.compose(f.op, f.land, f::make), () -> Widgets.single(f.op, f.land, f::make));
+            } catch (RuntimeException | OutOfMemoryError e) { Widgets.log("FavWidget " + id, e); }
         }
         if (Build.VERSION.SDK_INT < 31) legacyNotify(m, ids);
+    }
+
+    /** O que é igual em todas as versões de tamanho de um widget; make desenha uma versão. Bitmaps (logos, marca, gráfico) num
+     *  mapa só (bmp): o mesmo objeto em todas as versões, que o Android manda uma vez. */
+    private static final class Frame {
+        final Context c; final int id; final String sel, nm, data, up; final List<WidgetData.Item> items;
+        final java.util.Map<String, android.graphics.Bitmap> bmp = Logos.newCache();
+        final int px, wDp; final WidgetData.Bands bands; final android.os.Bundle op; final android.content.res.Configuration cf;
+        final boolean land, upd; final float dens; final WidgetData.Cols cols; final UpdateLogic.Info nu;
+        final int flagsImm = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+        final int flagsMut = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+
+        Frame(Context c, AppWidgetManager m, int id, List<WidgetData.Group> gs, boolean busy) {
+            this.c = c; this.id = id;
+            sel = selOf(c, id, gs); data = Store.data(c, sel); nm = WidgetData.name(sel, gs);
+            items = WidgetData.items(WidgetData.tickers(sel, Store.favs(c), gs), data);
+            px = Logos.px(c, items.size());
+            bands = WidgetData.bands(data);
+            op = m.getAppWidgetOptions(id);
+            cf = c.getResources().getConfiguration();
+            land = cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+            dens = c.getResources().getDisplayMetrics().density;
+            wDp = op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
+            cols = colsOf(c, items, wDp, cf.fontScale, dens);
+            // horário = quando a última atualização terminou (dados chegaram); sem isso ainda, o horário dos dados no site
+            long fat = Store.fetchedAt(c, sel);
+            up = busy ? c.getString(R.string.widget_loading) : fat > 0 ? WidgetData.fetched(fat, java.util.TimeZone.getDefault()) : WidgetData.updated(data);
+            nu = Updater.known(c);
+            upd = UpdateLogic.available(nu, BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME);
+        }
+
+        /** Uma versão do widget no tamanho s (s.h = altura; s.lw = largura da orientação dessa versão). */
+        RemoteViews make(WidgetData.Size s) {
+            int hv = s.h, hw = s.lw;
+            RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget);
+            v.setTextViewText(R.id.w_sel, nm + "  ▾");
+            v.setTextViewText(R.id.w_sel2, nm + "  ▾");
+            Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+            pick.setData(Uri.parse("jg://pick/" + id));  // um PendingIntent por widget
+            v.setOnClickPendingIntent(R.id.w_sel, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
+            v.setOnClickPendingIntent(R.id.w_sel2, PendingIntent.getActivity(c, 100 + id, pick, flagsImm));
+            v.setTextViewText(R.id.w_empty, c.getString(WidgetData.FAV.equals(sel) ? R.string.widget_empty : R.string.widget_empty_group));
+            v.setTextViewText(R.id.w_time, up);
+            v.setViewVisibility(R.id.w_time, up.isEmpty() ? View.GONE : View.VISIBLE);
+            // marca comprida "JG Investing" ou, se o nome do grupo não couber ao lado dela, o logo quadrado (refeito ao redimensionar)
+            boolean brand = WidgetData.longLogo(nm, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
+            // nome curto: marca comprida até o seletor, que fica colado ao horário; nome longo: logo quadrado e seletor no meio
+            v.setViewVisibility(R.id.w_brand, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.w_sel2, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.w_logo, brand ? View.GONE : View.VISIBLE);
+            v.setViewVisibility(R.id.w_mid, brand ? View.GONE : View.VISIBLE);
+            if (brand) {  // o mesmo bitmap em todas as versões do mesmo tamanho de marca (o Android guarda uma vez só)
+                android.graphics.Bitmap bm = brand(c, Math.round((WidgetData.brandRoom(nm, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens), bmp);
+                if (bm != null) v.setImageViewBitmap(R.id.w_brand, bm);
+            }
+            Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            v.setOnClickPendingIntent(R.id.w_logo, PendingIntent.getActivity(c, 0, open, flagsImm));
+            v.setOnClickPendingIntent(R.id.w_brand, PendingIntent.getActivity(c, 0, open, flagsImm));
+            v.setViewVisibility(R.id.w_upd, upd ? View.VISIBLE : View.GONE);
+            if (upd) {
+                v.setTextViewText(R.id.w_upd, c.getString(R.string.widget_update, nu.name));
+                Intent ui = new Intent(c, MainActivity.class).putExtra(EXTRA_UPDATE, true).setAction("com.jginvesting.app.UPDATE")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                v.setOnClickPendingIntent(R.id.w_upd, PendingIntent.getActivity(c, 3, ui, flagsImm));
+            }
+            Intent rf = new Intent(c, FavWidget.class).setAction(ACTION_REFRESH).putExtra(EXTRA_FORCE, true);
+            v.setOnClickPendingIntent(R.id.w_refresh, PendingIntent.getBroadcast(c, 1, rf, flagsImm));
+            // toques nas linhas (abrir/fechar gráfico, marcar ponto, abrir no app): WidgetTap, sem tela; o que fazer vem no fill-in
+            Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            v.setPendingIntentTemplate(R.id.w_list, PendingIntent.getActivity(c, 2, tpl, flagsMut));
+            v.setEmptyView(R.id.w_list, R.id.w_empty);
+            if (Build.VERSION.SDK_INT >= 31) {
+                // 1.12: N linhas inteiras na altura do widget, a última rente à borda (títulos com altura fixa para a conta fechar);
+                // 1.21: uma versão por altura possível (hv): o Android usa a maior que cabe no tamanho real
+                v.setViewLayoutHeight(R.id.w_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                // 1.21: coluna Ação do tamanho do maior nome; a sobra vai igual para Preço, Dia, Barato/Caro e Medo e Ganância
+                for (int k = 0; k < COL_IDS.length; k++)
+                    v.setViewLayoutWidth(COL_IDS[k], colDp(c, k) + cols.extra / 4f, android.util.TypedValue.COMPLEX_UNIT_DIP);
+                int listPx = Math.round((hv - WidgetData.headerDp(cf.fontScale, upd)) * dens);
+                int rowPx = hv > 0 ? WidgetData.rows(listPx, dens, cf.fontScale, items.size())[1] : 0;
+                RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
+                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp, px, bmp, rowPx, cols, i));
+                v.setRemoteAdapter(R.id.w_list, b.build());
+            } else {
+                Intent svc = new Intent(c, WidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+                svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
+                legacyAdapter(v, svc);
+            }
+            return v;
+        }
+    }
+
+    /** 1.23: marcas já desenhadas, por tamanho (entre um desenho e outro); render = o mesmo objeto em todas as versões do desenho. */
+    private static final android.util.LruCache<String, android.graphics.Bitmap> BRAND = new android.util.LruCache<>(6);
+
+    static android.graphics.Bitmap brand(Context c, int roomPx, int hPx, java.util.Map<String, android.graphics.Bitmap> render) {
+        String k = "brand:" + roomPx + "x" + hPx;
+        if (render != null && render.containsKey(k)) return render.get(k);
+        android.graphics.Bitmap b = BRAND.get(k);
+        if (b == null && (b = brandBitmap(c, roomPx, hPx)) != null) BRAND.put(k, b);
+        if (render != null) render.put(k, b);
+        return b;
     }
 
     /** Marca comprida do tamanho do espaço: nome "JG Investing" na proporção original + gráfico da faixa esticado na horizontal
@@ -209,15 +252,24 @@ public class FavWidget extends AppWidgetProvider {
 
     @Override public void onAppWidgetOptionsChanged(Context c, AppWidgetManager m, int id, android.os.Bundle o) { render(c); }
 
-    /** Busca o gráfico de 5 anos da ação aberta (se o guardado tem mais de 6 h) e redesenha. */
-    static void chartAsync(Context ctx, String t) {
+    /** Busca o gráfico de 5 anos da ação aberta (se o guardado tem mais de 6 h, ou é do "futuro": relógio voltou) e redesenha.
+     *  1.23: roda no broadcast ACTION_CHART (pr, goAsync), não numa thread solta do WidgetTap, que fecha na hora (no Android 14+
+     *  o processo em segundo plano podia ficar congelado e o gráfico nunca chegava). pr.finish() sempre. */
+    static void chartAsync(Context ctx, String t, PendingResult pr) {
         final Context c = ctx.getApplicationContext();
-        if (Store.chart(c, t) != null && System.currentTimeMillis() - Store.chartAt(c, t) < 6 * 3600_000L) return;
+        if (Store.chart(c, t) != null && WidgetData.within(Store.chartAt(c, t), System.currentTimeMillis(), WidgetData.CHART_FRESH_MS)) {
+            if (pr != null) pr.finish();
+            return;
+        }
         new Thread(() -> {
-            String j = Api.chart(t, 30000);
-            if (j != null && WidgetData.chart(j) != null) Store.setChart(c, t, j);
-            else if (Store.chart(c, t) == null) Store.setChart(c, t, "{}");  // sem histórico: mostra "Sem dados"
-            render(c);
+            try {
+                String j = Api.chart(t, pr != null ? (int) Widgets.BROADCAST_MS : 30000);
+                if (j != null && WidgetData.chart(j) != null) Store.setChart(c, t, j);
+                else if (Store.chart(c, t) == null) Store.setChart(c, t, "{}");  // sem histórico: mostra "Sem dados"
+                render(c);
+            } catch (RuntimeException e) {
+                Widgets.log("FavWidget.chartAsync", e);
+            } finally { if (pr != null) pr.finish(); }
         }).start();
     }
 
@@ -229,18 +281,12 @@ public class FavWidget extends AppWidgetProvider {
         return new Intent().putExtra(WidgetTap.A, a).putExtra(WidgetTap.T, t).putExtra(WidgetTap.Z, z);
     }
 
-    /** Uma linha: logo + Ação (nome curto embaixo) | Preço | Dia | Barato/Caro | Medo e Ganância; aberta, o gráfico de 5 anos com faixas de toque. */
-    static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp) { return row(c, it, bands, wDp, Logos.px(c, 1), null); }
-
     /** Widget estreito (menos de NARROW dp): sem o logo, para o ticker caber. */
     static final int NARROW = 330;
 
+    /** Uma linha: logo + Ação (nome curto embaixo) | Preço | Dia | Barato/Caro | Medo e Ganância; aberta, o gráfico de 5 anos com faixas de toque. */
     static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp) {
-        return row(c, it, bands, wDp, px, bmp, 0);
-    }
-
-    static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp, int rowPx) {
-        return row(c, it, bands, wDp, px, bmp, rowPx, null, 0);
+        return row(c, it, bands, wDp, px, bmp, 0, null, 0);
     }
 
     /** Colunas Preço, Dia, Barato/Caro e Medo e Ganância (títulos e linhas) e a largura padrão de cada uma (dimens.xml). */

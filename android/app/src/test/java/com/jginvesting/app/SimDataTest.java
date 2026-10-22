@@ -68,4 +68,22 @@ public class SimDataTest {
         assertNull(r.get(1).dp); assertEquals("—", SimData.dayPct(r.get(1).dp));
         assertTrue(SimData.rows("{}").isEmpty());
     }
+
+    // 1.23: ids das linhas pelas posições: "ABR3" e "AC33" têm o mesmo hashCode (antes: mesmo id no mesmo modelo) e nenhum id
+    // de empresa coincide com o do modelo, do título ou do CDB
+    @Test public void idsUnicosNaLista() {
+        assertEquals("ABR3".hashCode(), "AC33".hashCode());
+        StringBuilder pos = new StringBuilder("{\"t\":\"ABR3\",\"q\":1,\"inv\":1,\"v\":1},{\"t\":\"AC33\",\"q\":1,\"inv\":1,\"v\":1}");
+        for (int k = 0; k < 40; k++) pos.append(",{\"t\":\"T").append(k).append("\",\"q\":1,\"inv\":1,\"v\":1}");
+        String j = "{\"r\":[{\"m\":\"value\",\"n\":\"Value\",\"ap\":1,\"v\":1,\"cash\":5,\"pos\":[" + pos + "]},"
+                + "{\"m\":\"growth\",\"n\":\"Growth\",\"ap\":1,\"v\":1,\"cash\":5,\"pos\":[" + pos + "]}]}";
+        List<SimData.Row> rows = SimData.rows(j);
+        for (String open : new String[]{"value", "growth", ""}) {
+            List<SimData.Item> it = SimData.items(rows, open);
+            java.util.HashSet<Long> ids = new java.util.HashSet<>();
+            for (SimData.Item x : it) assertTrue(ids.add(x.id()));
+        }
+        // o mesmo item tem o mesmo id ao redesenhar
+        assertEquals(SimData.items(rows, "value").get(3).id(), SimData.items(SimData.rows(j), "value").get(3).id());
+    }
 }

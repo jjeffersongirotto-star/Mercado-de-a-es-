@@ -70,10 +70,7 @@ public class WidgetDataTest {
         assertEquals("NA", WidgetData.initials("NATU3"));
     }
 
-    @Test public void bitmapBudgetUnderOneMegabyte() {
-        for (float d : new float[]{1f, 2f, 2.75f, 3.5f, 4f})
-            for (int rows : new int[]{1, 10, 12, 13, 24, 25, WidgetData.MAX_ROWS})
-                assertEquals(true, WidgetData.bitmapBytes(rows, d, 600) < 1_000_000L);
+    @Test public void logoSizeByRows() {  // 1.23: a conta de bytes (bitmapBytes) saiu — ignorava as versões; o limite agora é medido (Widgets.compose)
         assertEquals(88, WidgetData.logoPx(2.75f, 10));
         assertEquals(96, WidgetData.logoPx(3.5f, 12));
         assertEquals(64, WidgetData.logoPx(3.5f, 20));
@@ -285,7 +282,103 @@ public class WidgetDataTest {
         WidgetData.Cols c2 = WidgetData.cols(java.util.Arrays.asList("Klabin"), java.util.Arrays.asList("KLBN3"), 200f, m);
         assertTrue(c2.text < c.text && c2.extra > c.extra);  // muda com as empresas
         assertEquals(40f, WidgetData.cols(nm, tk, 40f, m).text, 1e-6);  // nunca mais que o espaço
-        int[] h = WidgetData.heightVariants(400);
-        assertEquals(416, h[0]); assertEquals(352, h[h.length - 1]);
+        List<WidgetData.Size> h = WidgetData.sizes(0, 0, 400, 400, false, WidgetData.FULL);  // uma orientação só: 6 alturas
+        assertEquals(6, h.size()); assertEquals(416, h.get(0).h); assertEquals(352, h.get(h.size() - 1).h);
+    }
+
+    /** Escolha do Android entre as versões (RemoteViews.findBestFitLayout): entre as que cabem (largura e altura ≤ o tamanho real),
+     *  a mais próxima pela distância ao quadrado; nenhuma cabe = a menor. */
+    private static WidgetData.Size bestFit(List<WidgetData.Size> ss, float w, float h) {
+        WidgetData.Size best = null; float bd = Float.MAX_VALUE;
+        for (WidgetData.Size s : ss) {
+            if (s.w - w > 1e-3f || s.h - h > 1e-3f) continue;
+            float d = (s.w - w) * (s.w - w) + (s.h - h) * (s.h - h);
+            if (d < bd) { bd = d; best = s; }
+        }
+        if (best != null) return best;
+        for (WidgetData.Size s : ss) if (best == null || (long) s.w * s.h < (long) best.w * best.h) best = s;
+        return best;
+    }
+
+    // 1.23: versões para as duas orientações (ao girar, o Android troca sozinho, sem chamar o app) e no máximo 6, todas diferentes
+    @Test public void sizeVariantsCoverBothOrientations() {
+        int minW = 300, maxW = 380, minH = 200, maxH = 260;  // em pé: 300 × 260; deitado: 380 × 200
+        for (boolean land : new boolean[]{false, true}) {
+            List<WidgetData.Size> ss = WidgetData.sizes(minW, maxW, minH, maxH, land, WidgetData.FULL);
+            assertTrue(ss.size() <= 6);
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (WidgetData.Size s : ss) assertTrue(seen.add(s.w + "x" + s.h));
+            WidgetData.Size p = bestFit(ss, minW, maxH), l = bestFit(ss, maxW, minH);
+            assertFalse(p.land); assertEquals(260, p.h); assertEquals(300, p.lw);   // em pé: a altura máxima, largura mínima
+            assertTrue(l.land); assertEquals(200, l.h); assertEquals(380, l.lw);    // deitado: a altura mínima, largura máxima
+            assertEquals(land, ss.get(0).land);                                      // a orientação atual vem primeiro
+        }
+        List<WidgetData.Size> ss = WidgetData.sizes(minW, maxW, minH, maxH, false, WidgetData.FULL);
+        assertEquals(244, bestFit(ss, 300, 250).h);   // launcher informou mais alto do que é: a maior que cabe
+        assertEquals(276, bestFit(ss, 300, 285).h);   // mais baixo do que é: a versão de cima
+        assertTrue(bestFit(ss, 360, 100) != null);   // nada cabe: o Android usa a menor (sem erro)
+        // larguras parecidas, alturas bem diferentes (tablet): ainda escolhe pela orientação certa
+        List<WidgetData.Size> tb = WidgetData.sizes(300, 310, 200, 400, false, WidgetData.FULL);
+        assertEquals(400, bestFit(tb, 300, 400).h); assertFalse(bestFit(tb, 300, 400).land);
+        assertEquals(200, bestFit(tb, 310, 200).h); assertTrue(bestFit(tb, 310, 200).land);
+    }
+
+    @Test public void sizeVariantsShrinkWhenTooBig() {
+        List<WidgetData.Size> few = WidgetData.sizes(300, 380, 200, 260, false, WidgetData.FEW);
+        assertEquals(3, few.size()); assertEquals(260, few.get(0).h); assertEquals(244, few.get(1).h); assertEquals(228, few.get(2).h);
+        List<WidgetData.Size> one = WidgetData.sizes(300, 380, 200, 260, true, WidgetData.ONE);
+        assertEquals(1, one.size()); assertEquals(200, one.get(0).h); assertEquals(380, one.get(0).lw);
+        List<WidgetData.Size> none = WidgetData.sizes(0, 0, 0, 0, false, WidgetData.FULL);  // tamanho desconhecido
+        assertEquals(1, none.size()); assertEquals(0, none.get(0).h); assertTrue(none.get(0).w >= 1);
+        for (WidgetData.Size s : WidgetData.sizes(300, 380, 70, 90, false, WidgetData.FULL)) assertTrue(s.h >= 80);  // nunca abaixo de 80 dp
+    }
+
+    // 1.23: relógio que volta (ajuste de hora) não deixa "Atualizando…" para sempre nem o gráfico "novo" para sempre
+    @Test public void clockWindowsExpireWhenClockGoesBack() {
+        long now = 1_800_000_000_000L;
+        assertTrue(WidgetData.within(now - 1000, now, WidgetData.LOADING_MS));
+        assertFalse(WidgetData.within(now - WidgetData.LOADING_MS, now, WidgetData.LOADING_MS));
+        assertFalse(WidgetData.within(now + 3600_000L, now, WidgetData.LOADING_MS));   // marca do "futuro" (relógio voltou 1 h): vencida
+        assertFalse(WidgetData.within(now + 60_000L, now, WidgetData.CHART_FRESH_MS));  // gráfico do "futuro": busca de novo
+        assertFalse(WidgetData.within(0, now, WidgetData.LOADING_MS));                  // nunca começou
+        assertTrue(WidgetData.within(now + 1, now, WidgetData.LOADING_MS));             // toques no mesmo instante (nextToken)
+        // marca nova: agora; toque no mesmo ms: a seguinte; marca antiga do "futuro": agora (antes ficava presa nela + 1)
+        assertEquals(now, WidgetData.nextToken(0, now));
+        assertEquals(now, WidgetData.nextToken(now - 5000, now));
+        assertEquals(now + 1, WidgetData.nextToken(now, now));
+        assertEquals(now, WidgetData.nextToken(now + 3600_000L, now));
+        assertTrue(WidgetData.ownsLoading(WidgetData.nextToken(now, now), now + 1));
+    }
+
+    // 1.23: prazo total do broadcast (~10 s) dividido entre os pedidos, não 8 s para cada um
+    @Test public void budgetSharesOneDeadline() {
+        long t0 = 1_000_000L, dl = t0 + 8500;
+        assertEquals(8000, WidgetData.budget(dl, t0, 8000, 1500));
+        assertEquals(3500, WidgetData.budget(dl, t0 + 5000, 8000, 1500));
+        assertEquals(0, WidgetData.budget(dl, t0 + 7500, 8000, 1500));   // falta 1 s: não começa outro pedido
+        assertEquals(0, WidgetData.budget(dl, t0 + 9000, 8000, 1500));   // passou do prazo
+    }
+
+    @Test public void fileKeyIsSafeAndStable() {
+        String a = WidgetData.fileKey("Meu grupo/../ação"), b = WidgetData.fileKey("Meu grupo/../ação");
+        assertEquals(a, b); assertEquals(32, a.length()); assertTrue(a.matches("[0-9a-f]{32}"));
+        assertFalse(a.equals(WidgetData.fileKey("fav")));
+    }
+
+    @Test public void remapWidgetIdsAfterRestore() {
+        java.util.Map<String, Object> all = new java.util.HashMap<>();
+        all.put("sel_5", "g1"); all.put("sel_6", "fav"); all.put("ssel_5", "x"); all.put("reqseq", 3L);
+        java.util.Map<String, String> ch = WidgetData.remap(all, "sel_", new int[]{5, 6}, new int[]{6, 9});  // ids que se cruzam
+        assertEquals("g1", ch.get("sel_6")); assertEquals("fav", ch.get("sel_9"));
+        assertTrue(ch.containsKey("sel_5") && ch.get("sel_5") == null);  // o id velho sai
+        assertFalse(ch.containsKey("ssel_5"));                              // só o prefixo pedido
+        assertTrue(WidgetData.remap(all, "sel_", null, new int[]{1}).isEmpty());
+    }
+
+    @Test public void coalesceJoinsRequestsUntilStart() {
+        WidgetData.Coalesce q = new WidgetData.Coalesce();
+        assertTrue(q.claim()); assertFalse(q.claim());   // setFavs + setGroups ao abrir: uma busca
+        q.started();
+        assertTrue(q.claim());                           // pedido depois que a busca começou: outra busca
     }
 }

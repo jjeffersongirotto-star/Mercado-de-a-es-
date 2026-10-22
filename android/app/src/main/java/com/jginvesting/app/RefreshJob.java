@@ -37,7 +37,10 @@ public class RefreshJob extends JobService {
                         if (st != null && !WidgetData.refreshing(st)) break;
                     }
                 }
-                FavWidget.refreshNow(c, null, tk);
+                FavWidget.refreshNow(c, null, tk);  // protegido: erro do launcher não deixa o job sem fim
+            } catch (RuntimeException e) {
+                Widgets.log("RefreshJob", e);
+                if (tk != 0 && Store.endLoading(c, tk)) FavWidget.render(c);
             } finally { jobFinished(p, false); }
         }).start();
         return true;

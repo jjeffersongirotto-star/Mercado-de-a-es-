@@ -43,8 +43,8 @@ android {
         applicationId "com.jginvesting.app"
         minSdk 24
         targetSdk 36
-        versionCode 23
-        versionName "1.22"
+        versionCode 24
+        versionName "1.23"
         resValue "string", "app_name", appName
         resValue "color", "theme", themeColor
         resValue "color", "chart_stock", chartStock

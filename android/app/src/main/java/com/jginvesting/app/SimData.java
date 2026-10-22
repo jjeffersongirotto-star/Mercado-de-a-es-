@@ -106,9 +106,6 @@ public final class SimData {
         return out;
     }
 
-    /** Horário dos dados no site (u, "dd/mm/aaaa hh:mm:ss") -> "dd/mm hh:mm" (mesma regra do widget Favoritos). */
-    public static String updated(String json) { return WidgetData.updated(json); }
-
     private static DecimalFormat df(String pat) { return new DecimalFormat(pat, DecimalFormatSymbols.getInstance(new Locale("pt", "BR"))); }
 
     /** Valor compacto para a coluna: R$ 950,40 · R$ 12.345 (de mil para cima sem centavos) · R$ 1,23 mi. */
@@ -145,18 +142,21 @@ public final class SimData {
     public static final class Item {
         public static final int ROW = 0, HEAD = 1, POS = 2, CDB = 3;
         public final int type; public final Row row; public final Pos pos;
-        Item(int type, Row row, Pos pos) { this.type = type; this.row = row; this.pos = pos; }
-        public long id() { return ((long) row.m.hashCode() << 20) ^ (type == POS ? pos.t.hashCode() & 0xFFFFF : type); }
+        final int ri, k;  // posição do modelo na lista e da empresa no modelo
+        Item(int type, Row row, Pos pos, int ri, int k) { this.type = type; this.row = row; this.pos = pos; this.ri = ri; this.k = k; }
+        /** Id estável da linha, único na lista (1.23: pelas posições; antes, hash do modelo e do ticker, que podia repetir). */
+        public long id() { return ((long) ri << 32) | ((long) type << 24) | (k & 0xFFFFFF); }
     }
 
     public static List<Item> items(List<Row> rows, String openModel) {
         List<Item> out = new ArrayList<>();
-        for (Row r : rows) {
-            out.add(new Item(Item.ROW, r, null));
+        for (int ri = 0; ri < rows.size(); ri++) {
+            Row r = rows.get(ri);
+            out.add(new Item(Item.ROW, r, null, ri, 0));
             if (!r.m.equals(openModel)) continue;
-            out.add(new Item(Item.HEAD, r, null));
-            for (Pos p : r.pos) out.add(new Item(Item.POS, r, p));
-            if (r.cash >= 0.01) out.add(new Item(Item.CDB, r, null));
+            out.add(new Item(Item.HEAD, r, null, ri, 0));
+            for (int k = 0; k < r.pos.size(); k++) out.add(new Item(Item.POS, r, r.pos.get(k), ri, k));
+            if (r.cash >= 0.01) out.add(new Item(Item.CDB, r, null, ri, 0));
         }
         return out;
     }
