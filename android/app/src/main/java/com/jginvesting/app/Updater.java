@@ -50,15 +50,15 @@ final class Updater {
         return i;
     }
 
-    private static long lastData;
+    /** 1.23: atômico (o widget, o app e a ponte do site conferem em threads diferentes; só uma passa em cada OPEN_GAP). */
+    private static final java.util.concurrent.atomic.AtomicLong lastData = new java.util.concurrent.atomic.AtomicLong();
 
     /** 1.15: a cada atualização de dados (widget a cada 30 min e no ⟳, ⟳ e recarga automática do site dentro do app) também confere
      *  a versão, sem cache (?t= + no-cache; só junta conferências a menos de OPEN_GAP). Achou versão nova: aviso no widget e, com o app
      *  aberto na tela, a oferta (Atualizar / Depois) na hora. true = mudou o aviso. Fora da thread principal. */
     static boolean quietCheck(Context c, int timeoutMs) {
-        long now = System.currentTimeMillis();
-        if (!UpdateLogic.dataCheck(lastData, now)) return false;
-        lastData = now;
+        long now = System.currentTimeMillis(), last = lastData.get();
+        if (!UpdateLogic.dataCheck(last, now) || !lastData.compareAndSet(last, now)) return false;
         boolean before = available(c);
         UpdateLogic.Info i = fetch(c, timeoutMs, 1);
         Updater u = live.get();
@@ -69,7 +69,7 @@ final class Updater {
     /** Mesmo que quietCheck, em segundo plano (ponte do site: JGApp.dataRefreshed); redesenha o widget se o aviso mudou. */
     static void dataCheckAsync(Context ctx) {
         final Context c = ctx.getApplicationContext();
-        new Thread(() -> { try { if (quietCheck(c, 15000)) FavWidget.render(c); } catch (RuntimeException e) { /* widget não redesenhou: a oferta já foi */ } }).start();
+        new Thread(() -> { if (quietCheck(c, 15000)) FavWidget.render(c); }).start();  // render protegido (1.23)
     }
 
     /** Ao abrir e ao voltar ao app. Se a permissão acabou de ser dada, segue com a atualização. */
@@ -86,8 +86,8 @@ final class Updater {
                 boolean before = available(a);
                 i = fetch(a, 20000, UpdateLogic.RETRY_MS.length);
                 // 1.14 redesenhava o widget aqui sem proteção: um erro do widget (ex.: bitmaps grandes demais para o launcher) matava a
-                // thread antes da oferta e deixava "checking" preso — nenhuma conferência mais até fechar o app
-                if (before != available(a)) try { FavWidget.render(a.getApplicationContext()); SimWidget.render(a.getApplicationContext()); } catch (RuntimeException e) { /* segue para a oferta */ }
+                // thread antes da oferta e deixava "checking" preso — nenhuma conferência mais até fechar o app; 1.23: render protegido
+                if (before != available(a)) { FavWidget.render(a.getApplicationContext()); SimWidget.render(a.getApplicationContext()); }
             } finally {
                 final UpdateLogic.Info got = i != null ? i : known(a);  // sem resposta agora: a última versão vista (widget ou antes)
                 a.runOnUiThread(() -> { checking = false; maybeAsk(got); });
@@ -167,10 +167,12 @@ final class Updater {
     }
 
     private static String get(String url, int timeoutMs) {
-        HttpURLConnection c = null;
+        if (timeoutMs <= 0) return null;
+        HttpURLConnection c = null; java.util.concurrent.ScheduledFuture<?> w = null;
         try {
             c = (HttpURLConnection) new URL(url).openConnection();
             c.setConnectTimeout(timeoutMs); c.setReadTimeout(timeoutMs);
+            w = Api.watch(c, timeoutMs);  // prazo total (1.23)
             c.setUseCaches(false);
             c.setRequestProperty("Cache-Control", "no-cache"); c.setRequestProperty("Pragma", "no-cache");
             if (c.getResponseCode() != 200) return null;
@@ -180,6 +182,6 @@ final class Updater {
                 return b.toString("UTF-8");
             }
         } catch (Exception e) { return null; }
-        finally { if (c != null) c.disconnect(); }
+        finally { if (w != null) w.cancel(false); if (c != null) c.disconnect(); }
     }
 }

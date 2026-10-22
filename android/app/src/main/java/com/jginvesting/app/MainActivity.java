@@ -82,7 +82,8 @@ public class MainActivity extends Activity {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::back);
         updater = new Updater(this);
         if (getIntent().getBooleanExtra(FavWidget.EXTRA_UPDATE, false)) updater.forceOffer();
-        FavWidget.render(getApplicationContext());  // depois de atualizar o app: tira o aviso do widget
+        final android.content.Context app = getApplicationContext();
+        Widgets.post(() -> FavWidget.render(app));  // depois de atualizar o app: tira o aviso do widget (fila dos widgets, fora da tela)
         if (saved != null) web.restoreState(saved);
         else web.loadUrl(BuildConfig.SITE + "/" + startQuery(getIntent()));
     }
@@ -137,24 +138,32 @@ public class MainActivity extends Activity {
     @Override protected void onPause() { super.onPause(); web.onPause(); updater.onPause(); }
     @Override protected void onResume() { super.onResume(); web.onResume(); updater.onResume(); }
 
-    /** window.JGApp no site (só existe dentro do app). */
+    /** Buscas pedidas pela ponte do site: setFavs e setGroups chegam juntos ao abrir o app (uma busca só, Widgets.coalesce). */
+    private static final WidgetData.Coalesce FAV_Q = new WidgetData.Coalesce(), SIM_Q = new WidgetData.Coalesce();
+
+    /** window.JGApp no site (só existe dentro do app). 1.23: o trabalho vai para a fila dos widgets (Widgets.BG, uma thread, na
+     *  ordem em que chegou), não na thread do JavaBridge, e o desenho é protegido. */
     final class Bridge {
         /** Lista e ordem dos Favoritos (app.js → pushApp). Mudou: redesenha o widget e busca os preços. */
         @JavascriptInterface public void setFavs(String json) {
             if (json == null || json.length() > 20000) return;
-            if (Store.setFavs(MainActivity.this, json)) {
-                FavWidget.render(getApplicationContext());
-                FavWidget.refreshAsync(getApplicationContext(), null);
-            }
+            final android.content.Context app = getApplicationContext();
+            Widgets.post(() -> {
+                if (!Store.setFavs(app, json)) return;
+                FavWidget.render(app);
+                Widgets.coalesce(FAV_Q, () -> FavWidget.refreshAsync(app, null));
+            });
         }
 
         /** Grupos da aba Grupos (grupos.js → pushGroups) para o seletor do widget. */
         @JavascriptInterface public void setGroups(String json) {
             if (json == null || json.length() > 200000) return;
-            if (Store.setGroups(MainActivity.this, json)) {
-                FavWidget.render(getApplicationContext());
-                FavWidget.refreshAsync(getApplicationContext(), null);
-            }
+            final android.content.Context app = getApplicationContext();
+            Widgets.post(() -> {
+                if (!Store.setGroups(app, json)) return;
+                FavWidget.render(app);
+                Widgets.coalesce(FAV_Q, () -> FavWidget.refreshAsync(app, null));
+            });
         }
 
         /** O site terminou de carregar/atualizar os dados (app.js → load: ⟳, recarga automática, abertura): confere a versão também. */
@@ -163,10 +172,12 @@ public class MainActivity extends Activity {
         /** Grupos de simulação da aba Grupos (grupos.js → pushSims) para o widget Grupo simulação. */
         @JavascriptInterface public void setSims(String json) {
             if (json == null || json.length() > 20000) return;
-            if (Store.setSims(MainActivity.this, json)) {
-                SimWidget.render(getApplicationContext());
-                SimWidget.refreshAsync(getApplicationContext(), null, 0);
-            }
+            final android.content.Context app = getApplicationContext();
+            Widgets.post(() -> {
+                if (!Store.setSims(app, json)) return;
+                SimWidget.render(app);
+                Widgets.coalesce(SIM_Q, () -> SimWidget.refreshAsync(app, null, 0));
+            });
         }
 
         /** Exportar (ui.js → saveFile): grava o arquivo em Downloads. */

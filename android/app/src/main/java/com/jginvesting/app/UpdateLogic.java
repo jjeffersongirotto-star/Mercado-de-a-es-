@@ -12,7 +12,6 @@ import org.json.JSONObject;
  *  app) e, com o app aberto, oferece na hora; a thread da abertura não morre mais se o redesenho do widget falhar (ver Updater). */
 public final class UpdateLogic {
     private UpdateLogic() { }
-    public static final long CHECK_EVERY = 10 * 60_000L;     // depois de uma conferência que deu certo
     public static final long[] RETRY_MS = {0, 5_000L, 20_000L, 60_000L};  // na mesma abertura, se falhar (servidor acordando, rede)
     public static final long SNOOZE = 10 * 60_000L;         // "Depois": 10 min para a mesma versão, só na memória (abrir de novo o app oferece)
     public static final long OPEN_GAP = 15_000L;            // ao abrir/voltar: junta conferências seguidas (troca rápida de app)
@@ -32,13 +31,6 @@ public final class UpdateLogic {
             return new Info(code, name, apk, sha);
         } catch (Exception e) { return null; }
     }
-
-    /** lastOk = última conferência que recebeu um version.json válido. */
-    public static boolean shouldCheck(long lastOk, long now, long every) { return now - lastOk >= every || now < lastOk; }
-    public static boolean shouldCheck(long lastOk, long now) { return shouldCheck(lastOk, now, CHECK_EVERY); }
-
-    /** Falha (sem resposta, resposta inválida) não conta como conferência feita. */
-    public static long afterCheck(long lastOk, Info got, long now) { return got != null ? now : lastOk; }
 
     /** "Depois" vale só para a versão adiada e só até o prazo; versão mais nova aparece de novo. */
     public static boolean snoozed(int snoozeCode, long snoozeUntil, int code, long now) { return code == snoozeCode && now < snoozeUntil; }
@@ -61,11 +53,9 @@ public final class UpdateLogic {
     public static boolean offer(Info i, int installed, String name, int snoozeCode, long snoozeUntil, long now) {
         return newer(i, installed, name) && !snoozed(snoozeCode, snoozeUntil, i.code, now);
     }
-    public static boolean offer(Info i, int installed, int snoozeCode, long snoozeUntil, long now) { return offer(i, installed, null, snoozeCode, snoozeUntil, now); }
 
     /** Há versão mais nova conhecida (aviso no widget; vale mesmo com "Depois"). */
     public static boolean available(Info i, int installed, String name) { return newer(i, installed, name); }
-    public static boolean available(Info i, int installed) { return newer(i, installed, null); }
 
     /** Ao abrir/voltar ao app: confere sempre (só junta aberturas a menos de OPEN_GAP da última tentativa). */
     public static boolean openCheck(long lastTry, long now) { return lastTry <= 0 || now - lastTry >= OPEN_GAP || now < lastTry; }

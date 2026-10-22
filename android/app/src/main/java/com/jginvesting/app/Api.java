@@ -12,6 +12,22 @@ import java.util.List;
 final class Api {
     private Api() { }
 
+    /** 1.23: timeoutMs de cada chamada é o tempo TOTAL dela (relógio), não por etapa: connect e read timeouts valem cada um o
+     *  prazo inteiro e um servidor lento que manda aos poucos não para o read timeout; este vigia desliga a conexão no fim do prazo.
+     *  Quem chama passa o que resta do prazo do broadcast (WidgetData.budget). */
+    private static final java.util.concurrent.ScheduledThreadPoolExecutor WD = new java.util.concurrent.ScheduledThreadPoolExecutor(1, r -> {
+        Thread t = new Thread(r, "jg-api-prazo"); t.setDaemon(true); return t;
+    });
+    static { WD.setRemoveOnCancelPolicy(true); }
+
+    /** Desliga a conexão c depois de ms (cancelar no fim da chamada). */
+    static java.util.concurrent.ScheduledFuture<?> watch(HttpURLConnection c, int ms) {
+        return WD.schedule(c::disconnect, Math.max(1, ms), java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    /** Logo que não existe no servidor (resposta diferente de 200 ou que não é PNG): Logos guarda e só tenta de novo depois de um dia. */
+    static final byte[] MISSING = new byte[0];
+
     /** -> JSON da resposta ou null (sem internet, servidor acordando etc.). */
     static String widget(List<String> favs, int timeoutMs) {
         try { return get("/api/widget?v=2&t=" + URLEncoder.encode(WidgetData.param(favs), "UTF-8"), timeoutMs); }
@@ -30,22 +46,26 @@ final class Api {
     /** Estado da atualização do servidor (/api/status, leve) -> JSON ou null. */
     static String status(int timeoutMs) { return get("/api/status", timeoutMs); }
 
-    /** PNG de um logo (/logos/<arquivo>) ou null. */
+    /** PNG de um logo (/logos/<arquivo>), MISSING (o servidor não tem) ou null (sem internet, prazo: tenta na próxima). */
     static byte[] logo(String file, int timeoutMs) {
-        HttpURLConnection c = null;
+        if (timeoutMs <= 0) return null;
+        HttpURLConnection c = null; java.util.concurrent.ScheduledFuture<?> w = null;
         try {
             c = (HttpURLConnection) new URL(BuildConfig.SITE + "/logos/" + file).openConnection();
             c.setConnectTimeout(timeoutMs); c.setReadTimeout(timeoutMs);
-            if (c.getResponseCode() != 200) return null;
+            w = watch(c, timeoutMs);
+            int code = c.getResponseCode();
+            if (code != 200) return code >= 400 && code < 500 ? MISSING : null;  // 5xx: servidor acordando, tenta de novo
             try (InputStream in = c.getInputStream()) {
                 ByteArrayOutputStream b = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int n;
                 while ((n = in.read(buf)) > 0 && b.size() < 200_000) b.write(buf, 0, n);
                 byte[] x = b.toByteArray();
-                return x.length > 8 && (x[0] & 0xff) == 0x89 && x[1] == 'P' ? x : null;
+                return x.length > 8 && (x[0] & 0xff) == 0x89 && x[1] == 'P' ? x : MISSING;
             }
         } catch (Exception e) {
             return null;
         } finally {
+            if (w != null) w.cancel(false);
             if (c != null) c.disconnect();
         }
     }
@@ -53,11 +73,13 @@ final class Api {
     private static String get(String path, int timeoutMs) { return req(path, timeoutMs, false); }
 
     private static String req(String path, int timeoutMs, boolean post) {
-        HttpURLConnection c = null;
+        if (timeoutMs <= 0) return null;
+        HttpURLConnection c = null; java.util.concurrent.ScheduledFuture<?> w = null;
         try {
             URL u = new URL(BuildConfig.SITE + path);
             c = (HttpURLConnection) u.openConnection();
             c.setConnectTimeout(timeoutMs); c.setReadTimeout(timeoutMs);
+            w = watch(c, timeoutMs);
             if (post) { c.setRequestMethod("POST"); c.setDoOutput(true); c.setFixedLengthStreamingMode(0); c.getOutputStream().close(); }
             c.setRequestProperty("Accept", "application/json");
             if (c.getResponseCode() != 200) return null;
@@ -69,6 +91,7 @@ final class Api {
         } catch (Exception e) {
             return null;
         } finally {
+            if (w != null) w.cancel(false);
             if (c != null) c.disconnect();
         }
     }

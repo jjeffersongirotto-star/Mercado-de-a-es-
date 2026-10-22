@@ -136,15 +136,93 @@ public final class WidgetData {
         return new Cols(text, Math.max(0, room - text), sp);
     }
 
-    /** 1.21: alturas (dp) das versões do widget, uma para cada altura real possível perto da informada pelo launcher (que pode errar):
-     *  o Android escolhe a maior que cabe no tamanho de verdade, e a lista fecha em linhas inteiras nela. */
-    public static int[] heightVariants(int hDp) {
-        int[] o = {16, 0, -12, -24, -36, -48};
-        List<Integer> r = new ArrayList<>();
-        for (int x : o) if (hDp + x >= 80) r.add(hDp + x);
-        int[] a = new int[r.size()];
-        for (int i = 0; i < a.length; i++) a[i] = r.get(i);
-        return a.length == 0 ? new int[]{hDp} : a;
+    /** 1.23: uma versão do widget para o Android escolher pelo tamanho real (RemoteViews(Map<SizeF, RemoteViews>)).
+     *  w, h = tamanho (dp) informado ao Android; lw = largura usada no desenho (marca comprida ou logo quadrado); land = deitado. */
+    public static final class Size {
+        public final int w, h, lw; public final boolean land;
+        Size(int w, int h, int lw, boolean land) { this.w = w; this.h = h; this.lw = lw; this.land = land; }
+        @Override public String toString() { return w + "x" + h + (land ? "L" : "P"); }
+    }
+
+    /** Nível do plano de versões: FULL = até 6 (a orientação atual e, se for diferente, a outra), FEW = 3 da orientação atual,
+     *  ONE = uma só (resposta grande demais para o Android: ver Widgets.compose). */
+    public static final int FULL = 0, FEW = 1, ONE = 2;
+
+    /** 1.23: versões do widget. O Android (RemoteViews.findBestFitLayout) usa, entre as que cabem no tamanho real (largura E altura
+     *  menores ou iguais), a mais próxima (distância ao quadrado); nenhuma cabe = a menor. Em pé o widget tem a largura mínima e a
+     *  altura máxima; deitado, o contrário — e ao girar o Android troca a versão sozinho, sem chamar o app. Por isso, além das alturas
+     *  perto da atual (o launcher pode errar), vão versões da outra orientação. Largura informada = a da orientação − 24 dp: cada
+     *  orientação só cabe na própria largura (quando as larguras são bem diferentes) e a mais próxima ganha; a folga cobre launcher
+     *  que informa um pouco mais largo do que é. Altura mínima de 80 dp; sem altura conhecida: uma versão com h = 0. */
+    public static List<Size> sizes(int minW, int maxW, int minH, int maxH, boolean land, int level) {
+        int h = heightDp(minH, maxH, land), oh = heightDp(minH, maxH, !land);
+        int lw = widthDp(minW, maxW, land), olw = widthDp(minW, maxW, !land);
+        List<Size> out = new ArrayList<>();
+        if (h <= 0 || level >= ONE) { out.add(new Size(sizeW(lw), Math.max(0, h), lw, land)); return out; }
+        boolean other = level == FULL && oh > 0 && (Math.abs(oh - h) >= 8 || Math.abs(olw - lw) >= 24);
+        int[] cur = level == FEW ? new int[]{0, -16, -32} : other ? new int[]{16, 0, -16, -32} : new int[]{16, 0, -12, -24, -36, -48};
+        for (int x : cur) add(out, new Size(sizeW(lw), h + x, lw, land));
+        if (other) for (int x : new int[]{0, -16}) add(out, new Size(sizeW(olw), oh + x, olw, !land));
+        if (out.isEmpty()) out.add(new Size(sizeW(lw), h, lw, land));
+        return out;
+    }
+    private static int sizeW(int w) { return Math.max(1, w - 24); }
+    private static void add(List<Size> out, Size s) {
+        if (s.h < 80) return;
+        for (Size o : out) if (o.w == s.w && o.h == s.h) return;
+        out.add(s);
+    }
+
+    /** 1.23: o relógio do aparelho pode voltar (ajuste de hora, fuso): diferença negativa = janela vencida, nunca "para sempre".
+     *  since = início (ms; 0 = nunca). Tolera SKEW_MS no futuro (marcas nextToken de toques no mesmo instante). */
+    public static final long SKEW_MS = 1000;
+    public static boolean within(long since, long now, long window) {
+        if (since <= 0) return false;
+        long d = now - since;
+        return d >= -SKEW_MS && d < window;
+    }
+
+    /** Marca de um novo "Atualizando…": agora; se a guardada é deste instante (toques seguidos), a seguinte. Marca guardada muito
+     *  no futuro (o relógio voltou) não conta — antes Math.max(agora, guardada + 1) a carregava e o aviso não sumia mais. */
+    public static long nextToken(long cur, long now) { return cur >= now && cur - now < SKEW_MS ? cur + 1 : now; }
+
+    /** 1.23: tempo (ms) para o próximo pedido dentro do prazo total (deadline, relógio do aparelho): o que falta, no máximo cap;
+     *  0 = não vale começar (falta menos que min). O broadcast do widget tem ~10 s no total, não 10 s por pedido. */
+    public static int budget(long deadline, long now, int cap, int min) {
+        long r = deadline - now;
+        return r < min ? 0 : (int) Math.min(cap, r);
+    }
+
+    /** Nome de arquivo para um texto qualquer (id de grupo, chave do Grupo simulação): 32 dígitos hex do SHA-256. */
+    public static String fileKey(String s) {
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest((s == null ? "" : s).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < 16; i++) b.append(String.format("%02x", d[i] & 0xff));
+            return b.toString();
+        } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+    }
+
+    /** Chaves por widget (sel_ID, ssel_ID) quando o Android devolve widgets com ids novos (backup restaurado):
+     *  -> o que gravar (chave nova -> valor) e o que apagar (chave -> null). Lê tudo antes de mudar (ids velhos e novos podem se cruzar). */
+    public static Map<String, String> remap(Map<String, ?> all, String prefix, int[] oldIds, int[] newIds) {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        int n = Math.min(oldIds == null ? 0 : oldIds.length, newIds == null ? 0 : newIds.length);
+        for (int i = 0; i < n; i++) out.put(prefix + oldIds[i], null);
+        for (int i = 0; i < n; i++) {
+            Object v = all.get(prefix + oldIds[i]);
+            if (v instanceof String) out.put(prefix + newIds[i], (String) v);
+        }
+        return out;
+    }
+
+    /** 1.23: junta pedidos seguidos (ponte do site: setFavs e setGroups ao abrir o app = uma busca só). claim() = true para o
+     *  primeiro pedido, que agenda a busca; os seguintes, até ela começar (started), ficam com ela. Depois de começar, um pedido
+     *  novo agenda outra (os dados podem ter mudado depois da leitura). */
+    public static final class Coalesce {
+        private boolean queued;
+        public synchronized boolean claim() { if (queued) return false; queued = true; return true; }
+        public synchronized void started() { queued = false; }
     }
 
     /** Arquivo de logo válido de /api/widget (hash de 12 dígitos .png) ou null. */
@@ -156,14 +234,6 @@ public final class WidgetData {
     /** Lado do bitmap do logo: slot de 32dp, arquivo de 64 px; com muitas linhas, menor. */
     // 1.11: até 12 linhas o logo vai na resolução real da tela (32dp × densidade, até 96 px; o arquivo tem 128 px) — antes 56 px ampliados = borrado
     public static int logoPx(float density, int rows) { return Math.min(Math.round(32 * density), rows > 24 ? 44 : rows > 12 ? 64 : 96); }
-
-    /** Bytes de bitmap que o widget manda de uma vez: logos (ARGB) de todas as linhas + o gráfico aberto (RGB_565, escala até 1,5).
-     *  O Android recusa a atualização acima de ~1 MB. */
-    public static long bitmapBytes(int rows, float density, int wDp) {
-        int px = logoPx(density, rows);
-        float d = Math.min(1.5f, density);
-        return (long) rows * px * px * 4 + (long) ((wDp - 20) * d) * (long) (110 * d) * 2;
-    }
 
     /** Logos usados pelas linhas (sem repetir), para baixar os que faltam. */
     public static List<String> logos(List<Item> items) {
@@ -266,6 +336,8 @@ public final class WidgetData {
 
     /** "Atualizando…" some sozinho depois disso (⟳ espera o servidor refazer os dados: até RefreshJob.WAIT_MS + a busca). */
     public static final long LOADING_MS = 180_000;
+    /** "Atualizando…" do widget Grupo simulação (sem espera do servidor) e validade do gráfico de 5 anos guardado. */
+    public static final long SIM_LOADING_MS = 90_000, CHART_FRESH_MS = 6 * 3600_000L;
 
     /** Horário que o widget mostra: quando a resposta chegou (fim da atualização), "dd/MM HH:mm" no fuso do aparelho. */
     public static String fetched(long ms, java.util.TimeZone tz) {

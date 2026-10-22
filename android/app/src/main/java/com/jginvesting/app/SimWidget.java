@@ -21,18 +21,22 @@ public class SimWidget extends AppWidgetProvider {
     static final String ACTION_REFRESH = "com.jginvesting.app.SIM_REFRESH", ACTION_XLSX = "com.jginvesting.app.SIM_XLSX";
     static final String EXTRA_SIM = "sim", EXTRA_MODEL = "model", EXTRA_TK = "tk";
 
-    @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) { render(c); refreshAsync(c, goAsync(), 0); }
+    @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) { PendingResult pr = goAsync(); render(c); refreshAsync(c, pr, 0); }
 
     @Override public void onReceive(Context c, Intent i) {
         if (ACTION_XLSX.equals(i.getAction())) { download(c, i.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0)); return; }
         if (ACTION_REFRESH.equals(i.getAction())) {  // ⟳ e troca de grupo: "Atualizando…" e busca na hora
-            long tk = System.currentTimeMillis(); Store.setSimLoading(c, tk); render(c);
+            long tk = Store.startSimLoading(c); render(c);
             refreshAsync(c, goAsync(), tk); return;
         }
         super.onReceive(c, i);
     }
 
     @Override public void onAppWidgetOptionsChanged(Context c, AppWidgetManager m, int id, android.os.Bundle o) { render(c); }
+
+    /** 1.23: widget removido: a escolha dele sai do aparelho; restaurado com id novo (backup): a escolha vai junto. */
+    @Override public void onDeleted(Context c, int[] ids) { Store.forgetWidgets(c, "ssel_", ids); }
+    @Override public void onRestored(Context c, int[] oldIds, int[] newIds) { Store.remapWidgets(c, "ssel_", oldIds, newIds); }
 
     /** ⬇: planilha do grupo do widget id (/api/widget/simgrupo.xlsx, gerada no servidor) pelo DownloadManager, em Downloads (Android 10+;
      *  antes, na pasta de downloads do sistema), com a notificação do sistema que abre o arquivo ao terminar. */
@@ -59,119 +63,145 @@ public class SimWidget extends AppWidgetProvider {
     /** Grupo mostrado no widget id (o escolhido; se sumiu, o primeiro). */
     static SimData.Sim simOf(Context c, int id, List<SimData.Sim> ss) { return SimData.pick(Store.simSel(c, id), ss); }
 
+    /** Busca cada grupo em uso e redesenha. 1.23: um prazo só para tudo (como FavWidget.refreshNow), resposta mais antiga que a
+     *  guardada descartada (Store.nextReq + setSimDataIfNewer) e pr.finish() sempre. */
     static void refreshAsync(Context ctx, PendingResult pr, long token) {
         final Context c = ctx.getApplicationContext();
         new Thread(() -> {
+            final long deadline = System.currentTimeMillis() + (pr != null ? Widgets.BROADCAST_MS : Widgets.BACKGROUND_MS);
             try {
                 List<SimData.Sim> ss = SimData.sims(Store.sims(c));
                 java.util.LinkedHashMap<String, SimData.Sim> use = new java.util.LinkedHashMap<>();
                 for (int id : ids(c)) { SimData.Sim s = simOf(c, id, ss); if (s != null) use.put(SimData.key(s), s); }
                 for (SimData.Sim s : use.values()) {
-                    String j = Api.simgrupo(s, pr != null ? 8500 : 45000);  // 1º pedido do dia pode montar as tabelas no servidor
-                    if (j != null && !SimData.rows(j).isEmpty()) Store.setSimData(c, SimData.key(s), j);
+                    int t = WidgetData.budget(deadline, System.currentTimeMillis(), pr != null ? 8500 : 45000, 1500);  // 1º pedido do dia pode montar as tabelas no servidor
+                    if (t == 0) break;
+                    long req = Store.nextReq(c);
+                    String j = Api.simgrupo(s, t);
+                    if (j != null && !SimData.rows(j).isEmpty()) Store.setSimDataIfNewer(c, SimData.key(s), j, req);
                 }
                 java.util.HashSet<String> keep = new java.util.HashSet<>(); for (SimData.Sim s : ss) keep.add(SimData.key(s));
                 Store.pruneSims(c, keep);
-                if (Updater.quietCheck(c, pr != null ? 5000 : 20000)) FavWidget.render(c);  // atualização de dados = confere a versão também
+                if (token != 0) Store.endSimLoading(c, token);
+                render(c);  // dados novos na tela antes da conferência de versão
+                int t = WidgetData.budget(deadline, System.currentTimeMillis(), pr != null ? 5000 : 20000, 2500);
+                if (t > 0 && Updater.quietCheck(c, t)) FavWidget.render(c);  // atualização de dados = confere a versão também
+            } catch (RuntimeException | OutOfMemoryError e) {
+                Widgets.log("SimWidget.refresh", e);
             } finally {
-                if (token != 0 && Store.simLoading(c) == token) Store.setSimLoading(c, 0);
-                render(c);
-                if (pr != null) pr.finish();
+                try { if (token != 0) { Store.endSimLoading(c, token); render(c); } }
+                catch (RuntimeException e) { Widgets.log("SimWidget.endLoading", e); }
+                finally { if (pr != null) pr.finish(); }
             }
         }).start();
     }
 
-    static synchronized void render(Context c) {
+    /** Desenha todos os widgets Grupo simulação. 1.23: protegido (ver FavWidget.render). */
+    static void render(Context c) {
+        try { draw(c); } catch (RuntimeException | OutOfMemoryError e) { Widgets.log("SimWidget.render", e); }
+    }
+
+    private static synchronized void draw(Context c) {
         AppWidgetManager m = AppWidgetManager.getInstance(c);
         int[] ids = ids(c);
         if (ids.length == 0) return;
         List<SimData.Sim> ss = SimData.sims(Store.sims(c));
-        int flagsImm = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        int flagsMut = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+        boolean busy = WidgetData.within(Store.simLoading(c), System.currentTimeMillis(), WidgetData.SIM_LOADING_MS);
         for (int id : ids) {
-            SimData.Sim s = simOf(c, id, ss);
-            String key = SimData.key(s), data = s == null ? "{}" : Store.simData(c, key);
-            List<SimData.Row> rows = SimData.rows(data);
-            android.os.Bundle op0 = m.getAppWidgetOptions(id);
-            int h0 = WidgetData.heightDp(op0.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0), op0.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0),
-                    c.getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
-            int[] hs = Build.VERSION.SDK_INT >= 31 && h0 > 0 ? WidgetData.heightVariants(h0) : new int[]{h0};
-            java.util.Map<android.util.SizeF, RemoteViews> sized = new java.util.LinkedHashMap<>();
-            android.graphics.Bitmap[] bmc = {null};
-            RemoteViews v1 = null;
-            for (int hv : hs) {
-                RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_sim);
-                String nm = s == null ? c.getString(R.string.sim_widget_name) : s.name, selT = nm + (ss.size() > 1 ? "  ▾" : "");
-                v.setTextViewText(R.id.s_sel, selT); v.setTextViewText(R.id.s_sel2, selT);
-                if (ss.size() > 1) {  // seletor só com mais de um Grupo simulação (como o dos Favoritos)
-                    Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra(PickerActivity.EXTRA_SIM, true)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-                    pick.setData(Uri.parse("jg://simpick/" + id));
-                    v.setOnClickPendingIntent(R.id.s_sel, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
-                    v.setOnClickPendingIntent(R.id.s_sel2, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
-                } else { v.setOnClickPendingIntent(R.id.s_sel, openApp(c, s, null, 600 + id)); v.setOnClickPendingIntent(R.id.s_sel2, openApp(c, s, null, 600 + id)); }
-                v.setOnClickPendingIntent(R.id.s_logo, openApp(c, null, null, 0)); v.setOnClickPendingIntent(R.id.s_brand, openApp(c, null, null, 0));
-                boolean busy = System.currentTimeMillis() - Store.simLoading(c) < 90_000;
-                long at = s == null ? 0 : Store.simAt(c, key);
-                String up = busy ? c.getString(R.string.widget_loading) : at > 0 ? WidgetData.fetched(at, java.util.TimeZone.getDefault()) : "";
-                v.setTextViewText(R.id.s_time, up);
-                v.setViewVisibility(R.id.s_time, up.isEmpty() ? View.GONE : View.VISIBLE);
-                // marca comprida "JG Investing" até o seletor (como no widget Favoritos) ou, com nome de grupo longo, o logo quadrado
-                android.os.Bundle op = m.getAppWidgetOptions(id);
-                android.content.res.Configuration cf = c.getResources().getConfiguration();
-                int hw = WidgetData.widthDp(op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0), op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
-                        cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE);
-                float dens = c.getResources().getDisplayMetrics().density;
-                String bn = ss.size() > 1 ? nm : nm.substring(0, Math.max(0, nm.length() - 3));  // sem ▾ o chip é ~3 letras menor
-                boolean brand = WidgetData.longLogo(bn, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
-                v.setViewVisibility(R.id.s_brand, brand ? View.VISIBLE : View.GONE);
-                v.setViewVisibility(R.id.s_sel2, brand ? View.VISIBLE : View.GONE);
-                v.setViewVisibility(R.id.s_logo, brand ? View.GONE : View.VISIBLE);
-                v.setViewVisibility(R.id.s_mid, brand ? View.GONE : View.VISIBLE);
-                if (brand) {
-                    if (bmc[0] == null) bmc[0] = FavWidget.brandBitmap(c, Math.round((WidgetData.brandRoom(bn, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens));
-                    android.graphics.Bitmap bm = bmc[0];  // o mesmo bitmap em todas as versões de altura
-                    if (bm != null) v.setImageViewBitmap(R.id.s_brand, bm);
-                }
-                String sub = s == null ? "" : "Desde " + SimData.since(s.di) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
-                v.setTextViewText(R.id.s_sub, sub);
-                v.setViewVisibility(R.id.s_sub, sub.isEmpty() ? View.GONE : View.VISIBLE);
-                v.setTextViewText(R.id.s_empty, c.getString(s == null ? R.string.sim_empty : R.string.sim_wait));
-                Intent rf = new Intent(c, SimWidget.class).setAction(ACTION_REFRESH);
-                v.setOnClickPendingIntent(R.id.s_refresh, PendingIntent.getBroadcast(c, 11, rf, flagsImm));
-                Intent dl = new Intent(c, SimWidget.class).setAction(ACTION_XLSX).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-                v.setOnClickPendingIntent(R.id.s_dl, PendingIntent.getBroadcast(c, 700 + id, dl, flagsImm));
-                v.setViewVisibility(R.id.s_dl, s == null ? View.GONE : View.VISIBLE);
-                Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
-                        | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-                v.setPendingIntentTemplate(R.id.s_list, PendingIntent.getActivity(c, 12, tpl, flagsMut));
-                v.setEmptyView(R.id.s_list, R.id.s_empty);
-                if (Build.VERSION.SDK_INT >= 31) {
-                    // linhas inteiras: títulos e "Desde…" com altura fixa; com tudo fechado as linhas que cabem esticam até a borda
-                    int hDp = hv;  // 1.21: uma versão por altura possível (FavWidget: WidgetData.heightVariants)
-                    v.setViewLayoutHeight(R.id.s_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
-                    if (!sub.isEmpty()) v.setViewLayoutHeight(R.id.s_sub, SimData.subDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
-                    String om = openModel(c, s); boolean anyOpen = false; for (SimData.Row r : rows) if (r.m.equals(om)) anyOpen = true;
-                    int rp = SimData.rowPx(hDp, dens, cf.fontScale, !sub.isEmpty(), rows.size(), anyOpen);
-                    RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(VIEW_TYPES);
-                    for (SimData.Item it : SimData.items(rows, om)) {
-                        RemoteViews iv = item(c, s, it);
-                        if (rp > 0 && it.type == SimData.Item.ROW) iv.setViewLayoutHeight(R.id.q_main, rp, android.util.TypedValue.COMPLEX_UNIT_PX);
-                        b.addItem(it.id(), iv);
-                    }
-                    v.setRemoteAdapter(R.id.s_list, b.build());
-                } else {
-                    Intent svc = new Intent(c, SimWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-                    svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
-                    legacyAdapter(v, svc);
-                }
-                if (hs.length > 1) sized.put(new android.util.SizeF(1f, hv), v);
-                v1 = v;
-            }
-            RemoteViews v = hs.length > 1 ? new RemoteViews(sized) : v1;
-            m.updateAppWidget(id, v);
+            try {
+                Frame f = new Frame(c, m, id, ss, busy);
+                Widgets.update(m, id, Widgets.compose(f.op, f.land, f::make), () -> Widgets.single(f.op, f.land, f::make));
+            } catch (RuntimeException | OutOfMemoryError e) { Widgets.log("SimWidget " + id, e); }
         }
         if (Build.VERSION.SDK_INT < 31) legacyNotify(m, ids);
+    }
+
+    /** O que é igual em todas as versões de tamanho de um widget; make desenha uma versão (como FavWidget.Frame). */
+    private static final class Frame {
+        final Context c; final int id; final SimData.Sim s; final List<SimData.Sim> ss; final List<SimData.Row> rows;
+        final String nm, selT, up, sub, om; final boolean land, anyOpen; final float dens;
+        final android.os.Bundle op; final android.content.res.Configuration cf;
+        final java.util.Map<String, android.graphics.Bitmap> bmp = Logos.newCache();
+        final int flagsImm = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+        final int flagsMut = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+
+        Frame(Context c, AppWidgetManager m, int id, List<SimData.Sim> ss, boolean busy) {
+            this.c = c; this.id = id; this.ss = ss;
+            s = simOf(c, id, ss);
+            String key = SimData.key(s), data = s == null ? "{}" : Store.simData(c, key);
+            rows = SimData.rows(data);
+            op = m.getAppWidgetOptions(id);
+            cf = c.getResources().getConfiguration();
+            land = cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+            dens = c.getResources().getDisplayMetrics().density;
+            nm = s == null ? c.getString(R.string.sim_widget_name) : s.name;
+            selT = nm + (ss.size() > 1 ? "  ▾" : "");
+            long at = s == null ? 0 : Store.simAt(c, key);
+            up = busy ? c.getString(R.string.widget_loading) : at > 0 ? WidgetData.fetched(at, java.util.TimeZone.getDefault()) : "";
+            sub = s == null ? "" : "Desde " + SimData.since(s.di) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
+            om = openModel(c, s);
+            boolean o = false; for (SimData.Row r : rows) if (r.m.equals(om)) o = true;
+            anyOpen = o;
+        }
+
+        /** Uma versão do widget no tamanho s (sz.h = altura; sz.lw = largura da orientação dessa versão). */
+        RemoteViews make(WidgetData.Size sz) {
+            int hv = sz.h, hw = sz.lw;
+            RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_sim);
+            v.setTextViewText(R.id.s_sel, selT); v.setTextViewText(R.id.s_sel2, selT);
+            if (ss.size() > 1) {  // seletor só com mais de um Grupo simulação (como o dos Favoritos)
+                Intent pick = new Intent(c, PickerActivity.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra(PickerActivity.EXTRA_SIM, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+                pick.setData(Uri.parse("jg://simpick/" + id));
+                v.setOnClickPendingIntent(R.id.s_sel, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
+                v.setOnClickPendingIntent(R.id.s_sel2, PendingIntent.getActivity(c, 500 + id, pick, flagsImm));
+            } else { v.setOnClickPendingIntent(R.id.s_sel, openApp(c, s, null, 600 + id)); v.setOnClickPendingIntent(R.id.s_sel2, openApp(c, s, null, 600 + id)); }
+            v.setOnClickPendingIntent(R.id.s_logo, openApp(c, null, null, 0)); v.setOnClickPendingIntent(R.id.s_brand, openApp(c, null, null, 0));
+            v.setTextViewText(R.id.s_time, up);
+            v.setViewVisibility(R.id.s_time, up.isEmpty() ? View.GONE : View.VISIBLE);
+            // marca comprida "JG Investing" até o seletor (como no widget Favoritos) ou, com nome de grupo longo, o logo quadrado
+            String bn = ss.size() > 1 ? nm : nm.substring(0, Math.max(0, nm.length() - 3));  // sem ▾ o chip é ~3 letras menor
+            boolean brand = WidgetData.longLogo(bn, hw, Math.round(c.getResources().getDimension(R.dimen.brand_w) / dens), cf.fontScale, !up.isEmpty());
+            v.setViewVisibility(R.id.s_brand, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.s_sel2, brand ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.s_logo, brand ? View.GONE : View.VISIBLE);
+            v.setViewVisibility(R.id.s_mid, brand ? View.GONE : View.VISIBLE);
+            if (brand) {  // o mesmo bitmap em todas as versões do mesmo tamanho de marca
+                android.graphics.Bitmap bm = FavWidget.brand(c, Math.round((WidgetData.brandRoom(bn, hw, cf.fontScale, !up.isEmpty()) - 4) * dens), Math.round(30 * dens), bmp);
+                if (bm != null) v.setImageViewBitmap(R.id.s_brand, bm);
+            }
+            v.setTextViewText(R.id.s_sub, sub);
+            v.setViewVisibility(R.id.s_sub, sub.isEmpty() ? View.GONE : View.VISIBLE);
+            v.setTextViewText(R.id.s_empty, c.getString(s == null ? R.string.sim_empty : R.string.sim_wait));
+            Intent rf = new Intent(c, SimWidget.class).setAction(ACTION_REFRESH);
+            v.setOnClickPendingIntent(R.id.s_refresh, PendingIntent.getBroadcast(c, 11, rf, flagsImm));
+            Intent dl = new Intent(c, SimWidget.class).setAction(ACTION_XLSX).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+            v.setOnClickPendingIntent(R.id.s_dl, PendingIntent.getBroadcast(c, 700 + id, dl, flagsImm));
+            v.setViewVisibility(R.id.s_dl, s == null ? View.GONE : View.VISIBLE);
+            Intent tpl = new Intent(c, WidgetTap.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            v.setPendingIntentTemplate(R.id.s_list, PendingIntent.getActivity(c, 12, tpl, flagsMut));
+            v.setEmptyView(R.id.s_list, R.id.s_empty);
+            if (Build.VERSION.SDK_INT >= 31) {
+                // linhas inteiras: títulos e "Desde…" com altura fixa; com tudo fechado as linhas que cabem esticam até a borda
+                // 1.21: uma versão por altura possível (FavWidget: WidgetData.sizes)
+                v.setViewLayoutHeight(R.id.s_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                if (!sub.isEmpty()) v.setViewLayoutHeight(R.id.s_sub, SimData.subDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
+                int rp = SimData.rowPx(hv, dens, cf.fontScale, !sub.isEmpty(), rows.size(), anyOpen);
+                RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(VIEW_TYPES);
+                for (SimData.Item it : SimData.items(rows, om)) {
+                    RemoteViews iv = item(c, s, it);
+                    if (rp > 0 && it.type == SimData.Item.ROW) iv.setViewLayoutHeight(R.id.q_main, rp, android.util.TypedValue.COMPLEX_UNIT_PX);
+                    b.addItem(it.id(), iv);
+                }
+                v.setRemoteAdapter(R.id.s_list, b.build());
+            } else {
+                Intent svc = new Intent(c, SimWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+                svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
+                legacyAdapter(v, svc);
+            }
+            return v;
+        }
     }
 
     /** Abre o app (s e mid: nas movimentações desse modelo do grupo, o mesmo modal da aba Grupos). */
