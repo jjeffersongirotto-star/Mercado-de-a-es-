@@ -10,7 +10,8 @@ from datetime import date, timedelta
 import history
 import snapshots
 
-_C = OrderedDict()
+_C = OrderedDict()  # análises prontas: LRU de C_MAX
+C_MAX = 30
 WEEK = 5  # pregões
 WIN = 252  # um ano de pregões: cada parte do índice é comparada com o último ano
 
@@ -163,5 +164,5 @@ def analyze(t, di, df):
     r3 = [ret(C, m, 3) for m in msa if BA(m) == hb]; r3 = [r for r in r3 if r is not None]
     out["hoje"] = {"v": hv, "d": days[-1][0], "b": hb, "n": len(r3), "up": sum(1 for r in r3 if r > 0), "dn": sum(1 for r in r3 if r <= 0), "r3": _avg(r3)}
     _C[key] = out
-    while len(_C) > 300: _C.popitem(last=False)
+    while len(_C) > C_MAX: _C.popitem(last=False)
     return out

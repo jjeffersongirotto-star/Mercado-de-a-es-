@@ -115,6 +115,16 @@ def load(name, max_mem_age=1800):
     _mem[name] = (time.time(), payload, desc)
     return payload, desc
 
+def version(name):
+    """Versão do snapshot na branch `data` sem baixá-lo (HEAD: ETag = hash do conteúdo no GitHub) -> texto, ou None se o GitHub
+    não respondeu. Quem guarda uma cópia grande (modelos.data) só baixa e monta de novo quando a versão muda."""
+    try:
+        r = requests.head(f"{RAW}/{name}.json", timeout=(10, 20), allow_redirects=True)
+        if r.status_code != 200: return None
+        return r.headers.get("ETag") or r.headers.get("Last-Modified") or None
+    except Exception:
+        return None
+
 def drop(name):
     """Esquece um snapshot da memória (quem usa já guardou o que precisa, ex.: modelos.data)."""
     _mem.pop(name, None)

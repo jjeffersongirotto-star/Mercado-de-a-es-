@@ -4,7 +4,7 @@ Cada semana usa o sinal da semana anterior (decide com o fechamento de sexta e o
 Aportes e retiradas entram no último pregão de cada mês (mês 1 = valor inicial), como na tabela da Previsão.
 Imposto: 15% do lucro líquido das vendas do mês quando as vendas passam de R$ 20 mil; prejuízo compensa os meses seguintes.
 Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de R$ 50 mil, ou o % escolhido)."""
-import gc, hashlib, json, os, threading, time, unicodedata, warnings, zlib
+import gc, hashlib, json, math, os, threading, time, unicodedata, warnings, zlib
 import valor_justo
 from collections import OrderedDict
 import numpy as np
@@ -62,7 +62,6 @@ def perene(r, cad=None):
     return r.get("setor") == "Utilities" and not sub and seg in ("", "Não Classificados", "Não Classificado")
 
 
-besst = perene  # nome antigo
 
 
 def _hib(Cf, DV, cdb, X, JT=None, bloco=64):
@@ -159,7 +158,7 @@ def set_metodos(D, rows):
     e = np.flatnonzero(D["EK"] != "") if "EK" in D else []
     if len(e):  # ETF: sem balanço -> o híbrido usa só os 4 especialistas de preço (os de método ficariam sempre fora)
         D["HX"][e], D["HA"][e], D["HP"][e] = _hib(Cf[e], D["DV"][e], D["cdb"], [x[e] for x in hx[:4]], D["JT"][e])
-    D["_mk"] = key; _C.clear()
+    D["_mk"] = key; _cclear()
 
 
 def _ord_ganho(D, k, compra):
@@ -313,7 +312,7 @@ def set_setores(D, rows, cad=None):
 
 def _set_setores(D, rows, cad=None):
     bs = {r["ticker"] for r in rows if perene(r, cad)}
-    if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _C.clear()
+    if D.get("_bs") != bs: D["BS"] = np.array([t in bs for t in D["tick"]]); D["_bs"] = bs; _cclear()
     sec = {r["ticker"]: r.get("subsetor") or r.get("setor") or "" for r in rows}
     if D.get("_sec") != sec and "FM" in D:  # crise do setor: ≥ VENDA['setor_crise'] das empresas do setor com prejuízo no último balanço
         FM = D["FM"]; CRI = np.zeros_like(FM["PREJ"]); key = np.array([sec.get(t, "") for t in D["tick"]])
@@ -322,11 +321,11 @@ def _set_setores(D, rows, cad=None):
             if m.sum() < 3: continue
             n = FM["TEM"][m].sum(axis=0); sh = np.where(n >= 3, FM["PREJ"][m].sum(axis=0) / np.maximum(n, 1), 0)
             CRI[m] = (sh >= VENDA["setor_crise"])[None, :]
-        D["CRI"] = CRI; D["_sec"] = sec; _C.clear()
+        D["CRI"] = CRI; D["_sec"] = sec; _cclear()
         D["SEC3"] = np.array([1 if str(sec.get(t, "")).startswith("Bancos") else 2 for t in D["tick"]])  # Adaptativo: banco × outros
     set_metodos(D, rows)
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
-    if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _C.clear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
+    if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _cclear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
 ENGINE = 24       # versão das contas (24: 1º dia com ordens com preço limite, sem compra na criação; 23: 1º dia a mercado; 22: aporte primeiro nas empresas da carteira, Buy and Hold com dividendos + apostas de crescimento, confiança nas notícias; 21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
@@ -410,9 +409,37 @@ FORTE_R12 = 100   # Análise técnica: entrada no rodízio só com alta de pelo 
 # "lucro": só compra se o último balanço anual publicado teve lucro (fund.json); no teste 2006–2026 ajudou só estes dois modelos
 MARGEM = {"alg1": 20, "alg3": 20, "tendencia": 100}  # rodízio: vantagem mínima para trocar (chance ×1000; alta 12 m ×1000)
 
-_D = {"at": 0, "key": None, "d": None}
+_D = {"at": 0, "key": None, "d": None, "tag": None}  # tag: versão do snapshot `modelos` (snapshots.version)
 _lock = threading.Lock()
-_C = OrderedDict()
+_C = OrderedDict()  # respostas prontas (run, compare, simgrupo): LRU de C_MAX; chave com _CG (geração das tabelas)
+C_MAX = 20          # ~2,5 MB cada no pior caso (Comparar com todas as empresas)
+_clock = threading.Lock()
+_CG = [0]           # geração: sobe a cada _cclear (tabelas novas ou set_setores/set_metodos mudou algo); conta que começou antes não grava por cima
+
+
+def _cclear():
+    """Esquece as respostas prontas: as tabelas mudaram (a conta em andamento grava com a geração antiga e nunca é lida)."""
+    with _clock: _CG[0] += 1; _C.clear()
+
+
+def _ckey(*k):
+    """Chave do cache _C com a geração atual das tabelas (pegue ANTES de calcular)."""
+    return repr((_CG[0],) + k)
+
+
+def _cget(key):
+    with _clock:
+        x = _C.get(key)
+        if x is not None: _C.move_to_end(key)
+        return x
+
+
+def _cput(key, out):
+    """Guarda uma resposta pronta (LRU de C_MAX) e a devolve."""
+    with _clock:
+        _C[key] = out; _C.move_to_end(key)
+        while len(_C) > C_MAX: _C.popitem(last=False)
+    return out
 
 
 def _fund_mats(tick, wk, fund, spl=None):
@@ -741,20 +768,32 @@ def _trim():
     except Exception: pass
 
 
+DATA_TTL, DATA_RETRY = 6 * 3600, 600  # confere a versão do snapshot `modelos` a cada 6 h; GitHub fora: segue com as tabelas e tenta em 10 min
+
+
 def data():
-    """Matrizes prontas (recalcula quando o snapshot muda; guarda 6 h)."""
+    """Matrizes prontas. A cada DATA_TTL confere só a versão do snapshot `modelos` (snapshots.version, sem baixar os ~27 MB); baixa e
+    monta de novo só quando ela muda, soltando as tabelas antigas ANTES (pico menor no plano gratuito). GitHub fora: segue com as atuais."""
     import snapshots, history
     with _lock:
-        if _D["d"] is not None and time.time() - _D["at"] < 6 * 3600: return _D["d"]
-        snap = snapshots.load("modelos", max_mem_age=6 * 3600)[0]
-        if not snap or not snap.get("a"): raise RuntimeError("sinais dos modelos ainda não calculados")
+        if _D["d"] is not None and time.time() - _D["at"] < DATA_TTL: return _D["d"]
+        tag = snapshots.version("modelos")
+        if _D["d"] is not None:
+            if tag is None:  # GitHub não respondeu: continua com as tabelas atuais e confere de novo daqui a DATA_RETRY
+                _D["at"] = time.time() - DATA_TTL + DATA_RETRY; return _D["d"]
+            if tag == _D["tag"]: _D["at"] = time.time(); return _D["d"]
+            _D["d"] = None; _cclear(); gc.collect(); _trim()  # versão nova: solta as tabelas antigas antes de baixar o snapshot
+        snap = snapshots.load("modelos", max_mem_age=DATA_TTL)[0]
+        if not snap or not snap.get("a"):
+            snapshots.drop("modelos"); raise RuntimeError("sinais dos modelos ainda não calculados")
         if _D["key"] != snap.get("fetched_at") or _D["d"] is None:
             E = entradas()
             with snapshots.HEAVY:  # não monta junto com o histórico de todas as ações (history.all_closes)
-                _D["d"] = None; _C.clear(); gc.collect()  # solta as tabelas antigas antes de montar as novas (pico menor no plano gratuito)
+                _D["d"] = None; _cclear(); gc.collect()
                 _D["d"] = build(snap, history.bcb("cdi"), **E, consome=True); _D["key"] = snap.get("fetched_at")
+            del E
         snapshots.drop("modelos"); del snap; gc.collect(); _trim()  # o snapshot bruto (listas JSON) não fica na memória
-        _D["at"] = time.time()
+        _D["at"], _D["tag"] = time.time(), tag
         return _D["d"]
 
 
@@ -945,6 +984,27 @@ def _calma(mid, lado):
     return ("CCa" if lado == "c" else "CVa") if mid == "adapt" else ("CC" if lado == "c" else "CV")
 
 
+def ord_exec(compra, lim, lo, hi):
+    """Regra única de execução da ordem com preço limite (Ordens, 1º dia do grupo e a conferência ao vivo do servidor): a compra executa
+    quando a mínima passa ORD_FILA abaixo do limite, pelo limite (ou pela máxima, se ela ficou abaixo dele); a venda é o espelho.
+    Escalares ou matrizes; None/NaN na mínima/máxima = sem dado. -> (tocou, preço da execução)."""
+    lo = np.nan if lo is None else lo; hi = np.nan if hi is None else hi
+    with np.errstate(invalid="ignore"):
+        if compra: return lo <= lim * (1 - ORD_FILA), np.fmin(lim, hi)
+        return hi >= lim * (1 + ORD_FILA), np.fmax(lim, lo)
+
+
+def compra_inteira(v, px):
+    """Ações inteiras que o valor v compra ao preço px, com o custo CUSTO -> (quantidade, valor pago). Escalares ou matrizes."""
+    with np.errstate(invalid="ignore", divide="ignore"):
+        q = np.floor(v * (1 - CUSTO) / px + 1e-9); return q, q * px / (1 - CUSTO)
+
+
+def venda_liq(q, px):
+    """Valor recebido ao vender q ações a px (menos o custo CUSTO)."""
+    return q * px * (1 - CUSTO)
+
+
 class Ordens:
     """Ordens com preço limite de várias ações ao mesmo tempo (ORD_*): cada lado guarda o preço de referência do dia da decisão e há quantas
     semanas a ordem espera. lado(i, quer, P) -> (executa, preço, tocou): executa = tocou o limite na semana i ou venceu o prazo."""
@@ -964,8 +1024,7 @@ class Ordens:
         s.ref = np.where(nova, ref0, np.where(quer, s.ref, np.nan))
         d = D[s.dk][k, i - 1]; lo, hi = D["LO"][k, i], D["HI"][k, i]
         with np.errstate(invalid="ignore"):
-            if s.c: lim = s.ref * (1 - d); toc = quer & (lo <= lim * (1 - ORD_FILA)); px = np.where(toc, np.minimum(lim, hi), P)
-            else: lim = s.ref * (1 + d); toc = quer & (hi >= lim * (1 + ORD_FILA)); px = np.where(toc, np.maximum(lim, lo), P)
+            lim = s.ref * (1 - d) if s.c else s.ref * (1 + d); toc, px = ord_exec(s.c, lim, lo, hi); toc = quer & toc; px = np.where(toc, px, P)
         if s.d0 and toc.any():  # 1ª semana: mínima/máxima de antes da data inicial não conta (o dinheiro ainda não existia)
             for q in np.flatnonzero(toc):
                 if s.dia(i, q) < s.d0: toc[q] = False
@@ -1094,8 +1153,8 @@ class Conta:
         """Compra ações inteiras com o caixa (ou só `amt`) das ações marcadas; a sobra (menos que 1 ação) fica no caixa, no CDB,
         até dar para comprar pelo menos 1 ação. Custo de CUSTO sobre a compra."""
         a = s.cash if amt is None else np.minimum(s.cash, amt)
-        q = np.where(mask, np.floor(a * (1 - CUSTO) / np.where(mask & (p > 0), p, np.inf) + 1e-9), 0.0)
-        m = q >= 1; cost = np.where(m, q * p / (1 - CUSTO), 0.0)
+        q, c = compra_inteira(a, np.where(mask & (p > 0), p, np.inf)); q = np.where(mask, q, 0.0)
+        m = q >= 1; cost = np.where(m, c, 0.0)
         s.compras += m  # cada compra conta (aportes e proventos reinvestidos também)
         s.sh += np.where(m, q, 0); s.basis += cost; s.cash = s.cash - cost
         s.lq, s.lc = np.where(m, q, 0), cost
@@ -1426,8 +1485,9 @@ def run(D, req):
     wd = [max(0.0, float(x or 0)) for x in (req.get("w") or [])][:len(me)]
     ap += [0.0] * (len(me) - len(ap)); wd += [0.0] * (len(me) - len(wd))
     tx = req.get("tx"); tx = None if tx is None else max(0.0, min(100.0, float(tx)))
-    key = repr((D["at"], di, df, ap, wd, tx, req.get("ticker"), req.get("modelo"), req.get("grupos"), req.get("tab")))
-    if key in _C: _C.move_to_end(key); return _C[key]
+    key = _ckey(D["at"], di, df, ap, wd, tx, req.get("ticker"), req.get("modelo"), req.get("grupos"), req.get("tab"))
+    hit = _cget(key)
+    if hit is not None: return hit
     apT = sum(ap)
     ini = {"ini": D["ym"][me[0]], "fim": D["ym"][me[-1]], "meses": len(me), "apT": apT}
     ok = lambda k: not np.isnan(D["C"][k, me[0]])
@@ -1436,9 +1496,7 @@ def run(D, req):
         if mid in MOD and MOD[mid].get("ref"):  # CDB / Ouro: não depende da empresa
             r = simulate_ref(D, mid, me, ap, wd, rec=True)["rows"]
             if not r: return {"error": f"{MOD[mid]['n']} sem dados em {D['ym'][me[0]]}."}
-            out = dict(ini, tab=[dict(x, sem=x["v"], com=x.pop("v")) for x in r])
-            _C[key] = out
-            return out
+            return _cput(key, dict(ini, tab=[dict(x, sem=x["v"], com=x.pop("v")) for x in r]))
         if t not in D["ix"] or mid not in MOD: return {"error": "Empresa ou modelo sem dados."}
         k = D["ix"][t]
         if not ok(k): return {"error": f"{t} ainda não negociava em {D['ym'][me[0]]}."}
@@ -1488,9 +1546,7 @@ def run(D, req):
                              "c": int(r["c"][0]), "s": int(r["s"][0]), **({"fora": True} if mid == "barsi" and fora_barsi(D, [k], me)[0] else {})})
         rows.sort(key=lambda x: (x["k"] != "g", -(x["pct"] if x["pct"] is not None else -1e9)))  # grupos; depois modelos e CDB/Ouro pelo rendimento
         out = dict(ini, rows=rows, aviso=AVISO)
-    _C[key] = out
-    while len(_C) > 60: _C.popitem(last=False)
-    return out
+    return _cput(key, out)
 
 
 def top_sector(rows, n=5):
@@ -1814,7 +1870,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False, 
         if sell and i>s:
             cand=(sh>0)&(w==0)&ok&(age>=mod['min']);mo=_perda(D,mid,idx,i,cand,sh,basis,P,ok,hw);cand&=mo!="-"  # no prejuízo: só empresa ruim
             out,px,tc=Ov(i,cand,P)  # venda com preço limite (máxima do dia) ou no fim do prazo
-            v=sh*px*(1-CUSTO);g=np.where(out,v-basis,0)
+            v=venda_liq(sh,px);g=np.where(out,v-basis,0)
             if rec:
                 for q in np.flatnonzero(out): d_,x_=olim(Ov,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":(mo[q] or motivo)+x_})
             cash+=(v*out).sum();msales+=(sh*px*out).sum();mgain+=g.sum();ns+=out.sum()
@@ -1828,7 +1884,7 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False, 
                 mo=np.where(bx!="",bx,mo)
             out,px,tc=Ov2(i,mo!="",P)
             if out.any():
-                v=sh*px*(1-CUSTO);g=np.where(out,v-basis,0)
+                v=venda_liq(sh,px);g=np.where(out,v-basis,0)
                 if rec:
                     for q in np.flatnonzero(out): d_,x_=olim(Ov2,i,q,px,tc);ev.append({"d":d_,"k":"venda","t":nm[idx[q]],"q":int(sh[q]),"p":round(float(px[q]),2),"v":round(float(v[q]),2),"pct":round(float(g[q]/basis[q]*100),2) if basis[q]>0 else None,"x":mo[q]+x_})
                 cash+=(v*out).sum();msales+=(sh*px*out).sum();mgain+=g.sum();ns+=out.sum()
@@ -1902,19 +1958,19 @@ def grupo(D, mid, idx, me, ap, rec=False, wd=None, RG=None, p1=None, ult=False, 
                 k_=idx[fo];dd=D["ODI"][k_,max(0,s-1)];lim=r0[fo]*(1-dd);lo,hi,ol=D["LO"][k_,i],D["HI"][k_,i],D["OL"][k_,i]
                 from datetime import date as _d,timedelta as _td
                 dl_=[(_d.fromisoformat(W[i])-_td(days=int(o))).isoformat() if o<255 else "" for o in ol]
-                with np.errstate(invalid="ignore"): toc=(lo<=lim*(1-ORD_FILA))&np.array([d>dia0 for d in dl_])
+                toc,pxl=ord_exec(True,lim,lo,hi);toc=toc&np.array([d>dia0 for d in dl_])
                 fim=i<T_-1 or _d.fromisoformat(W[i]).weekday()==4  # semana completa (a última dos dados pode estar em andamento)
                 for a_,k in enumerate(np.flatnonzero(fo)):
-                    if toc[a_]: px[k]=min(lim[a_],hi[a_]) if hi[a_]==hi[a_] else lim[a_];inf[k]=(dl_[a_],f" · 1º dia: ordem com preço limite R$ {lim[a_]:.2f}".replace(".",","),None)
+                    if toc[a_]: px[k]=pxl[a_];inf[k]=(dl_[a_],f" · 1º dia: ordem com preço limite R$ {lim[a_]:.2f}".replace(".",","),None)
                     elif fim: px[k]=P[k];inf[k]=(W[i]," · 1º dia: no fechamento da semana (não tocou o limite)",None)
                     else: continue
                     m[k]=ok[k]&(P[k]>0)&(pend[k]*(1-CUSTO)>=px[k]);fo[k]=False
                 if fim: fo[:]=False
         oc=lambda k:inf[k][:2] if k in inf else olim(Oc,i,k,px,tc)
         if m.any():
-            q=np.where(m,np.floor(pend*(1-CUSTO)/np.where(m,px,np.inf)+1e-9),0.0);m=q>=1
+            q,c_=compra_inteira(pend,np.where(m,px,np.inf));q=np.where(m,q,0.0);m=q>=1
             if m.any():
-                cost=np.where(m,q*px/(1-CUSTO),0.0);new=m&(sh<=0);age=np.where(new,0,age)
+                cost=np.where(m,c_,0.0);new=m&(sh<=0);age=np.where(new,0,age)
                 if rec:
                     qn,po=_nota(D,idx,jd) if RG else (None,None)
                     for k in np.flatnonzero(m):
@@ -1972,22 +2028,29 @@ def _rule(rows, m):
     return reg, extra
 
 
+SIM_MAX = 1e12  # Grupo simulação: maior valor aceito (valor inicial, aporte, extra ou retirada); acima, ou inf/nan, é inválido
+
+
+def _valor(x):
+    """Valor em R$ vindo do site/app -> float entre 0 e SIM_MAX; inválido (texto, inf, nan, acima de SIM_MAX) -> None."""
+    try: v = float(x or 0)
+    except Exception: return None
+    return max(0.0, v) if math.isfinite(v) and v <= SIM_MAX else None
+
+
 def sim_def(b):
     """Definição de um Grupo simulação vinda do site/app -> (di, v0, ap mensal, extras, retiradas), validada.
-    Grupos antigos (só di e v0) ficam como estavam: sem aporte mensal nem retiradas."""
+    Grupos antigos (só di e v0) ficam como estavam: sem aporte mensal nem retiradas. Valor inválido (_valor): 0 (linha extra: ignorada)."""
     def rows(x):
         out = []
         for r in (x if isinstance(x, list) else [])[:60]:
             try:
-                t = r.get("t") or "m"; m = int(r["m"]); v = max(0.0, float(r["v"])); n = int(r.get("n") or 0)
-                if t in ("m", "u", "p") and 1 <= m <= 1200 and r.get("ok", True) is not False: out.append({"t": t, "m": m, "v": v, "n": n})
+                t = r.get("t") or "m"; m = int(r["m"]); v = _valor(r["v"]); n = int(r.get("n") or 0)
+                if v is not None and t in ("m", "u", "p") and 1 <= m <= 1200 and r.get("ok", True) is not False: out.append({"t": t, "m": m, "v": v, "n": n})
             except Exception: continue
         return out
     b = b or {}
-    try: ap = max(0.0, float(b.get("ap") or 0))
-    except Exception: ap = 0.0
-    try: v0 = max(0.0, float(b.get("v0") or 0))
-    except Exception: v0 = 0.0
+    ap, v0 = _valor(b.get("ap")) or 0.0, _valor(b.get("v0")) or 0.0
     import re
     di = str(b.get("di") or "")[:10]
     if not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", di): di = di[:7]  # AAAA-MM (grupos antigos) ou AAAA-MM-DD
@@ -2026,7 +2089,8 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=(), p1=None, ult=False, cr=N
     if not me: return {"error": _curto(D, di), "pend": len(di) > 7 and di > D["w"][-1]}
     if v0 <= 0: return {"error": "Valor inicial deve ser maior que zero."}
     p1, cr = sim_p1(p1), sim_cr(cr); key = _simkey(D, tickers, di, aps, wd, p1) + ("u" if ult else "") + (cr or "")
-    if key in _C: _C.move_to_end(key); return _C[key]
+    hit = _cget(key)
+    if hit is not None: return hit
     idx = _simidx(D, tickers, me)
     if not idx: return {"error": f"Nenhuma empresa tinha preço em {D['ym'][me[0]]}."}
     apT = sum(aps) - sum(wd)  # valor aportado: cresce com cada aporte, cai com cada retirada; rendimento sobre ele
@@ -2040,16 +2104,14 @@ def simgrupo(D, tickers, di, v0, ap=0.0, ex=(), ret=(), p1=None, ult=False, cr=N
                          "cash": h["cash"], "cdb": h["cdb"], "pos": h["pos"], "mov": h["mov"][-MOV_SITE:], "nmov": len(h["mov"]), "ord": h.get("ord") or []})
     out["m"] += [{"m": r["m"], "n": MOD[r["m"]]["n"], "v": r["v"], "pct": pc(r["v"]) if r["v"] is not None else None, "ref": True} for r in _refs(D, me, aps, wd, apT)]
     out["m"].sort(key=lambda x: -(x["pct"] if x["pct"] is not None else -1e9))
-    _C[key] = out
-    while len(_C) > 60: _C.popitem(last=False)
-    return out
+    return _cput(key, out)
 
 
 MOV_SITE = 50  # Grupo simulação: movimentações que vão junto com a simulação (as mais recentes); as outras vêm em páginas de simmov
-_MZ = OrderedDict(); MZ_MAX = 12  # (simulação, modelo) -> movimentações e posições em JSON comprimido (~70 KB por modelo em 20 anos)
+_MZ = OrderedDict(); MZ_MAX = 2 * len(MODELOS)  # 2 simulações inteiras; (simulação, modelo) -> movimentações e posições em JSON comprimido (~70 KB por modelo em 20 anos)
 
 
-def _simkey(D, tickers, di, aps, wd, p1=None): return repr(("sim", ENGINE, D["at"], tuple(tickers), di, tuple(round(x, 2) for x in aps), tuple(round(x, 2) for x in wd), tuple(sorted((p1 or {}).items()))))
+def _simkey(D, tickers, di, aps, wd, p1=None): return _ckey("sim", ENGINE, D["at"], tuple(tickers), di, tuple(round(x, 2) for x in aps), tuple(round(x, 2) for x in wd), tuple(sorted((p1 or {}).items())))
 
 
 def sim_cr(x):
@@ -2074,8 +2136,11 @@ def _simidx(D, tickers, me): return [D["ix"][t] for t in dict.fromkeys(tickers) 
 
 
 def _mzput(k, h):
-    _MZ[k] = zlib.compress(json.dumps(h, separators=(",", ":")).encode(), 6); _MZ.move_to_end(k)
-    while len(_MZ) > MZ_MAX: _MZ.popitem(last=False)
+    z = zlib.compress(json.dumps(h, separators=(",", ":")).encode(), 6)
+    with _clock:
+        _MZ[k] = z; _MZ.move_to_end(k)
+        while len(_MZ) > MZ_MAX: _MZ.popitem(last=False)
+    return z
 
 
 def sim_hist(D, tickers, di, v0, mid, ap=0.0, ex=(), ret=(), p1=None, cr=None):
@@ -2085,11 +2150,14 @@ def sim_hist(D, tickers, di, v0, mid, ap=0.0, ex=(), ret=(), p1=None, cr=None):
     v0 = max(0.0, float(v0 or 0)); me, aps, wd = _simspan(D, di, v0, ap, ex, ret)
     if not me or v0 <= 0: return {"error": "Simulação inválida."}
     p1, cr = sim_p1(p1), sim_cr(cr); k = (_simkey(D, tickers, di, aps, wd, p1) + (cr or ""), mid)
-    if k not in _MZ:
+    with _clock:
+        z = _MZ.get(k)
+        if z is not None: _MZ.move_to_end(k)
+    if z is None:
         idx = _simidx(D, tickers, me)
         if not idx: return {"error": "Nenhuma empresa no período."}
-        _mzput(k, grupo(D, mid, idx, me, aps, rec=True, wd=wd, p1=p1, cr=cr)[4])
-    _MZ.move_to_end(k); return json.loads(zlib.decompress(_MZ[k]))
+        z = _mzput(k, grupo(D, mid, idx, me, aps, rec=True, wd=wd, p1=p1, cr=cr)[4])
+    return json.loads(zlib.decompress(z))
 
 
 def simmov(D, tickers, di, v0, mid, tk=None, off=0, n=50, ap=0.0, ex=(), ret=(), p1=None, cr=None):
@@ -2120,17 +2188,15 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
     if not me: return {"error": _curto(D, di)}
     aps = ([max(0.0, float(x or 0)) for x in aps] + [0.0] * len(me))[:len(me)]
     wd = ([max(0.0, float(x or 0)) for x in (wd or [])] + [0.0] * len(me))[:len(me)]
-    key = repr(("cmp", D["at"], tuple(tickers), di, df, aps, wd, tx, repr(grupos)))
-    if key in _C: _C.move_to_end(key); return _C[key]
+    key = _ckey("cmp", D["at"], tuple(tickers), di, df, aps, wd, tx, repr(grupos))
+    hit = _cget(key)
+    if hit is not None: return hit
     apT = sum(aps)
-    idx = [D["ix"][t] for t in dict.fromkeys(tickers) if t in D["ix"] and not np.isnan(D["C"][D["ix"][t], me[0]])]
+    idx = _simidx(D, tickers, me)
     if not idx: return {"error": f"Nenhuma das empresas tinha preço em {D['ym'][me[0]]}."}
     if not any(wd) and tx is None and grupos is None:  # casos mais comuns já calculados na rotina diária (modelos_pre)
         hit = _PRE["e"].get(pre_key(D, tickers, idx, me, aps))
-        if hit is not None:
-            _C[key] = hit
-            while len(_C) > 60: _C.popitem(last=False)
-            return hit
+        if hit is not None: return _cput(key, hit)
     R = [simulate(D, m["id"], idx, me, aps, wd, tx) for m in MODELOS]
     fora = fora_barsi(D, idx, me) if len(idx) > 1 else np.zeros(len(idx), bool)  # uma empresa só: calcula mesmo fora do método
     for r, m in zip(R, MODELOS):  # ETF: modelos que não se aplicam ficam sem valor (como o Barsi fora do método)
@@ -2175,6 +2241,4 @@ def compare(D, tickers, di, df, aps, wd=None, tx=None, grupos=None):
                 out["g"].append({"m": m["id"], "n": str(g.get("n") or "")[:60], "t": [D["tick"][x] for x in gi], "v": round(r["v"], 2), "pct": pc(r["v"]), "ra": None if r["ra"] != r["ra"] else round(r["ra"], 2), 
                                  "ir": round(r["ir"], 2), "irv": round(r["irv"], 2), "c": r["c"], "s": r["s"], "hist": r["hist"]})
         out["g"].sort(key=lambda x: -(x["pct"] or -1e9))
-    _C[key] = out
-    while len(_C) > 60: _C.popitem(last=False)
-    return out
+    return _cput(key, out)

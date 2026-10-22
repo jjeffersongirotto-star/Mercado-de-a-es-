@@ -36,6 +36,15 @@ def test_nome_do_arquivo():
     assert history.fname("^GSPC") == "_GSPC" and history.fname("7203.t") == "7203.T"
 
 
+def test_cache_b3_limitado():
+    # histórico completo da B3 (~1,4 MB cada): LRU de H4_MAX (fora dele, b3hist lê a cópia do disco); b3full: H4F_MAX
+    history._h4.clear()
+    for k in range(history.H4_MAX + 10): history._h4put(f"T{k:03d}3", (0, {"k": k}))
+    assert len(history._h4) == history.H4_MAX and "T0003" not in history._h4 and history._h4get(f"T{history.H4_MAX + 9:03d}3")[1] == {"k": history.H4_MAX + 9}
+    history._h4b["ZZZZ3"] = (0, {"b": 1}); assert history._h4get("ZZZZ3") == (0, {"b": 1}); history._h4b.clear()  # durante all_closes
+    history._h4.clear()
+    assert history.H4F_MAX <= 20
+
 if __name__ == "__main__":
     fs = [f for k, f in dict(globals()).items() if k.startswith("test_")]
     for f in fs: f()
