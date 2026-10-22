@@ -101,7 +101,7 @@ def main(outd):
     path = os.path.join(outd, "b3_proventos.json")
     try:
         old = json.load(open(path))
-        if time.time() - datetime.fromisoformat(old["fetched_at"]).timestamp() < REFAZ:
+        if "ev" in old and time.time() - datetime.fromisoformat(old["fetched_at"]).timestamp() < REFAZ:  # sem ev (antes dos eventos): refaz
             print("Proventos B3: snapshot desta semana já existe"); return 0
     except Exception:
         pass
