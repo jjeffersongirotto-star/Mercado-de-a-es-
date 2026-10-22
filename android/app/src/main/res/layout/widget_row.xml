@@ -35,8 +35,14 @@
             android:maxLines="1" android:textColor="@color/c_txt" android:textSize="13sp"
             android:autoSizeTextType="uniform" android:autoSizeMinTextSize="9sp" android:autoSizeMaxTextSize="13sp" android:autoSizeStepGranularity="0.5sp"
             tools:targetApi="26" />
-        <TextView android:id="@+id/r_var" android:layout_width="@dimen/col_v" android:layout_height="wrap_content" android:gravity="center"
-            android:maxLines="1" android:textSize="12sp" android:textStyle="bold" />
+        <!-- Dia: variação em % e, embaixo, quanto o preço mudou (1.24: WidgetData.changeAbs, letra menor) -->
+        <LinearLayout android:id="@+id/r_vcol" android:layout_width="@dimen/col_v" android:layout_height="wrap_content" android:gravity="center"
+            android:orientation="vertical">
+            <TextView android:id="@+id/r_var" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center"
+                android:maxLines="1" android:textSize="12sp" android:textStyle="bold" />
+            <TextView android:id="@+id/r_vabs" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center"
+                android:maxLines="1" android:textSize="10.5sp" />
+        </LinearLayout>
         <FrameLayout android:id="@+id/r_fcol" android:layout_width="@dimen/col_f" android:layout_height="wrap_content">
             <TextView android:id="@+id/r_badge" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center"
                 android:gravity="center" android:maxLines="1" android:minWidth="40dp" android:paddingStart="4dp" android:paddingTop="1dp"

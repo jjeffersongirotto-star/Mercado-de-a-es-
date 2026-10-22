@@ -381,4 +381,15 @@ public class WidgetDataTest {
         q.started();
         assertTrue(q.claim());                           // pedido depois que a busca começou: outra busca
     }
+
+    // 1.24: valor da variação embaixo da %, tirado do preço e da % (BBAS3: 23,83 a −1,12% → −0,27)
+    @Test public void variacaoEmValor() {
+        assertEquals("-0,27", WidgetData.changeAbs(23.83, -1.12, null));
+        assertEquals("+0,71", WidgetData.changeAbs(43.17, 1.67, null));
+        assertEquals("-5,45", WidgetData.changeAbs(330.95, -1.62, "USD"));
+        assertEquals("+0,00", WidgetData.changeAbs(10.0, 0.0, null));
+        assertEquals("", WidgetData.changeAbs(10.0, null, null));
+        assertEquals("", WidgetData.changeAbs(null, 1.0, null));
+        assertEquals("+121", WidgetData.changeAbs(3094.0, 4.07, "JPY"));
+    }
 }

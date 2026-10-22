@@ -290,7 +290,7 @@ public class FavWidget extends AppWidgetProvider {
     }
 
     /** Colunas Preço, Dia, Barato/Caro e Medo e Ganância (títulos e linhas) e a largura padrão de cada uma (dimens.xml). */
-    private static final int[] COL_IDS = {R.id.h_p, R.id.h_v, R.id.h_f, R.id.h_g}, ROW_COL_IDS = {R.id.r_price, R.id.r_var, R.id.r_fcol, R.id.r_gcol};
+    private static final int[] COL_IDS = {R.id.h_p, R.id.h_v, R.id.h_f, R.id.h_g}, ROW_COL_IDS = {R.id.r_price, R.id.r_vcol, R.id.r_fcol, R.id.r_gcol};
     private static final int[] COL_DIM = {R.dimen.col_p, R.dimen.col_v, R.dimen.col_f, R.dimen.col_g};
 
     static float colDp(Context c, int k) { return c.getResources().getDimension(COL_DIM[k]) / c.getResources().getDisplayMetrics().density; }
@@ -344,6 +344,10 @@ public class FavWidget extends AppWidgetProvider {
         r.setTextViewText(R.id.r_price, priceText(WidgetData.price(it.p, it.c)));
         r.setTextViewText(R.id.r_var, WidgetData.change(it.v));
         r.setTextColor(R.id.r_var, c.getColor(it.v == null ? R.color.c_mut : it.v >= 0 ? R.color.c_pos : R.color.c_neg));
+        String va = WidgetData.changeAbs(it.p, it.v, it.c);
+        r.setTextViewText(R.id.r_vabs, va);
+        r.setViewVisibility(R.id.r_vabs, va.isEmpty() ? View.GONE : View.VISIBLE);
+        r.setTextColor(R.id.r_vabs, c.getColor(it.v == null ? R.color.c_mut : it.v >= 0 ? R.color.c_pos : R.color.c_neg));
         r.setTextViewText(R.id.r_badge, WidgetData.badge(it.f, it.x));
         r.setTextColor(R.id.r_badge, c.getColor(it.f == null ? R.color.c_mut : WidgetData.up(it.f) ? R.color.c_pos : R.color.c_neg));
         r.setInt(R.id.r_badge, "setBackgroundResource", it.f == null ? R.drawable.chip_none : WidgetData.up(it.f) ? R.drawable.chip_pos : R.drawable.chip_neg);
