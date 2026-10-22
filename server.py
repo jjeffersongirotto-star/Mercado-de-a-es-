@@ -990,7 +990,8 @@ def proventos_acao(t, hoje=None):
             try: c = d.replace(year=d.year + k)
             except ValueError: c = d + timedelta(days=365 * k)
             if c > hoje and all(abs((c - x).days) > PROV_PERTO for x in ja + est): est.append(c)
-    for c in sorted(est)[:max(0, PROV_MIN - len(prox))]: prox.append(item(c, None, None, None, "estimada"))
+    falta = PROV_MIN - len({x["pg"] or x["com"] for x in prox})  # datas diferentes (anúncios pagos no mesmo dia contam uma vez)
+    for c in sorted(est)[:max(0, falta)]: prox.append(item(c, None, None, None, "estimada"))
     prox.sort(key=lambda x: x["pg"] or x["com"])
     return {"ano": ano, "prox": prox, "at": snap.get("fetched_at")}
 
