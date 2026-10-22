@@ -494,7 +494,7 @@ function setBlockOpen(art, open) {
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-cores]')) { e.stopPropagation(); infoSection('Cores'); return; }  // selo "% concordam": legenda das cores
   const co = e.target.closest('[data-co]');  // ⓘ da empresa
-  if (co) { const r = state.rowMap[co.dataset.co]; if (r) uiAlert('', { title: `${esc(r.ticker)} · ${esc(r.nome || '')}`, html: aboutHtml(r) }); return; }
+  if (co) { const r = state.rowMap[co.dataset.co]; if (r) { uiAlert('', { title: `${esc(r.ticker)} · ${esc(r.nome || '')}`, html: aboutHtml(r) }); provLoad(r); } return; }
   const head = e.target.closest('.blk-head'); if (!head || e.target.closest('.gsel') || e.target.closest('[data-gl]')) return;
   if (window.getSelection && String(window.getSelection()).length) return;
   const art = head.closest('.blk'); setBlockOpen(art, !art.classList.contains('open'));
@@ -645,7 +645,22 @@ function aboutHtml(r) {
   const pf = strengths(r);
   return `<p class="pvd-note">${esc(d ? d.charAt(0).toUpperCase() + d.slice(1) : 'Sem descrição desta empresa.')}</p>
     <p class="pvd-note"><b>Ramo:</b> ${esc([r.macro, r.subsetor || r.setor].filter(Boolean).join(' · ') || '—')}</p>
-    <p class="pvd-note"><b>Pontos fortes:</b></p><ul class="pvd-note list-disc pl-5">${pf.length ? pf.map(x => `<li>${esc(x)}</li>`).join('') : '<li>Nenhum indicador entre os 25% melhores do setor.</li>'}</ul>`;
+    <p class="pvd-note"><b>Pontos fortes:</b></p><ul class="pvd-note list-disc pl-5">${pf.length ? pf.map(x => `<li>${esc(x)}</li>`).join('') : '<li>Nenhum indicador entre os 25% melhores do setor.</li>'}</ul>`
+    + (state.country === 'br' && !r.etf ? `<p class="pvd-note"><b>Proventos ${glossBtn('Proventos a receber')}</b></p><div id="coProv">${loaderHTML('Buscando proventos…')}</div>` : '');
+}
+// Proventos do ⓘ: do ano (pagos e a receber) e as próximas datas — anunciadas ou estimadas pelo histórico (server.proventos_acao)
+async function provLoad(r) {
+  if (state.country !== 'br' || r.etf) return;
+  let d = null; try { d = await getRetry('/api/proventos?t=' + encodeURIComponent(r.ticker)); } catch (e) { }
+  const box = document.getElementById('coProv'); if (!box) return;
+  if (!d) { box.innerHTML = '<p class="pvd-note">Não foi possível buscar os proventos agora.</p>'; return; }
+  const SIT = { pago: 'pago', receber: 'a receber', estimada: 'estimada', 'a definir': 'data a definir' };
+  const row = (x) => `<tr><td>${x.pg ? dataBR(x.pg) : '—'}</td><td>${x.com ? dataBR(x.com) : '—'}</td><td>${esc(x.tipo || '—')}</td><td>${x.v != null ? brl.format(x.v).replace(/(,\d\d)$/, '$1') : '—'}</td><td class="${x.sit === 'pago' ? 'up' : ''}">${SIT[x.sit] || x.sit}</td></tr>`;
+  const tab = (L) => `<div class="pv-scroll"><table class="gtab"><thead><tr><th>Pagamento</th><th>Data-com</th><th>Tipo</th><th>Valor/ação</th><th>Situação</th></tr></thead><tbody>${L.map(row).join('')}</tbody></table></div>`;
+  const Y = hojeSP().slice(0, 4);
+  box.innerHTML = (d.ano.length ? `<p class="pvd-note">Em ${Y}:</p>` + tab(d.ano) : `<p class="pvd-note">Sem proventos registrados em ${Y}.</p>`)
+    + (d.prox.length ? `<p class="pvd-note">Próximos recebimentos:</p>` + tab(d.prox) : (d.ano.length ? '' : '<p class="pvd-note">Sem proventos anunciados nem histórico para estimar.</p>'))
+    + '<p class="pvd-note">Fonte: B3 (proventos em dinheiro). Data estimada = mesma época dos pagamentos dos anos anteriores, sem valor. Não é recomendação.</p>';
 }
 // ---------- Setor (macro) e classificação ----------
 const SECTORS = ['Financeiro', 'Utilidade Pública', 'Materiais Básicos & Commodities', 'Petróleo, Gás e Biocombustíveis', 'Consumo Cíclico', 'Consumo Não Cíclico', 'Agronegócio', 'Saúde', 'Tecnologia & Comunicações', 'Outros'];

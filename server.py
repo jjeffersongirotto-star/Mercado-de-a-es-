@@ -965,6 +965,42 @@ def api_metrics():
     d, _ = snapshots.load("metrics", max_mem_age=3 * 3600)
     return JSONResponse(d or {}, headers={"Cache-Control": "public, max-age=1800"})
 
+PROV_MIN = 2   # ⓘ da empresa: sempre ao menos estas próximas datas de recebimento (anunciadas ou estimadas pelo histórico)
+PROV_PERTO = 20  # dias: data estimada perto de uma anunciada (ou de outra estimada) é o mesmo pagamento
+
+def proventos_acao(t, hoje=None):
+    """ⓘ da empresa: proventos em dinheiro do ano (pagos e a receber, com valor por ação) e as próximas datas de recebimento — as
+    anunciadas (com valor) e, se faltarem para chegar a PROV_MIN, estimadas pelas datas de pagamento dos 2 anos anteriores (sem valor).
+    Fonte: snapshot b3_proventos → ev ({ticker: [[pagamento, data-com, valor, tipo]]}, scripts/fetch_b3_proventos.py).
+    -> {ano: [...], prox: [...], at} ou None (sem eventos no snapshot); cada item {pg, com, v, tipo, sit: pago/receber/estimada/a definir}."""
+    from datetime import date, timedelta
+    snap = snapshots.load("b3_proventos")[0] or {}
+    if "ev" not in snap: return None
+    hoje = hoje or datetime.now(TZ).date(); Y = hoje.year
+    E = [(date.fromisoformat(pg) if pg else None, date.fromisoformat(com), v, tp) for pg, com, v, tp in (snap["ev"].get(t) or [])]
+    sit = lambda pg: "a definir" if pg is None else "pago" if pg <= hoje else "receber"
+    item = lambda pg, com, v, tp, st=None: {"pg": pg.isoformat() if pg else None, "com": com.isoformat() if com else None, "v": v, "tipo": tp, "sit": st or sit(pg)}
+    ano = [item(*e) for e in E if (e[0] or e[1]).year == Y]
+    prox = [item(*e) for e in E if e[0] is None and e[1] >= hoje or e[0] is not None and e[0] > hoje]
+    ja = [date.fromisoformat(x["pg"]) for x in prox if x["pg"]]
+    passadas = sorted({e[0] for e in E if e[0] and Y - 2 <= e[0].year < Y + 1 and e[0] <= hoje})
+    est = []
+    for k in (1, 2):  # mesma época 1 ano depois (e 2, para empresa que pagou só em anos alternados): a mais cedo primeiro
+        for d in passadas:
+            try: c = d.replace(year=d.year + k)
+            except ValueError: c = d + timedelta(days=365 * k)
+            if c > hoje and all(abs((c - x).days) > PROV_PERTO for x in ja + est): est.append(c)
+    for c in sorted(est)[:max(0, PROV_MIN - len(prox))]: prox.append(item(c, None, None, None, "estimada"))
+    prox.sort(key=lambda x: x["pg"] or x["com"])
+    return {"ano": ano, "prox": prox, "at": snap.get("fetched_at")}
+
+@app.get("/api/proventos")
+def api_proventos(t: str = ""):
+    """ⓘ da empresa → Proventos (proventos_acao). Leve: lê o snapshot b3_proventos já em memória."""
+    t = str(t or "").upper()[:12]
+    if not WIDGET_TK.fullmatch(t): return JSONResponse({"error": "Ticker inválido."}, status_code=400)
+    return JSONResponse(proventos_acao(t) or {"ano": [], "prox": [], "sem": True}, headers={"Cache-Control": "public, max-age=1800"})
+
 @app.get("/api/noticias")
 def api_noticias():
     """Aba Notícias: repassa o snapshot noticias (scripts/fetch_noticias.py) com o assunto de cada notícia (a); nada é buscado por visita."""
