@@ -350,7 +350,7 @@ public class FavWidget extends AppWidgetProvider {
         if (!narrow) {  // logo no formato original (fit-center no slot de 32dp); sem logo: círculo com as iniciais
             // logo da própria ação (arquivo da mesma resposta); ainda não baixado: iniciais e imagem limpa (linha reaproveitada
             // pelo launcher não fica com o logo de outra empresa)
-            String lf = WidgetData.logoFile(it, f -> new java.io.File(Logos.dir(c), f).exists());
+            String lf = Logos.fileFor(c, it.t, it.l);  // 1.26: sem o logo novo ainda, fica o anterior
             android.graphics.Bitmap lg = Logos.bitmap(c, lf, px, bmp);
             r.setContentDescription(R.id.r_logo, it.t);
             if (lg != null) {

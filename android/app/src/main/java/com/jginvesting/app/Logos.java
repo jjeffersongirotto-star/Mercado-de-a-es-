@@ -52,6 +52,7 @@ final class Logos {
                 if (!failed.contains(e.getKey()) && (!(e.getValue() instanceof Long) || !WidgetData.within((Long) e.getValue(), now, FAIL_RETRY_MS))) fe.remove(e.getKey());
             fe.apply();
         }
+        loadLast(c);
         prune(d);
         return got;
     }
@@ -60,7 +61,32 @@ final class Logos {
         File[] all = d.listFiles((dir, n) -> n.endsWith(".png"));
         if (all == null || all.length <= MAX) return;
         Arrays.sort(all, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
-        for (int i = 0; i < all.length - MAX; i++) all[i].delete();
+        java.util.Set<String> keep = LAST_FILES.get();
+        int del = all.length - MAX;
+        for (int i = 0; i < all.length && del > 0; i++) if (keep == null || !keep.contains(all[i].getName())) { all[i].delete(); del--; }
+    }
+
+    /** 1.26: último logo bom de cada ticker (ticker -> arquivo). Logo novo no servidor (outro hash) ainda não baixado, resposta
+     *  sem o campo do logo ou download falho: continua o logo anterior; iniciais só para quem nunca teve logo. */
+    private static SharedPreferences last(Context c) { return c.getSharedPreferences("logos_last", Context.MODE_PRIVATE); }
+    private static final java.util.concurrent.atomic.AtomicReference<java.util.Set<String>> LAST_FILES = new java.util.concurrent.atomic.AtomicReference<>();
+
+    /** Arquivo a desenhar para o ticker: o da resposta se já está no aparelho (e passa a ser o "último"), senão o último guardado. */
+    static String fileFor(Context c, String ticker, String f) {
+        File d = dir(c);
+        SharedPreferences lp = last(c);
+        if (f != null && new File(d, f).exists()) {
+            if (ticker != null && !f.equals(lp.getString(ticker, null))) lp.edit().putString(ticker, f).apply();
+            return f;
+        }
+        String o = ticker == null ? null : lp.getString(ticker, null);
+        return o != null && new File(d, o).exists() ? o : null;
+    }
+
+    private static void loadLast(Context c) {
+        java.util.Set<String> s = new java.util.HashSet<>();
+        for (Object v : last(c).getAll().values()) if (v instanceof String) s.add((String) v);
+        LAST_FILES.set(s);
     }
 
     /** 1.23: logos já decodificados e no tamanho, entre um desenho e outro (até ~4 MB). O desenho também guarda os que usou no
