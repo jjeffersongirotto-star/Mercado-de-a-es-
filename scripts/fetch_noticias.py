@@ -201,7 +201,14 @@ def main(out):
                           "resumo": curto(meta(pg.text, "og:description") or desc), "url": url, "img": img if img and img.startswith("https://") else None})
             urls.add(url); nb += 1; time.sleep(1)
     # Mercado: fontes em português (+ reserva), só notícias de mercado
-    merc = [i for i in velhos if i["tema"] == "mercado" and not i.get("marco") and (agora.date() - datetime.fromisoformat(i["data"]).date()).days <= DIAS]
+    def _dia(s):  # aceita AAAA-MM-DD, AAAA-MM e AAAA; None se inválida
+        s = str(s or "").strip()
+        for f in ("%Y-%m-%d", "%Y-%m", "%Y"):
+            try: return datetime.strptime(s[:10] if f == "%Y-%m-%d" else s, f).date()
+            except ValueError: pass
+        try: return datetime.fromisoformat(s).date()
+        except ValueError: return None
+    merc = [i for i in velhos if i["tema"] == "mercado" and not i.get("marco") and _dia(i.get("data")) and (agora.date() - _dia(i.get("data"))).days <= DIAS]
     vistos = {chave(i["titulo"]) for i in merc} | {i["url"] for i in merc}
     novos, og, por_fonte = [], 0, {}
     feeds = [(n, u) for n, us in FONTES_RSS.items() for u in us] + [("Bing Notícias", RSS_RESERVA)]
