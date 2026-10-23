@@ -7,6 +7,8 @@ Proventos: mesma regra de imposto da tabela (automático = 10% no mês acima de 
 import gc, hashlib, json, math, os, threading, time, unicodedata, warnings, zlib
 import valor_justo
 from collections import OrderedDict
+from datetime import date, timedelta
+from functools import lru_cache
 import numpy as np
 
 # id, nome, vende? e regras (o painel ⓘ → Modelos explica cada um com estas regras)
@@ -53,6 +55,26 @@ BARSI_DY, BARSI_ANOS = .06, 5
 # teto); com empresa no teto, o excedente vai para elas (Método Barsi, simulação de uma empresa e modo Grupo)
 BARSI_CAIXA = .10
 
+
+
+def _pascoa(a):  # domingo de Páscoa (algoritmo de Meeus/Butcher)
+    b, c = divmod(a, 100); d = (19 * (a % 19) + b - b // 4 - (b - (b + 8) // 25 + 1) // 3 + 15) % 30
+    e = (32 + 2 * (b % 4) + 2 * (c // 4) - d - c % 4) % 7; f = d + e - 7 * ((a % 19 + 11 * d + 22 * e) // 451) + 114
+    return date(a, f // 31, f % 31 + 1)
+
+@lru_cache(maxsize=16)
+def feriados_b3(a):
+    """Dias sem pregão na B3 no ano a (feriados nacionais + Carnaval, Sexta-feira Santa, Corpus Christi, 24/12 e 31/12). Lista leve, sem lib."""
+    p = _pascoa(a); fx = [(1, 1), (4, 21), (5, 1), (9, 7), (10, 12), (11, 2), (11, 15), (11, 20), (12, 24), (12, 25), (12, 31)]
+    return frozenset([date(a, mm, dd).isoformat() for mm, dd in fx] + [(p + timedelta(days=k)).isoformat() for k in (-48, -47, -2, 60)])
+
+def dias_uteis(d0, d1):
+    """Dias úteis da B3 depois de d0 até d1 (inclusive), 'AAAA-MM-DD' -> lista. Fonte única do CDB estimado (sem CDI publicado)."""
+    a, b = date.fromisoformat(d0[:10]), date.fromisoformat(d1[:10]); out = []
+    while a < b:
+        a += timedelta(days=1)
+        if a.weekday() < 5 and a.isoformat() not in feriados_b3(a.year): out.append(a.isoformat())
+    return out
 
 def perene(r, cad=None):
     """A empresa (linha de /api/data) é de setor perene do Método Barsi? cad: cadastro da B3 {raiz: [nome, segmento]}."""
@@ -673,7 +695,7 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
     # CDB (100% do CDI): fator de cada semana = produto das taxas diárias desde a semana anterior
     cd_, cv_ = list(cdi["d"]), [float(x) for x in cdi["v"]]
     if cd_ and W and W[-1] > cd_[-1]:  # o BCB publica o CDI com 1 dia de atraso: até o último dia dos dados, rende pela última taxa conhecida
-        ex_ = pd.bdate_range(pd.Timestamp(cd_[-1]) + pd.Timedelta(days=1), pd.Timestamp(W[-1])).strftime("%Y-%m-%d").tolist()
+        ex_ = dias_uteis(cd_[-1], W[-1])
         cd_ += ex_; cv_ += [cv_[-1]] * len(ex_)
     cs = pd.Series(np.cumprod(1 + np.array(cv_, dtype=float) / 100), index=pd.to_datetime(cd_))
     wk = pd.to_datetime(W)

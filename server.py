@@ -1305,7 +1305,7 @@ def api_modelos_comparar(body: dict):
         D = modelos.data(); modelos.set_setores(D, rows, _cad()); _pre()
         if u == "all": tick = modelos.todas(D, rows)  # + as que saíram da bolsa
         out = modelos.compare(D, tick, str(b.get("di") or "")[:10], str(b.get("df") or "")[:10], aps, wd, tx, grupos)
-        if not out.get("error"): out = dict(out, nm=_nomes(out.get("t") or []))  # cópia: a resposta fica no cache de modelos
+        if not out.get("error"): out = _sg_hoje(out); out = dict(out, nm=_nomes(out.get("t") or []))  # cópia: a resposta fica no cache de modelos
     except Exception:
         log.exception("modelos: comparar"); return JSONResponse({"error": "Não foi possível comparar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1323,6 +1323,26 @@ def _sim_nomes(out):
     if isinstance(out.get("pos"), dict): tk.add(out["pos"].get("t"))
     return _nomes(tk)
 
+def _cdb_hoje(cash, cdb, rd, nbd):
+    """Fonte única do CDB do caixa do último dia dos dados até hoje (widget, planilha e aba Grupos): nbd dias úteis da B3
+    (modelos.dias_uteis, sem feriados) pela última taxa diária do CDI rd -> (caixa, rendeu no último dia, cdb com j somado)."""
+    if nbd <= 0 or cash <= 0: return cash, 0.0, cdb
+    c1 = cash * (1 + rd) ** nbd; c = dict(cdb or {}); c["j"] = round(float(c.get("j") or 0) + c1 - cash, 2)
+    return c1, c1 - c1 / (1 + rd), c
+
+def _sg_hoje(out):
+    """Resposta de simgrupo (aba Grupos) com o CDB do caixa rendendo até hoje (_cdb_hoje): caixa, valor, rendimento e cdb de cada modelo."""
+    import modelos
+    d1, hoje = out.get("d1"), datetime.now(TZ).date().isoformat()
+    if not d1 or d1 >= hoje: return out
+    nbd, rd, apT = len(modelos.dias_uteis(d1, hoje)), float(out.get("cdi") or 0) / 100, out.get("apT", out.get("v0"))
+    if nbd <= 0: return out
+    def f(x):
+        if x.get("ref") or not x.get("cash"): return x
+        c1, dd, cdb = _cdb_hoje(x["cash"], x.get("cdb"), rd, nbd); cdb = dict(cdb or {}, d=round(dd, 2)); v = (x.get("v") or 0) + c1 - x["cash"]
+        return dict(x, cash=round(c1, 2), cdb=cdb, v=round(v, 2), **({"pct": round((v / apT - 1) * 100, 2)} if apT else {}))
+    return dict(out, m=[f(x) for x in out["m"]])
+
 @app.post("/api/modelos/simgrupo")
 def api_modelos_simgrupo(body: dict):
     """Grupo simulação (aba Grupos): todos os modelos em todas as empresas (1 ticker por empresa) desde di, mesmo valor inicial,
@@ -1336,7 +1356,7 @@ def api_modelos_simgrupo(body: dict):
         di, v0, ap, ex, ret = modelos.sim_def(b)  # valor inicial, aporte mensal, aportes e retiradas extras da Previsão
         tk = modelos.todas(D, rows); out = modelos.simgrupo(D, tk, di, v0, ap, ex, ret, b.get("p1"), cr=b.get("cr"))
         if out.get("pend"): out = _sim_hoje(D, tk, di, v0, ap, ex, ret, b.get("p1"), b.get("r1"), b.get("cr")) or out  # começa hoje: ordens do 1º dia ao vivo
-        if not out.get("error"): out = dict(out, nm=_sim_nomes(out), m=[dict(x, mov=_horas(di, v0, x["m"], x.get("mov"))) if x.get("mov") else x for x in out["m"]])  # cópia: o resultado fica no cache de modelos
+        if not out.get("error"): out = _sg_hoje(out); out = dict(out, nm=_sim_nomes(out), m=[dict(x, mov=_horas(di, v0, x["m"], x.get("mov"))) if x.get("mov") else x for x in out["m"]])  # cópia: o resultado fica no cache de modelos
     except Exception:
         log.exception("modelos: grupo simulação"); return JSONResponse({"error": "Não foi possível simular agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1359,7 +1379,7 @@ def api_modelos_simmov(body: dict):
         if x:
             L = [e for e in x["mov"][::-1] if not tk or e.get("t") == tk]
             out = {"t": tk, "pos": next((p for p in x["pos"] if p["t"] == tk), None), "dv": 0.0, "mov": L, "nmov": len(L)} if tk else {"off": 0, "mov": L, "nmov": len(L)}
-        if not out.get("error"): out = dict(out, nm=_sim_nomes(out), mov=_horas(di, v0, mid, out.get("mov")))
+        if not out.get("error"): out = _sg_hoje(out); out = dict(out, nm=_sim_nomes(out), mov=_horas(di, v0, mid, out.get("mov")))
     except Exception:
         log.exception("modelos: movimentações do grupo simulação"); return JSONResponse({"error": "Não foi possível carregar agora."}, status_code=502)
     return JSONResponse(out, status_code=400 if out.get("error") else 200, headers={"Cache-Control": "no-store"})
@@ -1550,8 +1570,7 @@ def _simw(di, v0, f, reg=True):
         return (p, r.get("var")) if p else (pw, None)
     hoje = datetime.now(TZ).date().isoformat(); agora = datetime.now(TZ).strftime("%H:%M")
     out, Q = [], _quotes(); rd = float(sg.get("cdi") or 0) / 100
-    import numpy as _np
-    nbd = int(_np.busday_count(_np.datetime64(sg["d1"]) + 1, _np.datetime64(hoje) + 1)) if sg["d1"] < hoje else 0
+    nbd = len(modelos.dias_uteis(sg["d1"], hoje))
     for x in sg["m"]:
         if x.get("ref"): continue
         cash, pa, prov = x["cash"], {y["t"]: dict(y) for y in x.get("pos") or []}, []
@@ -1575,9 +1594,7 @@ def _simw(di, v0, f, reg=True):
                 prov.append({"d": hoje, "h": h, "k": "compra" if o["lado"] == "c" else "venda", "t": o["t"], "q": q, "p": round(px, 2), "v": round(cost, 2),
                              "x": "ordem com preço limite · provisória (confirma no fechamento)"})
             with _LIVE_LK: _trim_dias(_PROV, PROV_MAX, lambda k: k[-1])
-        dia = 0.0
-        if nbd > 0 and cash > 0:  # CDB rende por dia útil até hoje (dias depois do último dos dados, pela última taxa do CDI)
-            c1 = cash * (1 + rd) ** nbd; dia = c1 - c1 / (1 + rd); x = dict(x, cdb=dict(x.get("cdb") or {}, j=round(float((x.get("cdb") or {}).get("j") or 0) + c1 - cash, 2))); cash = c1
+        cash, dia, cdb = _cdb_hoje(cash, x.get("cdb"), rd, nbd); x = dict(x, cdb=cdb)
         tot, pos = cash, []
         for y in pa.values():
             t, q, inv = y["t"], y["q"], y["inv"]; p, var = live(t, y["p"]); val = q * p; tot += val
