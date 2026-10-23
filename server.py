@@ -1549,7 +1549,9 @@ def _simw(di, v0, f, reg=True):
         r = by.get(t) or {}; p = (r.get("v") or {}).get("preco")
         return (p, r.get("var")) if p else (pw, None)
     hoje = datetime.now(TZ).date().isoformat(); agora = datetime.now(TZ).strftime("%H:%M")
-    out, Q = [], _quotes()
+    out, Q = [], _quotes(); rd = float(sg.get("cdi") or 0) / 100
+    import numpy as _np
+    nbd = int(_np.busday_count(_np.datetime64(sg["d1"]) + 1, _np.datetime64(hoje) + 1)) if sg["d1"] < hoje else 0
     for x in sg["m"]:
         if x.get("ref"): continue
         cash, pa, prov = x["cash"], {y["t"]: dict(y) for y in x.get("pos") or []}, []
@@ -1573,7 +1575,10 @@ def _simw(di, v0, f, reg=True):
                 prov.append({"d": hoje, "h": h, "k": "compra" if o["lado"] == "c" else "venda", "t": o["t"], "q": q, "p": round(px, 2), "v": round(cost, 2),
                              "x": "ordem com preço limite · provisória (confirma no fechamento)"})
             with _LIVE_LK: _trim_dias(_PROV, PROV_MAX, lambda k: k[-1])
-        tot, dia, pos = cash, 0.0, []
+        dia = 0.0
+        if nbd > 0 and cash > 0:  # CDB rende por dia útil até hoje (dias depois do último dos dados, pela última taxa do CDI)
+            c1 = cash * (1 + rd) ** nbd; dia = c1 - c1 / (1 + rd); x = dict(x, cdb=dict(x.get("cdb") or {}, j=round(float((x.get("cdb") or {}).get("j") or 0) + c1 - cash, 2))); cash = c1
+        tot, pos = cash, []
         for y in pa.values():
             t, q, inv = y["t"], y["q"], y["inv"]; p, var = live(t, y["p"]); val = q * p; tot += val
             if y.get("b"): dia += q * (p - y["b"])  # comprada hoje: variação desde a compra

@@ -327,7 +327,7 @@ def _set_setores(D, rows, cad=None):
     ak = (D.get("_mk"), D.get("at"), len(D.get("_bs") or ()))
     if D.get("_ak") != ak: _adapt(D); D["_ak"] = ak; _cclear(); gc.collect(); _trim()  # Adaptativo: aprende de novo só quando os dados ou os sinais mudam
 JCP_IR = 0.15     # IR retido na fonte sobre JCP (os proventos da B3 com tipo JCP; antes da lista da B3 o Yahoo não separa)
-ENGINE = 24       # versão das contas (24: 1º dia com ordens com preço limite, sem compra na criação; 23: 1º dia a mercado; 22: aporte primeiro nas empresas da carteira, Buy and Hold com dividendos + apostas de crescimento, confiança nas notícias; 21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
+ENGINE = 25       # versão das contas (25: CDI de hoje/ontem ainda não publicado rende pela última taxa; 24: 1º dia com ordens com preço limite, sem compra na criação; 23: 1º dia a mercado; 22: aporte primeiro nas empresas da carteira, Buy and Hold com dividendos + apostas de crescimento, confiança nas notícias; 21: saldo do CDB antes de cada aplicação/resgate; 20: CDB dia a dia com IR regressivo e IOF no resgate; 19: Grupo simulação do mês atual anda até hoje; 18: ordem só executa passando 0,2% do limite, nada antes da data inicial, histórico por data; 17: alvos caros no Value e Barsi, prejuízo só com empresa ruim nos de segurar; 16: ordens ligadas na semana da decisão + anti-emoção; 15: ordens com preço limite; 14: modelo Adaptativo (aprende); 13: ETFs nos modelos de preço; 12: caixa máximo do Método Barsi; 11: valor de mercado com as ações de cada balanço; 10: modelos de método e híbrido com eles; 9: empresas que saíram da bolsa em Todas): invalida resultados guardados
 # Regras de carteira do modo Grupo (Comparar → Grupo, Grupo simulação, widget) — valem para todos os modelos, mesmo rendendo menos:
 # ninguém acompanha 200 empresas de verdade. max: empresas na carteira; liq: volume médio diário mínimo (R$, 60 pregões, da época) para
 # comprar; conc: o aporte do mês vai para até conc empresas (as mais abaixo da meta), compra mínima min_compra; venda: venda ocasional nos
@@ -671,7 +671,11 @@ def build(snap, cdi, gold=None, ibov=None, fund=None, news=None, saida=None, idi
         med = pd.DataFrame(P.T).rolling(MED_SEM, min_periods=MED_SEM // 2).median().to_numpy(dtype=np.float32).T
         fav[key] = (P >= med) & ~np.isnan(P); MED[key] = med
     # CDB (100% do CDI): fator de cada semana = produto das taxas diárias desde a semana anterior
-    cs = pd.Series(np.cumprod(1 + np.array(cdi["v"], dtype=float) / 100), index=pd.to_datetime(cdi["d"]))
+    cd_, cv_ = list(cdi["d"]), [float(x) for x in cdi["v"]]
+    if cd_ and W and W[-1] > cd_[-1]:  # o BCB publica o CDI com 1 dia de atraso: até o último dia dos dados, rende pela última taxa conhecida
+        ex_ = pd.bdate_range(pd.Timestamp(cd_[-1]) + pd.Timedelta(days=1), pd.Timestamp(W[-1])).strftime("%Y-%m-%d").tolist()
+        cd_ += ex_; cv_ += [cv_[-1]] * len(ex_)
+    cs = pd.Series(np.cumprod(1 + np.array(cv_, dtype=float) / 100), index=pd.to_datetime(cd_))
     wk = pd.to_datetime(W)
     acc = cs.reindex(cs.index.union(wk)).ffill().reindex(wk).to_numpy()
     cdb = np.ones(T)
