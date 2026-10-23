@@ -345,6 +345,7 @@ def build():
             dhl = {k: tm[k] for k in ("dh", "dl") if tm.get(k) is not None}  # máxima/mínima do dia (TradingView): ordens ao vivo dos modelos
         else:
             var = names.get(t, {}).get("var")
+            if var is not None: dhl = {"pxb": names[t].get("preco_brapi")}  # preço da mesma fonte da variação (brapi), sem misturar com o fechamento de ontem
             if var is None and t in tv: var = tv[t]["m"].get("var")
         rows.append({"ticker": t, "nome": nm.get("nome"), "setor": nm.get("setor"), "subsetor": nm.get("subsetor"),
                      "insi": bool(s), "var": var, "cur": "BRL", "S": S, "A": A, "div": div, **lucro_pl(fda.get(t)), **ex, **dhl})
@@ -415,6 +416,10 @@ def finalize(base, yf_store=None):
         if isbr and base.get("px_tv"):  # cotação em "Todos": a do TradingView (build → px_tv), sem consenso; sem ela, "—"
             nr["v"]["preco"] = ((r.get("S") or {}).get("tv") or {}).get("preco")
             nr.setdefault("src", {})["preco"] = "tv"
+            for d_ in (nr.get("st"), nr.get("cm"), nr.get("ag")): (d_ or {}).pop("preco", None)
+        elif isbr and r.get("pxb"):  # TradingView fora (ex.: 429): cotação e variação da brapi, ambas de agora
+            nr["v"]["preco"] = r["pxb"]
+            nr.setdefault("src", {})["preco"] = "brapi"
             for d_ in (nr.get("st"), nr.get("cm"), nr.get("ag")): (d_ or {}).pop("preco", None)
         if isbr:  # cadastro oficial da B3 completa nome/setor; sem nome ou sem nenhum fundamento, o papel sai
             cd = CAD.get(r["ticker"][:4])
@@ -1122,6 +1127,12 @@ def live_quotes(tks, force=False):
                             m = re.search(r"_(\d+)$", um or ""); q[it["s"].split(":", 1)[1]] = (at, c, ch, ts, int(m.group(1)) if m else 0)
                 except Exception as e:
                     log.warning("widget: cotações leves: %s", e)
+                    try:  # TradingView bloqueado (ex.: 429 no IP do Render): preço e variação da brapi, a mesma lista do build
+                        b, at = fetch_brapi_names(), time.time()
+                        for t in need:
+                            if (b.get(t) or {}).get("preco_brapi"): q[t] = (at, b[t]["preco_brapi"], b[t].get("var"), None, 0)
+                    except Exception as e2:
+                        log.warning("widget: cotações leves (brapi): %s", e2)
     return {t: q[t] for t in tks if t in q and now - q[t][0] < 30 * 60}
 
 def quote_label(qs):

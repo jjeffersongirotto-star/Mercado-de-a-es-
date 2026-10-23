@@ -70,7 +70,8 @@ def feriados_b3(a):
 
 def dias_uteis(d0, d1):
     """Dias úteis da B3 depois de d0 até d1 (inclusive), 'AAAA-MM-DD' -> lista. Fonte única do CDB estimado (sem CDI publicado)."""
-    a, b = date.fromisoformat(d0[:10]), date.fromisoformat(d1[:10]); out = []
+    p = lambda s: date.fromisoformat((s[:10] + "-01-01"[len(s[:10]) - 4:]) if len(s[:10]) < 10 else s[:10])  # AAAA-MM / AAAA: dia 1
+    a, b = p(d0), p(d1); out = []
     while a < b:
         a += timedelta(days=1)
         if a.weekday() < 5 and a.isoformat() not in feriados_b3(a.year): out.append(a.isoformat())
