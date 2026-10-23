@@ -33,6 +33,8 @@ public class WidgetTap extends Activity {
             if ("o".equals(a)) {
                 startActivity(new Intent(this, MainActivity.class).putExtra(FavWidget.EXTRA_TICKER, t)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+            } else if ("c".equals(a)) {  // 1.25: "Sem conexão, toque para tentar de novo"
+                sendBroadcast(new Intent(this, FavWidget.class).setAction(FavWidget.ACTION_CHART).putExtra(FavWidget.EXTRA_TICKER, t));
             } else if ("z".equals(a)) {
                 Store.setZone(this, i.getIntExtra(Z, -1));
                 FavWidget.render(this);

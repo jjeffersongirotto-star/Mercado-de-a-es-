@@ -85,6 +85,15 @@ public class FavWidget extends AppWidgetProvider {
             render(c);  // dados novos na tela antes dos logos e da conferência de versão
             // logos que faltam no aparelho (só na primeira vez de cada um; ficam guardados), dentro do mesmo prazo
             if (Logos.ensure(c, logos, deadline)) render(c);
+            // 1.25: linha aberta sem gráfico guardado (busca do toque falhou): busca de novo aqui, com o tempo que sobrar
+            // (no RefreshJob em segundo plano, até 60 s)
+            String ex = Store.expanded(c);
+            if (WidgetData.validTicker(ex) && Store.chart(c, ex) == null && LOADING.add(ex)) {
+                try {
+                    int ct = WidgetData.budget(deadline, System.currentTimeMillis(), pr != null ? 8000 : 60000, 1500);
+                    if (ct > 0) { render(c); fetchChart(c, ex, ct); }
+                } finally { LOADING.remove(ex); render(c); }
+            }
             int t = WidgetData.budget(deadline, System.currentTimeMillis(), pr != null ? 6000 : 20000, 2500);
             if (t > 0 && Updater.quietCheck(c, t)) render(c);  // aviso "Atualização disponível" no topo
         } catch (RuntimeException | OutOfMemoryError e) {
@@ -261,16 +270,28 @@ public class FavWidget extends AppWidgetProvider {
             if (pr != null) pr.finish();
             return;
         }
+        if (!LOADING.add(t)) { if (pr != null) pr.finish(); return; }  // já buscando
+        render(c);  // 1.25: "Carregando 5 anos…" no lugar do "Sem conexão" ao tentar de novo
         new Thread(() -> {
             try {
-                String j = Api.chart(t, pr != null ? (int) Widgets.BROADCAST_MS : 30000);
-                if (j != null && WidgetData.chart(j) != null) Store.setChart(c, t, j);
-                else if (Store.chart(c, t) == null) Store.setChart(c, t, "{}");  // sem histórico: mostra "Sem dados"
-                render(c);
+                fetchChart(c, t, pr != null ? (int) Widgets.BROADCAST_MS : 30000);
             } catch (RuntimeException e) {
                 Widgets.log("FavWidget.chartAsync", e);
-            } finally { if (pr != null) pr.finish(); }
+            } finally { LOADING.remove(t); render(c); if (pr != null) pr.finish(); }
         }).start();
+    }
+
+    /** 1.25: ações com busca do gráfico em andamento; sem gráfico guardado e fora daqui = "Sem conexão, toque para tentar de novo"
+     *  (falhou, esgotou o tempo ou o processo morreu no meio). Nunca mais fica preso em "Carregando 5 anos…". */
+    static final java.util.Set<String> LOADING = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Busca e guarda; sem resposta (rede/tempo) não guarda nada, para a próxima atualização tentar de novo. */
+    static boolean fetchChart(Context c, String t, int timeoutMs) {
+        String j = Api.chart(t, timeoutMs);
+        if (j == null) return false;
+        if (WidgetData.chart(j) != null) Store.setChart(c, t, j);
+        else if (Store.chart(c, t) == null) Store.setChart(c, t, "{}");  // sem histórico: mostra "Sem dados"
+        return true;
     }
 
     static final int ZONES = 16;
@@ -365,10 +386,12 @@ public class FavWidget extends AppWidgetProvider {
         r.setViewVisibility(R.id.r_exp, open ? View.VISIBLE : View.GONE);
         if (!open) return r;
         r.setOnClickFillInIntent(R.id.r_open, tap("o", it.t, -1));
+        r.setOnClickFillInIntent(R.id.r_tip, tap("c", it.t, -1));  // 1.25: toque tenta de novo (com gráfico guardado e recente, nada a fazer)
         String js = Store.chart(c, it.t);
         WidgetData.Chart ch = js == null ? null : WidgetData.chart(js);
         if (ch == null) {
-            r.setTextViewText(R.id.r_tip, js == null ? "Carregando 5 anos…" : "Sem dados de preço");
+            boolean busy = LOADING.contains(it.t);
+            r.setTextViewText(R.id.r_tip, js != null ? "Sem dados de preço" : busy ? "Carregando 5 anos…" : "Sem conexão, toque para tentar de novo");
             r.setViewVisibility(R.id.r_chartbox, View.GONE);
             return r;
         }
