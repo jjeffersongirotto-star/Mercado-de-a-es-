@@ -27,6 +27,7 @@ public class SimWidget extends AppWidgetProvider {
         if (ACTION_XLSX.equals(i.getAction())) { download(c, i.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0)); return; }
         if (ACTION_REFRESH.equals(i.getAction())) {  // ⟳ e troca de grupo: "Atualizando…" e busca na hora
             long tk = Store.startSimLoading(c); render(c);
+            Api.simFreshUntil = System.currentTimeMillis() + 20_000;  // 1.27: ⟳ busca a cotação de agora
             refreshAsync(c, goAsync(), tk); return;
         }
         super.onReceive(c, i);
@@ -137,7 +138,7 @@ public class SimWidget extends AppWidgetProvider {
             nm = s == null ? c.getString(R.string.sim_widget_name) : s.name;
             selT = nm + (ss.size() > 1 ? "  ▾" : "");
             long at = s == null ? 0 : Store.simAt(c, key);
-            up = busy ? c.getString(R.string.widget_loading) : at > 0 ? WidgetData.fetched(at, java.util.TimeZone.getDefault()) : "";
+            up = busy ? c.getString(R.string.widget_loading) : at > 0 ? WidgetData.withQuote(WidgetData.fetched(at, java.util.TimeZone.getDefault()), data) : "";
             sub = s == null ? "" : "Desde " + SimData.since(s.di) + " · " + SimData.money(s.v0) + SimData.monthly(s) + " em cada modelo";
             om = openModel(c, s);
             boolean o = false; for (SimData.Row r : rows) if (r.m.equals(om)) o = true;

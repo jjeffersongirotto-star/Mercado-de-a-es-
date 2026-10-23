@@ -345,6 +345,12 @@ public final class WidgetData {
         return f.format(new java.util.Date(ms));
     }
 
+    /** 1.27: horário + "cotação HH:mm · atraso 15 min" (q da resposta, só no pregão). */
+    public static String withQuote(String up, String json) {
+        try { String q = json == null ? "" : new JSONObject(json).optString("q", ""); return q.isEmpty() ? up : up + "\n" + q; }
+        catch (Exception e) { return up; }
+    }
+
     /** O servidor ainda está refazendo os dados? (resposta de /api/refresh ou /api/status; null/erro = não) */
     public static boolean refreshing(String json) {
         try { return json != null && new JSONObject(json).optBoolean("refreshing", false); } catch (Exception e) { return false; }

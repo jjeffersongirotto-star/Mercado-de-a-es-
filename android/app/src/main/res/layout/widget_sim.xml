@@ -75,7 +75,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/c_mut"
-            android:textSize="11sp" />
+            android:textSize="11sp" 
+            android:gravity="end"
+            android:maxLines="2"
+            android:lineSpacingMultiplier="0.9" />
 
         <!-- ⬇ planilha .xlsx do grupo (Resumo + uma aba por modelo) em Downloads, pelo DownloadManager (SimWidget.download) -->
         <TextView

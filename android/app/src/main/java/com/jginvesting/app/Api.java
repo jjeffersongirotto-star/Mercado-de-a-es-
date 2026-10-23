@@ -29,13 +29,17 @@ final class Api {
     static final byte[] MISSING = new byte[0];
 
     /** -> JSON da resposta ou null (sem internet, servidor acordando etc.). */
+    /** 1.27: até quando o ⟳ pede a cotação de agora (q=1: o servidor ignora o cache de 60 s das cotações leves). */
+    static volatile long favFreshUntil, simFreshUntil;
+    private static String fresh(long until) { return System.currentTimeMillis() < until ? "&q=1" : ""; }
+
     static String widget(List<String> favs, int timeoutMs) {
-        try { return get("/api/widget?v=2&t=" + URLEncoder.encode(WidgetData.param(favs), "UTF-8"), timeoutMs); }
+        try { return get("/api/widget?v=2" + fresh(favFreshUntil) + "&t=" + URLEncoder.encode(WidgetData.param(favs), "UTF-8"), timeoutMs); }
         catch (Exception e) { return null; }
     }
 
     /** Widget Grupo simulação: por modelo, aportado, valor atual, variação do dia e maiores posições (/api/widget/simgrupo). */
-    static String simgrupo(SimData.Sim s, int timeoutMs) { return get("/api/widget/simgrupo?" + SimData.query(s), timeoutMs); }
+    static String simgrupo(SimData.Sim s, int timeoutMs) { return get("/api/widget/simgrupo?" + SimData.query(s) + fresh(simFreshUntil), timeoutMs); }
 
     /** Gráfico de 5 anos de uma ação (/api/widget/chart). */
     static String chart(String t, int timeoutMs) { try { return get("/api/widget/chart?t=" + URLEncoder.encode(t, "UTF-8"), timeoutMs); } catch (java.io.UnsupportedEncodingException e) { return null; } }

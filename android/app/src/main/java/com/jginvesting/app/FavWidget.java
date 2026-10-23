@@ -31,7 +31,8 @@ public class FavWidget extends AppWidgetProvider {
         if (ACTION_REFRESH.equals(i.getAction())) {  // ⟳ e troca de grupo (PickerActivity): "Atualizando…" já e busca na hora
             long tk = Store.startLoading(c); render(c);
             // ⟳: o servidor refaz os dados se estiverem velhos no pregão (RefreshJob espera e busca); troca de grupo: só busca
-            if (i.getBooleanExtra(EXTRA_FORCE, false) && RefreshJob.schedule(c, tk)) return;
+            // 1.27: ⟳ sempre busca a cotação de agora (servidor: só os preços pedidos, sem refazer tudo e sem esperar)
+            if (i.getBooleanExtra(EXTRA_FORCE, false)) Api.favFreshUntil = System.currentTimeMillis() + 20_000;
             refreshAsync(c, goAsync(), tk); return;
         }
         if (ACTION_CHART.equals(i.getAction())) {  // 1.23: gráfico pedido pelo WidgetTap (que já fechou): busca dentro deste broadcast
@@ -154,7 +155,7 @@ public class FavWidget extends AppWidgetProvider {
             cols = colsOf(c, items, wDp, cf.fontScale, dens);
             // horário = quando a última atualização terminou (dados chegaram); sem isso ainda, o horário dos dados no site
             long fat = Store.fetchedAt(c, sel);
-            up = busy ? c.getString(R.string.widget_loading) : fat > 0 ? WidgetData.fetched(fat, java.util.TimeZone.getDefault()) : WidgetData.updated(data);
+            up = busy ? c.getString(R.string.widget_loading) : WidgetData.withQuote(fat > 0 ? WidgetData.fetched(fat, java.util.TimeZone.getDefault()) : WidgetData.updated(data), data);
             nu = Updater.known(c);
             upd = UpdateLogic.available(nu, BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME);
         }

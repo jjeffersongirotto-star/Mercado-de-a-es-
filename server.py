@@ -1097,8 +1097,42 @@ def vj_x(j, motivo):
     """Widget: sem valor justo -> x = texto curto do chip (valor_justo.rotulo: "Prej." / "s/ VJ"); app até 1.6 ignora e mostra "—"."""
     return {} if j else {"x": valor_justo.rotulo(motivo)[1]}
 
+_LQ = {"q": {}, "lock": threading.Lock(), "last": {}}  # cotações leves do widget: ticker -> (buscado em, preço, var %, horário da cotação, atraso s)
+LQ_TTL, LQ_FORCE = 60, 5  # cache de 60 s; ⟳ do widget (q=1) ignora o cache, com trava anti-repetição de 5 s
+
+def live_quotes(tks, force=False):
+    """Widget no pregão: preço e variação de agora só dos tickers pedidos, num pedido pequeno ao scanner do TradingView (a mesma
+    fonte das cotações de /api/data, com 15 min de atraso). Sem rebuild. Fora do pregão ou com erro: {} (fica o dado em memória)."""
+    if not tks or not pregao(): return {}
+    now, ttl = time.time(), (LQ_FORCE if force else LQ_TTL)
+    q = _LQ["q"]; need = [t for t in tks if now - (q.get(t) or (0,))[0] > ttl]
+    if need:
+        with _LQ["lock"]:
+            need = [t for t in need if time.time() - (q.get(t) or (0,))[0] > ttl]
+            if need:
+                try:
+                    r = requests.post("https://scanner.tradingview.com/brazil/scan", timeout=(3, 5),
+                                      json={"symbols": {"tickers": ["BMFBOVESPA:" + t for t in need[:40]]},
+                                            "columns": ["close", "change", "last_bar_update_time", "update_mode"]},
+                                      headers={"User-Agent": "Mozilla/5.0", "Origin": "https://www.tradingview.com", "Referer": "https://www.tradingview.com/"})
+                    r.raise_for_status(); at = time.time()
+                    for it in r.json().get("data", []):
+                        c, ch, ts, um = (it.get("d") or [None] * 4)[:4]
+                        if c:
+                            m = re.search(r"_(\d+)$", um or ""); q[it["s"].split(":", 1)[1]] = (at, c, ch, ts, int(m.group(1)) if m else 0)
+                except Exception as e:
+                    log.warning("widget: cotações leves: %s", e)
+    return {t: q[t] for t in tks if t in q and now - q[t][0] < 30 * 60}
+
+def quote_label(qs):
+    """Texto do cabeçalho do widget: horário da cotação mais recente e o atraso da fonte (ex.: "cotação 12:15 · atraso 15 min")."""
+    ts = [x[3] - x[4] for x in qs.values() if x[3]]  # last_bar_update_time é quando chegou; o preço é de "atraso" antes
+    if not ts: return None
+    dl = max(x[4] for x in qs.values()) // 60
+    return f"cotação {datetime.fromtimestamp(max(ts), TZ).strftime('%H:%M')}" + (f" · atraso {dl} min" if dl else "")
+
 @app.get("/api/widget")
-def api_widget(t: str = "", v: int = 1):
+def api_widget(t: str = "", v: int = 1, q: int = 0):
     """Widget de Favoritos do app Android (android/): preço, variação do dia e Barato/Caro (valor_justo.fair, a mesma conta do card)
     só dos tickers pedidos, a partir dos dados já em memória (/api/data). Leve: nada é baixado nem recalculado por pedido."""
     d = cache.data or {}
@@ -1109,6 +1143,7 @@ def api_widget(t: str = "", v: int = 1):
     ver, v = v, (lambda o, k: (o.get("v") or {}).get(k))
     logos = logo_index()
     fq, fqw = foreign_quotes(), _FQ["want"]
+    lq = live_quotes([x for x in want if x in by], force=bool(q))
     out = []
     for tk in want:
         r = by.get(tk)
@@ -1128,12 +1163,15 @@ def api_widget(t: str = "", v: int = 1):
                         "p": q["v"].get("preco"), "v": q.get("var"), "c": q["cur"], "k": q["c"],
                         "f": round(pct, 1) if j else None, "m": m if j else None, **vj_x(j, pct), "g": None})  # Medo e Ganância: só B3
             continue
+        if tk in lq:  # cotação de agora (live_quotes): o Barato/Caro usa o mesmo preço
+            r = dict(r, v=dict(r.get("v") or {}, preco=lq[tk][1]), var=round(lq[tk][2], 2) if lq[tk][2] is not None else r.get("var"))
         j, pct, m = valor_justo.fair(r, v, rows)
         out.append({"t": tk, "n": r.get("nome"), "s": snapshots.nome_popular(tk, r.get("nome")), "l": (logos.get(tk) or {}).get("f"),
                     "p": v(r, "preco"), "v": r.get("var"),
                     "f": round(pct, 1) if j else None, "m": m if j else None, **vj_x(j, pct),
                     "g": (r.get("fg") or [None])[0]})  # Medo e Ganância da ação hoje (snapshot fg_acoes → rows.fg, o mesmo do card)
-    return JSONResponse({"u": d.get("updated_at_sp"), "gf": (d.get("fga") or {}).get("faixas"), "r": out}, headers={"Cache-Control": "no-store"})
+    ql = quote_label(lq)
+    return JSONResponse({"u": d.get("updated_at_sp"), "gf": (d.get("fga") or {}).get("faixas"), "r": out, **({"q": ql} if ql else {})}, headers={"Cache-Control": "no-store"})
 
 WIDGET_TK = re.compile(r"[A-Z0-9][A-Z0-9.\-]{0,11}")  # PETR4, KO, BRK.B, RR., BT-A (mesmo padrão do app: WidgetData.TICKER)
 _FQ = {"q": {}, "at": 0.0, "busy": False, "live": {}, "want": {}}
@@ -1542,7 +1580,7 @@ def _ao_vivo():
             log.exception("modelos: ordens ao vivo")
         time.sleep(ORD_VIVO)
 
-def _simw(di, v0, f, reg=True):
+def _simw(di, v0, f, reg=True, fresh=None):
     """Grupo simulação com o preço de agora (widget e planilha): -> (resposta de erro ou None, dados do widget, contexto p/ movimentações).
     Valor atual = caixa + ações × preço de agora de /api/data; variação do dia pelo var; posições com preço médio (do simgrupo)."""
     import modelos
@@ -1565,7 +1603,9 @@ def _simw(di, v0, f, reg=True):
     if sg.get("error"): return JSONResponse(sg, status_code=400, headers={"Cache-Control": "no-store"}), None, None
     if reg: _sim_reg((di, v0, ap, json.dumps(ex), json.dumps(ret)), di0, v00, f)  # acompanhada ao vivo (_ao_vivo), só a que deu certo
     d = cache.data or {}; by = {r["ticker"]: r for r in d.get("rows") or []}
+    lq = live_quotes(sorted({y["t"] for x in sg["m"] for y in (x.get("pos") or []) if y.get("t") in by}), force=bool(fresh)) if fresh is not None else {}
     def live(t, pw):  # preço de agora e variação do dia (%); sem cotação: o da última semana da simulação, sem variação
+        if t in lq: return lq[t][1], lq[t][2]
         r = by.get(t) or {}; p = (r.get("v") or {}).get("preco")
         return (p, r.get("var")) if p else (pw, None)
     hoje = datetime.now(TZ).date().isoformat(); agora = datetime.now(TZ).strftime("%H:%M")
@@ -1606,13 +1646,14 @@ def _simw(di, v0, f, reg=True):
         out.append({"m": x["m"], "n": x["n"], "ap": sg.get("apT", sg["v0"]), "v": round(tot, 2), "dv": round(dia, 2), "dp": round(dia / (tot - dia) * 100, 2) if tot - dia > 0 else None,
                     "cash": round(cash, 2), "cdb": x.get("cdb"), "np": len(pos), "pos": pos, "ir": x.get("ir"), "c": x.get("c"), "s": x.get("s"), **({"prov": prov} if prov else {})})
     out.sort(key=lambda y: -y["v"])
-    return None, {"u": d.get("updated_at_sp"), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out, **{k: sg[k] for k in ("p1", "r1", "nota") if sg.get(k)}}, (D, tk, di, v0, ap, ex, ret, sg, p1, cr)
+    ql = quote_label(lq) if lq else None
+    return None, {"u": d.get("updated_at_sp"), **({"q": ql} if ql else {}), "d0": sg["d0"], "d1": sg["d1"], "v0": sg["v0"], "r": out, **{k: sg[k] for k in ("p1", "r1", "nota") if sg.get(k)}}, (D, tk, di, v0, ap, ex, ret, sg, p1, cr)
 
 @app.get("/api/widget/simgrupo")
-def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = ""):
+def api_widget_simgrupo(di: str = "", v0: float = 0, f: str = "", q: int = 0):
     """Widget Grupo simulação do app: por modelo, valor aportado, valor atual (mesmo cálculo e cache da aba Grupos, com o preço de
     agora) e variação do dia; e todas as posições (nº de ações, investido, atual). Leve: o simgrupo fica em memória por versão dos dados."""
-    err, w, _ = _simw(di, v0, f)
+    err, w, _ = _simw(di, v0, f, fresh=q)
     if err is not None: return err
     for x in w["r"]:
         x.pop("ir", None); x.pop("c", None); x.pop("s", None)  # posições com preço médio pm (widget 1.20+)

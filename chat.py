@@ -878,7 +878,7 @@ HOWTO_KEYS = [
     (("compar",), ["Comparar"]),
     (("favorit", "estrela"), ["Favoritos"]),
     (("reorganiz", "arrastar", "reordenar", "mudar a ordem", "trocar a ordem"), ["Reorganizar"]),
-    (("widget", "widget grupo simulacao", "widget de simulacao", "carteira do widget", "planilha do grupo simulacao", "baixar planilha", "xlsx", "exportar excel", "atualizacao do app", "apk", "app android", "app do android", "aplicativo android", "logo da empresa", "logos das empresas", "logotipo"), ["App Android"]),
+    (("widget", "widget grupo simulacao", "widget de simulacao", "carteira do widget", "planilha do grupo simulacao", "baixar planilha", "xlsx", "exportar excel", "atualizacao do app", "apk", "app android", "app do android", "aplicativo android", "logo da empresa", "logos das empresas", "logotipo", "cotacao do widget", "atraso da cotacao", "preco atrasado"), ["App Android"]),
     (("instal", "aplicativo", "baixar o app", "baixar app", "tela inicial", "app no celular", "como app"), ["Instalar o app"]),
     (("importar", "exportar grupo", "exportar os grupos", "backup", "outro aparelho", "outro celular"), ["Grupos (criar e editar)"]),
     (("export", "csv", "baixar", "planilha", "excel", "download"), ["Exportar (CSV)"]),

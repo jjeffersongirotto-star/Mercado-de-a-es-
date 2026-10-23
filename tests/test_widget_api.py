@@ -8,13 +8,22 @@ FQ = {"KO": {"c": "us", "cur": "USD", "n": "Coca-Cola Company (The)", "var": -0.
       "BRK.B": {"c": "us", "cur": "USD", "n": "Berkshire Hathaway Inc.", "var": 0.3, "sub": None, "v": {"preco": 480.0, "vpa": 300.0, "lpa": -1.0}},
       "7203": {"c": "jp", "cur": "JPY", "n": "Toyota Motor Corporation", "var": 1.0, "sub": None, "v": {"preco": 3000.0, "vpa": None, "lpa": 300.0}}}
 
-def setup():
+_LQ0 = server.live_quotes
+def setup(lq=None):
+    server.live_quotes = lambda tks, force=False: {t: lq[t] for t in tks if t in (lq or {})}  # sem rede
     server.cache.data = {"rows": ROWS, "updated_at_sp": "17/10/2026 09:00:00"}
     server._FQ.update(q=FQ, at=time.time(), busy=False)
     server._LOGO_IDX.update(t={"KO": {"f": "4cd4fb315e6f.png", "s": "favicon"}, "AAPL34": {"f": "651952a76745.png", "s": "bdr"}}, at=time.time())
 
 def widget(t, v=2):
     return json.loads(server.api_widget(t, v).body)["r"]
+
+def test_live_quotes_override():
+    setup({"PETR4": (time.time(), 31.5, 2.0, 1792769835, 900)})
+    j = json.loads(server.api_widget("PETR4", 2, 1).body)
+    assert j["r"][0]["p"] == 31.5 and j["r"][0]["v"] == 2.0 and j["q"].endswith("atraso 15 min"), j
+    setup()
+    assert "q" not in json.loads(server.api_widget("PETR4", 2).body)
 
 def test_short_and_dotted_tickers():
     setup()
