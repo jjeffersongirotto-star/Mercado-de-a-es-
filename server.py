@@ -627,10 +627,39 @@ class Cache:
 
 cache = Cache()
 
+MEM_LIMITE = 440  # MB: acima disso, fora do pregão, o servidor reinicia de propósito (o plano gratuito mata em 512 MB, a qualquer hora)
+MEM_TRIM = 600    # s: a cada 10 min devolve ao sistema a memória que o Python já soltou (gc + malloc_trim)
+_MEM = {"t": 0.0}
+
+def mem_mb():
+    """Memória do processo agora (RSS, MB) — /proc/self/statm; 0 se não der para ler."""
+    try: return int(open("/proc/self/statm").read().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 2**20
+    except Exception: return 0.0
+
+def _mem_guard(now=None):
+    """Chamada pelo scheduler a cada minuto: devolve memória a cada MEM_TRIM e, se mesmo assim passar de MEM_LIMITE fora do pregão
+    (sem atualização rodando), grava o acompanhamento ao vivo e reinicia o processo (o Render sobe outro em ~1 min). -> True se reiniciou."""
+    import gc, modelos
+    if time.time() - _MEM["t"] >= MEM_TRIM:
+        _MEM["t"] = time.time(); gc.collect(); modelos._trim()
+    m = mem_mb()
+    if m <= MEM_LIMITE or pregao(now) or cache.refreshing: return False
+    log.warning("memória em %.0f MB (limite %d): reiniciando fora do pregão", m, MEM_LIMITE)
+    try: _VIVO["t"] = 0; _vivo_grava()  # o acompanhamento ao vivo volta igual depois de reiniciar
+    except Exception: log.exception("memória: gravar acompanhamento ao vivo")
+    import signal
+    os.kill(os.getpid(), signal.SIGTERM)  # encerramento normal do uvicorn; o Render reinicia o serviço
+    return True
+
 def scheduler():
     while True:
         if cache.age() >= REFRESH_SECONDS:
             cache.refresh()
+            try:
+                import gc, modelos; gc.collect(); modelos._trim()  # devolve o pico da atualização ao sistema
+            except Exception: pass
+        try: _mem_guard()
+        except Exception: log.exception("memória")
         time.sleep(60)
 
 app = FastAPI(title="JG Investing")
@@ -964,6 +993,20 @@ def api_chat_log(request: Request, n: int = 200, only: str = "", token: str = ""
     if not tok or not hmac.compare_digest(got.encode(), tok.encode()):
         return JSONResponse({"error": "acesso negado"}, status_code=403, headers={"Cache-Control": "no-store"})
     return JSONResponse(chat.read_log(max(1, min(n, 2000)), only or None), headers={"Cache-Control": "no-store"})
+
+@app.get("/api/mem")
+def api_mem(request: Request, token: str = ""):
+    """Memória do servidor e tamanho dos caches (para quem mantém o site; mesmo token do registro do chat)."""
+    import hmac, modelos, history
+    tok = os.environ.get("CHAT_LOG_TOKEN") or ""
+    got = request.headers.get("x-chat-log-token") or token or ""
+    if not tok or not hmac.compare_digest(got.encode(), tok.encode()):
+        return JSONResponse({"error": "acesso negado"}, status_code=403, headers={"Cache-Control": "no-store"})
+    n = lambda x: len(x) if hasattr(x, "__len__") else None
+    return JSONResponse({"mb": round(mem_mb()), "limite": MEM_LIMITE, "pregao": pregao(), "modelos": modelos._D.get("d") is not None,
+                         "caches": {"modelos._C": n(modelos._C), "modelos._MZ": n(modelos._MZ), "history._h4": n(history._h4),
+                                    "json": n(_JSON_CACHE), "sims": n(_SIMS), "prov": n(_PROV), "snapshots": n(snapshots._mem)}},
+                        headers={"Cache-Control": "no-store"})
 
 @app.get("/api/metrics")
 def api_metrics():
