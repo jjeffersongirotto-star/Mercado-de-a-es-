@@ -252,3 +252,20 @@ def test_proventos_do_ano_e_proximos():
         assert [x["sit"] for x in server.proventos_acao("BBAS3", date(2026, 10, 22))["prox"]] == ["receber", "receber", "estimada"]
     finally:
         snapshots.load = old
+
+
+def test_reinicio_por_memoria_so_fora_do_pregao():
+    """Acima de MEM_LIMITE: reinicia só fora do pregão e sem atualização rodando; abaixo, nunca."""
+    from datetime import datetime
+    import server, os
+    mortes = []; old = (server.mem_mb, os.kill, server._vivo_grava)
+    server._vivo_grava = lambda: None
+    os.kill = lambda pid, sig: mortes.append(sig)
+    try:
+        server.mem_mb = lambda: 300.0
+        assert server._mem_guard(datetime(2026, 10, 28, 6, 48, tzinfo=server.TZ)) is False
+        server.mem_mb = lambda: 500.0
+        assert server._mem_guard(datetime(2026, 10, 28, 14, 0, tzinfo=server.TZ)) is False   # pregão: espera
+        assert server._mem_guard(datetime(2026, 10, 28, 6, 48, tzinfo=server.TZ)) is True and len(mortes) == 1
+    finally:
+        server.mem_mb, os.kill, server._vivo_grava = old
