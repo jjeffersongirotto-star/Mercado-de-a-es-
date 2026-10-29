@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-10-29T10:35:48+00:00",
+ "fetched_at": "2026-10-29T20:47:38+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -386,6 +386,759 @@
    "resumo": "Confira os pontos de suporte e resistência do mini-índice e minidólar The post Day Trade hoje (29): Ibovespa afunda após eleições; pode cair mais? appeared first on InfoMoney .",
    "url": "https://www.infomoney.com.br/mercados/mercados-day-trade-hoje-analistas-29102026/",
    "img": "https://www.infomoney.com.br/wp-content/uploads/2024/12/Daytrade-hoje.jpg?fit=1280%2C720&quality=70&strip=all",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar à vista encerra sessão em alta e real é uma das moedas mais fracas do dia",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O dólar à vista encerrou a sessão de hoje em alta firme, em dia em que o ambiente externo esteve desfavorável para moedas de mercados emergentes. O real apresentou um dos mais fracos desempenhos do dia. Ao longo da…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/dolar-a-vista-encerra-sessao-em-alta-e-real-e-uma-das-moedas-mais-fracas-do-dia.ghtml",
+   "img": "https://s2-valor.glbimg.com/Kg_ZnNtwSD6gOaqZfPc6FmIciUI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/0/1/2wu17qT2yK5Snc50oLAg/336641520.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bolsas de NY recuam pressionadas pelos resultados decepcionantes da Alphabet",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "As bolsas americanas encerraram esta quinta-feira em queda, sobretudo o índice Nasdaq, pressionadas pelos ajustes de posições nos setores de tecnologia e comunicação. O gatilho para o movimento foi o resultado…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/bolsas-de-ny-recuam-pressionadas-pelos-resultados-decepcionantes-da-alphabet.ghtml",
+   "img": "https://s2-valor.glbimg.com/x3xLWcCdUGyhpUuUKgcCabWytzk=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/w/u/UUVIpxS6KbXjpXShZGfQ/447024336.jpg",
+   "t": [],
+   "tf": [
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Fintech Clara passa a integrar programa de pagamentos da Mastercard para viagens",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A fintech Clara é a nova emissora do Mastercard Wholesale Program (MWP) no Brasil e no México. Lançado no Brasil há dois meses, com o Citi como primeiro emissor, o programa é voltado ao setor de viagens e utiliza…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/fintech-clara-passa-a-integrar-programa-de-pagamentos-da-mastercard-para-viagens.ghtml",
+   "img": "https://s2-valor.glbimg.com/CjM1Q8WZDJvg9bYxOQMFQtz2oBU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/F/J/hQZdElS5uufgnbKfLBfA/clara-fintech.jpg",
+   "t": [],
+   "tf": [
+    "us:MA",
+    "us:MSCD"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Tribunal de Paris nega pedido da Meta para anular ordem de negociar com veículos de imprensa",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Um tribunal de apelações francês rejeitou, nesta quinta-feira (29), um pedido da Meta Plataforms para anular uma decisão que a obriga a negociar, de boa-fé, com veículos de imprensa franceses o pagamento de direitos…",
+   "url": "https://valor.globo.com/empresas/marketing/noticia/2026/10/29/tribunal-de-paris-nega-pedido-da-meta-para-anular-ordem-de-negociar-com-veiculos-de-imprensa.ghtml",
+   "img": "https://s2-valor.glbimg.com/ExbRWUQEeDRX-rvJ_D6zpaAfBG0=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/V/c/2bSe0nRMOrTsAdOzxs6Q/foto27emp-101-meta-b1.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa recua pela 4ª sessão seguida com extensão da liquidação de ativos",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A manutenção dos ajustes nas carteiras dos investidores levou o Ibovespa a ampliar as perdas pelo quarto pregão consecutivo e encerrar em queda de 1,06% nesta quinta-feira, aos 169.186 pontos. No pior momento do dia, o…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/ibovespa-recua-pela-4a-sessao-seguida-com-extensao-da-liquidacao-de-ativos.ghtml",
+   "img": "https://s2-valor.glbimg.com/jZ-lQub7SrhXjgtziwmujIb5R0g=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/V/Q/A5mGbKTCKeHFL6bJCGyA/foto03fin-201-crdcs-c6.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Juros longos sobem com temor fiscal, mas possível indicação de Fonteles à Fazenda acalma mercado",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Os juros futuros encerraram o pregão de hoje sem direção única, à medida que o recuo moderado das taxas de curto a médio prazo contrastou com a pressão observada na ponta longa da curva a termo, que acabou inclinando…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/juros-longos-sobem-com-temor-fiscal-mas-possivel-indicacao-de-fonteles-a-fazenda-acalma-mercado.ghtml",
+   "img": "https://s2-valor.glbimg.com/AP6aOmr0zLwjMzcb5iZlvm5EGcA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/1/4/BcFPcpSiqig1HRdbApwA/foto30opin-201-col-op1-a18.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Lucro da Amazon recua no 3º trimestre e frustra expectativa de Wall Street",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Amazon registrou lucro líquido de US$ 20,7 bilhões no terceiro trimestre de 2026, sendo 2,4% inferior ao ganho de US$ 21,2 bilhões reportado no mesmo período de 2025. O lucro líquido ajustado por ação foi de US$ 1,89,…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/lucro-da-amazon-recua-no-3-trimestre-e-frustra-expectativa-de-wall-street.ghtml",
+   "img": "https://s2-valor.glbimg.com/rn5eE-ZBIiY1Os2P_py5NRBdYOU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/C/e/JA9JWlTFu89lvMypxAUQ/371196129.jpg",
+   "t": [],
+   "tf": [
+    "us:AMZN",
+    "us:AMZO"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Microsoft anuncia nova emissão de títulos de dívida e amplia onda de endividamento para IA",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Microsoft planeja uma mega emissão de títulos para captar recursos, finalmente se juntando às rivais na tomada de dívida para a expansão da infraestrutura de inteligência artificial. Na manhã desta quinta-feira, a…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/microsoft-anuncia-nova-emisso-de-ttulos-de-dvida-e-amplia-onda-de-endividamento-para-ia.ghtml",
+   "img": "https://s2-valor.glbimg.com/qsHR3lJvvHPO5IB3_yKQm5wts4U=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/s/D/MQNLfqRkG9RbiRGeN3mA/461544929.jpg",
+   "t": [],
+   "tf": [
+    "us:MSFT"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bradesco formaliza atuação com criptoativos junto ao Banco Central",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O Bradesco formalizou junto ao Banco Central (BC) sua atuação como prestador de serviços de ativos virtuais (PSAV), informou a instituição nesta quinta-feira (29). A comunicação abrange as atividades de intermediação e…",
+   "url": "https://valor.globo.com/financas/criptomoedas/noticia/2026/10/29/bradesco-formaliza-atuao-com-criptoativos-junto-ao-banco-central.ghtml",
+   "img": "https://s2-valor.glbimg.com/tkVacUwB_LuYtu64Y2OIgA5k720=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/3/s/hEIdo8SKO4Kpo3Yk7B1A/mau09757-1-.jpg",
+   "t": [
+    "BBDC4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Onda de investimentos em IA pelas ‘big techs’ perde força",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A esperança de Wall Street de que as grandes empresas de tecnologia continuassem impulsionando a bolsa, apoiadas em parte pela onda de investimentos em inteligência artificial, começa a enfraquecer. À medida que algumas…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/onda-de-investimentos-em-ia-pelas-big-techs-perde-fora.ghtml",
+   "img": "https://s2-valor.glbimg.com/q5FpsUQsNrEIKBfD9Q1mrJ8AkXI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/u/q/4v5QKdQdyj7ZrdVOvlVw/photo-1677442135703-1787eea5ce01.avif",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Exxon e Chevron cancelam viagens de executivos para feira setorial nos Emirados Árabes, dizem fontes",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "As petrolíferas americanas ExxonMobil e Chevron cancelaram os planos de viagem de seus executivos para a maior feira do setor de petróleo nos Emirados Árabes Unidos, na próxima semana, por preocupações com a segurança,…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/exxon-e-chevron-cancelam-viagens-de-executivos-para-feira-setorial-nos-emirados-rabes-dizem-fontes.ghtml",
+   "img": "https://s2-valor.glbimg.com/_wruAgrUw8VFioIRZ0hQ9l9pzlE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/x/J/qMdjvbRmK2Hj3PmMcb8A/area-de-stands-da-adipec-2025-rep-adipec.jpg",
+   "t": [],
+   "tf": [
+    "us:CHVX",
+    "us:CVX",
+    "us:EXXO",
+    "us:XOM"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Receita da Caterpillar desacelera no 3º trimestre apesar de salto em negócios ligados a data centers",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Caterpillar segue crescendo, mas num ritmo insuficiente para satisfazer Wall Street. A fabricante de equipamentos industriais informou que sua receita avançou 17% no terceiro trimestre, para US$ 20,6 bilhões, ficando…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/receita-da-caterpillar-desacelera-no-3o-trimestre-apesar-de-salto-em-negocios-ligados-a-data-centers.ghtml",
+   "img": "https://s2-valor.glbimg.com/zOIcahMfohblmaorKlgdY5NB34Q=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/Z/2/nItc4KQPyT6VLutSjqBA/caterpillar.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Em áudio ao canal de Janones, Lula agradece por voto e promete pronunciamento na semana que vem",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O presidente Luiz Inácio Lula da Silva (PT) enviou um áudio ao canal de WhatsApp \"Exército do Lula\" para agradecer aos votos do \"povo brasileiro\" no último domingo (25). Ele almoçou com o deputado reeleito André Janones…",
+   "url": "https://valor.globo.com/politica/eleicoes-2026/noticia/2026/10/29/em-audio-ao-canal-de-janones-lula-agradece-por-voto-e-promete-pronunciamento-na-semana-que-vem.ghtml",
+   "img": "https://s2-valor.glbimg.com/pc85acR_PSYw3hyXtprMmV-Ef6g=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/4/E/ECNDyxT2WRjys4jGjG7g/2026-10-27t212833z-987645668-rc2xboax4ir7-rtrmadp-3-brazil-election-lula-supporters.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Receitas da Universal Music crescem com recuperação de assinaturas e streaming",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Universal Music Group registrou alta na receita no terceiro trimestre, à medida que as assinaturas e os serviços de streaming deram sinais de recuperação. Matéria exclusiva para assinantes. Para ter acesso completo,…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/receitas-da-universal-music-crescem-com-recuperacao-de-assinaturas-e-streaming.ghtml",
+   "img": "https://s2-valor.glbimg.com/-XRlwo_m3JCtN0vmchqTTnu_-tg=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/N/I/1azk1ISfSPzE1Ru4FqIw/228182814.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Índice de preços de gastos com consumo dos EUA sobe 0,5% em setembro",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O índice de preços de gastos com consumo (PCE) dos Estados Unidos, a medida preferida do Federal Reserve (Fed) para aferir a inflação, subiu 0,5% em setembro na comparação com o mês anterior, acelerando em relação à…",
+   "url": "https://valor.globo.com/mundo/noticia/2026/10/29/indice-de-precos-de-gastos-com-consumo-dos-eua-sobe-05percent-em-setembro.ghtml",
+   "img": "https://s2-valor.glbimg.com/t67WPT1mDKXCjXc2_qQ-Hd18xjM=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/7/t/9wcoz9SaWpiookDGAatA/eua-varejo0.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Meta devolve todos os ganhos obtidos após lançamento do Muse",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Cinco anos após Mark Zuckerberg renomear o Facebook para Meta Platforms, refletindo a aposta da empresa no metaverso, essa visão foi em grande parte abandonada. A administração redirecionou recursos para óculos de…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/meta-devolve-todos-os-ganhos-obtidos-apos-lancamento-do-muse.ghtml",
+   "img": "https://s2-valor.glbimg.com/QcZnxRAnUd8bYOP3v_msXex0-GI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/q/y/i1gMPLSMSblbucvg2Xqg/2026-05-04t160810z-406096418-rc211fal39mf-rtrmadp-3-meta-lawsuit-new-mexico-trial-1-.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ouro recua após dados dos EUA e decisão de política monetária do Fed",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Os contratos futuros do ouro encerraram esta quinta-feira (29) em leve queda e seguem negociados em uma faixa de preço restrita, levemente acima do patamar de US$ 4 mil, após o Federal Reserve (Fed) ter mantido os juros…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/ouro-recua-apos-dados-dos-eua-e-decisao-de-politica-monetaria-do-fed.ghtml",
+   "img": "https://s2-valor.glbimg.com/BsuQH-y-6hqzqCTdUt9CKLbk4HA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2020/r/h/xj8YlySryeO4xQ1J7u8g/gold-is-money-2496344-1280.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Haleon reduz projeções para 2026 com queda em remédios para gripe nos EUA",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "As ações da Haleon, fabricante de marcas como Advil, Sensodyne e Centrum, despencaram 15,7% na Bolsa de Londres, após a companhia cortar suas estimativas de desempenho financeiro anual. Matéria exclusiva para…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/haleon-reduz-projees-para-2026-com-queda-em-remdios-para-gripe-nos-eua.ghtml",
+   "img": "https://s2-valor.glbimg.com/NJsGf4OIppKQiPut-Kou_1QiwoA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2022/E/Y/XKzXTEQrqm7QUtWqX2RQ/372822552.jpg",
+   "t": [],
+   "tf": [
+    "gb:HLN"
+   ],
+   "m": [
+    "gb",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Risco de liquidez das ações caiu em setembro ao menor nível desde 2019, diz CVM",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O risco de liquidez das ações brasileiras caiu em setembro ao menor nível desde dezembro de 2019, segundo o Boletim Econômico divulgado nesta quinta-feira (29) pela Comissão de Valores Mobiliários (CVM). O indicador,…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/risco-de-liquidez-das-aes-caiu-em-setembro-ao-menor-nvel-desde-2019-diz-cvm.ghtml",
+   "img": "https://s2-valor.glbimg.com/QBZozhTvf_4jEpsFZNl6YqMp-XA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/i/A/7Fi6d0QeScPhuiDxFdNg/foto28fin-101-cvm-c4.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "YPF tem lucro de US$ 1,16 bi e receitas crescem 41% com maiores preços do petróleo",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Yacimientos Petrolíferos Fiscales (YPF) registrou lucro de US$ 1,16 bilhão no terceiro trimestre de 2026, revertendo o prejuízo de US$ 198 milhões que a estatal argentina teve no mesmo período do calendário anterior.…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/ypf-tem-lucro-de-us-116-bi-e-receitas-crescem-41percent-com-maiores-precos-do-petroleo.ghtml",
+   "img": "https://s2-valor.glbimg.com/SC6SmOEQadVQlRrewA_wi1r6laE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/4/c/GQHAtIRBuQqa0I38qm4g/453209653.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Airbnb destinará parte da receita de reservas a programa de hospedagem gratuita para pessoas em situação de emergência",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A plataforma de hospedagem Airbnb anunciou nesta quarta-feira (28), um novo modelo de financiamento para o Airbnb.org, organização sem fins lucrativos que oferece acomodação temporária gratuita a pessoas em situações de…",
+   "url": "https://valor.globo.com/empresas/esg/noticia/2026/10/29/airbnb-destinara-parte-da-receita-de-reservas-a-programa-de-hospedagem-gratuita-para-pessoas-em-situacao-de-emergencia.ghtml",
+   "img": "https://s2-valor.glbimg.com/CvI9N7OCmS-qFpbkqaSESiZ6kFU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/r/5/X8jgXXQTyeuqdlpAnDqw/395774211.jpg",
+   "t": [],
+   "tf": [
+    "us:ABNB",
+    "us:AIRB"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Creditas tem prejuízo de R$ 108,4 milhões no 3º tri, mas receita avança a R$ 728,3 milhões",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Creditas teve prejuízo ajustado de R$ 108,4 milhões no terceiro trimestre, 62,0% pior do que o rombo do segundo trimestre e 15,6% mais negativo que o saldo do terceiro trimestre do ano anterior. A receita, no entanto,…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/creditas-tem-prejuzo-de-r-1084-milhes-no-3-tri-mas-receita-avana-a-r-7283-milhes.ghtml",
+   "img": "https://s2-valor.glbimg.com/_R0uUHR83EA_1tbkW0COwPVzjhs=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2022/I/s/XLS8ekQJ6okYD0zVooTA/150322creditas29.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bolsas na Europa sobem com apoio de balanços e após decisão do BCE",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Após a decisão de política monetária do Banco Central Europeu (BCE), que manteve os juros inalterados na zona do euro, os principais índices de ações da Europa terminaram o dia em alta. As bolsas também receberam…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/bolsas-na-europa-sobem-com-apoio-de-balancos-e-apos-decisao-do-bce.ghtml",
+   "img": "https://s2-valor.glbimg.com/dMFuLJBSuZ1Y7GUZ7Cq-bRghJCE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/z/8/HDjKM6QAmZv5zqvSicwg/404606969.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Pluxee supera expectativas, mas reforma no vale-alimentação no Brasil deve derrubar lucro em 2027",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Pluxee divulgou nesta quinta-feira (29) resultados do ano fiscal de 2026 acima das expectativas de mercado, mas projetou uma retração no lucro diante das mudanças regulatórias do vale-refeição no Brasil, movimento que…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/pluxee-supera-expectativas-mas-reforma-no-vale-alimentacao-no-brasil-deve-derrubar-lucro-em-2027.ghtml",
+   "img": "https://s2-valor.glbimg.com/hkZBhvNohiqfOdPOR7kZd6aGVOo=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/K/N/Et8l78TwuBlOlJUTcQHA/pluxee.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Engetron apresenta soluções para eficiência energética e continuidade de data centers no DCD Connect Brasil 2026",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Engetron, empresa brasileira líder em fabricação de UPS IoT, apresentará tecnologias para ampliar a eficiência e a continuidade energética dos data centers no DCD Connect Brasil 2026, que acontece nos dias 4 e 5 de…",
+   "url": "https://valor.globo.com/patrocinado/pulse-brand/noticia/2026/10/29/engetron-apresenta-solucoes-para-eficiencia-energetica-e-continuidade-de-data-centers-no-dcd-connect-brasil-2026-1.ghtml",
+   "img": "https://s2-valor.glbimg.com/ck-cZ23_K6PpAQXESRneRI_WS2o=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/f/J/0pXKDPRBSFyQGFzKLtAg/publicador-api-valor-pulse-brand-100-c233659e-29b1-4d39-9090-3adf4fa371f8.jpeg-20261029141818",
+   "t": [],
+   "tf": [
+    "us:UPS"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Sistema Operacional de Gestão: a solução da TOTVS que inaugura a próxima fase da orquestração digital nas empresas",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Os investimentos em inteligência artificial deverão atingir a marca de US$ 2,5 trilhões até o final de 2026, de acordo com o último levantamento divulgado pelo Gartner. Com a incorporação da tecnologia como uma nova…",
+   "url": "https://valor.globo.com/conteudo-de-marca/totvs/noticia/2026/10/29/sistema-operacional-de-gestao-a-solucao-da-totvs-que-inaugura-a-proxima-fase-da-orquestracao-digital-nas-empresas.ghtml",
+   "img": "https://s2-valor.glbimg.com/MVV-OT5qGqi-3qBEpAt34q6NPA8=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/d/E/ADVy9aRbA4KB0IOU54DQ/20261013-universototvs-vansbumbeers-8338.jpg",
+   "t": [
+    "TOTS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "CEO da Ambev defende ganho de participação, enquanto mercado critica volumes no trimestre",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O CEO da Ambev, Carlos Lisboa, defendeu um bom momento para o negócio da gigante de bebidas apesar dos desafios do mercado de cerveja do Brasil. Em teleconferência com jornalistas, o executivo apontou o ganho de…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/ceo-da-ambev-defende-ganho-de-participao-enquanto-mercado-critica-volumes-no-trimestre.ghtml",
+   "img": "https://s2-valor.glbimg.com/xVJpQhChHxC5HQN0M9_08xcpxzE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/y/F/XWV0mFSF64PZm7Chfffw/01pri-600-ambev-a1-img01.jpg",
+   "t": [
+    "ABEV3"
+   ],
+   "tf": [],
+   "m": [
+    "br",
+    "pt"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Tesouro Direto tem emissão líquida de R$ 4,8 bi em setembro; indexados à Selic lideram",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O programa Tesouro Direto registrou emissão líquida de R$ 4,83 bilhões em setembro, informou a Secretaria do Tesouro Nacional. No mês, foram realizadas 1.249.333 operações de investimento em títulos do programa,…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/tesouro-direto-tem-emissao-liquida-de-r-48-bi-em-setembro-indexados-a-selic-lideram.ghtml",
+   "img": "https://s2-valor.glbimg.com/3GVO6OdMMW92YRJ1whrNBfmU_Hc=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/k/L/YT1WBXQPepATUQcEt8vQ/economia-1609210412-0.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Plano de voo e escolha de ministro da Fazenda podem acalmar mercado, diz IFI",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "A Instituição Fiscal Independente (IFI), órgão técnico e apartidário vinculado ao Senado, comentou o estresse nos mercados de capitais, de câmbio e de juros futuros após o resultado do segundo turno das eleições…",
+   "url": "https://valor.globo.com/brasil/noticia/2026/10/29/plano-de-voo-e-escolha-de-ministro-da-fazenda-podem-acalmar-mercado-diz-ifi.ghtml",
+   "img": "https://s2-valor.glbimg.com/pc85acR_PSYw3hyXtprMmV-Ef6g=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/4/E/ECNDyxT2WRjys4jGjG7g/2026-10-27t212833z-987645668-rc2xboax4ir7-rtrmadp-3-brazil-election-lula-supporters.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Klabin vê tendência neutra para mercados em que opera",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O presidente da Klabin, Cristiano Teixeira, disse que a empresa vê tendência de neutralidade nos próximos meses para os mercados em que a companhia opera. O segmento de kraftliner, papel obtido a partir da celulose de…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/klabin-ve-tendencia-neutra-para-mercados-em-que-opera.ghtml",
+   "img": "https://s2-valor.glbimg.com/e8iAv_JgKAzLzOD9L99sDWcUr8s=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/u/y/Q9Al9uQIKcYSceOma5EQ/captura-de-tela-2023-09-21-as-09.17.21.png",
+   "t": [
+    "KLBN11"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nível de atividade da construção civil cai no 3° trimestre, aponta CNI",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O nível de atividade da construção civil apresentou queda no terceiro trimestre, para 45,9 pontos, de 47,8 no segundo trimestre, de acordo com a Sondagem da Industria e do Comércio, realizada pela Confederação Nacional…",
+   "url": "https://valor.globo.com/brasil/noticia/2026/10/29/nivel-de-atividade-da-construcao-civil-cai-no-3-trimestre-aponta-cni.ghtml",
+   "img": "https://s2-valor.glbimg.com/OGrNeK1M-snK8UaAQME5NtfLrWk=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/O/c/M67LctRyS7yjHDA18WbQ/0020set6.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Lucro da Mapfre cresce 2% no Brasil de janeiro a setembro, para 203,2 milhões de euros",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O lucro da Mapfre Brasil cresceu 2% no período de janeiro a setembro, em comparação ao mesmo intervalo de 2025, para 203,2 milhões de euros. O resultado corresponde a cerca de 22% do lucro global do grupo, que somou…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/lucro-da-mapfre-cresce-2-pontos-percentuais-no-brasil-de-janeiro-a-setembro-para-2032-milhes-de-euros.ghtml",
+   "img": "https://s2-valor.glbimg.com/5HEIO42HrrcXHsqu4D9irzBi2tQ=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/j/e/boXcqMRBqKpb9TmyNENw/1564056428screenshot-1.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Países muito endividados devem considerar que juros ficarão altos por algum tempo, diz Lagarde",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Ao ser questionada sobre os receios com relação à situação orçamentária na França e a disparada dos rendimentos dos títulos soberanos do país (OATs), a presidente do Banco Central Europeu (BCE), Christine Lagarde,…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/paises-muito-endividados-devem-considerar-que-juros-ficarao-altos-por-algum-tempo-diz-lagarde.ghtml",
+   "img": "https://s2-valor.glbimg.com/pD3FI9sJGggbXtccYS86ZP_PcL8=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/C/a/TB7ViTQBmrZ8aw2awiiA/414030420.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Oncoclínicas atualiza plano de recuperação extrajudicial com adesão de titulares de 29,79% da dívida",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Oncoclínicas informou, nesta quinta-feira (29), que protocolou uma versão atualizada do seu plano de recuperação extrajudicial com ajustes de redação, mas sem alterações materiais. A companhia também comunicou que o…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/oncoclnicas-atualiza-plano-de-recuperao-extrajudicial-com-adeso-de-titulares-de-2979-pontos-percentuais-da-dvida.ghtml",
+   "img": "https://s2-valor.glbimg.com/ELoAwSuDX6MtBRE8Moaei-k4DkA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/l/t/siqeWAQdGzO5v12bjUvQ/foto28emp-101-onco-b4.jpg",
+   "t": [
+    "ONCO3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bitcoin fica perto de US$ 80 mil após Fed e balanços de tecnologia nos EUA",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O bitcoin opera em leve queda nesta quinta-feira (29), perto dos US$ 80 mil, após o Federal Reserve (Fed) manter os juros e o índice de preços de gastos com consumo (PCE) mostrar nova aceleração da inflação nos Estados…",
+   "url": "https://valor.globo.com/financas/criptomoedas/noticia/2026/10/29/bitcoin-fica-perto-de-us-80-mil-apos-fed-e-balancos-de-tecnologia-nos-eua.ghtml",
+   "img": "https://s2-valor.glbimg.com/fmvpt0uONLhIYXfof-_AY7_W_80=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/q/9/UwbBmdSsKGYvJmcKs72g/pexels-karolina-grabowska-5980888.avif",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Estrangeiros retiram R$ 2 bi da B3 em 27 de outubro e somam 4 sessões de saques",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Os investidores estrangeiros retiraram R$ 2 bilhões em recursos no segmento secundário da B3 (ações já listadas) em 27 de outubro, quando o Ibovespa cedeu 0,51%. Ainda assim, a categoria registra superávit mensal de R$…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/estrangeiros-retiram-r-2-bi-da-b3-em-27-de-outubro-e-somam-4-sessoes-de-saques.ghtml",
+   "img": "https://s2-valor.glbimg.com/VnUoLavAz5FXy_93_x_abgBt0iU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/4/X/jf5md0Rc2q2qjqLn1jGg/422019428.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Devemos ver uma melhora no ambiente de consumo no 4° trimestre, diz CEO da AB Inbev",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "O CEO global da AB Inbev, Michel Doukeris, disse apostar em um ambiente de consumo mais favorável para o mercado brasileiro no quarto trimestre. Entre os fatores para sustentar a estimativa estão o maior poder de compra…",
+   "url": "https://valor.globo.com/empresas/noticia/2026/10/29/devemos-ver-uma-melhora-no-ambiente-de-consumo-no-4-trimestre-diz-ceo-da-ab-inbev.ghtml",
+   "img": "https://s2-valor.glbimg.com/2r9HWzVGCaHZWdTGA1ENq6zWc-A=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/Q/a/3IBHtuQI2iUKJNB3I7AA/8c4b40eb-430d-4c17-b4a9-ac2cdb462e12.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bancos elevam taxas de financiamento imobiliário após disparada dos juros futuros",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "Os bancos que atuam com financiamento imobiliário começaram a ajustar as taxas em meio à disparada dos juros futuros. O Itaú anunciou hoje a elevação da taxa mínima para 12,95% ao ano, seguindo o mesmo caminho do…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/bancos-elevam-taxas-de-financiamento-imobilirio-aps-disparada-dos-juros-futuros.ghtml",
+   "img": "https://s2-valor.glbimg.com/L7nYveuzALvbtPlvR-Qs3Yskd1k=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/I/i/QasH8BS3eB1c5RA7dnJA/oleksandrpidvalnyi-real-estate-6688945.avif",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bolsas de NY recuam com balanços e taxas de Treasuries caem após dados e Fed",
+   "data": "2026-10-29",
+   "fonte": "Valor Econômico",
+   "resumo": "As bolsas de Nova York recuam, pressionadas pelos resultados corporativos, com quedas acentuadas das ações da Alphabet e da Caterpillar após balanços abaixo das expectativas. As ações ligadas à inteligência artificial…",
+   "url": "https://valor.globo.com/financas/noticia/2026/10/29/bolsas-em-ny-caem-apos-balanco-da-alphabet-frustrar-investidores.ghtml",
+   "img": "https://s2-valor.glbimg.com/ZLtvyvDEMcPVHhHLDDi0lmh5TPI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/J/9/fkIWQGSnaxSdmEA9jBRQ/455644310.jpg",
+   "t": [],
+   "tf": [
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dona do Google tem pior sessão da história e perde US$ 500 bi de valor após resultado",
+   "data": "2026-10-29",
+   "fonte": "InfoMoney",
+   "resumo": "Logo do Google 24 de março de 2026 REUTERS/Danielle Villasana \"…",
+   "url": "https://www.infomoney.com.br/mercados/acoes-da-alphabet-despencam-com-problemas-na-area-de-buscas-levando-a-decepcao/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/09/2026-09-08T141931Z_1_LYNXMPEM871DE_RTROPTP_4_CERAWEEK-ENERGY.jpg",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Wall Street cai, após resultado da Alphabet reviver temores com gastos em IA",
+   "data": "2026-10-29",
+   "fonte": "InfoMoney",
+   "resumo": "A placa de Wall Street é vista na Bolsa de Valores de Nova York, no bairro de Manhattan, na cidade de Nova York, EUA, em 9 de março de 2020. REUTERS/Carlo Allegri \"…",
+   "url": "https://www.infomoney.com.br/mercados/wall-street-cai-apos-resultado-da-alphabet-reviver-temores-com-gastos-em-ia/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/2026-03-29T060934Z_964769431_RC25EKAJLMU1_RTRMADP_3_USA-MARKETS-IRAN-TRADING.jpg",
+   "t": [],
+   "tf": [
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa tem quarta queda seguida, com exterior, balanços e fiscal; dólar dispara",
+   "data": "2026-10-29",
+   "fonte": "InfoMoney",
+   "resumo": "Ibovespa ao vivo, bolsa ao vivo, bolsa de valores ao vivo, bolsa de valores em tempo real, ibovespa, ibovespa em alta, ibovespa em baixa, ibovespa hoje, bolsa hoje, bolsa de valores hoje, B3, bolsa de valores, ibovespa…",
+   "url": "https://www.infomoney.com.br/mercados/ibovespa-hoje-bolsa-de-valores-ao-vivo-29102026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/05/Ibovespa-1-9.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bradesco sofre 2º rebaixamento e JPMorgan corta preço-alvo em quase 30%; BBDC4 cai",
+   "data": "2026-10-29",
+   "fonte": "InfoMoney",
+   "resumo": "Agência do Bradesco na avenida Paulista, em São Paulo (Foto: Nilton Fukuda/Estadão Conteúdo/AE) \" data-image-caption=\" Agência do Bradesco na avenida Paulista, em São Paulo (Foto: Nilton Fukuda/Estadão Conteúdo/AE) \"…",
+   "url": "https://www.infomoney.com.br/mercados/bradesco-bbdc4-sofre-segundo-rebaixamento-e-jpmorgan-corta-preco-alvo-em-quase-30/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2023/11/40802749.135301.jpg",
+   "t": [
+    "BBDC4"
+   ],
+   "tf": [
+    "us:JPM",
+    "us:JPMC"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Gerdau: Itaú BBA eleva recomendação de GGBR4 para compra e ações sobem quase 6%",
+   "data": "2026-10-29",
+   "fonte": "InfoMoney",
+   "resumo": "Foto: Divulgação \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2019/06/gerdau-1.jpg?fit=900%2C624&quality=70&strip=all\" />Segundo o banco, a combinação de fundamentos mais fortes e uma queda recente…",
+   "url": "https://www.infomoney.com.br/mercados/gerdau-ggbr4-itau-bba-eleva-recomendacao-de-acoes-para-compra-e-ativos-sobem-forte/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2019/06/gerdau-1.jpg",
+   "t": [
+    "GGBR4",
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar hoje sobe a R$ 5,38 com exterior e preocupações com novo governo Lula",
+   "data": "2026-10-29",
+   "fonte": "InfoMoney",
+   "resumo": "Imagem: Pixabay \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2025/08/Impacto-do-dolar-nos-investimentos.jpg?fit=1280%2C853&quality=70&strip=all\" />Investidores seguem atentos a desdobramentos…",
+   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-29102026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/08/Impacto-do-dolar-nos-investimentos.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Taxas longas sobem com mercado sensível aos desdobramentos da vitória de Lula",
+   "data": "2026-10-29",
+   "fonte": "InfoMoney",
+   "resumo": "juros-selic-copom-calendario \" data-image-caption=\" Foto: Freepik \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2025/12/2148783033.jpg?fit=1000%2C563&quality=70&strip=all\" />Controle das contas…",
+   "url": "https://www.infomoney.com.br/mercados/taxas-longas-sobem-com-mercado-sensivel-aos-desdobramentos-da-vitoria-de-lula/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/12/2148783033.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dívida pública fica em 82,9% do PIB, e déficit soma R$ 5,5 bilhões",
+   "data": "2026-10-29",
+   "fonte": "Agência Brasil",
+   "resumo": "O setor público consolidado – União, estado, municípios e estatais – registrou déficit primário de R$ 5,5 bilhões em setembro, enquanto a dívida bruta permaneceu em 82,9% do Produto Interno Bruto (PIB), o equivalente a…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/divida-publica-fica-em-829-do-pib-e-deficit-soma-r-55-bilhoes",
+   "img": "https://imagens.ebc.com.br/SsEaxKB6JesLZ9lJzaH-Lv_glP0=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/10/_raf0979_1.jpg?itok=MNE0Gj8a",
+   "t": [
+    "AZZA3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Consumo nos lares acumula alta de 2,70% até setembro, diz Abras",
+   "data": "2026-10-29",
+   "fonte": "Agência Brasil",
+   "resumo": "O Consumo nos Lares Brasileiros registrou alta de 2,70% no acumulado de janeiro a setembro, segundo balanço da Associação Brasileira de Supermercados (Abras), que considera o percentual praticamente estável em relação…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/consumo-nos-lares-acumula-alta-de-270-ate-setembro-diz-abras",
+   "img": "https://imagens.ebc.com.br/83gp-6q9uAykiKQXk5TF8aBwib8=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/06/12/20231130_110010.jpg?itok=93evJOHF",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Economistas criticam usar corte de gastos para conter dívida pública",
+   "data": "2026-10-29",
+   "fonte": "Agência Brasil",
+   "resumo": "A trajetória da dívida pública brasileira, que saiu de 71,7% do Produto Interno Bruto (PIB) em 2022 para cerca de 82,9% do PIB em agosto de 2026, vem sendo apontada pelo mercado financeiro e por economistas considerados…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/economistas-criticam-usar-corte-de-gastos-para-conter-divida-publica",
+   "img": "https://imagens.ebc.com.br/SgnUFMdRtJPNTHPG5q90__2MSS4=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2025/07/11/0d4a1789.jpg?itok=9dpF2vXe",
    "t": [],
    "tf": [],
    "m": [
@@ -3891,761 +4644,6 @@
    "tf": [],
    "m": [
     "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Vítima de golpe falso boleto pode cobrar prejuízo do banco; entenda quando",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Quem paga um boleto falso pode acabar com dois prejuízos: perder o dinheiro transferido aos criminosos e continuar devendo a quem deveria ter recebido o pagamento. Em alguns casos, a Justiça determina que o banco…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/vitima-de-golpe-falso-boleto-pode-cobrar-prejuizo-do-banco-entenda-quando.ghtml",
-   "img": "https://s2-valor.glbimg.com/kxyWAnAhajwxJ9Wo37PNaPtwc08=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/N/A/YbkxWCT0G22ydpRb5Ncw/boleto.png",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "França volta à mira do mercado com disparada dos juros longos após protestos",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Os juros dos títulos da dívida da França (OATs) abandonaram a tendência de consolidação vista nos últimos dias e voltaram a disparar nesta segunda-feira, sobretudo nos vencimentos mais longos, ao passo em que o…",
-   "url": "https://valor.globo.com/financas/intraday/post/2026/10/franca-volta-a-mira-do-mercado-com-disparada-dos-juros-longos-apos-protestos.ghtml",
-   "img": "https://s2-valor.glbimg.com/BOhwUkOzzA3I9nK37CPYgFPNYlo=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/M/3/Pk8ACZTnS34JoEN0wlkw/471244516.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Automob tem alta de 9% no faturamento bruto no 3º trimestre, para R$ 3,68 bilhões",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Automob registrou receita bruta de R$ 3,68 bilhões no terceiro trimestre, alta de 9% na comparação anual, refletindo a diversificação do seu portfólio e do desempenho robusto em veículos leves e pesados. Confira…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/automob-tem-alta-de-9percent-no-faturamento-bruto-no-3o-trimestre-para-r-368-bilhoes.ghtml",
-   "img": "https://s2-valor.glbimg.com/dmsIicxYUro2YWeDkwFc7LPIPZI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/3/k/MuCWIVSUeDNIZANyBVZQ/aut-2-scaled-rg7gdkhkaatatx0hwlqf9rjoqxx6zsbw6gzikm150g.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dexco encerra operações em fábrica de louças sanitárias em Pernambuco",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Dexco anunciou nesta segunda-feira (19) aprovou o encerramento das atividades na sua fábrica de louças sanitárias localizada em Cabo de Santo Agostinho (PE). Segundo a companhia, a decisão integra o processo…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/dexco-encerra-operaes-em-fbrica-de-louas-sanitrias-em-pernambuco.ghtml",
-   "img": "https://s2-valor.glbimg.com/7Yf-6scIyMOI524q-yWnKi3pcIM=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/o/X/I6FoqWTYuHC14dh1EeaA/dexco-sede-da-empresa-divulgacao.jpg",
-   "t": [
-    "DXCO3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Merck e Intesa lideram rodada de captação na empresa de biotecnologia Nouscom",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A empresa suíça de biotecnologia Nouscom levantou 120 milhões de euros em uma rodada de financiamento liderada pela Revelation Partners e pelo braço de capital de risco da alemã Merck, atraindo a Neva SGR, do grupo…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/merck-e-intesa-lideram-rodada-de-captao-na-empresa-de-biotecnologia-nouscom.ghtml",
-   "img": "https://s2-valor.glbimg.com/VxTye1aRrlRi3XXB63RpLabZNGo=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/K/k/fSpwgxTIOV3G5orrpd5g/pexels-mediocrememories-954585.jpg",
-   "t": [],
-   "tf": [
-    "de:MRK",
-    "us:MRK"
-   ],
-   "m": [
-    "de",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Carrefour cobra proteção do governo francês após 50 lojas serem vandalizadas em protestos",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O diretor-presidente do Carrefour, Alexandre Bompard, cobrou publicamente uma ação mais enfática do governo francês para proteger os varejistas do país após pelo menos 50 lojas terem sido saqueadas durante a onda de…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/carrefour-cobra-proteo-do-governo-francs-aps-50-lojas-serem-vandalizadas-em-protestos.ghtml",
-   "img": "https://s2-valor.glbimg.com/eb21OBO2T7GJ12_bwFd4AOYmsR8=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/i/M/zfOhmuREqDKiJtDZiQFA/437076455.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Juros longos têm leve alta em meio a ajustes de posição antes do 2° turno",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Os juros futuros de longo prazo sobem em ritmo moderado na tarde desta segunda-feira (19), apagando o bom desempenho do início do pregão à medida que os investidores voltam a reduzir a exposição a risco no mercado…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/juros-futuros-recuam-as-vesperas-do-2-turno-apos-estresse-da-semana-passada.ghtml",
-   "img": "https://s2-valor.glbimg.com/3GVO6OdMMW92YRJ1whrNBfmU_Hc=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/k/L/YT1WBXQPepATUQcEt8vQ/economia-1609210412-0.webp",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar à vista hoje tem leve queda com correção na última semana antes de eleição",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O dólar à vista exibe leve desvalorização frente ao real, em uma sessão em que a moeda americana exibe força no exterior (ainda que outras divisas pares também estejam resilientes). As manifestações de apoio ao…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/dolar-recua-e-real-se-destaca-as-vesperas-do-2-turno.ghtml",
-   "img": "https://s2-valor.glbimg.com/PB4ekf4-naRg3xhLig5maqADKak=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/G/c/7GuDWBQs21XdiI6d9Pvw/384690718.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Eneva tem geração bruta de 2.548 GWh no 3º trimestre com menor despacho e estreia do Complexo Azulão",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Eneva encerrou o terceiro trimestre com uma geração de energia bruta total de 2.548 gigawatts-hora (GWh), marcando um período pautado por um menor despacho termelétrico diante da hidrologia favorável no país e…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/eneva-tem-geracao-bruta-de-2548-gwh-no-3o-trimestre-com-menor-despacho-e-estreia-do-complexo-azulao.ghtml",
-   "img": "https://s2-valor.glbimg.com/T8VnthQz2yZjuuMYcStalX9Sf5A=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/g/D/Q0HYRRSzK74sdcaKGrBQ/funcionarios-da-eneva-divulgacao-eneva.jpg",
-   "t": [
-    "ENEV3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Uber consegue derrubar ação coletiva de taxistas de Londres",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Uber informou nesta segunda-feira que conseguiu derrubar duas ações judiciais relacionadas, avaliadas em cerca de 340 milhões de libras (US$ 453 milhões), movidas por milhares de motoristas dos tradicionais táxis…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/uber-consegue-derrubar-ao-coletiva-de-taxistas-de-londres.ghtml",
-   "img": "https://s2-valor.glbimg.com/0IYZnTR9GMoxXDp5d3VPC_RThqY=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/n/y/mzydYPT0G1hMCWA48C2w/foto26emp-101-sububer-b4.jpg",
-   "t": [],
-   "tf": [
-    "us:UBER"
-   ],
-   "m": [
-    "gb",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Rheinmetall e MSC compram estaleiro na Romênia para construir navios civis e militares",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Rheinmetall fechou um acordo em conjunto com a Mediterranean Shipping Company (MSC) para comprar o estaleiro romeno Mangalia por 138 milhões de euros. Matéria exclusiva para assinantes. Para ter acesso completo,…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/rheinmetall-e-msc-compram-estaleiro-na-romnia-para-construir-navios-civis-e-militares.ghtml",
-   "img": "https://s2-valor.glbimg.com/To-Y3K-e7aqkl3OvxKXNayzSodg=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/0/k/EXBANqSz2dEHkb92ZoUA/439612436.jpg",
-   "t": [],
-   "tf": [
-    "de:RHM"
-   ],
-   "m": [
-    "de"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "STJ anula julgamento do TJ-RJ sobre embargos de declaração da Bradespar em ação movida pela Litel",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O Superior Tribunal de Justiça (STJ) anulou o julgamento dos embargos de declaração opostos pela Bradespar no Tribunal de Justiça do Estado do Rio de Janeiro (TJ-RJ), no âmbito da ação indenizatória movida pela…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/stj-anula-julgamento-do-tj-rj-sobre-embargos-de-declaracao-da-bradespar-em-acao-movida-pela-litel.ghtml",
-   "img": "https://s2-valor.glbimg.com/9o7NnSj40NhQOcAjxmbY0xz3thY=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/i/R/gSgaOkTAOiCZMkACuxUQ/vale-scaled.jpeg",
-   "t": [
-    "BRAP4",
-    "MOVI3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Mercado mantém projeção de alta do IPCA de 2026 em 5,22% e eleva de 2027 para 4,32%, aponta Focus",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A mediana das projeções dos economistas do mercado para a inflação oficial brasileira em 2026 foi mantida em 5,22%, de acordo com o relatório Focus, do Banco Central (BC), divulgado nesta segunda-feira (19) com…",
-   "url": "https://valor.globo.com/brasil/noticia/2026/10/19/mercado-mantem-projecao-de-alta-do-ipca-de-2026-em-522percent-e-eleva-de-2027-para-432percent-aponta-focus.ghtml",
-   "img": "https://s2-valor.glbimg.com/-v2ZvUR1JRbJWl4hkKnVd6lcnkU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/X/K/Q53VSAQVSS6cTUFxNViA/ray-reyes-3xwrg7vv6ts-unsplash.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Receita da Cleveland-Cliffs cresce no 3º trimestre com aumento de volumes e preços",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Cleveland-Cliffs obteve lucro no terceiro trimestre deste ano, impulsionado pelo aumento dos volumes comercializados de produtos siderúrgicos e pela alta dos preços. Matéria exclusiva para assinantes. Para ter…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/receita-da-cleveland-cliffs-cresce-no-3o-trimestre-com-aumento-de-volumes-e-precos.ghtml",
-   "img": "https://s2-valor.glbimg.com/CBz3eOKNoo_1IAEHk_Z9JAtv0XQ=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2022/1/u/FZazAjRUSrV40dqDDOXg/390668982.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Minério de ferro avança 1,26% na Bolsa de Dalian",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O preço do minério de ferro registrou forte alta nesta segunda-feira (19) na China, após o Produto Interno Bruto (PIB) do país asiático avançar mais do que o esperado no terceiro trimestre. Matéria exclusiva para…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/minrio-de-ferro-avana-126-pontos-percentuais-na-bolsa-de-dalian.ghtml",
-   "img": "https://s2-valor.glbimg.com/bgSjcVOmYpcO8zTuCOZWqBK14gg=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/R/5/AejdjLTy2nk5HIfCRFAw/minerio-ferro1.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Agenda de empresas: M. Dias Branco compra Grespan; questões na OPA da Unifique",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A M. Dias Branco anunciou a compra de 80% da Grespan, marcando a entrada da fabricante de massas e biscoitos no mercado brasileiro de pães congelados. Braskem A Braskem divulgou o resultado do leilão da oferta pública…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/agenda-de-empresas-m-dias-branco-compra-grespan-questoes-na-opa-da-unifique.ghtml",
-   "img": "https://s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/public/fb_marca.png",
-   "t": [
-    "FIQE3",
-    "MDIA3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Roadster da Tesla e o prestígio da SpaceX",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A indústria automobilística tem uma longa história de veículos concebidos para valorizar a imagem das marcas, produzidos não tanto pelo potencial de lucro, mas pela capacidade de fortalecer a reputação de uma…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/roadster-da-tesla-e-o-prestigio-da-spacex.ghtml",
-   "img": "https://s2-valor.glbimg.com/wEelallrWot2g_21Fu0bqGLw9nw=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/z/O/1o0aEWT9mDz61hZ43hLA/2026-10-16t034904z-1418217462-rc214oae6di8-rtrmadp-3-tesla-roadster.jpg",
-   "t": [],
-   "tf": [
-    "us:SPCX",
-    "us:TSLA"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Coordenadora econômica de Flávio promete regra de transição para Bolsa Família",
-   "data": "2026-10-19",
-   "fonte": "InfoMoney",
-   "resumo": "A coordenadora econômica da campanha de Flávio Bolsonaro (PL), a ex-presidente da Caixa, Daniella Marques. Foto: Felipe Araújo / Divulgação \"…",
-   "url": "https://www.infomoney.com.br/politica/coordenadora-economica-de-flavio-promete-regra-de-transicao-para-bolsa-familia/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/08/daniella-marques.webp",
-   "t": [
-    "CXSE3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Como anda a Argentina de Milei? Veja índices de inflação, pobreza e desemprego",
-   "data": "2026-10-19",
-   "fonte": "InfoMoney",
-   "resumo": "Argentine President Javier Milei speaks next to Brazilian Senator Flavio Bolsonaro, who is to be announced as candidate for Brazil’s presidential elections, during the national convention of the Liberal Party (PL) in…",
-   "url": "https://www.infomoney.com.br/mundo/como-anda-a-argentina-de-milei-veja-indices-de-inflacao-pobreza-e-desemprego/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/07/2026-07-25T160828Z_1813509285_RC24LMALFGSD_RTRMADP_3_BRAZIL-POLITICS.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "M. Dias (MDIA3): ação sobe após comprar fábrica de pães congelados Grespan",
-   "data": "2026-10-19",
-   "fonte": "InfoMoney",
-   "resumo": "Divulgação M. Dias Branco \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2022/08/m-dias-branco.webp?fit=984%2C656&quality=70&strip=all\" />Aquisição marca a entrada da M. Dias Branco no segmento de…",
-   "url": "https://www.infomoney.com.br/mercados/m-dias-mdia3-acao-sobe-apos-comprar-fabrica-de-paes-congelados-grespan/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2022/08/m-dias-branco.webp?fit=984%2C656&quality=70&strip=all",
-   "t": [
-    "MDIA3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Pagamentos de outubro do Bolsa Família começam nesta segunda",
-   "data": "2026-10-19",
-   "fonte": "Agência Brasil",
-   "resumo": "Os pagamentos do Bolsa Família referentes ao mês de outubro começam a ser feitos nesta segunda-feira (19), quando recebem os beneficiários com NIS terminado em 1. Na terça-feira (20), será a vez de quem tem NIS…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/pagamentos-de-outubro-do-bolsa-familia-comecam-nesta-segunda",
-   "img": "https://cdn.jsdelivr.net/gh/sergiosdlima/assets-ebc@1.0.0/public/thumbs/thumb_1200x600_agbrasil.png",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa cede 0,17% com baixa forte em Petrobras e eleições no radar",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Depois de subir logo após a abertura dos negócios, a bolsa local mudou de direção ainda no fim da manhã, diante da queda mais intensa das ações da Petrobras. Ao longo da tarde, o Ibovespa ainda chegou a oscilar…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/ibovespa-cede-017percent-com-baixa-forte-em-petrobras-e-eleicoes-no-radar.ghtml",
-   "img": "https://s2-valor.glbimg.com/jZ-lQub7SrhXjgtziwmujIb5R0g=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/V/Q/A5mGbKTCKeHFL6bJCGyA/foto03fin-201-crdcs-c6.jpg",
-   "t": [
-    "PETR4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "ANPD pede que Meta esclareça denúncias de violações de contas em redes sociais na campanha eleitoral",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Meta, empresa dona do Facebook, WhatsApp e Instagram, \"big tech\" Benoit Tessier/Reuters A Agência Nacional de Proteção de Dados (ANPD) notificou nesta segunda-feira (19) a Meta Platforms para que preste…",
-   "url": "https://valor.globo.com/politica/eleicoes-2026/noticia/2026/10/19/anpd-pede-que-meta-esclareca-denuncias-de-violacoes-de-contas-em-redes-sociais-na-campanha-eleitoral.ghtml",
-   "img": "https://s2-valor.glbimg.com/QcZnxRAnUd8bYOP3v_msXex0-GI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/q/y/i1gMPLSMSblbucvg2Xqg/2026-05-04t160810z-406096418-rc211fal39mf-rtrmadp-3-meta-lawsuit-new-mexico-trial-1-.jpg",
-   "t": [],
-   "tf": [
-    "us:META"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Juros futuros têm movimentos discretos com eleição acirrada às vésperas do 2° turno",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Os juros futuros encerraram o pregão desta segunda-feira sem direção única e com movimentos discretos em toda a extensão da estrutura a termo da curva. Em um dia em que não trouxe eventos relevantes que alterassem a…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/juros-futuros-tem-movimentos-discretos-com-eleicao-acirrada-as-vesperas-do-2-turno.ghtml",
-   "img": "https://s2-valor.glbimg.com/AP6aOmr0zLwjMzcb5iZlvm5EGcA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/1/4/BcFPcpSiqig1HRdbApwA/foto30opin-201-col-op1-a18.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar à vista recua com ajuste de posições de olho no 2º turno da eleição",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O dólar à vista exibiu desvalorização frente ao real, em uma sessão em que a moeda americana registrou força no exterior (ainda que outras divisas pares também estivessem resilientes). A manifestação de apoio ao…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/dolar-a-vista-recua-com-ajuste-de-posicoes-de-olho-no-2o-turno-da-eleicao.ghtml",
-   "img": "https://s2-valor.glbimg.com/h8M9uHVMjqytDk6F-enJjG3X4A8=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/p/y/tjvm4iQByI9VrMkviYeQ/005fev22.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Procuradoria do DF prorroga por 2 meses o prazo para avaliação dos danos do Banco Master no BRB",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Procuradoria-Geral do Distrito Federal (PGDF) prorrogou por 90 dias o prazo de funcionamento da Comissão Especial de Recuperação de Ativos e Composição Consensual de Danos relacionados ao Banco de Brasília (BRB).…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/procuradoria-do-df-prorroga-por-2-meses-o-prazo-para-avaliao-dos-danos-do-banco-master-no-brb.ghtml",
-   "img": "https://s2-valor.glbimg.com/nJxiFG-VcjDcF9Ulg35EM6We7gE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/m/L/1SpBAAQI6YrRr1BUGMrQ/foto06fin-101-brb-c4.jpg",
-   "t": [
-    "BSLI3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Campanha de Flávio quer pagamento do Bolsa Família por 24 meses a quem conseguir emprego",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A coordenadora do núcleo econômico da campanha do candidato à Presidência Flávio Bolsonaro (PL), Daniella Marques, disse hoje que, caso Flávio seja eleito, aumentará para dois anos o período de transição no programa…",
-   "url": "https://valor.globo.com/politica/eleicoes-2026/noticia/2026/10/19/campanha-de-flvio-quer-pagamento-do-bolsa-famlia-por-24-meses-a-quem-conseguir-emprego.ghtml",
-   "img": "https://s2-valor.glbimg.com/sChxajbdG4FfkvsefGVpZV8mMxc=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/R/6/dPxDazRvWER4GjI99iJA/foto08pol-111-tributa-a16.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Diretor da S&P Global alerta que empresas de tecnologia provavelmente têm mais dívidas relacionadas à IA do que comentam",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A agência de classificação de risco S&P Global estima que as maiores empresas de tecnologia do mundo provavelmente tenham mais passivos relacionados à inteligência artificial do que se sabe atualmente, embora seu…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/diretor-da-sp-global-alerta-que-empresas-de-tecnologia-provavelmente-tm-mais-dvidas-relacionadas-ia-do-que-comentam.ghtml",
-   "img": "https://s2-valor.glbimg.com/sUR95nTVoZBGMcOpKwuQrK0zmnU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/2/o/RAJMTyS3CSpgef2oniFg/john-adams-1xin4fmr78a-unsplash.jpg",
-   "t": [],
-   "tf": [
-    "us:SPGI"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Netflix e Globo anunciam acordo de licenciamento para exibir filmes, novelas e séries",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Netflix anunciou nesta segunda-feira (19) um acordo de licenciamento no qual 18 obras originais da Globo, entre filmes, novelas e séries, estarão disponíveis na plataforma de streaming americana a partir de…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/netflix-e-globo-anunciam-acordo-de-licenciamento-para-exibir-filmes-novelas-e-series.ghtml",
-   "img": "https://s2-valor.glbimg.com/r3_nlbFIxUOhSL7q-FFOYKENUUY=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/u/X/seARuvTk6jU1d1ZdqLsw/1-destaques-eng-.png",
-   "t": [],
-   "tf": [
-    "us:NFLX"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Apple enfrenta novo pedido de indenização após veredicto histórico de patente de US$ 5,7 bi",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Uma empresa de tecnologia que ganhou um veredicto histórico de US$ 5,7 bilhões por violação de patente contra a Apple pediu a um juiz federal que adicionasse mais indenizações e juros, expondo potencialmente a…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/apple-enfrenta-novo-pedido-de-indenizao-aps-veredicto-histrico-de-patente-de-us-57-bi.ghtml",
-   "img": "https://s2-valor.glbimg.com/PmDb_y7gbL1P8u9jMcDxYaWvjXU=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/L/U/naN5EbRBylvkUaLoxf1Q/465644077.jpg",
-   "t": [],
-   "tf": [
-    "us:AAPL"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ypê é destaque no ranking Merco Talento Brasil 2026",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "Às vésperas de completar 76 anos de história, em 6 de novembro, a Ypê, presente em 96,3% dos domicílios brasileiros, segundo o ranking Brand Footprint 2026, soma mais um reconhecimento à sua trajetória. A companhia…",
-   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/ype-e-destaque-no-ranking-merco-talento-brasil-2026-1.ghtml",
-   "img": "https://s2-valor.glbimg.com/3nemkSGFZcCtS2uSEkDFnPg51vM=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/E/v/dN0mb4SAWvcrATV7VxQg/publicador-api-valor-dino-100-8ef5676b-7b25-4fcd-a1e3-189ee426b8f3.jpeg-20261019160834",
-   "t": [
-    "AZZA3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Lumu integra solução ao CrowdStrike Falcon Next-Gen SIEM",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Lumu, criadora do modelo de segurança Continuous Compromise Assessment®, anunciou uma nova integração com o CrowdStrike Falcon® Next-Gen SIEM. A integração incorpora os dados de comprometimento de rede…",
-   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/lumu-integra-solucao-ao-crowdstrike-falcon-nextgen-siem-1.ghtml",
-   "img": "https://s2-valor.glbimg.com/fue-D9T-MsghSp-2PziHIuwF1dE=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/R/A/AOaGABT5K5cB9f0FYfLg/publicador-api-valor-dino-100-43c9ef4b-f77d-41f7-90e6-e31fc85bfea1.png-20261019155145",
-   "t": [],
-   "tf": [
-    "us:CRWD"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Itaú passa a permitir uso de pontos para pagamentos via Pix",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O Itaú Unibanco anunciou nesta segunda-feira (19) que seus clientes poderão usar pontos para fazer pagamentos via Pix pelo aplicativo do banco. Com a novidade, o programa Pontos Itaú passa a oferecer mais uma opção…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/ita-passa-a-permitir-uso-de-pontos-para-pagamentos-via-pix.ghtml",
-   "img": "https://s2-valor.glbimg.com/UInKCTfbx6lK-oss2MA9t9wrW6k=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/d/k/RHrnQUS4G4y61WZGABmw/itau-sm2-1-1-.jpg",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Inter firma parceria com Data Hackers sobre dados e IA",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O Inter anunciou uma parceria institucional com o Data Hackers, comunidade que se apresenta como o maior ecossistema de dados e inteligência artificial (IA) do Brasil, para estimular a troca de conhecimento técnico…",
-   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/inter-firma-parceria-com-data-hackers-sobre-dados-e-ia-1.ghtml",
-   "img": "https://s2-valor.glbimg.com/Gmq_CrZPVkP9z2szrOT2e4dhVoc=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/N/h/zfKj32R6yepzuBHc4xrA/publicador-api-valor-dino-100-358d8d9c-cc4b-41cd-8243-141d491b721d.jpg-20261019150709",
-   "t": [],
-   "tf": [
-    "us:INBR"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "BB cria ‘cofrinho’ de reinvestimento de dividendos e JCP",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "O Banco do Brasil criou uma ferramenta de reinvestimento de dividendos de ações e fundos imobiliários e de juros sobre capital próprio (JCP). Por meio do Cofrinho de Proventos, o investidor poderá ter os recursos…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/19/bb-cria-cofrinho-de-reinvestimento-de-dividendos-e-jcp.ghtml",
-   "img": "https://s2-valor.glbimg.com/wSsiDUq5rlAEDPlYC01skOz3qIw=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/h/y/EHO4JKRqyxqO3SUtazFg/439452971.jpg",
-   "t": [
-    "BBAS3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Tags de modelo white label crescem com bancos e marcas",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A presença de bancos e marcas no mercado brasileiro de tags está em expansão. Dados da Klavi indicam que tags ligadas a Nubank, Itaú, Inter, C6 e Sicoob somam cerca de 4,5% do valor movimentado no levantamento. Esse…",
-   "url": "https://valor.globo.com/patrocinado/dino/noticia/2026/10/19/tags-de-modelo-white-label-crescem-com-bancos-e-marcas-1.ghtml",
-   "img": "https://s2-valor.glbimg.com/5cg0LjYmF_Q1c6wjIX4RhdvS9HA=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/2/A/U3DEhgRjilX0tiEPtWJQ/publicador-api-valor-dino-100-9a10672e-be0c-4f73-bb1e-22483119f60d.png-20261019144012",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [
-    "us:INBR",
-    "us:NU",
-    "us:ROXO"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Após Anthropic anunciar fundo ‘de benefício público’, Musk promete doar ações a crianças dos EUA",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A Anthropic, desenvolvedora do chatbot Claude, anunciou, no domingo (18), que destinará 5% de suas ações a um novo fundo de benefício público para facilitar doações em prol do “bem comum”. Na sequência, Elon Musk se…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/aps-anthropic-montar-fundo-de-benefcio-pblico-musk-promete-doar-aes-a-crianas-dos-eua.ghtml",
-   "img": "https://s2-valor.glbimg.com/CGlRT0LQdIWmJJIx79SuUP2xIPw=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2025/a/L/IZBs9CRlexrr1QTxOrxg/430970759.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "EUA aprovam Jemperli, da GSK, como imunoterapia para certos tipos de câncer retal",
-   "data": "2026-10-19",
-   "fonte": "Valor Econômico",
-   "resumo": "A GSK informou que a Administração de Alimentos e Medicamentos dos Estados Unidos (FDA, na sigla em inglês) aprovou o Jemperli como imunoterapia para pacientes adultos com determinados tipos de câncer de reto.…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/19/eua-aprovam-jemperli-da-gsk-como-imunoterapia-para-certos-tipos-de-cncer-retal.ghtml",
-   "img": "https://s2-valor.glbimg.com/_ieMlBIkkCYAyHcLw1YXc8a7u7o=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2023/q/A/F9msAsT5KLHw8DFrlr2Q/403747894.jpg",
-   "t": [],
-   "tf": [
-    "gb:GSK"
-   ],
-   "m": [
-    "gb",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Automob (AMOB3): ações saltam 15% após divulgação de dados operacionais do 3º tri",
-   "data": "2026-10-19",
-   "fonte": "InfoMoney",
-   "resumo": "Concessionária Autostar, uma das adquiridas pela Automob (Crédito: Divulgação) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2024/12/Autostar_Nacoes-unidas.jpg?fit=907%2C605&quality=70&strip=all\"…",
-   "url": "https://www.infomoney.com.br/mercados/automob-amob3-acoes-saltam-apos-divulgacao-de-dados-operacionais-do-3o-tri/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2024/12/Autostar_Nacoes-unidas.jpg",
-   "t": [
-    "AMOB3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar hoje cai a R$ 5,04, reagindo a disputa eleitoral no Brasil e seguindo exterior",
-   "data": "2026-10-19",
-   "fonte": "InfoMoney",
-   "resumo": "Foto genérica de dólares \" data-image-caption=\" (Foto: Blogging Guide/Unsplash) \"…",
-   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-19102026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/blogging-guide-K5DY18hy5JQ-unsplash_red.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa fecha com leve queda, com olhos na eleição; dólar cai a R$ 5,04",
-   "data": "2026-10-19",
-   "fonte": "InfoMoney",
-   "resumo": "Índices nos EUA terminam mistos; apenas o Dow fecha negativo The post Ibovespa fecha com leve queda, com olhos na eleição; dólar cai a R$ 5,04 appeared first on InfoMoney .",
-   "url": "https://www.infomoney.com.br/mercados/ibovespa-hoje-bolsa-de-valores-ao-vivo-19102026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/08/Ibovespa-ao-vivo-7.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Anthropic planeja transferir parte de suas ações para um novo fundo voltado ao 'bem público'",
-   "data": "2026-10-18",
-   "fonte": "Valor Econômico",
-   "resumo": "A Anthropic PBC informou que planeja destinar 5% de suas ações a um novo fundo que, segundo a empresa de inteligência artificial, permitirá a realização de doações voltadas ao “bem público” — incluindo ações para…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/18/anthropic-planeja-transferir-parte-de-suas-acoes-para-um-novo-fundo-voltado-ao-bem-publico.ghtml",
-   "img": "https://s2-valor.glbimg.com/CcuWv5okwXgBmo6_0dS--wIb_aI=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/s/u/qFuQ4dQKmTx4Xvss30GA/401142144.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Temor de virada de Lula faz proteção contra alta do dólar saltar à máxima desde 2011",
-   "data": "2026-10-18",
-   "fonte": "Valor Econômico",
-   "resumo": "A euforia do mercado com a vantagem do senador Flávio Bolsonaro (PL-RJ) no primeiro turno ficou para trás. Pelo menos é isso o que indica o mercado de opções de câmbio. Matéria exclusiva para assinantes. Para ter…",
-   "url": "https://valor.globo.com/financas/intraday/post/2026/10/temor-de-virada-de-lula-faz-protecao-contra-alta-do-dolar-saltar-a-maxima-desde-2011.ghtml",
-   "img": "https://s2-valor.glbimg.com/NKd8b0Ic86Aydq1hkb8R_5PpBO8=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2019/X/D/E1nXusTma0Xmjm6rryEQ/notas-moedas-dolar9.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Agenda de mercados: IPCA-15 e reta final das eleições são destaque",
-   "data": "2026-10-18",
-   "fonte": "Valor Econômico",
-   "resumo": "A reta final da eleição presidencial no Brasil deve ser acompanhada de perto pelos investidores na semana de 19 a 23 de outubro. Nos próximos dias, pesquisas de intenção de voto devem continuar a fazer preço e a…",
-   "url": "https://valor.globo.com/financas/noticia/2026/10/18/agenda-de-mercados-ipca-15-e-reta-final-das-eleicoes-sao-destaque.ghtml",
-   "img": "https://s2-valor.glbimg.com/k_2vOOO6n0ED4hXTvOKAc7doodQ=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/Q/0/RQKdX2TT6zXYwiFsLhLw/rbr2547.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "TSE libera atos com mote de democracia no Rio, em Salvador e Porto Alegre, e rejeita vetar shows",
-   "data": "2026-10-18",
-   "fonte": "Valor Econômico",
-   "resumo": "O ministro Ricardo Villas Bôas Cueva, corregedor-geral eleitoral do TSE (Tribunal Superior Eleitoral), liberou os atos previstos para este domingo (18) chamados com mote de defesa da democracia. Na mesma decisão, o…",
-   "url": "https://valor.globo.com/politica/noticia/2026/10/17/tse-libera-atos-com-mote-de-democracia-no-rio-em-salvador-e-porto-alegre-e-rejeita-vetar-shows.ghtml",
-   "img": "https://s2-valor.glbimg.com/26j9VZy4YBY9bb75vlyQwOXFp54=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/w/w/L8ZgjtT0OmZ0IYCqFT1A/55582157937-6d040c4716-o.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Anthropic destinará 5% de ações a fundo voltado ao alívio do impacto da IA",
-   "data": "2026-10-18",
-   "fonte": "InfoMoney",
-   "resumo": "O logotipo da Anthropic pode ser visto nesta ilustração criada em 20 de maio de 2024. REUTERS/Dado Ruvic/Ilustração/Foto de arquivo \"…",
-   "url": "https://www.infomoney.com.br/mercados/anthropic-destinara-5-de-acoes-a-fundo-voltado-ao-alivio-do-impacto-da-ia/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/5WWIA5MXEJOR5CZTTNGXYY3UP4.jpg?fit=1200%2C745&quality=70&strip=all",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Calendário econômico: segundo turno das eleições e IPCA-15 têm as atenções da semana",
-   "data": "2026-10-18",
-   "fonte": "InfoMoney",
-   "resumo": "Consumidora faz compras nos EUA; crescimento econômico estava mais lento já no fim de 2025 (Foto: Hiroko Masuike/The New York Times) \"…",
-   "url": "https://www.infomoney.com.br/mercados/calendario-economico-segundo-turno-das-eleicoes-e-ipca-15-tem-as-atencoes-da-semana/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/ECON-INFLATION_b.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "BB recebe até 31 de outubro inscrições para projetos de impacto social",
-   "data": "2026-10-18",
-   "fonte": "Agência Brasil",
-   "resumo": "Projetos de impacto social podem se inscrever até 31 de outubro para receber recursos do Banco do Brasil (BB). A instituição financeira abriu edital de 2026 do Programa Mãos Dadas, que também inclui projetos de saúde e,…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/bb-recebe-ate-31-de-outubro-inscricoes-para-projetos-de-impacto-social",
-   "img": "https://imagens.ebc.com.br/L5EQpoecgNp8Lhd3jZir8Bx6y6k=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/_mg_8408.jpg?itok=_MswIMeg",
-   "t": [
-    "BBAS3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "EUA ameaçam retaliação ‘devastadora’ contra restrições da Europa à Starlink",
-   "data": "2026-10-18",
-   "fonte": "Valor Econômico",
-   "resumo": "Empresas europeias vão enfrentar uma retaliação “devastadora” de Washington se Bruxelas seguir adiante com os planos para restringir rivais americanas como a SpaceX, de Elon Musk, de partes do mercado europeu,…",
-   "url": "https://valor.globo.com/empresas/noticia/2026/10/18/eua-ameacam-retaliacao-devastadora-contra-restricoes-da-europa-a-starlink.ghtml",
-   "img": "https://s2-valor.glbimg.com/yXS0y_CSgn3TEocvtfv-_zLVPic=/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/K/G/q06pmYRdqVFHnSOz1AoQ/2026-10-09t112738z-1201529500-rc2srla8ez39-rtrmadp-3-russia-space-starlink-1-.jpg",
-   "t": [],
-   "tf": [
-    "us:SPCX"
-   ],
-   "m": [
-    "us"
    ]
   },
   {
