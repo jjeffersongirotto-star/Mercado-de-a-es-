@@ -1,13 +1,17 @@
 {
- "fetched_at": "2026-10-30T00:34:35+00:00",
+ "fetched_at": "2026-10-30T10:53:15+00:00",
  "temas": {
   "mercado": "Mercado"
  },
  "fontes": [
   "Agência Brasil",
+  "Brazil Journal",
   "Exame",
   "InfoMoney",
-  "Reuters (Investing.com Brasil)"
+  "NeoFeed",
+  "Reuters (Investing.com Brasil)",
+  "Times Brasil (CNBC)",
+  "g1 Economia"
  ],
  "itens": [
   {
@@ -40,6 +44,268 @@
    "tf": [],
    "m": [
     "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Starlink derruba ações de telecom no mundo; o que muda para Vivo e TIM?",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "A troca de textos, áudios e localização ocorre sem descontar da franquia mensal do cliente (Foto: Divulgação/VIVO) \"…",
+   "url": "https://www.infomoney.com.br/mercados/starlink-derruba-acoes-de-telecom-no-mundo-o-que-muda-para-vivo-e-tim/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2021/03/Site-thumb-de-materia.png?fit=1280%2C720&quality=70&strip=all",
+   "t": [
+    "TIMS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Lucro da Irani (RANI3) sobe para R$ 56,5 mi no 3º tri",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "CVC da Irani se movimenta. (Foto: divulgação) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/02/fuM2xONY-1320-X-768-19-1024x596-1.webp?fit=1024%2C596&quality=70&strip=all\" />O resultado…",
+   "url": "https://www.infomoney.com.br/mercados/lucro-da-irani-rani3-sobe-para-r-565-mi-no-3o-tri/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/02/fuM2xONY-1320-X-768-19-1024x596-1.webp",
+   "t": [
+    "CVCB3",
+    "RANI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "BC do Japão mantém taxa de juros em 1,25% ao ano, mas eleva inflação para 2027",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Bandeira do Japão na sede do banco central do país 18/03/2024. REUTERS/Kim Kyung-Hoon/File Photo \" data-image-caption=\" Bandeira do Japão na sede do banco central do país 18/03/2024. REUTERS/Kim Kyung-Hoon/File Photo \"…",
+   "url": "https://www.infomoney.com.br/economia/bc-do-japao-mantem-taxa-de-juros-em-125-ao-ano-mas-eleva-inflacao-para-2027/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2024/12/2024-12-19T103211Z_1_LYNXMPEKBI0DF_RTROPTP_4_JAPAN-ECONOMY-BOJ.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "jp"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "PIB da zona do euro cresce 0,4% no 3º trimestre, mais do que o esperado",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Bandeiras da UE em frente à sede do Banco Central Europeu em Frankfurt, Alemanha 18/07/2024. REUTERS/Jana Rodenbusch \"…",
+   "url": "https://www.infomoney.com.br/economia/pib-da-zona-do-euro-cresce-04-no-3o-trimestre-mais-do-que-o-esperado/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/01/2026-01-19T115053Z_1_LYNXMPEM0I0NR_RTROPTP_4_ECB-POLICY.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "de"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ações chinesas têm maior queda mensal desde 2016 com onda de vendas no setor de IA",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Investidor observa um painel eletrônico que exibe informações sobre ações em uma corretora em Pequim, na China, em 8 de setembro de 2015 REUTERS/Kim Kyung-Hoon \"…",
+   "url": "https://www.infomoney.com.br/mercados/acoes-chinesas-tem-maior-queda-mensal-desde-2016-com-onda-de-vendas-no-setor-de-ia/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/10/2026-10-30T092003Z_1_LYNXNPEM9T0Q5_RTROPTP_4_GLOBAL-MARKETS.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "CSN fecha exclusividade com chinesa Huaxin para venda da CSN Cimentos por R$ 12,7 bi",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Uma vista de drone mostra a Companhia Siderúrgica Nacional (CSN) em Volta Redonda 10 de fevereiro de 2025 REUTERS/Ricardo Moraes \"…",
+   "url": "https://www.infomoney.com.br/mercados/csn-fecha-exclusividade-com-chinesa-huaxin-para-venda-da-csn-cimentos-por-r-127-bi/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/11/Captura-de-tela-2025-11-05-142708.png",
+   "t": [
+    "CSNA3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Posições vendidas sobem na Bolsa, com avanço maior entre small caps",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Ilustração conceitual mostra operador diante de telas com gráficos em queda, em referência ao avanço das posições vendidas na Bolsa e à volatilidade do mercado brasileiro após as eleições \" data-image-caption=\" Imagem…",
+   "url": "https://www.infomoney.com.br/mercados/posicoes-vendidas-na-bolsa-crescem-5-e-chegam-a-r-138-bi-no-pos-eleicao/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/10/Colapso-do-Mercado-em-Brasilia.jpg?fit=1672%2C941&quality=70&strip=all",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Financiamento imobiliário mais caro? Bradesco, Itaú e Santander elevam taxas; Caixa não se manifesta",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "Bradesco, Itaú e Santander Montagem com imagens de divulgação e da Reuters Quem planeja financiar a compra de um imóvel vai encontrar juros mais altos em alguns dos maiores bancos privados do país. Nos últimos dias,…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/30/financiamento-imobiliario-taxas.ghtml",
+   "img": "https://s2-g1.glbimg.com/FAefhXGfD_1dR2QYLR_LzFgbV1g=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/l/d/SxPEQ2TZy61pG3o9uZMA/fotojet-38-.jpg",
+   "t": [
+    "BBDC4",
+    "CXSE3",
+    "ITUB4",
+    "SANB11"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Governo questiona Meta sobre perfis derrubados no Instagram antes das eleições",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "Facebook e Instagram AP Photo/Richard Drew A Secretaria Nacional do Consumidor (Senacon), ligada ao Ministério da Justiça e Segurança, notificou a Meta em busca de informações sobre contas e publicações derrubadas no…",
+   "url": "https://g1.globo.com/tecnologia/ciberseguranca/noticia/2026/10/30/governo-questiona-meta-sobre-perfis-derrubados-no-instagram-antes-das-eleicoes.ghtml",
+   "img": "https://s2-g1.glbimg.com/qw6m7dBu5wIMC4MPttTJAa11eOU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/T/i/iXg3Y9TqaS6P5MM4Cqug/facebook-instagram.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Justiça do Trabalho manda Meta remover publicações que incentivam demissão por causa do voto",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "Justiça do Trabalho manda Meta remover publicações que incentivam demissão por causa do voto A Justiça do Trabalho determinou nesta quinta-feira (29) que a Meta retire do ar, em até 24 horas, publicações no Instagram…",
+   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/10/29/justica-do-trabalho-meta-publicacoes-demissao-por-causa-do-voto.ghtml",
+   "img": "https://s2-g1.glbimg.com/9THRty0GvXseTpuZcIv00XSWOqc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/p/P/Xhf7wyQgiNXb7raZrPKQ/globo-canal-4-20261022-2000-frame-101064.jpeg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Binance promete cobrir perdas após maior ataque hacker da história, de US$ 6,3 bilhões; empresas de segurança atribuem ação a grupos da Coreia do Norte",
+   "data": "2026-10-30",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Exchange congela cerca de US$ 3 bilhões, investiga laptop de engenheiro e outros pontos de invasão e vê bitcoin cair abaixo de US$ 78 mil, enquanto firmas de segurança apontam grupo norte-coreano O post Binance promete…",
+   "url": "https://timesbrasil.com.br/cripto-brasil/binance-suspende-saques-maior-ataque-hacker-historia/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2025/05/681001b7-afp__20230606__1496426892__v2__preview__securitiesandexchangecommissionsueslargecryp.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Alphabet pressiona techs e bolsas asiáticas fecham em baixa, com Kospi em queda de 3,48% e Nikkei em recuo de 2,12%",
+   "data": "2026-10-30",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Perda de cerca de US$ 500 bilhões em valor de mercado da controladora do Google, após receita de buscas perder fôlego, leva investidores a reduzir tecnologia, enquanto Hang Seng e ASX 200 sobem O post Alphabet pressiona…",
+   "url": "https://timesbrasil.com.br/investimentos/bolsa/alphabet-bolsas-asia-fecham-baixa-techs-kospi-nikkei/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2025/12/f02c56d7-lendo-dados-mercado-de-acoes.webp",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "jp",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Gemini 4 Carbon: o que a nova IA do Google promete fazer?",
+   "data": "2026-10-30",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Google lança novo modelo do Gemini com novas ferramentas de segurança O post Gemini 4 Carbon: o que a nova IA do Google promete fazer? apareceu primeiro em Times Brasil | CNBC .",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/tecnologia-e-inovacao/gogle-lanca-novo-modelo-do-gemini/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/10/525d15de-google-anuncia-nova-versao-do-gemini-modelo-de-i.a.-da-empresa-americana.webp",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Por que a Netflix pretende cortar mais de mil empregos?",
+   "data": "2026-10-30",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Empresa demite funcionários para manter estratégia de custo O post Por que a Netflix pretende cortar mais de mil empregos? apareceu primeiro em Times Brasil | CNBC .",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/netflix-anuncia-a-demissao-de-funcionarios/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/10/ad25f5e7-netflix-deve-demitir-mais-de-1.000-pessoas.webp",
+   "t": [],
+   "tf": [
+    "us:NFLX"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Alexa+ ganha novos parceiros: conheça os lançamentos da Amazon no Brasil",
+   "data": "2026-10-30",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Novos dipositivos já estão em pré-venda no Brasil O post Alexa+ ganha novos parceiros: conheça os lançamentos da Amazon no Brasil apareceu primeiro em Times Brasil | CNBC .",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/tecnologia-e-inovacao/amazon-lanca-nova-linha-ec/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/10/25b30f66-amazon-lanca-nova-linha-eco-no-mercado-brasileiro.webp",
+   "t": [],
+   "tf": [
+    "us:AMZN",
+    "us:AMZO"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Macbook Pro da Apple que pode custar mais de R$ 170 mil; veja detalhes",
+   "data": "2026-10-30",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Novo macbook chega com ferramentas inéditas O post Macbook Pro da Apple que pode custar mais de R$ 170 mil; veja detalhes apareceu primeiro em Times Brasil | CNBC .",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/tecnologia-e-inovacao/apple-lanca-macbook-que-pode-chegar-a-176-mil/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/10/fd0d5e7e-veja-detalhes-do-novo-macbook-pro-da-apple-que-pode-custar-mais-de-r-170-mil.webp",
+   "t": [],
+   "tf": [
+    "us:AAPL"
+   ],
+   "m": [
+    "br",
+    "us"
    ]
   },
   {
@@ -308,6 +574,277 @@
   },
   {
    "tema": "mercado",
+   "titulo": "Gerdau surfa o boom dos data centers nos EUA; UBS BB eleva preço-alvo",
+   "data": "2026-10-29",
+   "fonte": "Brazil Journal",
+   "resumo": "Quer surfar o boom dos data centers nos Estados Unidos? Compre Gerdau.",
+   "url": "https://braziljournal.com/gerdau-surfa-o-boom-dos-data-centers-nos-eua-ubs-bb-eleva-preco-alvo",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/aseKO6unlKCHgxtOJ.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [
+    "GGBR4"
+   ],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "DoorDash compra Instacart por US$ 17 bilhões",
+   "data": "2026-10-29",
+   "fonte": "Brazil Journal",
+   "resumo": "A DoorDash está comprando a Instacart por US$ 17 bilhões, abrindo um novo capítulo em sua estratégia de consolidação do setor de delivery. A DoorDash pagará US$ 65 por ação da Instacart, um prêmio de 26% sobre o preço…",
+   "url": "https://braziljournal.com/doordash-compra-instacart-por-us-17-bilhoes",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asDoibAuYsiT1uM9i.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Raízen fecha acordo tributário épico, extinguindo R$ 22 bi em dívidas",
+   "data": "2026-10-29",
+   "fonte": "Brazil Journal",
+   "resumo": "A Raízen anunciou um acordo com a União que vai extinguir R$ 22,4 bilhões em débitos da companhia – na maior transação tributária desde que esse tipo de acordo foi regulamentado no Brasil, seis anos atrás. Pelos termos…",
+   "url": "https://braziljournal.com/raizen-fecha-acordo-tributario-epico-extinguindo-r-22-bi-em-dividas",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/assuQ8vDl6vfvdqWg.png?width=800&height=420&quality=85&resize=fill",
+   "t": [
+    "RAIZ4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A Bolsa caiu 16% com Lula até agora. Mas o estrago é maior do que parece",
+   "data": "2026-10-29",
+   "fonte": "Brazil Journal",
+   "resumo": "A queda de 2,68% no Ibovespa no pregão de hoje esconde uma destruição muito maior em alguns setores e ações. Casas Bahia, por exemplo, despencou 20% hoje, enquanto a Cosan perdeu 12%, a Cyrela caiu 11% e Cogna recuou…",
+   "url": "https://braziljournal.com/a-bolsa-caiu-16-com-lula-ate-agora-mas-o-estrago-e-maior-do-que-parece",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asi5NAeTP2t75yrHD.png?width=800&height=420&quality=85&resize=fill",
+   "t": [
+    "BHIA3",
+    "COGN3",
+    "CSAN3",
+    "CYRE3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nem petróleo, nem juros: por que a inteligência artificial virou o verdadeiro motor da economia global",
+   "data": "2026-10-29",
+   "fonte": "NeoFeed",
+   "resumo": "As previsões de um 2026 de desaceleração da economia global em razão da crise do petróleo, com o fechamento do Estreito de Ormuz, acabaram sendo sobrepostas pelo boom de investimentos das empresas de tecnologia em…",
+   "url": "https://neofeed.com.br/economia/nem-petroleo-nem-juros-por-que-a-inteligencia-artificial-virou-o-verdadeiro-motor-da-economia-global/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/relogio-engrenagem-dinheiro.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "As armas da Clear para quem faz day trade",
+   "data": "2026-10-29",
+   "fonte": "NeoFeed",
+   "resumo": "﻿ Uma notícia sobre juros, um novo indicador econômico ou uma mudança no cenário político pode alterar, em poucos minutos, o rumo dos preços na Bolsa. Para quem compra e vende ativos no mesmo pregão, acompanhar esses…",
+   "url": "https://neofeed.com.br/brand-stories/apresentado-por-clear/as-armas-da-clear-para-quem-faz-day-trade/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/casa-clear.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "“Modo IA” de buscas no Google provoca queda de receita e gera perda bilionária na Alphabet",
+   "data": "2026-10-29",
+   "fonte": "NeoFeed",
+   "resumo": "A Alphabet, dona do Google, está sofrendo os efeitos da inteligência artificial no seu buscador. Na Nasdaq, as ações da companhia registravam queda de 11,5% por volta de 11h30 (horário local) de quinta-feira, 29 de…",
+   "url": "https://neofeed.com.br/negocios/modo-ia-de-buscas-no-google-provoca-queda-de-receita-e-gera-perda-bilionaria-na-alphabet/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2023/07/alphabet-google.jpg",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Crédito mais arriscado, oportunidade maior: o dilema da Creditas para 2027",
+   "data": "2026-10-29",
+   "fonte": "NeoFeed",
+   "resumo": "O cenário de crédito no Brasil deve ficar mais desafiador em 2027, com juros elevados, famílias pressionadas pelo endividamento e pouco espaço para expansão das concessões. Para a Creditas, porém, esse quadro é como uma…",
+   "url": "https://neofeed.com.br/startups/credito-mais-arriscado-oportunidade-maior-o-dilema-da-creditas-para-2027/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/creditas.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Petrobras encontra petróleo pela 3ª vez no mesmo poço na costa do Amapá",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Petrobras anuncia descoberta de petróleo em águas ultra profundas na Costa do Amapá A Petrobras encontrou petróleo em uma terceira área do poço Morpho, localizado na bacia da Foz do Amazonas, no litoral do Amapá, em uma…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/29/petrobras-conclui-perfuracao-com-mais-uma-descoberta-de-petroleo-em-aguas-ultra-profundas-do-amapa.ghtml",
+   "img": "https://s2-g1.glbimg.com/Gznbkj04W9VZY7I0AbT5m7CyVlY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/L/P9PQopRfABvNpBBEiOIg/75523909-906.jpg",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Google vai colocar anúncios nas respostas da inteligência artificial no Brasil ainda em 2026",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Alphabet, dona do Google, vai liberar uso de inteligência artificial para pesquisas que tenham fins militares Reprodução/TV Globo O Google planeja expandir a exibição de anúncios em seu Modo IA para o Brasil, o México e…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/10/29/google-vai-colocar-anuncios-nas-respostas-da-inteligencia-artificial-no-brasil-ainda-em-2026.ghtml",
+   "img": "https://s2-g1.glbimg.com/BxZusOghdvRrfE50J2h0Pw9gBLQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/5/B/EYa70ES4yHRUGzJlyhxQ/globo-canal-5-20250205-1654-frame-407305.jpeg",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Contas públicas têm déficit de R$ 5,5 bilhões em setembro; dívida soma 82,9% do PIB, maior nível em cinco anos e meio",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "As contas do setor público consolidado apresentaram um déficit primário de R$ 5,5 bilhões em setembro, informou o Banco Central (BC) nesta quinta-feira (29). 🔎 O déficit primário ocorre quando as receitas com tributos e…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/29/contas-publicas-tem-deficit-de-r-55-bilhoes-em-setembro-divida-segue-em-829percent-do-pib-maior-nivel-desde-2021.ghtml",
+   "img": "https://s2-g1.glbimg.com/NEQ5QEmQq3hq1aMUuCI-32mEg_Y=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2021/L/m/xJ33noQUurvxa9pzqgig/dinheiro-4.jpeg",
+   "t": [
+    "AZZA3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Governo Trump aponta plano de espionagem chinês contra CEO da Nvidia, diz jornal",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Jensen Huang, CEO da Nvidia, durante conferência da empresa em 17 de março de 2026 Reuters/Carlos Barria O governo dos Estados Unidos suspeita que uma executiva chinesa do setor de tecnologia tenha atuado como agente de…",
+   "url": "https://g1.globo.com/tecnologia/ciberseguranca/noticia/2026/10/29/governo-trump-aponta-plano-de-espionagem-chines-contra-ceo-da-nvidia-diz-jornal.ghtml",
+   "img": "https://s2-g1.glbimg.com/22XEKSu6f5zZG4WXle_QeY__7wo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/v/u/hWsMECTGWbgeWtTLsw8g/2026-03-17t190331z-1569419364-rc2i6kamf29y-rtrmadp-3-nvidia-gtc.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "MPT processa Meta em R$ 50 milhões e quer remoção imediata de conteúdos de assédio eleitoral",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Ministério Público Eleitoral afirma que Meta não cumpriu medidas para tratamento igualitário às campanhas presidenciais Jornal Nacional/ Reprodução O Ministério Público do Trabalho (MPT) entrou nesta quinta-feira (29)…",
+   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/10/29/mpt-processa-meta-em-r-50-milhoes-e-quer-remocao-imediata-de-conteudos-de-assedio-eleitoral.ghtml",
+   "img": "https://s2-g1.glbimg.com/9THRty0GvXseTpuZcIv00XSWOqc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/p/P/Xhf7wyQgiNXb7raZrPKQ/globo-canal-4-20261022-2000-frame-101064.jpeg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Volkswagen tem prejuízo de US$ 6,5 bilhões, o maior em mais de 10 anos, em meio à crise no setor e à concorrência chinesa",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Divulgação Volks Divulgação Volks A Volkswagen registrou prejuízo operacional de US$ 6,59 bilhões no terceiro trimestre de 2026, o pior resultado em mais de uma década. A montadora enfrenta dificuldades em mercados…",
+   "url": "https://g1.globo.com/carros/noticia/2026/10/29/volkswagen-prejuizo-10-anos.ghtml",
+   "img": "https://s2-g1.glbimg.com/qQSZPe_gs16P1ZzjvKfIjdM6yeM=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2020/B/4/GBU0AgSR6PBdBAtHAv3Q/capa-materia-nivos-suv.jpg",
+   "t": [],
+   "tf": [
+    "de:VOW",
+    "de:VOW3"
+   ],
+   "m": [
+    "de"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa cai pelo 4º dia, e queda na semana passa de 17%; dólar sobe e fecha a R$ 5,38",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou em alta de 0,89% nesta quinta-feira (29), cotado a R$ 5,3874. Na máxima do dia, chegou a R$ 5,4285. Já o Ibovespa, principal índice da bolsa brasileira,…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/29/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/qJ7O_5T6hSs6HEsS6HwA-Vl1Otk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/2/s/iveHFATICeDrK8diFnLw/pexels-john-guccione-wwwadvergroupcom-3564390.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Vazamento expõe dados de mais de 40 mil funcionários da segurança dos EUA",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Oficial do ICE, o Serviço de Imigração e Algândega dos EUA AP Photo/Julia Demaree Nikhinson Dados de mais de 40 mil funcionários do Departamento de Segurança Interna dos Estados Unidos (DHS) foram divulgados na…",
+   "url": "https://g1.globo.com/tecnologia/ciberseguranca/noticia/2026/10/29/vazamento-expoe-dados-de-mais-de-40-mil-funcionarios-da-seguranca-dos-eua.ghtml",
+   "img": "https://s2-g1.glbimg.com/FSmgfSvI8FuaJC9f-dZkAQTTvzY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/9/9/ScMZBNRTSIQsFO0yXoMg/ice.jpg",
+   "t": [],
+   "tf": [
+    "us:ICE"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Eleições nos EUA: carne bovina vira símbolo de inflação e guerra cultural na disputa pelo Congresso",
+   "data": "2026-10-29",
+   "fonte": "g1 Economia",
+   "resumo": "Eleições legislativas nos EUA podem redefinir o raio de ação da presidência de Donald Trump “Escolher outra proteína? Eu prefiro escolher outro senador.” A frase, dita por um homem enquanto preparava hambúrgueres em uma…",
+   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/10/29/eleicoes-nos-eua-carne-bovina-vira-simbolo-de-inflacao-e-guerra-cultural-na-disputa-pelo-congresso.ghtml",
+   "img": "https://s2-g1.glbimg.com/qRwUS7Brx5s_jjQZdZPTLOXgKxk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/0/B/vPoYX6QTCSmJhpQg2pMw/globo-canal-4-20260827-2000-frame-77847.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
    "titulo": "Ibovespa cai 2,68%, e dólar fecha em leve baixa a R$ 5,34",
    "data": "2026-10-28",
    "fonte": "Agência Brasil",
@@ -329,6 +866,166 @@
    "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/cni-reduz-previsao-de-crescimento-do-pib-para-16-em-2026",
    "img": "https://imagens.ebc.com.br/oKCsjrcZTtCEAq0ImtGcid21rrk=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2022-05-03t150541z_1_lynxnpei420m7_rtroptp_4_health-coronavirus-brazil-autos.jpg?itok=rbsSJiDw",
    "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Prepare o bolso e o caixa: vem aí o IVA de (pelo menos) 30%",
+   "data": "2026-10-28",
+   "fonte": "Brazil Journal",
+   "resumo": "O contribuinte brasileiro é, antes de tudo, um forte. O novo imposto sobre valor agregado, que será dividido na CBS (de alçada federal) e no IBS (de alçada estadual e municipal), deverá ficar próximo de 30%.",
+   "url": "https://braziljournal.com/prepare-o-bolso-e-o-caixa-vem-ai-o-iva-de-pelo-menos-30",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asm2QZvgJH22Uns8W.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [
+    "CXSE3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Lucro do Santander cai 28% e fica abaixo do consenso; ROE vai a 11,9%",
+   "data": "2026-10-28",
+   "fonte": "Brazil Journal",
+   "resumo": "O mercado já esperava um resultado mais fraco do Santander Brasil no terceiro tri, mas a piora surpreendeu. O lucro líquido caiu 4% no tri a tri e 28% na comparação anual, para R$ 2,9 bilhões, 7% abaixo do consenso. O…",
+   "url": "https://braziljournal.com/lucro-do-santander-cai-28-e-fica-abaixo-do-consenso-roe-vai-a-11-9",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asdArj60PI60mFmXc.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [
+    "SANB11"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "O Itaú quer ser um ChatGPT financeiro. Este M&A é um passo importante",
+   "data": "2026-10-28",
+   "fonte": "Brazil Journal",
+   "resumo": "Em outubro de 2019, o Itaú pagou R$ 500 milhões por uma startup de tecnologia chamada Zup. O objetivo: acelerar a transformação digital do maior banco da América Latina. Agora, sete anos depois, o banco está repetindo o…",
+   "url": "https://braziljournal.com/o-itau-quer-ser-um-chatgpt-financeiro-este-m-and-a-e-um-passo-importante",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/aslUxrl21FcyEv8B4.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "MPT pede multa de R$ 3 milhões à Azul por assédio moral; veja as denúncias",
+   "data": "2026-10-28",
+   "fonte": "g1 Economia",
+   "resumo": "Embraer E1 Azul Linhas Aéreas Azul/Divulgação O Ministério Público do Trabalho (MPT) entrou com uma ação civil pública contra a Azul Linhas Aéreas e pede que a companhia pague R$ 3 milhões por danos morais coletivos, em…",
+   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/10/28/mpt-pede-multa-de-r-3-milhoes-a-azul-por-assedio-moral-veja-as-denuncias.ghtml",
+   "img": "https://s2-g1.glbimg.com/Wis3OUhgWtNdsyF2e8KLEtu-xTc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/4/c/dXcohlT9qla54dLDO4XQ/azul-embraer-195-e1-vcp-pouso-sh.jpg",
+   "t": [
+    "AZUL3",
+    "EMBJ3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Raízen fecha acordo de R$ 22,4 bilhões com a União e abate R$ 8,5 bilhões em multas e juros",
+   "data": "2026-10-28",
+   "fonte": "g1 Economia",
+   "resumo": "Logo da Raízen Divulgação A Raízen anunciou nesta quarta-feira (28) um acordo com a União para renegociar R$ 22,4 bilhões em dívidas com o governo federal relativas a tributos de empresas do grupo. O acordo, negociado…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/28/raizen-fecha-acordo-tributario.ghtml",
+   "img": "https://s2-g1.glbimg.com/sGVd_ajUEsHLvLXmw2qiq00teGU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/d/V/6hFQlST0iVMfWZDEN3tg/raizen-1200px-v2-1773240962.jpg",
+   "t": [
+    "RAIZ4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Fed mantém juros dos EUA na faixa de 3,75% a 4% ao ano a poucos dias das eleições para o Congresso",
+   "data": "2026-10-28",
+   "fonte": "g1 Economia",
+   "resumo": "Prédio do Federal Reserve dos EUA em Washington, EUA (maio/2020) Kevin Lamarque / Reuters O Federal Reserve (Fed), banco central dos Estados Unidos, manteve a taxa de juros do país inalterada na faixa de 3,75% a 4% ao…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/28/fed-juros-outubro.ghtml",
+   "img": "https://s2-g1.glbimg.com/Sw2CxPnFGTH-Paj18JSZew574Uo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2020/S/z/QNN6LlTDioqEtAjg5R3g/2020-06-03t000000z-487125308-rc2v1h9a67l7-rtrmadp-3-usa-fed-liquidity.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Amazon corta até 250 empregos após lançar novos produtos, diz agência; veja quais áreas foram afetadas",
+   "data": "2026-10-28",
+   "fonte": "g1 Economia",
+   "resumo": "Funcionários da Amazon denunciam à Justiça receber menos que um salário mínimo A Amazon cortou até 250 postos de trabalho em sua divisão de dispositivos e serviços nesta quarta-feira (28). 🗒️ Tem alguma sugestão de…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/10/28/amazon-corta-ate-250-empregos-apos-lancar-novos-produtos-diz-agencia-veja-quais-areas-foram-afetadas.ghtml",
+   "img": "https://s2-g1.glbimg.com/rug-YXztiCQ4CPT4AbRBaPmLtdQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/Y/w/zzYLkwSiOfOL8LdoXr3Q/2026-10-08t010301z-2110120797-rc21hbar5a86-rtrmadp-3-amazon-com-layoffs.jpg",
+   "t": [],
+   "tf": [
+    "us:AMZN",
+    "us:AMZO"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Apple lança seu primeiro notebook com tela sensível ao toque; versão mais cara custa R$ 180 mil",
+   "data": "2026-10-28",
+   "fonte": "g1 Economia",
+   "resumo": "Apple apresenta seu primeiro notebook com tela sensível ao toque. Reprodução/Apple A Apple apresentou nesta quarta-feira (28) seu primeiro notebook com tela sensível ao toque (touch screen), o MacBook Pro. No Brasil, os…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/10/28/apple-apresenta-seu-primeiro-notebook-com-tela-sensivel-ao-toque.ghtml",
+   "img": "https://s2-g1.glbimg.com/fV5VyejkZqmkL61M__mFc4Q5GLg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/r/l/3IJucqTA6bldFS3gSlRQ/captura-de-tela-2026-10-28-141402.png",
+   "t": [],
+   "tf": [
+    "us:AAPL"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa cai mais uma vez e acumula perda de 16% na semana; dólar recua",
+   "data": "2026-10-28",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O Ibovespa, principal índice da bolsa brasileira, fechou em queda de 2,68% nesta quarta-feira (28), aos 171.006 pontos. Com o resultado, o índice acumula perdas de 16,62%…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/28/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/Cb95F4-UJ3mVJ_OH5hvu38XLzv4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/8/9/eVBIWGRCmGr5WQ7HufAA/pexels-pixabay-164661.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Governo renova subsídio ao diesel; por que o agro é tão vulnerável à alta do combustível?",
+   "data": "2026-10-28",
+   "fonte": "g1 Economia",
+   "resumo": "Governo prorroga subvenção de R$ 2,12 por litro de diesel O governo federal prorrogou nesta terça-feira (27), por mais 30 dias, o subsídio ao diesel, mantendo o benefício em R$ 2,12 por litro. A medida busca conter os…",
+   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/10/28/por-que-o-agro-e-tao-vulneravel-a-alta-do-diesel.ghtml",
+   "img": "https://s2-g1.glbimg.com/p9LFlGwKhTFbeYaSR9NqOVkl4VQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/c/O/4BDo8VSNiFyoyyjBF9UA/adobestock-392658613.jpeg",
+   "t": [
+    "RNEW3"
+   ],
    "tf": [],
    "m": [
     "br"
@@ -460,6 +1157,49 @@
    "resumo": "O mercado financeiro apresentou movimentos de acomodação nesta terça-feira (27), após a forte reação da véspera à reeleição do presidente Luiz Inácio Lula da Silva. O dólar fechou em queda próxima de 1% e ficou abaixo…",
    "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/dolar-cai-quase-1-e-ibovespa-recua-apos-tombo-eleitoral",
    "img": "https://imagens.ebc.com.br/qgr1uCa7n_TP2WKn5oQPmLd6V2M=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/23/2026-07-23t123806z_1_lynxmpem6m19r_rtroptp_4_usa-trump-tariffs-indonesia.jpg?itok=6u1xpzSK",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Bilionários brasileiros perdem R$ 75 bilhões em um dia após tombo da bolsa; veja os mais afetados",
+   "data": "2026-10-27",
+   "fonte": "g1 Economia",
+   "resumo": "O que explica o ‘circuit breaker’ na bolsa de valores? A forte turbulência nos mercados financeiros após a reeleição do presidente Luiz Inácio Lula da Silva (PT) provocou uma queda expressiva na bolsa brasileira nesta…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/27/bilionarios-brasileiros-perdem-us-14-bilhoes-apos-tombo-do-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/N2u1c2YFm1QqJWINxAYtAleMHsQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/K/a/cyEsSkQHiwA0QfGhN07g/1755124380843.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa fecha em queda após eleições e à espera do Fed; dólar recua a R$ 5,35",
+   "data": "2026-10-27",
+   "fonte": "g1 Economia",
+   "resumo": "Bolsa cai e dólar sobe após vitória de Lula; economista explica reação do mercado O Ibovespa, principal índice da bolsa brasileira, oscilou ao longo desta terça-feira (27) e fechou em queda de 0,51%, aos 175.705 pontos.…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/27/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/XNe-iZGShwcfxKKIu_dUZJjCMZA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/A/W/pNqFkwSSG90RoeSZ80Pg/drf20241217001.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "É hora de comprar ações? Veja o que avaliar após o tombo do Ibovespa",
+   "data": "2026-10-27",
+   "fonte": "g1 Economia",
+   "resumo": "Bolsa despenca 13% após vitória de Lula A forte queda da bolsa brasileira após a reeleição de Luiz Inácio Lula da Silva (PT), nesta segunda-feira (26), levantou uma dúvida entre investidores: é hora de aproveitar os…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/27/comprar-acoes-veja-o-que-avaliar-apos-tombo-do-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/46C4or-4GqMftg6KPOilEINCu5o=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2020/C/c/FwsIXETS6K61xm99LqYA/000-1pl7t0.jpg",
    "t": [],
    "tf": [],
    "m": [
@@ -614,6 +1354,20 @@
    "resumo": "O mercado financeiro brasileiro teve um dia de forte turbulência nesta segunda-feira (26), após a reeleição do presidente Luiz Inácio Lula da Silva no segundo turno das eleições presidenciais. O dólar fechou em alta de…",
    "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/dolar-sobe-821-e-bolsa-cai-1388-apos-reeleicao-de-lula",
    "img": "https://imagens.ebc.com.br/qKGaRkOSgKY92Sv-dTm3L4d-IYM=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2021-10-06t120841z_1_lynxmpeh950lf_rtroptp_4_dolar-abre.jpg?itok=VWlxDSS-",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Circuit breaker é acionado pela primeira vez desde a pandemia de Covid-19; relembre todas as vezes em que a Bolsa parou",
+   "data": "2026-10-26",
+   "fonte": "g1 Economia",
+   "resumo": "Circuit breaker: entenda o que é a suspensão das negociações quando a bolsa despenca Luiz Inácio Lula da Silva (PT) foi reeleito presidente da República neste domingo (25) e governará o Brasil por mais quatro anos. Com…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/26/circuit-breaker-e-acionado-pela-primeira-vez-desde-a-pandemia-de-covid-19-relembre-todas-as-vezes-em-que-a-bolsa-parou.ghtml",
+   "img": "https://s2-g1.glbimg.com/46C4or-4GqMftg6KPOilEINCu5o=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2020/C/c/FwsIXETS6K61xm99LqYA/000-1pl7t0.jpg",
    "t": [],
    "tf": [],
    "m": [
