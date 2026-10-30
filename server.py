@@ -1056,7 +1056,9 @@ def api_noticias():
     d, _ = snapshots.load("noticias", max_mem_age=3 * 3600)
     if not d: return JSONResponse({"itens": []}, headers={"Cache-Control": "public, max-age=1800"})
     if _NWA.get("d") is not d:
-        _NWA.update(d=d, out=dict(d, itens=[dict(it, a=noticia_assuntos(it)) for it in d.get("itens") or []]))
+        pg = json.load(open(os.path.join(BASE, "vocabulario.json"), encoding="utf-8"))["noticias"]["pagos"]  # sites pagos: nunca aparecem
+        _NWA.update(d=d, out=dict(d, fontes=[f for f in d.get("fontes") or [] if f != "Valor Econômico"],
+                                  itens=[dict(it, a=noticia_assuntos(it)) for it in d.get("itens") or [] if not any(k in (it.get("url") or "") for k in pg)]))
     return JSONResponse(_NWA["out"], headers={"Cache-Control": "public, max-age=1800"})
 
 _NWA, _NWV = {}, {}  # notícias com assunto (por versão do snapshot); palavras de vocabulario.json → noticias.assuntos

@@ -21,7 +21,6 @@ MAX_BARSI, MAX_MERCADO, DIAS, OG_MAX = 20, 300, 120, 40
 RSS_BARSI = "https://www.bing.com/news/search?q=%22Luiz+Barsi%22&format=rss&setlang=pt-BR&cc=BR"
 # Fontes de mercado (todas em português do Brasil): nome -> endereços do RSS, na ordem de tentativa
 FONTES_RSS = {
-    "Valor Econômico": ["https://pox.globo.com/rss/valor/", "https://valor.globo.com/rss/valor/"],
     "InfoMoney": ["https://www.infomoney.com.br/mercados/feed/", "https://www.infomoney.com.br/feed/"],
     "Reuters (Investing.com Brasil)": ["https://br.investing.com/rss/news_25.rss", "https://br.investing.com/rss/news.rss"],
     "Exame": ["https://exame.com/invest/mercados/feed/", "https://exame.com/feed/"],
@@ -31,6 +30,7 @@ RSS_RESERVA = "https://www.bing.com/news/search?q=Ibovespa+OR+%22a%C3%A7%C3%B5es
 MERCADO_RX = re.compile(r"\b(ibovespa|bolsa|b3|a[cç][aãoõ]es|a[cç][aã]o|selic|copom|d[oó]lar|infla[cç][aã]o|ipca|juros|dividendo|provento|jcp|"
                         r"balan[cç]o|lucro|preju[ií]zo|trimestre|ipo|opa|recompra|fato relevante|cvm|mercado financeiro)\b", re.I)
 VOC = json.load(open(os.path.join(os.path.dirname(HERE), "vocabulario.json"), encoding="utf-8"))["noticias"]
+PAGOS = VOC["pagos"]  # sites que cobram assinatura para ler (não entram; o servidor também esconde as antigas: server.noticia_paga)
 AMBIGUOS = set(VOC["nomes_ambiguos"])  # nomes que também são palavras comuns
 import snapshots  # noqa: E402  (arquivo de notícias: começa da cópia da branch data)
 import tradingview  # noqa: E402  (países do site: nome, índice e bolsa de cada um — sinais do mercado de fora)
@@ -235,7 +235,7 @@ def main(out):
             it["resumo"] = it["resumo"] or curto(meta(pg.text, "og:description"))
         time.sleep(0.5)
     for it in merc: it.update(cl(it))  # as já guardadas também: mesma regra de hoje (mercado e empresas)
-    merc = sorted(merc + novos, key=lambda i: i["data"], reverse=True)[:MAX_MERCADO]
+    merc = sorted([i for i in merc + novos if not any(k in i["url"] for k in PAGOS)], key=lambda i: i["data"], reverse=True)[:MAX_MERCADO]
     try: marcos = json.load(open(os.path.join(HERE, "noticias_marcos.json"), encoding="utf-8"))["itens"]
     except Exception as e: marcos = []; print("noticias: sem marcos:", e)
     for m in marcos:
@@ -244,6 +244,7 @@ def main(out):
     try: dest = set(json.load(open(os.path.join(HERE, "noticias_marcos.json"), encoding="utf-8")).get("destaque") or [])
     except Exception: dest = set()
     itens = sorted(barsi, key=lambda i: i.get("data") or "", reverse=True)[:MAX_BARSI] + merc + marcos
+    itens = [it for it in itens if not any(k in (it.get("url") or "") for k in PAGOS)]  # pagas saem (também as já guardadas)
     for it in itens:
         if it.get("url") in dest: it["destaque"] = True  # destaque no topo da aba (escolhido à mão em noticias_marcos.json)
     for it in itens: it["resumo"] = curto(it.get("resumo") or "", 10 ** 4)  # limpa também as já guardadas (marcas "]]>" do RSS)
