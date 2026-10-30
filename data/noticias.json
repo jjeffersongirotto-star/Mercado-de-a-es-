@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-10-30T10:53:15+00:00",
+ "fetched_at": "2026-10-30T21:01:50+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -306,6 +306,314 @@
    "m": [
     "br",
     "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe a R$ 5,44 e tem maior cotação de 2026; alta na semana é de 9,15%",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Dólares (Foto: Valter Campanato/Agência Brasil) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/01/dolar_moeda_0803221210.webp?fit=1170%2C700&quality=70&strip=all\" />Calculada pelo Banco Central…",
+   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-30102026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/01/dolar_moeda_0803221210.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Do rali à queda histórica: como o Ibovespa caiu 9,88% no mês, maior baixa desde 2022",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Ações em queda (Crédito: Shutterstock) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2019/06/acoes-queda-baixa-bear.jpg?fit=900%2C572&quality=70&strip=all\" />Ibovespa saiu de máximas históricas…",
+   "url": "https://www.infomoney.com.br/mercados/do-rali-a-queda-historica-como-ibovespa-caiu-988-outubro-2026-maior-baixa-desde-2022/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2019/06/acoes-queda-baixa-bear.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa cai 18,12% na semana, maior baixa desde 2020 e 5ª maior desde o Plano Real",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Painéis de mercado inspirados na B3 mostram oscilações de preços e queda, em referência à volatilidade e à gestão de risco no day trade. \" data-image-caption=\" Imagem conceitual representa a volatilidade no mercado…",
+   "url": "https://www.infomoney.com.br/mercados/ibovespa-cai-pela-5a-vez-com-temor-fiscal-e-externo-queda-historica-semanal/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/09/ChatGPT-Image-14-de-set.-de-2026-19_09_19.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Meta fecha acordo em processo sobre vício em redes sociais e evita julgamento nos EUA",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Fachada da Corte Superior do Condado de Los Angeles, onde estava previsto o julgamento de uma ação contra a Meta relacionada ao vício de crianças e adolescentes em redes sociais, em 2 de fevereiro de 2026. Foto: Stella…",
+   "url": "https://www.infomoney.com.br/business/global/meta-fecha-acordo-em-processo-sobre-vicio-em-redes-sociais-e-evita-julgamento-nos-eua/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/10/META-SETTLEMENT.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa emenda 5ª baixa e tem pior semana desde 2020; outubro é o pior mês do ano",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Índices nos EUA despencam com temores sobre maiores gastos em IA The post Ibovespa emenda 5ª baixa e tem pior semana desde 2020; outubro é o pior mês do ano appeared first on InfoMoney .",
+   "url": "https://www.infomoney.com.br/mercados/ibovespa-hoje-bolsa-de-valores-ao-vivo-30102026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/08/Ibovespa-ao-vivo-7.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Acionistas da Raízen aprovam plano de recuperação extrajudicial, dizem fontes",
+   "data": "2026-10-30",
+   "fonte": "InfoMoney",
+   "resumo": "Raízen (Foto: Divulgação) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2021/08/post-64-raizen.png?fit=860%2C420&quality=70&strip=all\" />Plano de reestruturação extrajudicial da Raízen, que envolve…",
+   "url": "https://www.infomoney.com.br/business/acionistas-da-raizen-aprovam-plano-de-recuperacao-extrajudicial-dizem-fontes/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2021/08/post-64-raizen.png",
+   "t": [
+    "RAIZ4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Com muita disputa, Aneel leiloou oito lotes de transmissão de energia",
+   "data": "2026-10-30",
+   "fonte": "Agência Brasil",
+   "resumo": "A Agência Nacional de Energia Elétrica (Aneel) leiloou nesta sexta-feira (30), na sede da B3, na capital paulista, oito projetos de transmissão de energia. Foi o último leilão do ano. O certame prevê investimentos de R$…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/com-muita-disputa-aneel-leiloou-oito-lotes-de-transmissao-de-energia",
+   "img": "https://imagens.ebc.com.br/2JUqV5iFM_HtEQXUV1RlsrA4_Go=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/10/30/_int2625.jpg?itok=x2usrmxc",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Desemprego em 5,2% no 3° trimestre é o menor para o período desde 2012",
+   "data": "2026-10-30",
+   "fonte": "Agência Brasil",
+   "resumo": "A taxa de desocupação para o terceiro trimestre caiu para 5,2%, a menor já registrada para esse período desde 2012. O desemprego era de 5,4% no segundo trimestre deste ano e de 5,6% no terceiro trimestre de 2025. Os…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/desemprego-em-52-no-3deg-trimestre-e-o-menor-para-o-periodo-desde-2012",
+   "img": "https://imagens.ebc.com.br/s5ev6nz84vmzqqOcyIe5Sd-2tBE=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/coronavirus_industria_automobilistica_fabrica2005200371.jpg?itok=b95DhOUD",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Itaú vê fim do ciclo de cortes da Selic diante de cenário mais adverso",
+   "data": "2026-10-30",
+   "fonte": "NeoFeed",
+   "resumo": "O Itaú acredita que o ciclo de cortes da Selic chegou ao fim. O banco diz em relatório divulgado na sexta-feira, 30 de outubro, que espera que o Comitê de Política Monetária (Copom) mantenha a taxa básica de juros em…",
+   "url": "https://neofeed.com.br/economia/itau-ve-fim-do-ciclo-de-cortes-da-selic-diante-de-cenario-mais-adverso/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2024/05/Selic-corte-de-juros.jpg",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Em dobradinha ibérica, espanholas e EDP levam todos os lotes de transmissão de R$ 8,9 bilhões",
+   "data": "2026-10-30",
+   "fonte": "NeoFeed",
+   "resumo": "As empresas espanholas foram as principais ganhadoras do leilão de transmissão de energia realizado nesta sexta-feira, 30 de outubro, na B3, em São Paulo. Celeo, Cymi, Neoenergia e Cox arremataram sete dos oito lotes,…",
+   "url": "https://neofeed.com.br/economia/em-dobradinha-iberica-espanholas-e-edp-levam-todos-os-lotes-de-transmissao-de-r-89-bilhoes/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/linha-transmissao.jpg",
+   "t": [],
+   "tf": [
+    "pt:EDP"
+   ],
+   "m": [
+    "br",
+    "pt"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "BTG aposta em um “Pix internacional” e prevê avanço das stablecoins em até cinco anos",
+   "data": "2026-10-30",
+   "fonte": "NeoFeed",
+   "resumo": "Nova York – Depois de o Pix transformar os pagamentos no Brasil, o BTG Pactual acredita que as stablecoins podem fazer o mesmo pelas transferências internacionais. Para André Portilho, head de digital assets do BTG…",
+   "url": "https://neofeed.com.br/wealth-management/btg-aposta-em-um-pix-internacional-e-preve-avanco-das-stablecoins-em-ate-cinco-anos/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/stablecoin.jpg",
+   "t": [
+    "BPAC11"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Itaú une Rede, crédito e superapp no Itaú Pay para disputar a “última milha” do e-commerce",
+   "data": "2026-10-30",
+   "fonte": "NeoFeed",
+   "resumo": "O Itaú Unibanco decidiu recorrer a diferentes prateleiras do seu ecossistema para ampliar as compras realizadas no comércio eletrônico, de olho em estreitar os laços tanto com as plataformas do setor como com os…",
+   "url": "https://neofeed.com.br/negocios/itau-une-rede-credito-e-superapp-no-itau-pay-para-disputar-a-ultima-milha-do-e-commerce/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/e-commerce-pay.jpg",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A disputa no balcão da farmácia: CEO da Pague Menos abre o jogo sobre o Mercado Livre",
+   "data": "2026-10-30",
+   "fonte": "NeoFeed",
+   "resumo": "Quase dois meses após o Mercado Livre anunciar que passaria a vender medicamentos com retenção de receita médica no Brasil, incluindo as canetas emagrecedoras, a guerra entre a plataforma digital e as varejistas…",
+   "url": "https://neofeed.com.br/negocios/a-disputa-no-balcao-da-farmacia-ceo-da-pague-menos-abre-o-jogo-sobre-o-mercado-livre/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/mercado-livre-farmacias.jpeg",
+   "t": [
+    "PGMN3"
+   ],
+   "tf": [
+    "us:MELI"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "CSN fecha acordo de exclusividade de R$ 12,7 bilhões com a Huaxin para a venda da CSN Cimentos",
+   "data": "2026-10-30",
+   "fonte": "NeoFeed",
+   "resumo": "Como parte do seu plano de desinvestimentos, a CSN anunciou na manhã desta sexta-feira, 30 de outubro, que celebrou um acordo de exclusividade com a chinesa Huaxin Building Materials Group para a venda da CSN Cimentos.…",
+   "url": "https://neofeed.com.br/negocios/csn-fecha-acordo-de-exclusividade-de-r-127-bilhoes-com-a-huaxin-para-a-venda-da-csn-cimentos/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2021/06/CSN-Cimento-1.jpg",
+   "t": [
+    "CSNA3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Raízen aprova plano para evitar falência e prevê injeção de até R$ 39,8 bilhões",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "Pedido de recuperação extrajudicial da Raízen preocupa produtores de cana Os acionistas da Raízen, produtora de açúcar e etanol de cana-de-açúcar que também atua na distribuição de combustíveis, aprovaram nesta…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/30/raizen-aprova-plano-para-evitar-falencia-e-preve-injecao-de-ate-r-398-bilhoes.ghtml",
+   "img": "https://s2-g1.glbimg.com/sGVd_ajUEsHLvLXmw2qiq00teGU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/d/V/6hFQlST0iVMfWZDEN3tg/raizen-1200px-v2-1773240962.jpg",
+   "t": [
+    "RAIZ4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Meta faz acordo com adolescente em processo que alega que redes sociais causaram depressão e transtornos alimentares",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "MPT processa Meta em R$ 50 milhões A Meta, dona do Instagram e do Facebook, fez um acordo com uma jovem que acusava as plataformas de serem projetadas para causar dependência e prejudicar a saúde mental dos usuários. 🗒️…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/10/30/meta-faz-acordo-com-adolescente-em-processo-que-alega-que-redes-sociais-causaram-depressao-e-transtornos-alimentares.ghtml",
+   "img": "https://s2-g1.glbimg.com/9THRty0GvXseTpuZcIv00XSWOqc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/p/P/Xhf7wyQgiNXb7raZrPKQ/globo-canal-4-20261022-2000-frame-101064.jpeg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Júri dos EUA decide a favor da Bayer em ação sobre câncer ligado a agrotóxico",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "Herbicida Roundup a venda em Encinitas, Califórnia, EUA Reuters / Mike Blake Um júri dos Estados Unidos decidiu a favor da gigante multinacional Bayer em um processo movido por três mulheres que alegavam ter…",
+   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/10/30/juri-dos-eua-decide-a-favor-da-bayer-em-acao-sobre-cancer-ligado-a-agrotoxico.ghtml",
+   "img": "https://s2-g1.glbimg.com/BjgIzyXsGg2XoP45IiCC883sVZE=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/2/A/HQ58dUTHS5mQUHilXI9Q/reutersmike-blake-monsanto-cos-roundup-is-shown-for-sale-in-encinitas-california.jpg",
+   "t": [],
+   "tf": [
+    "de:BAYN"
+   ],
+   "m": [
+    "de",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Desemprego cai no Brasil e atinge menor taxa para o 3º trimestre em 14 anos",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "Desemprego cai no Brasil e atinge menor taxa em 14 anos A taxa de desemprego ficou em 5,2% no terceiro trimestre de 2026, o menor nível para o período desde 2012. Os dados são da Pesquisa Nacional por Amostra de…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/30/desocupacao-fica-em-52percent-a-menor-para-um-terceiro-trimestre-desde-2012.ghtml",
+   "img": "https://s2-g1.glbimg.com/S_BB6BFboWsxtfpcXtMd9XK8Zbs=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/u/p/5BX3wqTXe0o9FxOBf5gg/remedios.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ibovespa recua 18,12% na semana e tem 5ª maior queda desde o Plano Real; dólar sobe a R$ 5,44",
+   "data": "2026-10-30",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O Ibovespa, principal índice da bolsa brasileira, fechou em queda de 0,75% nesta sexta-feira (30), aos 167.922 pontos. Com o resultado, o índice chegou à quinta baixa…",
+   "url": "https://g1.globo.com/economia/noticia/2026/10/30/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/O49d2V48Q5zIUn7fQPNfoMN5WOI=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/K/J/NvIKwCR8arhLFNMisILw/2025-01-21t204813z-1-lynxnpel0k0yk-rtroptp-4-brazil-economy.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Fiesp aponta retração da indústria no terceiro trimestre e prevê queda de 0,4% na produção em 2026",
+   "data": "2026-10-30",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "O desempenho da indústria brasileira apresentou sinais de enfraquecimento no terceiro trimestre de 2026, segundo o Levantamento de Conjuntura da Federação das Indústrias do Estado de São Paulo (Fiesp). Os resultados…",
+   "url": "https://timesbrasil.com.br/brasil/fiesp-aponta-retracao-da-industria-no-terceiro-trimestre-e-preve-queda-de-04-na-producao-em-2026/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/01/00938fb0-15.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
    ]
   },
   {
