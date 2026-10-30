@@ -16,6 +16,7 @@ public class WidgetService extends RemoteViewsService {
             List<WidgetData.Item> items = new ArrayList<>();
             WidgetData.Bands bands = WidgetData.bands("{}");
             int wDp = 300;
+            WidgetData.Cols cols;
             public void onCreate() { }
             public void onDataSetChanged() {
                 int id = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, 0);
@@ -23,11 +24,14 @@ public class WidgetService extends RemoteViewsService {
                 String sel = FavWidget.selOf(c, id, gs), data = Store.data(c, sel);
                 items = WidgetData.items(WidgetData.tickers(sel, Store.favs(c), gs), data); bands = WidgetData.bands(data); bmp.clear();
                 wDp = android.appwidget.AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
+                // 1.28: mesmas colunas em todas as linhas (antes as pontas vinham sem o ajuste ao rolar)
+                android.content.res.Resources rs = c.getResources();
+                cols = FavWidget.colsOf(c, items, wDp, rs.getConfiguration().fontScale, rs.getDisplayMetrics().density);
             }
             public void onDestroy() { }
             public int getCount() { return items.size(); }
             final java.util.Map<String, android.graphics.Bitmap> bmp = Logos.newCache();
-            public RemoteViews getViewAt(int i) { return FavWidget.row(c, items.get(i), bands, wDp, Logos.px(c, items.size()), bmp); }
+            public RemoteViews getViewAt(int i) { return FavWidget.row(c, items.get(i), bands, wDp, Logos.px(c, items.size()), bmp, 0, cols, i); }
             public RemoteViews getLoadingView() { return null; }
             public int getViewTypeCount() { return 1; }
             public long getItemId(int i) { return items.get(i).t.hashCode(); }
