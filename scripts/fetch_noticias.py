@@ -25,6 +25,10 @@ FONTES_RSS = {
     "Reuters (Investing.com Brasil)": ["https://br.investing.com/rss/news_25.rss", "https://br.investing.com/rss/news.rss"],
     "Exame": ["https://exame.com/invest/mercados/feed/", "https://exame.com/feed/"],
     "Agência Brasil": ["https://agenciabrasil.ebc.com.br/rss/economia/feed.xml"],
+    "Brazil Journal": ["https://braziljournal.com/feed/"],
+    "NeoFeed": ["https://neofeed.com.br/feed/"],
+    "g1 Economia": ["https://g1.globo.com/rss/g1/economia/"],
+    "Times Brasil (CNBC)": ["https://timesbrasil.com.br/feed/"],
 }
 RSS_RESERVA = "https://www.bing.com/news/search?q=Ibovespa+OR+%22a%C3%A7%C3%B5es%22+OR+B3&format=rss&setlang=pt-BR&cc=BR"
 MERCADO_RX = re.compile(r"\b(ibovespa|bolsa|b3|a[cç][aãoõ]es|a[cç][aã]o|selic|copom|d[oó]lar|infla[cç][aã]o|ipca|juros|dividendo|provento|jcp|"
@@ -43,7 +47,8 @@ FONTES = {"estadao.com.br": "Estadão", "seudinheiro.com": "Seu Dinheiro", "info
           "valor.globo.com": "Valor Econômico", "moneytimes.com.br": "Money Times", "einvestidor": "Estadão E-Investidor",
           "bpmoney.com.br": "BP Money", "suno.com.br": "Suno", "opetroleo.com.br": "O Petróleo", "cnnbrasil.com.br": "CNN Brasil",
           "istoedinheiro.com.br": "IstoÉ Dinheiro", "forbes.com.br": "Forbes Brasil", "investnews.com.br": "InvestNews",
-          "investing.com": "Reuters (Investing.com Brasil)", "agenciabrasil.ebc.com.br": "Agência Brasil"}
+          "investing.com": "Reuters (Investing.com Brasil)", "agenciabrasil.ebc.com.br": "Agência Brasil",
+          "braziljournal.com": "Brazil Journal", "neofeed.com.br": "NeoFeed", "g1.globo.com": "g1 Economia", "timesbrasil.com.br": "Times Brasil (CNBC)"}
 
 
 def get(url):
