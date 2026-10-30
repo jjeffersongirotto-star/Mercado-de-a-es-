@@ -694,6 +694,7 @@ app.mount("/static/brand", StaticFiles(directory=os.path.join(BASE, "static", "b
 def _start():
     threading.Thread(target=scheduler, daemon=True).start()
     threading.Thread(target=_ao_vivo, daemon=True).start()
+    foreign_quotes()  # já carrega as cotações de fora do widget (segundo plano) logo após cada reinício
     if cache.base is not None:
         cache.tiebreak_async()
 
@@ -1198,7 +1199,7 @@ def api_widget(t: str = "", v: int = 1, q: int = 0):
     by = {r["ticker"]: r for r in rows}
     ver, v = v, (lambda o, k: (o.get("v") or {}).get(k))
     logos = logo_index()
-    fq, fqw = foreign_quotes(), _FQ["want"]
+    fq, fqw = foreign_quotes(wait=6 if any(x not in by for x in want) else 0), _FQ["want"]
     lq = live_quotes([x for x in want if x in by], force=bool(q))
     out = []
     for tk in want:
@@ -1232,7 +1233,7 @@ def api_widget(t: str = "", v: int = 1, q: int = 0):
 WIDGET_TK = re.compile(r"[A-Z0-9][A-Z0-9.\-]{0,11}")  # PETR4, KO, BRK.B, RR., BT-A (mesmo padrão do app: WidgetData.TICKER)
 _FQ = {"q": {}, "at": 0.0, "busy": False, "live": {}, "want": {}}
 
-def foreign_quotes():
+def foreign_quotes(wait=0):
     """Ações de fora no widget: ticker -> {c: país, cur, n: nome, var, sub, v: {preco, vpa, lpa}}. Fonte única = a da aba Mercado
     de cada país (TradingView: build_foreign → load_tv): usa a cópia que a aba já tem em memória (cache.foreign); país pedido
     por algum widget nas últimas 6 h e sem essa cópia é renovado com load_tv (a mesma chamada da aba) a cada 30 min; os
@@ -1270,6 +1271,8 @@ def foreign_quotes():
             finally:
                 _FQ["busy"] = False
         threading.Thread(target=go, daemon=True).start()
+    end = now + wait  # servidor recém-reiniciado: espera a 1ª carga (senão o widget das ações de fora mostra só "—")
+    while not _FQ["q"] and _FQ["busy"] and time.time() < end: time.sleep(0.2)
     return _FQ["q"]
 
 # ---------- Logos das empresas (AGENTS.md 1.3 "Logo da empresa"): scripts/build_logos.py → branch data → data/logos ----------
