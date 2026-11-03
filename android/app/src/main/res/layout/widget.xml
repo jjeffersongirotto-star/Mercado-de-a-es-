@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget: logo (marca comprida ou, com nome de grupo longo, o quadrado; abre o app: FavWidget.render → WidgetData.longLogo) | seletor Favoritos/grupo ▾ | horário dos dados | ⟳ ; aviso de nova versão (só quando há); títulos das colunas; linhas -->
+<!-- 1.29: sem @android:id/background no topo nem seletor na lista: tocar não "afunda" o widget (animação de abertura do launcher/realce), só ⟳ e a linha tocada reagem. Widget: logo (marca comprida ou, com nome de grupo longo, o quadrado; abre o app: FavWidget.render → WidgetData.longLogo) | seletor Favoritos/grupo ▾ | horário dos dados | ⟳ ; aviso de nova versão (só quando há); títulos das colunas; linhas -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
@@ -143,6 +142,9 @@
 
         <ListView
             android:id="@+id/w_list"
+            android:listSelector="@android:color/transparent"
+            android:drawSelectorOnTop="false"
+            android:cacheColorHint="@android:color/transparent"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:divider="@drawable/divider"

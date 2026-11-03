@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget Grupo simulação: marca comprida ou logo (abre o app) | seletor do grupo ▾ | horário | ⟳ ; títulos (centralizados, 2 linhas); lista plana: modelos e, do aberto, título das posições, uma linha por empresa e o CDB (SimWidget) -->
+<!-- 1.29: sem @android:id/background no topo nem seletor na lista: tocar não "afunda" o widget (animação de abertura do launcher/realce), só ⟳ e a linha tocada reagem. Widget Grupo simulação: marca comprida ou logo (abre o app) | seletor do grupo ▾ | horário | ⟳ ; títulos (centralizados, 2 linhas); lista plana: modelos e, do aberto, título das posições, uma linha por empresa e o CDB (SimWidget) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
@@ -141,6 +140,9 @@
 
         <ListView
             android:id="@+id/s_list"
+            android:listSelector="@android:color/transparent"
+            android:drawSelectorOnTop="false"
+            android:cacheColorHint="@android:color/transparent"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:divider="@drawable/divider"
