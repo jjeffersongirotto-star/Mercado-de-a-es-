@@ -1199,6 +1199,9 @@ def api_widget(t: str = "", v: int = 1, q: int = 0):
     by = {r["ticker"]: r for r in rows}
     ver, v = v, (lambda o, k: (o.get("v") or {}).get(k))
     logos = logo_index()
+    for x in want:  # fora da B3 e sem cotação: entra no pedido pequeno de extra_us_quotes (ex.: GOOG)
+        if x not in by and x not in _FQ["q"] and x not in _FQ["miss"]: _FQ["miss"][x] = 0; _FQ["at"] = 0
+        if x in _FQ["miss"]: _FQ["miss"][x] = time.time()
     fq, fqw = foreign_quotes(wait=6 if any(x not in by for x in want) else 0), _FQ["want"]
     lq = live_quotes([x for x in want if x in by], force=bool(q))
     out = []
@@ -1231,7 +1234,41 @@ def api_widget(t: str = "", v: int = 1, q: int = 0):
     return JSONResponse({"u": d.get("updated_at_sp"), "gf": (d.get("fga") or {}).get("faixas"), "r": out, **({"q": ql} if ql else {})}, headers={"Cache-Control": "no-store"})
 
 WIDGET_TK = re.compile(r"[A-Z0-9][A-Z0-9.\-]{0,11}")  # PETR4, KO, BRK.B, RR., BT-A (mesmo padrão do app: WidgetData.TICKER)
-_FQ = {"q": {}, "at": 0.0, "busy": False, "live": {}, "want": {}}
+_FQ = {"q": {}, "at": 0.0, "busy": False, "live": {}, "want": {}, "miss": {}}
+
+def extra_us_quotes(tks):
+    """Ações dos EUA pedidas no widget fora da lista da aba Mercado (2ª classe de ação, ex.: GOOG, BRK.A: o scanner da aba só traz
+    a classe principal): pedido pequeno ao TradingView só desses tickers; com erro (ex.: 429 no Render), preço e variação do Yahoo."""
+    tks = [t for t in tks if not re.fullmatch(r"[A-Z]{4}\d{1,2}", t)][:20]  # tickers da B3 (BDR etc.) não são dos EUA
+    out = {}
+    if not tks: return out
+    try:
+        r = requests.post("https://scanner.tradingview.com/america/scan", timeout=(3, 8),
+                          json={"symbols": {"tickers": [f"{x}:{t}" for t in tks for x in ("NASDAQ", "NYSE", "AMEX")]}, "columns": tradingview.COLS},
+                          headers={"User-Agent": "Mozilla/5.0", "Origin": "https://www.tradingview.com", "Referer": "https://www.tradingview.com/"})
+        r.raise_for_status()
+        for it in r.json().get("data", []):
+            t = it["s"].split(":", 1)[1]
+            v, m = tradingview.to_vals(dict(zip(tradingview.COLS, it["d"])))
+            if t not in out and v.get("preco"):
+                out[t] = {"c": "us", "cur": m.get("cur") or "USD", "n": m.get("nome"), "var": m.get("var"), "sub": m.get("subsetor"),
+                          "v": {k: v.get(k) for k in ("preco", "vpa", "lpa")}}
+    except Exception as e:
+        log.warning("widget: ações dos EUA fora da lista (TradingView): %s", e)
+    for t in [t for t in tks if t not in out]:
+        try:
+            r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{t.replace('.', '-')}", params={"range": "5d", "interval": "1d"},
+                             headers={"User-Agent": "Mozilla/5.0"}, timeout=(3, 8))
+            r.raise_for_status(); mt = r.json()["chart"]["result"][0]["meta"]
+            px, pc = mt.get("regularMarketPrice"), mt.get("chartPreviousClose") or mt.get("previousClose")
+            if px and mt.get("currency") == "USD":
+                cl = [c for c in (r.json()["chart"]["result"][0]["indicators"]["quote"][0].get("close") or []) if c]
+                pc = cl[-2] if len(cl) >= 2 else pc
+                out[t] = {"c": "us", "cur": "USD", "n": mt.get("longName") or mt.get("shortName"),
+                          "var": round((px / pc - 1) * 100, 2) if pc else None, "sub": None, "v": {"preco": px}}
+        except Exception as e:
+            log.warning("widget: ações dos EUA fora da lista (Yahoo %s): %s", t, e)
+    return out
 
 def foreign_quotes(wait=0):
     """Ações de fora no widget: ticker -> {c: país, cur, n: nome, var, sub, v: {preco, vpa, lpa}}. Fonte única = a da aba Mercado
@@ -1264,6 +1301,7 @@ def foreign_quotes(wait=0):
                         if t not in q and v.get("preco"):
                             q[t] = {"c": c, "cur": m.get("cur") or tradingview.COUNTRIES[c][2], "n": m.get("nome"), "var": m.get("var"),
                                     "sub": m.get("subsetor"), "v": {k: v.get(k) for k in ("preco", "vpa", "lpa")}}
+                q.update(extra_us_quotes([t for t, w in _FQ["miss"].items() if time.time() - w < 6 * 3600 and t not in q]))
                 if q: _FQ["q"] = q
                 _FQ["at"] = time.time()
             except Exception as e:
