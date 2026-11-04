@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-11-03T21:03:46+00:00",
+ "fetched_at": "2026-11-04T21:02:52+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -14,6 +14,429 @@
   "g1 Economia"
  ],
  "itens": [
+  {
+   "tema": "mercado",
+   "titulo": "Wegovy em comprimido chega ao Brasil e acende alerta para Hypera, diz Goldman Sachs",
+   "data": "2026-11-04",
+   "fonte": "InfoMoney",
+   "resumo": "Caixas do medicamento Wegovy, da Novo Nordisk, em farmácia de Londres – 08/03/2024 (Foto: REUTERS/Hollie Adams) \"…",
+   "url": "https://www.infomoney.com.br/mercados/wegovy-em-comprimido-chega-ao-brasil-e-acende-alerta-para-hypera-diz-goldman-sachs/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/05/2025-05-02T201527Z_1_LYNXMPEL410X7_RTROPTP_4_USA-HEALTH-OBESITY.jpg",
+   "t": [
+    "HYPE3"
+   ],
+   "tf": [
+    "us:GS"
+   ],
+   "m": [
+    "br",
+    "gb",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar hoje cai a R$ 5,45, em dia positivo para ativos do Brasil após eleição nos EUA",
+   "data": "2026-11-04",
+   "fonte": "InfoMoney",
+   "resumo": "Um funcionário conta cédulas de dólar americano em uma casa de câmbio em Jacarta, na Indonésia, na quarta-feira, 2 de março de 2022 (Dimas Ardian/Bloomberg) \"…",
+   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-04112026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/01/448264696.jpg",
+   "t": [
+    "POSI3"
+   ],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Taxas dos DIs recuam com exterior e à espera do Copom",
+   "data": "2026-11-04",
+   "fonte": "InfoMoney",
+   "resumo": "(Imagem: Kamil / Unsplash) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/04/juros.png?fit=1275%2C767&quality=70&strip=all\" />Perspectiva de menores incertezas na condução da ​política americana…",
+   "url": "https://www.infomoney.com.br/mercados/taxas-dos-dis-recuam-com-exterior-e-a-espera-do-copom/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/04/juros.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Juros altos frustram criação de vagas formais em setembro; bets “tombam” o comércio",
+   "data": "2026-11-04",
+   "fonte": "InfoMoney",
+   "resumo": "Carteira de Trabalho Digital \" data-image-caption=\" (Marcelo Camargo / Agência Brasil) \"…",
+   "url": "https://www.infomoney.com.br/economia/caged-setembro-vagas-juros-altos-comercio/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2021/12/carteira-de-trabalho-digital_mcamgo_abr_240620211818-2-1.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Esquenta Black Friday XP reúne ofertas e benefícios para clientes XP e Rico",
+   "data": "2026-11-04",
+   "fonte": "InfoMoney",
+   "resumo": "Black Friday XP 2026 \" data-image-caption=\" Black Friday XP 2026 \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/11/Banner-BlackXP-com-curvas-douradas.png?fit=1280%2C720&quality=70&strip=all\"…",
+   "url": "https://www.infomoney.com.br/consumo/esquenta-black-friday-xp-reune-ofertas-e-beneficios-para-clientes-xp-e-rico/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/11/Banner-BlackXP-com-curvas-douradas.png",
+   "t": [],
+   "tf": [
+    "us:XP"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Copom decide nesta quarta-feira se corta ou mantém a Taxa Selic",
+   "data": "2026-11-04",
+   "fonte": "Agência Brasil",
+   "resumo": "O Comitê de Política Monetária (Copom) do Banco Central (BC) faz nesta quarta-feira (4) a penúltima reunião do ano. Mesmo com a alta recente do dólar, os analistas de mercado acreditam na sexta redução seguida de juros.…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/copom-decide-nesta-quarta-feira-se-corta-ou-mantem-taxa-selic",
+   "img": "https://imagens.ebc.com.br/15adY8ZKr12NpZ2PrRKtRipWPqI=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/banco_central_mcajr_abr_0104222280_0.jpg?itok=cZ5GbjQe",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "CVS anuncia spinoff de drogarias. Ação desaba 12%",
+   "data": "2026-11-04",
+   "fonte": "Brazil Journal",
+   "resumo": "A CVS anunciou hoje que vai desmembrar sua rede de drogarias em uma nova empresa listada, sob o argumento de que as duas companhias resultantes funcionarão melhor separadamente. O mercado detestou a ideia.",
+   "url": "https://braziljournal.com/cvs-anuncia-spinoff-de-drogarias-acao-desaba-12",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asMN31QwrmeXtvuFG.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Itaú se afasta de concorrentes com ROE de 23,6% e carteira saudável",
+   "data": "2026-11-04",
+   "fonte": "Brazil Journal",
+   "resumo": "O Itaú ampliou ainda mais o gap em relação aos concorrentes com o resultado do terceiro trimestre reportado agora à noite. A carteira de crédito cresceu de forma saudável apesar da piora macro, o ROE caiu mas segue…",
+   "url": "https://braziljournal.com/itau-se-afasta-de-concorrentes-com-roe-de-23-6-e-carteira-saudavel",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asN7bC5ZGwdm6nHur.png?width=800&height=420&quality=85&resize=fill",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "André Street, o maior VC pessoa física do Brasil",
+   "data": "2026-11-04",
+   "fonte": "Brazil Journal",
+   "resumo": "Ao longo dos últimos 15 anos, André Street ficou mais conhecido como o fundador da Stone, a empresa que ajudou a quebrar o duopólio Cielo-Rede no mercado de maquininhas. Mas em paralelo à construção da companhia, Street…",
+   "url": "https://braziljournal.com/andre-street-o-maior-vc-pessoa-fisica-do-brasil",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asccZOGfoGKZWUExE.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:STNE"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A vida após o ataque hacker: BMP refaz gestão e prepara novo negócio",
+   "data": "2026-11-04",
+   "fonte": "NeoFeed",
+   "resumo": "A BMP esteve no centro do maior ataque hacker contra o sistema financeiro nacional e sofreu um prejuízo de mais de R$ 540 milhões em junho de 2025. O evento exigiu que a empresa de infraestrutura financeira acelerasse…",
+   "url": "https://neofeed.com.br/negocios/a-vida-apos-o-ataque-hacker-bmp-refaz-gestao-e-prepara-novo-negocio/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/infraestrutura-seguranca.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Maluhy, do Itaú, pede previsibilidade fiscal a Lula e defende volta do grau de investimento",
+   "data": "2026-11-04",
+   "fonte": "NeoFeed",
+   "resumo": "Em meio às incertezas sobre os rumos da política econômica após a reeleição do presidente Luiz Inácio Lula da Silva, o Itaú Unibanco defende que o governo dê sinais claros sobre sua agenda fiscal e trabalhe para…",
+   "url": "https://neofeed.com.br/negocios/maluhy-do-itau-pede-previsibilidade-fiscal-a-lula-e-defende-volta-do-grau-de-investimento/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/milton-maluhy-itau.jpg",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "“Não acredito em juízo fiscal para o Lula 4”, diz CEO da Multiplan",
+   "data": "2026-11-04",
+   "fonte": "NeoFeed",
+   "resumo": "Poucas horas após o resultado do segundo turno, com a vitória de Luiz Inácio Lula da Silva (PT) sobre Flávio Bolsonaro (PL), o mercado entrou em uma espiral de tensão, com queda na maior parte das ações, que gerou o…",
+   "url": "https://neofeed.com.br/negocios/nao-acredito-em-juizo-fiscal-para-o-lula-4-diz-ceo-da-multiplan/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2025/06/eduardo-peres-CEO-Multiplan.webp",
+   "t": [
+    "MULT3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Aeris pede recuperação extrajudicial para reestruturar R$ 1,5 bilhão em dívidas",
+   "data": "2026-11-04",
+   "fonte": "NeoFeed",
+   "resumo": "A Aeris, fabricante cearense de pás eólicas, entrou com pedido de recuperação extrajudicial (RE) na terça-feira, 3 de novembro, na 3ª Vara de Falências e Recuperações Judiciais de São Paulo para reestruturar R$ 1,52…",
+   "url": "https://neofeed.com.br/negocios/aeris-pede-recuperacao-extrajudicial-para-reestruturar-r-15-bilhao-em-dividas/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2022/08/aeris.png",
+   "t": [
+    "AERI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Papamóvel de Leão XIV no Peru é uma Chevrolet S10 adaptada; veja o que mudou na picape",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Chevrolet S10 como papamóvel divulgação/Chevrolet Uma Chevrolet S10 foi transformada em papamóvel para transportar o papa Leão XIV durante sua visita ao Peru, entre 11 e 17 de novembro. O modelo reúne detalhes da versão…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/04/papamovel-leao-xiv-peru.ghtml",
+   "img": "https://s2-g1.glbimg.com/NfDocMEaVKNTp8SLFB9mazuT3H0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/f/d/OCTAzUQHalrignIdShgg/projetodevdeo31-ezgif.com-optimize.gif",
+   "t": [],
+   "tf": [
+    "us:GM"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Carro voador da Embraer: Eve fecha acordo para vender até 12 aeronaves para empresa que vai operar no Sul do Brasil",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Carros voadores da Embraer: Eve fecha acordo para vender até 12 aeronaves para empresa do Sul do Brasil Divulgação A Eve Air Mobility, empresa ligada à Embraer, fechou um acordo para fornecer até 12 carros voadores…",
+   "url": "https://g1.globo.com/sp/vale-do-paraiba-regiao/noticia/2026/11/04/carro-voador-da-embraer-eve-fecha-acordo-para-vender-ate-12-aeronaves-para-empresa-que-vai-operar-no-sul-do-brasil.ghtml",
+   "img": "https://s2-g1.glbimg.com/Upc9q6lGb20aFcqLVeEzddupgFA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/L/3/KDUqaZR3CCKRXsizupHg/texto-do-seu-paragrafo-2026-11-04t095833.442.png",
+   "t": [
+    "EMBJ3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Aeris Energy pede recuperação extrajudicial para renegociar R$ 1,5 bilhão em dívidas",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Aeris, empresa brasileira fabricante de pás eólicas Divulgação A Aeris, fabricante brasileira de pás utilizadas em turbinas eólicas, entrou com um pedido de recuperação extrajudicial para renegociar cerca de R$ 1,52…",
+   "url": "https://g1.globo.com/economia/negocios/noticia/2026/11/04/aeris-energy-recuperacao-extrajudicial.ghtml",
+   "img": "https://s2-g1.glbimg.com/1bwX6rlJrr2ia6xTKCz34H3cOT0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/N/E/PE32CARCS8dhxA4FYyiw/money-aeris-22jun21-divulgacao-.jpg",
+   "t": [
+    "AERI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar cai e fecha a R$ 5,45 após vitória democrata no Congresso dos EUA; Ibovespa sobe",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou em queda de 0,64% nesta quarta-feira (4), cotado a R$ 5,4518. Já o Ibovespa, principal índice da bolsa brasileira, tinha alta de 1,08% na reta final do…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/04/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/flrGTzCGA7rcqIkU-pbLKhRAjM8=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/H/q/DVW4KVTAm4HtV81KBWKg/pexels-karolina-grabowska-4386431.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Midterms nos EUA: vitória democrata ameaça planos de Trump e pode afetar dólar e juros no Brasil",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Democratas conquistam controle do Congresso nos Estados Unidos A vitória do Partido Democrata nas eleições de meio de mandato dos Estados Unidos, realizadas na terça-feira (3), pode mudar os rumos da política econômica…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/04/midterms-nos-eua-vitoria-democrata-ameaca-planos-de-trump-e-pode-afetar-dolar-e-juros-no-brasil.ghtml",
+   "img": "https://s2-g1.glbimg.com/1-B3_OzIhDAOho2006H8AJOaV9U=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/0/0/BBon1hQYCBaRv5dmEACw/2026-10-24t224431z-105027597-rc2w9oazeoor-rtrmadp-3-usa-trump.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Calendário de novembro 2026: veja datas de pagamento do INSS, Bolsa Família, pé-de-meia e mais",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Calendário de novembro 2026 Governo Federal O mês de novembro de 2026 já começou, e com ele chegam os pagamentos de programas e benefícios como INSS, Pé-de-Meia e Bolsa Família, entre outros. Alguns dos depósitos…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/04/calendario-de-novembro-2026.ghtml",
+   "img": "https://s2-g1.glbimg.com/XUvFJzQpL-5DDzmr_UUnmUoLEPs=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/1/V/uuDUIHTWuOviwDiUerHQ/185648-salvador-dispensa-visita-domiciliar-para-atualizacao-do-cadastro-unico-de-quem-mora-sozinho-3.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Com mercado dividido após reeleição de Lula, BC decide nesta quarta entre novo corte ou manutenção da taxa de juros",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "O Comitê de Política Monetária (Copom) do Banco Central se reúne nesta quarta-feira (16) para definir o patamar da taxa básica de juros da economia brasileira, atualmente em 13,75% após cinco cortes seguidos. 🕝A decisão…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/04/com-mercado-dividido-apos-reeleicao-de-lula-bc-decide-nesta-quarta-entre-novo-corte-ou-manutencao-da-taxa-de-juros.ghtml",
+   "img": "https://s2-g1.glbimg.com/fwFB8-hQOTFpOo3u2HxFfm0AKFw=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/z/T/Bt61UOQ7WYpnlzGMj07Q/globo-canal-4-20260327-2000-frame-98859.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Selic: por que o Banco Central pode parar de cortar juros após a reeleição de Lula?",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Copom reduz taxa de juros, e o FED mantém Jornal Nacional/ Reprodução O Banco Central chega à reunião do Comitê de Política Monetária (Copom) nesta quarta-feira (4) diante de um cenário mais complicado para decidir o…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/04/selic-por-que-o-banco-central-pode-parar-de-cortar-juros-apos-a-reeleicao-de-lula.ghtml",
+   "img": "https://s2-g1.glbimg.com/-A7pgTgjRSkyK4Q_u1rOIbAk5L4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/m/N/CqiB4MRnqkRVIYzBQGig/globo-canal-4-20260429-2000-frame-24226.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Uber prevê mais de 2 mil carros sem motorista na plataforma em 2027",
+   "data": "2026-11-04",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A Uber pretende ampliar a presença de veículos que circulam sem motorista em seu aplicativo e superar a marca de 2 mil unidades em 2027. A projeção foi apresentada nesta quarta-feira (4), junto com os resultados do…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/uber-preve-mais-de-2-mil-carros-sem-motorista-em-2027/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/02/7342feb3-uber.webp",
+   "t": [],
+   "tf": [
+    "us:UBER"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "TCU adia para 11 de novembro debate sobre política de preços da Petrobras",
+   "data": "2026-11-04",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "O Tribunal de Contas da União (TCU) adiou novamente a discussão sobre a política de preços da Petrobras, que estava prevista para esta quarta-feira (4). A expectativa é que o processo volte à pauta do plenário da Corte…",
+   "url": "https://timesbrasil.com.br/brasil/tcu-adia-para-11-de-novembro-debate-sobre-politica-de-precos-da-petrobras/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/09/695ed706-petrobras_1761150529715-e1789004546639.webp",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Itaú BBA monta mesa de crédito privado e contrata executivo da Genial",
+   "data": "2026-11-04",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A expansão do crédito privado levou a corretora do Itaú BBA a preparar uma estrutura especializada no atendimento a investidores institucionais. A iniciativa acompanha o crescimento do mercado de títulos de dívida de…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/bancos-fintechs/itau-bba-contrata-executivo-da-genial/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/3d602aee-07a.webp",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Messi mantém liderança nas vendas de camisas da MLS pela quarta temporada consecutiva",
+   "data": "2026-11-04",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A camisa de Lionel Messi continua sendo a mais procurada pelos torcedores da Major League Soccer (MLS). Pelo quarto ano seguido, o atacante argentino do Inter Miami terminou na primeira colocação do levantamento de…",
+   "url": "https://timesbrasil.com.br/esportes/messi-mantem-lideranca-nas-vendas-de-camisas-da-mls-pela-quarta-temporada-consecutiva/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/614d9c22-inter_miami_messi.jpg.webp",
+   "t": [],
+   "tf": [
+    "us:INBR"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Oracle AI Experience Brasil: IA resolve 97% dos atendimentos a gestantes em projeto com a Unimed, diz Vinícius Reis, CTO da StaryaAI",
+   "data": "2026-11-04",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Um agente de inteligência artificial já consegue resolver 97% das interações de triagem de gestantes em um projeto desenvolvido pela StaryaAI com a Seguros Unimed, segundo Vinícius Reis, fundador e CTO da empresa. O…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/tecnologia-e-inovacao/ai-resolve-97-dos-atendimentos-a-gestantes-na-unimed/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/7a02226e-04a.webp",
+   "t": [],
+   "tf": [
+    "us:ORCL"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Caged: saldo líquido de emprego formal é positivo em 121.305 vagas em setembro",
+   "data": "2026-11-04",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "O Brasil criou 121.305 empregos com carteira assinada em setembro, segundo dados do Novo Cadastro Geral de Empregados e Desempregados (Caged) divulgados nesta quarta-feira (4) pelo Ministério do Trabalho e Emprego. O…",
+   "url": "https://timesbrasil.com.br/brasil/caged-saldo-liquido-de-emprego-formal-e-positivo-em-121-305-vagas-em-setembro/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2025/01/be2f30b8-pexels-kateryna-babaieva-1423213-2760241-scaled.jpg",
+   "t": [
+    "POSI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
   {
    "tema": "mercado",
    "titulo": "Nathalia Arcuri e Luiz Barsi Neto são confirmados no 11º Fórum Negócios Experience em Natal - Portal 98 FM Natal",
@@ -399,6 +822,51 @@
    "resumo": "O ministro Luiz Fux, do Supremo Tribunal Federal (STF), arquivou nesta terça-feira (3) uma ação que pretendia invalidar a rejeição, pelo Senado, da indicação de Jorge Messias para a Corte. A iniciativa havia sido…",
    "url": "https://timesbrasil.com.br/brasil/fux-arquiva-acao-contra-rejeicao-de-messias-ao-stf/",
    "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/392bf6bc-05a.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe 0,74% e aproxima-se de R$ 5,50 em dia de cautela fiscal",
+   "data": "2026-11-03",
+   "fonte": "Agência Brasil",
+   "resumo": "O mercado financeiro brasileiro encerrou esta terça-feira (3) em queda, com o dólar em alta e a bolsa de valores ampliando as perdas após a reeleição do presidente Luiz Inácio Lula da Silva. A moeda norte-americana…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-sobe-074-e-aproxima-se-de-r-550-em-dia-de-cautela-fiscal",
+   "img": "https://imagens.ebc.com.br/rasBiqiDGctpl5-xBWwAW622HfA=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/dolar_moeda_0803221212.jpg?itok=KoFmjD94",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Itaú entrega balanço “como sempre”: lucro de R$ 12,6 bilhões e inadimplência sob controle",
+   "data": "2026-11-03",
+   "fonte": "NeoFeed",
+   "resumo": "O Itaú Unibanco entregou mais um resultado previsível em seu balanço do terceiro trimestre, divulgado no início da noite de terça-feira, 3 de novembro, com lucro dentro das expectativas e qualidade da carteira…",
+   "url": "https://neofeed.com.br/negocios/itau-entrega-balanco-como-sempre-lucro-de-r-126-bilhoes-e-inadimplencia-sob-controle/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/itau-agencia.jpg",
+   "t": [
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "André Lara Resende: muito barulho por nada?",
+   "data": "2026-11-03",
+   "fonte": "NeoFeed",
+   "resumo": "Brasília – Após os ruídos causados por uma proposta de reforma monetária e fiscal do economista André Lara Resende, que sugeriu reduzir a taxa básica de juros de maneira mais rápida, o governo federal correu para pôr…",
+   "url": "https://neofeed.com.br/poder/andre-lara-resende-muito-barulho-por-nada/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2022/10/AndreLaraOGloboVale.jpg",
    "t": [],
    "tf": [],
    "m": [
