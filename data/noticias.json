@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-11-04T21:02:52+00:00",
+ "fetched_at": "2026-11-05T21:00:49+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -14,6 +14,236 @@
   "g1 Economia"
  ],
  "itens": [
+  {
+   "tema": "mercado",
+   "titulo": "TSE aceita ação contra chapa Lula-Alckmin por abuso de poder econômico",
+   "data": "2026-11-05",
+   "fonte": "InfoMoney",
+   "resumo": "O presidente brasileiro e candidato à reeleição pelo Partido dos Trabalhadores (PT), Luiz Inácio Lula da Silva, segura a bandeira nacional ao lado do vice-presidente Geraldo Alckmin ao chegar para votar nas eleições…",
+   "url": "https://www.infomoney.com.br/politica/tse-aceita-acao-contra-chapa-lula-alckmin-por-abuso-de-poder-economico/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/10/2026-10-04T122320Z_465391442_RC2BWNA16J0Q_RTRMADP_3_BRAZIL-ELECTION.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar hoje sobe a R$ 5,48, com pressão externa e de olho em política econômica",
+   "data": "2026-11-05",
+   "fonte": "InfoMoney",
+   "resumo": "Notas de real e dólar em imagem de ilustração 18 de dezembro de 2024 REUTERS/Amanda Perobelli \"…",
+   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-05112026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/10/2025-10-27T215425Z_1_LYNXMPEL9Q0VS_RTROPTP_4_BRAZIL-ECONOMY.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "BofA vê Itaú com balanço mais forte para enfrentar 2027; Bradesco é “aposta de valor”",
+   "data": "2026-11-05",
+   "fonte": "InfoMoney",
+   "resumo": "Agência do Itaú em São Paulo 30 de julho de 2025 REUTERS/Amanda Perobelli \"…",
+   "url": "https://www.infomoney.com.br/mercados/bofa-ve-itau-com-balanco-mais-forte-para-enfrentar-2027-bradesco-e-aposta-de-valor/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/08/2026-08-17T222338Z_1_LYNXMPEM7G1IB_RTROPTP_4_BRAZIL-ECONOMY-BANKS.jpg",
+   "t": [
+    "BBDC4",
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Durigan diz que é preciso dar condições para a queda dos juros",
+   "data": "2026-11-05",
+   "fonte": "Agência Brasil",
+   "resumo": "Um dia depois de o Comitê de Política Monetária (Copom) anunciar a manutenção da taxa básica de juros Selic em 13,75% ao ano, o ministro da Fazenda, Dario Durigan, considera que o valor ainda é muito alto . Segundo ele,…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/durigan-diz-que-e-preciso-dar-condicoes-para-queda-dos-juros",
+   "img": "https://imagens.ebc.com.br/J8_Q9wKBZv8S_5v0pjNaggzxz-A=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/11/05/dario_durigan.jpg?itok=Vbf_K_3R",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Por que a Berkshire já tem 37% da SiriusXM",
+   "data": "2026-11-05",
+   "fonte": "Brazil Journal",
+   "resumo": "A Berkshire Hathaway revelou ontem que comprou mais 1 milhão de ações da SiriusXM, a plataforma de rádio por satélite e streaming com mais de 30 milhões de assinantes nos EUA. A companhia comandada por Greg Abel agora…",
+   "url": "https://braziljournal.com/por-que-a-berkshire-ja-tem-37-da-siriusxm",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asCT4WaVmQyZxYXgO.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:BERK",
+    "us:BRK.A",
+    "us:BRK.B"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "OPINIÃO. O desafio do varejo: não perder o cliente para os LLMs",
+   "data": "2026-11-05",
+   "fonte": "Brazil Journal",
+   "resumo": "Imagine uma cliente que compra na mesma rede de moda há dez anos e, num domingo à noite, pede pelo WhatsApp da marca uma sugestão de vestido para um casamento. Se a atendente virtual indicar um modelo que já acabou no…",
+   "url": "https://braziljournal.com/opiniao-o-desafio-do-varejo-nao-perder-o-cliente-para-os-llms",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/as5xoOd2lUtE0SoUn.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Maior produtora independente de óleo e gás do Brasil só tem olhos e “energia” para o petróleo",
+   "data": "2026-11-05",
+   "fonte": "NeoFeed",
+   "resumo": "﻿ Enquanto grandes petroleiras investem em fontes renováveis para diversificar seus negócios, a Prio pretende continuar concentrada na produção de petróleo. A maior produtora independente de óleo e gás do Brasil não…",
+   "url": "https://neofeed.com.br/bravamente/maior-produtora-independente-de-oleo-e-gas-do-brasil-so-tem-olhos-e-energia-para-o-petroleo/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/prio-1.jpg",
+   "t": [
+    "PRIO3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Side Capital capta R$ 280 milhões e vai atrás de imóveis ícones",
+   "data": "2026-11-05",
+   "fonte": "NeoFeed",
+   "resumo": "Os juros elevados pressionam o mercado imobiliário por diferentes frentes: encarecem o crédito, aumentam o custo de capital das incorporadoras e dificultam a demanda por imóveis. Mesmo no segmento de alto padrão, em que…",
+   "url": "https://neofeed.com.br/negocios/side-capital-capta-r-280-milhoes-e-vai-atras-de-imoveis-icones/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/Lindenberg-edificio-Vila-Nova-Conceicao.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Google derruba esquema que controlava 1 milhão de TV boxes infectados; Brasil é o 2º mais afetado",
+   "data": "2026-11-05",
+   "fonte": "g1 Economia",
+   "resumo": "Google derruba rede com 1,3 milhão de aparelhos infectados, incluindo TV boxes; Brasil é o 2º mais afetado Reprodução/Google Uma operação do Google com outras empresas de tecnologia desmantelou uma rede que controlava…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/05/google-derruba-rede-com-1-milhao-de-aparelhos-infectados-incluindo-tv-boxes-brasil-e-o-2o-mais-afetado.ghtml",
+   "img": "https://s2-g1.glbimg.com/mQSMHfw4zJik7gWG35VDKrRumMI=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/j/q/O3qqFZTFCWT88t8nnRfA/android-tv-1200.png",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "PT e parte da equipe de Lula atacam BC após Copom interromper ciclo de corte de juros por dúvidas sobre ajuste fiscal",
+   "data": "2026-11-05",
+   "fonte": "g1 Economia",
+   "resumo": "O PT e parte da equipe do presidente Lula estão atacando o Banco Central, dizendo que o Copom se rendeu ao mercado e parou de cortar a taxa Selic, que ficou em 13,75% ao ano. Entre petistas e uma ala do governo, há quem…",
+   "url": "https://g1.globo.com/politica/blog/valdo-cruz/post/2026/11/05/pt-e-parte-da-equipe-de-lula-atacam-bc-apos-copom-interromper-ciclo-de-corte-de-juros-por-duvidas-sobre-ajuste-fiscal.ghtml",
+   "img": "https://s2-g1.glbimg.com/-A7pgTgjRSkyK4Q_u1rOIbAk5L4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/m/N/CqiB4MRnqkRVIYzBQGig/globo-canal-4-20260429-2000-frame-24226.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Durigan diz que taxa de juros é muito alta no Brasil, mas evita criticar decisão do BC de interromper ciclo de corte da Selic",
+   "data": "2026-11-05",
+   "fonte": "g1 Economia",
+   "resumo": "O ministro da Fazenda, Dario Durigan, avaliou nesta quinta-feira (5) que a taxa básica de juros da economia brasileira, fixada pelo Banco Central, é muito alta no Brasil. Ele evitou, entretanto, criticar a decisão do…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/05/durigan-diz-que-taxa-de-juros-e-muito-alta-no-brasil-mas-evita-criticar-decisao-do-bc-de-interromper-ciclo-de-corte-da-selic.ghtml",
+   "img": "https://s2-g1.glbimg.com/b5d4-8d94KCWtuVrP079E4ixGjQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/V/S/qdkNArTzuhhYA31GzvRw/55615371946-d00d02ff99-k.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe e fecha a R$ 5,48 após decisão do Copom e com política econômica no radar; Ibovespa cai",
+   "data": "2026-11-05",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou em alta de 0,67% nesta quinta-feira (5), cotado a R$ 5,4885. Já o Ibovespa, principal índice da bolsa brasileira, tinha queda de 0,50% na última hora do…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/05/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/qJ7O_5T6hSs6HEsS6HwA-Vl1Otk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/2/s/iveHFATICeDrK8diFnLw/pexels-john-guccione-wwwadvergroupcom-3564390.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Falta de engenheiros ameaça expansão de ferrovias, alerta Nathalie Zanata, da Motiva Trilhos",
+   "data": "2026-11-05",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A expansão da infraestrutura metroferroviária brasileira pode esbarrar na falta de profissionais qualificados, alertou Nathalie Zanata, gerente de pessoas da Motiva Trilhos, em entrevista nesta quinta-feira (5) ao Times…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/falta-de-engenheiros-ameaca-expansao-de-ferrovias/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/72cd7c3d-10a.webp",
+   "t": [
+    "MOTV3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "EXCLUSIVO: Irregularidades fazem fintech cearense Mêntore Bank perder o maior programa de crédito do Brasil",
+   "data": "2026-11-05",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Uma planilha de custos que não fechou tirou o Mêntore Bank da disputa pelo Crediamigo, o maior programa de microcrédito do Brasil, em um pregão de R$ 2 bilhões realizado pelo Banco do Nordeste (BNB). A fintech, cujo…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/exclusivo-irregularidades-fazem-mentore-bank-fintech-cearense-perder-maior-programa-de-credito-do-brasil/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/a6a8daf6-mentore-bank-e1793910065599.webp",
+   "t": [
+    "BNBR3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "‘Bolsa Mounjaro’: Justiça suspende programa de medicamento para obesidade em cidade de SP",
+   "data": "2026-11-05",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A Justiça de São Paulo determinou a interrupção imediata do programa municipal de combate à obesidade de Urupês, no interior do Estado, conhecido popularmente como “Bolsa Mounjaro”. A decisão liminar foi concedida após…",
+   "url": "https://timesbrasil.com.br/brasil/bolsa-mounjaro-justica-suspende-programa-de-medicamento-para-obesidade-em-cidade-de-sp/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/02/8191d697-mounjaro.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
   {
    "tema": "mercado",
    "titulo": "Wegovy em comprimido chega ao Brasil e acende alerta para Hypera, diz Goldman Sachs",
@@ -432,6 +662,97 @@
    "t": [
     "POSI3"
    ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Pague Menos decepciona na receita, mas compensa no EBITDA e lucro",
+   "data": "2026-11-04",
+   "fonte": "Brazil Journal",
+   "resumo": "A Pague Menos reportou um terceiro tri com desaceleração na receita, que veio abaixo do consenso, mas com ganhos importantes de rentabilidade – que levaram à maior margem de lucro da história da companhia para o…",
+   "url": "https://braziljournal.com/pague-menos-decepciona-na-receita-mas-compensa-no-ebitda-e-lucro",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asXuGVefq3YoitSPN.png?width=800&height=420&quality=85&resize=fill",
+   "t": [
+    "PGMN3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A aprovação do Cade para um M&A no setor de óleo e gás que desagradou a Petrobras",
+   "data": "2026-11-04",
+   "fonte": "NeoFeed",
+   "resumo": "Brasília – Com grande resistência da Petrobras, o Conselho Administrativo de Defesa Econômica (Cade) aprovou, com restrições, a fusão da italiana Saipem com a britânica Subsea7. A operação formou uma gigante global, com…",
+   "url": "https://neofeed.com.br/negocios/a-aprovacao-do-cade-para-um-ma-no-setor-de-oleo-e-gas-que-desagradou-a-petrobras/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/Subsea7.jpg",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br",
+    "gb"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "O GPA encolheu e o prejuízo subiu. Mas a margem salvou o trimestre",
+   "data": "2026-11-04",
+   "fonte": "NeoFeed",
+   "resumo": "Com a homologação da recuperação extrajudicial (RE), o GPA passou a concentrar as energias na retomada das operações. Mas a retomada vai demorar mais tempo. A varejista divulgou na quarta-feira, 4 de novembro, que a…",
+   "url": "https://neofeed.com.br/negocios/o-gpa-encolheu-e-o-prejuizo-subiu-mas-a-margem-salvou-o-trimestre/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/03/gpa.jpg",
+   "t": [
+    "PCAR3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Na primeira decisão pós-eleição, Banco Central ajusta a direção da taxa Selic",
+   "data": "2026-11-04",
+   "fonte": "NeoFeed",
+   "resumo": "“Prudente”, “anticlímax” e “dentro do esperado” foram algumas das expressões usadas pelos economistas ouvidos pelo NeoFeed para descrever a penúltima decisão da taxa básica de juros do ano no Brasil. Na quarta-feira, 4…",
+   "url": "https://neofeed.com.br/economia/na-primeira-decisao-pos-eleicao-banco-central-ajusta-a-direcao-da-taxa-selic/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/ajuste-ativos.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Brasil amplia distância e segue com o maior juro real do mundo após Copom manter Selic; veja ranking",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Copom mantém taxa básica de juros da economia em 13,75% ao ano O Brasil ampliou a distância para o segundo colocado e segue com o maior juro real do mundo após o Comitê de Política Monetária (Copom) do Banco Central…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/04/ranking-juro-real-novembro.ghtml",
+   "img": "https://s2-g1.glbimg.com/GK6lw7tr8M3TWoHrHmrLkDh58vg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2022/s/K/eBdJ5MRCOs4XjL8VpiOA/48002099586-2939bac18b-k.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Copom mantém taxa básica de juros da economia em 13,75% ao ano",
+   "data": "2026-11-04",
+   "fonte": "g1 Economia",
+   "resumo": "Copom mantém taxa básica de juros da economia em 13,75% ao ano O Comitê de Política Monetária (Copom) do Banco Central (BC) decidiu, nesta quarta-feira (4), manter a taxa básica de juros da economia em 13,75% ao ano. A…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/04/copom-mantem-taxa-basica-de-juros-da-economia-em-1375percent-ao-ano.ghtml",
+   "img": "https://s2-g1.glbimg.com/be4usyjPCD19kJSybeRYxMXNpVU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/U/W/6Y4qERTSOg1kq30qJphA/261104-grafico-selic-a-trajetoria-da-taxa-basica.jpg",
+   "t": [],
    "tf": [],
    "m": [
     "br"
