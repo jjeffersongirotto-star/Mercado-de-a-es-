@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-11-05T21:00:49+00:00",
+ "fetched_at": "2026-11-06T21:02:35+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -14,6 +14,265 @@
   "g1 Economia"
  ],
  "itens": [
+  {
+   "tema": "mercado",
+   "titulo": "Dólar hoje sobe a R$ 5,51, após payroll dos EUA superar expectativas em outubro",
+   "data": "2026-11-06",
+   "fonte": "InfoMoney",
+   "resumo": "Notas de dólar -20/12/2025 (Foto: Majid Asgaripour/WANA – Agência de Notícias da Ásia Ocidental – via REUTERS) \"…",
+   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-06112026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/04/2026-04-23T223943Z_1_LYNXMPEM3M1IY_RTROPTP_4_IRAN-ECONOMY.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "JPMorgan tem cautela com small caps globais e vê risco ao consumo em 2027",
+   "data": "2026-11-06",
+   "fonte": "InfoMoney",
+   "resumo": "Small caps (Reprodução: InfoMoney) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2021/02/melhores-small-caps-2020-10-mais-promissoras.jpg?fit=1000%2C580&quality=70&strip=all\" />Segundo o banco, a…",
+   "url": "https://www.infomoney.com.br/mercados/jpmorgan-tem-cautela-com-small-caps-globais-e-ve-risco-ao-consumo-em-2027/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2021/02/melhores-small-caps-2020-10-mais-promissoras.jpg",
+   "t": [],
+   "tf": [
+    "us:JPM",
+    "us:JPMC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nubank e Mercado Pago suspendem transferências de criptomoedas",
+   "data": "2026-11-06",
+   "fonte": "InfoMoney",
+   "resumo": "Bitcoin (Foto: Reprodução/Flying Logos) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/06/One_bitcoin_sitting_atop_bundles_of_US_100_notes.png?fit=960%2C540&quality=70&strip=all\" />\"A ocorrência…",
+   "url": "https://www.infomoney.com.br/onde-investir/nubank-e-mercado-pago-suspendem-transferencias-de-criptomoedas/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/06/One_bitcoin_sitting_atop_bundles_of_US_100_notes.png",
+   "t": [],
+   "tf": [
+    "us:NU",
+    "us:ROXO"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Brasil tem maior juro real do mundo, seguido por Turquia e Argentina",
+   "data": "2026-11-06",
+   "fonte": "Agência Brasil",
+   "resumo": "O Brasil segue como o país com os maiores juros reais do mundo, calculados em 9,05%, mais de sete vezes a média de 1,27% do ranking da consultoria de mercado Moneyou publicado nesta semana. O juro real desconta a…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/brasil-tem-maior-juro-real-do-mundo-seguido-por-turquia-e-argentina",
+   "img": "https://imagens.ebc.com.br/1NJn9G2PoYXBvGMCP58KdHAie8c=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/20231025_150203.jpg?itok=GOvom9QM",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Brian Chesky comanda o Airbnb de dia. De noite, toca um lab de AI",
+   "data": "2026-11-06",
+   "fonte": "Brazil Journal",
+   "resumo": "O fundador e CEO do Airbnb, Brian Chesky, fundou um laboratório de inteligência artificial e está financiando o negócio com recursos próprios – num movimento que levantou questionamentos sobre a capacidade do…",
+   "url": "https://braziljournal.com/brian-chesky-comanda-o-airbnb-de-dia-de-noite-toca-um-lab-de-ai",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/aspTvhKZRdvwY32CA.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:ABNB",
+    "us:AIRB"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Mercedes-Benz quer colocar a IA “dentro do carro” (e longe da nuvem)",
+   "data": "2026-11-06",
+   "fonte": "NeoFeed",
+   "resumo": "A Mercedes-Benz tem ampliado o uso de inteligência artificial (IA) em seus veículos com uma aposta em assistentes de voz mais rápidos, capazes de executar comandos diretamente no carro. O avanço é fruto da parceria com…",
+   "url": "https://neofeed.com.br/inovacao/mercedes-benz-quer-colocar-a-ia-dentro-do-carro-e-longe-da-nuvem/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/mercedes-benz-inteligencia-artificial.jpg",
+   "t": [],
+   "tf": [
+    "de:MBG"
+   ],
+   "m": [
+    "de"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Diversificar só no Brasil não é diversificar: o que revela a nova pesquisa da FGV",
+   "data": "2026-11-06",
+   "fonte": "NeoFeed",
+   "resumo": "O CDI pode subir por anos sem que o patrimônio esteja verdadeiramente protegido. E a taxa de juros elevada, longe de eliminar o risco Brasil, é também um reflexo dos riscos que o investidor assume ao concentrar seus…",
+   "url": "https://neofeed.com.br/brand-stories/apresentado-por-avenue/diversificar-so-no-brasil-nao-e-diversificar-o-que-revela-a-nova-pesquisa-da-fgv/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/AvenueConnection.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Apple restringe sugestões de termos como 'Trump ditador' e 'Joe sonolento' no iPhone",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Uma pessoa usa um telefone para fotografar iPhones em exposição durante o evento da Apple. Manuel Orbegozo/Arquivo/Reuters A Apple mantém uma lista não divulgada com dezenas de milhares de palavras e expressões em…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/06/apple-restringe-sugestoes-de-termos-como-trump-ditador-e-joe-sonolento-no-iphone.ghtml",
+   "img": "https://s2-g1.glbimg.com/RTKjYcn7urmaxzwqp86ZiuvsoJE=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/c/4/2HxSH1S5OVEi8FuFen8g/globo-canal-5-20240910-1800-frame-260599.jpeg",
+   "t": [],
+   "tf": [
+    "us:AAPL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Pressionado a cortar gastos, Lula diz que Brasil tem 'seriedade fiscal' e que 'pobre não pagará a conta'",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Lula diz que Brasil tem 'seriedade fiscal' e que 'pobre não pagará a conta' O presidente Luiz Inácio Lula da Silva (PT) rebateu nesta sexta-feira (6) cobranças de economistas e do mercado financeiro por cortes de…",
+   "url": "https://g1.globo.com/politica/noticia/2026/11/06/pressionado-a-cortar-gastos-lula-diz-que-brasil-tem-responsabilidade-e-seriedade-fiscal-e-que-pobre-nao-vai-pagar-a-conta.ghtml",
+   "img": "https://s2-g1.glbimg.com/wb4LCTVe72UA_N8PsFPM9_aYhHw=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/f/A/ntg7r5QXKjEpQ8ogpWDg/lula-2-.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Trump chama IA de 'ouro' e defende expansão após queda de ações de tecnologia",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Bolsas despencam por causa de queda nas ações de tecnologia O presidente dos Estados Unidos, Donald Trump, afirmou nesta sexta-feira (6) que pretende trabalhar com estados americanos interessados em expandir o uso da…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/06/trump-chama-ia-de-ouro-e-defende-expansao-apos-queda-de-acoes-de-tecnologia.ghtml",
+   "img": "https://s2-g1.glbimg.com/1yrEhOELhX4ClnDQSH-jLu7vgXM=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/O/6/tqI6rIRQKeJdnDptLyJw/261106-grafico-tesla-e-nvidia-tiveram-as-maiores-quedas.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Por que a corrida pela IA virou motivo de preocupação e fez ações despencarem? Gigantes perderam US$ 1 trilhão em um dia",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Bolsas globais caem após vitória democrata nos EUA e temor sobre setor de IA As ações de empresas ligadas à inteligência artificial (IA) sofreram fortes perdas nas bolsas pelo mundo. Na quinta-feira (5), o Nasdaq caiu…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/06/acoes-ia-globais.ghtml",
+   "img": "https://s2-g1.glbimg.com/16f9avPvaSEr_k0-SK4ykQeMg9g=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/E/N/RAwBjDQCuoEntjA01vuw/2026-11-05t204733z-1818248589-rc2shoae62f9-rtrmadp-3-usa-stocks.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Minha Casa, Minha Vida: governo define regras para famílias afetadas por desastres e obras públicas",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Residencial Diuza Gonçalves é um dos empreendimentos do Minha Casa, Minha Vida em Teresina Divulgação/Caixa O Ministério das Cidades estabeleceu novas regras para a seleção de famílias que poderão receber imóveis pelo…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/06/minha-casa-minha-vida-imoveis-desastres-e-obras-publicas.ghtml",
+   "img": "https://s2-g1.glbimg.com/RS2GWx-Z-y9AIcn-AcZGe77e7MM=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/y/p/7Yv5WPRnKXBFzf7Jmjqw/diuza-29072025-1-.jpg",
+   "t": [
+    "CXSE3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ações da maior empresa de azeite do mundo despencam após mercado avaliar que companhia receberá menos com a venda",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Ações da maior empresa de azeite do mundo despencam após mercado avaliar que companhia receberá menos com a venda. Racool_studio As ações da Deoleo, maior engarrafadora de azeite do mundo e dona de marcas como Carbonell…",
+   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/11/06/acoes-da-deoleo-maior-empresa-de-azeite-do-mundo-caem-apos-venda.ghtml",
+   "img": "https://s2-g1.glbimg.com/V27oL3v--1scueuTgPlaDeQlaTA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/n/3/pGZ9gRSGOZBPTlvFfb5g/olive-oil-bowl.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Wall Street perde trilhões em um dia: entenda o que derrubou as ações de IA",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Bolsas Wall Street Reuters/Brendan McDermid Os principais índices de Wall Street fecharam em forte queda na última quinta-feira (5), pressionados pelas ações de empresas ligadas à inteligência artificial (IA). O…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/06/wall-street-acoes-inteligencia-artificial.ghtml",
+   "img": "https://s2-g1.glbimg.com/irmSkXsjmSLnL7V96WF8vS6ojxo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/3/2/yHkkBOR0GWB4tTCW3NUA/2025-04-08t135750z-1820810981-rc2ptdaayt43-rtrmadp-3-usa-stocks.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe e fecha a R$ 5,50 com dados de emprego dos EUA e temor com IA; Ibovespa avança",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou em alta de 0,36% nesta sexta-feira (6), cotado a R$ 5,5082. O Ibovespa, principal índice da bolsa brasileira, tinha ganhos de 1,32% na reta final do…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/06/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/KbOg1q3fzRMd5YV3G82VDQOh1V0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/D/u/bIbO92QKm2Mwko6Uw45w/2025-08-13t150516z-1527003558-rc2e6gazlupi-rtrmadp-3-zelle-new-york.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Tesla vai reduzir gradualmente produção do Cybertruck no Texas, diz Musk",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "g1 testou: a primeira Tesla Cybertruck que veio para o Brasil A Tesla planeja reduzir gradualmente a produção do Cybertruck em sua fábrica no Texas por volta de meados do próximo ano, afirmou o presidente-executivo Elon…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/06/tesla-cybertruck-musk.ghtml",
+   "img": "https://s2-g1.glbimg.com/dikwOVzHwnKxurJW-4xMsmjhBFE=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/5/V/yhzTYvSBAZBCbwOfcbKA/tesla-cybertruck-traseira.jpg",
+   "t": [],
+   "tf": [
+    "us:TSLA"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Temores com IA derrubam mercados globais nesta sexta-feira; Coreia do Sul aciona circuit breaker",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "A tela exibe o Índice Composto de Preços das Ações da Coreia (KOSPI) em uma sala de negociação do Hana Bank em Seul, Coreia do Sul, na quinta-feira, 5 de novembro de 2026. Lee Jin-man/AP Apesar do desempenho positivo…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/05/bolsa-do-japao-cai-mais-de-6percent-apos-tombo-de-acoes-de-ia-nos-eua.ghtml",
+   "img": "https://s2-g1.glbimg.com/08uD-MOMXTLmzQL8W07mkdoIIhc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/5/B/lyBmf7TMq320E5CzkLug/ap26309026920769.jpg",
+   "t": [
+    "POSI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
   {
    "tema": "mercado",
    "titulo": "TSE aceita ação contra chapa Lula-Alckmin por abuso de poder econômico",
@@ -239,6 +498,52 @@
    "url": "https://timesbrasil.com.br/brasil/bolsa-mounjaro-justica-suspende-programa-de-medicamento-para-obesidade-em-cidade-de-sp/",
    "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/02/8191d697-mounjaro.webp",
    "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar volta a aproximar-se de R$ 5,49 em dia de instabilidade global",
+   "data": "2026-11-05",
+   "fonte": "Agência Brasil",
+   "resumo": "O dólar fechou em alta e a bolsa encerrou em queda nesta quinta-feira (5), em um pregão marcado pelo aumento da aversão ao risco nos mercados internacionais. A pressão veio principalmente de Wall Street, com fortes…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-volta-aproximar-se-de-r-549-em-dia-de-instabilidade-global",
+   "img": "https://imagens.ebc.com.br/puCwIlqITk33Us9_iK6fqhXhOFM=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/atoms/image/dolares.jpg?itok=ipUA3SFB",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Panvel cresce no digital com canetas emagrecedoras mais baratas e chega a R$ 1,7 bilhão de receita",
+   "data": "2026-11-05",
+   "fonte": "NeoFeed",
+   "resumo": "A varejista farmacêutica gaúcha Panvel viu no crescimento de seus canais digitais o principal pilar de sustentação para o avanço em suas linhas financeiras no terceiro trimestre deste ano. No período, a companhia…",
+   "url": "https://neofeed.com.br/negocios/panvel-cresce-no-digital-com-canetas-emagrecedoras-mais-baratas-e-chega-a-r-17-bilhao-de-receita/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/rede-varejista-gaucha-Panvel.jpg",
+   "t": [
+    "PNVL3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Com aporte de R$ 1 bilhão, Iguatemi e Catuaí trazem Four Seasons de volta a SP",
+   "data": "2026-11-05",
+   "fonte": "NeoFeed",
+   "resumo": "Em dezembro de 2025, o NeoFeed noticiou com exclusividade que os grupos Iguatemi e Catuaí estavam em negociação para trazer o Four Seasons, uma das principais marcas globais de hotéis de luxo, de volta ao Brasil. Agora,…",
+   "url": "https://neofeed.com.br/negocios/com-aporte-de-r-1-bilhao-iguatemi-e-catuai-trazem-four-seasons-de-volta-a-sp/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/bruno-khouri-pedro-jereissati.jpg",
+   "t": [
+    "IGTI11"
+   ],
    "tf": [],
    "m": [
     "br"
