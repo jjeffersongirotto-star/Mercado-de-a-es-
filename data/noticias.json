@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-11-06T21:02:35+00:00",
+ "fetched_at": "2026-11-09T21:03:01+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -14,6 +14,517 @@
   "g1 Economia"
  ],
  "itens": [
+  {
+   "tema": "mercado",
+   "titulo": "Nvidia: o que a empresa produz e por que vale trilhões de dólares?",
+   "data": "2026-11-09",
+   "fonte": "InfoMoney",
+   "resumo": "Foto de BoliviaInteligente na Unsplash \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/11/Logo-NVIDIA.png?fit=1232%2C770&quality=70&strip=all\" />Gigante dos chips impulsiona a corrida pela IA e…",
+   "url": "https://www.infomoney.com.br/mercados/nvidia-o-que-a-empresa-produz/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/11/Logo-NVIDIA.png?fit=1232%2C770&quality=70&strip=all",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "MBRF (MBRF3) salta mais de 10% na B3 após bons sinais para os resultados do 3º tri",
+   "data": "2026-11-09",
+   "fonte": "InfoMoney",
+   "resumo": "MBRF Foto: Divulgação/MBRF \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2025/06/brf-marfrig-divulgacao-01.jpg?fit=1120%2C720&quality=70&strip=all\" />\"Esperamos uma recuperação sequencial das…",
+   "url": "https://www.infomoney.com.br/mercados/mbrf-mbrf3-salta-mais-de-10-na-b3-apos-bons-sinais-para-os-resultados-do-3o-tri/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/06/brf-marfrig-divulgacao-01.jpg",
+   "t": [
+    "MBRF3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Mercado eleva projeção da Selic para 13,75% em 2026",
+   "data": "2026-11-09",
+   "fonte": "Agência Brasil",
+   "resumo": "O mercado financeiro elevou de 13,5% para 13,75% ao ano a projeção para a taxa básica de juros (Selic) ao final de 2026, segundo o Boletim Focus divulgado nesta segunda-feira (9) pelo Banco Central. Com a revisão, a…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/mercado-eleva-projecao-da-selic-para-1375-em-2026",
+   "img": "https://imagens.ebc.com.br/J1s9VLw3udVm8bUyu_s0hnBSBug=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/10/_raf1037_1.jpg?itok=0kwDCPe7",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A debacle do BuzzFeed – que nem a AI conseguiu salvar (ainda)",
+   "data": "2026-11-09",
+   "fonte": "Brazil Journal",
+   "resumo": "O BuzzFeed – uma empresa digital de mídia outrora promissora que chegou a valer quase US$ 2 bilhões na Bolsa – recorreu à AI para tentar salvar sua operação moribunda, mas os resultados até agora foram decepcionantes. A…",
+   "url": "https://braziljournal.com/a-debacle-do-buzzfeed-que-nem-a-ai-conseguiu-salvar-ainda",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asKxtbdiBOqanhZhR.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Por que a Southern Copper vale o triplo da Vale – faturando só um terço",
+   "data": "2026-11-09",
+   "fonte": "Brazil Journal",
+   "resumo": "Para a economia do século XXI, o cobre é o novo petróleo – e as mineradoras bem posicionadas na produção do metal são um ímã para os investidores. Caso emblemático: a Southern Copper Corporation, controlada pelo Grupo…",
+   "url": "https://braziljournal.com/por-que-a-southern-copper-vale-o-triplo-da-vale-faturando-so-um-terco",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asGeV5RfhYeuZlhm7.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:SCCO"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Os caminhos da Arezzo&CO e da Allos para lidar com o fim da escala 6×1 e com os juros altos",
+   "data": "2026-11-09",
+   "fonte": "NeoFeed",
+   "resumo": "Passado o período eleitoral e a reeleição do presidente Luiz Inácio Lula da Silva, os empresários brasileiros, em especial aqueles do setor de varejo, passaram a focar nos desafios para crescimento em meio às mudanças…",
+   "url": "https://neofeed.com.br/neoconference2026/os-caminhos-da-arezzoco-e-da-allos-para-lidar-o-fim-da-escala-6x1-e-com-os-juros-altos/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/Alexandre-Birman-NeoConference2026.jpg",
+   "t": [
+    "ALOS3",
+    "AZZA3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Brasil precisa avançar em inclusão digital para ser competitivo em IA, dizem CEOs de Vivo e Totvs",
+   "data": "2026-11-09",
+   "fonte": "NeoFeed",
+   "resumo": "A inteligência artificial pode aprofundar as desigualdades digitais no Brasil se o país não conseguir avançar na inclusão digital e definir o papel que pretende desempenhar na transformação da economia provocada pela…",
+   "url": "https://neofeed.com.br/neoconference2026/brasil-precisa-avancar-em-inclusao-digital-para-ser-competitivo-em-ia-dizem-ceos-de-vivo-e-totvs/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/christian-gebara-vivo-neoconference-2026.jpg",
+   "t": [
+    "TOTS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Para Brookfield e La Caisse, insegurança regulatória põe investimentos em xeque no Brasil",
+   "data": "2026-11-09",
+   "fonte": "NeoFeed",
+   "resumo": "O Brasil tem oportunidades para atrair ainda mais capital estrangeiro, porém mudanças nas regras jurídicas e regulatórias podem frear esse movimento. O alerta vem de executivos das canadenses Brookfield e La Caisse, que…",
+   "url": "https://neofeed.com.br/neoconference2026/para-brookfield-e-la-caisse-inseguranca-regulatoria-poe-investimentos-em-xeque-no-brasil/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/Como-as-gestoras-estrangeiras-estao-enxergando-o-Brasil-NeoConference-2026.jpeg",
+   "t": [],
+   "tf": [
+    "us:BN"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "O chamado à ação de Maluhy, do Itaú, e Noronha, do Bradesco, pelo ajuste fiscal",
+   "data": "2026-11-09",
+   "fonte": "NeoFeed",
+   "resumo": "A necessidade de um ajuste nas contas públicas é cada vez mais clara para o mercado e até para o próprio governo, diante da trajetória de crescimento da dívida pública. O que se exige agora é uma mobilização conjunta do…",
+   "url": "https://neofeed.com.br/neoconference2026/o-chamado-a-acao-de-maluhy-do-itau-e-noronha-do-bradesco-pelo-ajuste-fiscal/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/NeoConference-2026-A-economia-real-e-as-perspectivas-para-2027.jpeg",
+   "t": [
+    "BBDC4",
+    "ITUB4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Citi rebaixa Eztec para venda com alerta sobre o peso do estoque",
+   "data": "2026-11-09",
+   "fonte": "NeoFeed",
+   "resumo": "O Citi rebaixou a recomendação das ações da Eztec de neutra para venda e cortou o preço-alvo de R$ 12 para R$ 8, em relatório divulgado nesta segunda-feira, 9 de novembro. O novo alvo indica queda de 15,6% em relação ao…",
+   "url": "https://neofeed.com.br/negocios/citi-rebaixa-eztec-para-venda-com-alerta-sobre-o-peso-do-estoque/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2023/09/eztec.jpg",
+   "t": [
+    "EZTC3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "O “risco Jensen Huang”: como o caso com uma suposta espiã chinesa abala a Nvidia",
+   "data": "2026-11-09",
+   "fonte": "NeoFeed",
+   "resumo": "Depois de fechar o pregão da última sexta-feira na Nasdaq com alta de 2,78% e um valor de mercado de US$ 4,5 trilhões, as ações da Nvidia, um dos grandes ícones por trás do boom da inteligência artificial (IA),…",
+   "url": "https://neofeed.com.br/negocios/o-risco-jensen-huang-como-o-caso-com-uma-suposta-espia-chinesa-abala-a-nvidia/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/jensen-huang.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic, criadora do Claude, lança IA mais potente e barata a uma semana de possível estreia na bolsa",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Ilustração mostra o logotipo da Anthropic e um teclado. Dado Ruvic/ Reuters A Anthropic, empresa americana responsável pelo assistente de inteligência artificial Claude, anunciou nesta segunda-feira (9) uma nova geração…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/09/anthropic-lanca-ia-bolsa.ghtml",
+   "img": "https://s2-g1.glbimg.com/UcVhOySkJPocqCnkuDXnSNBr_s4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/4/J/2e8p4bTzWPvsIs1cnb9w/2026-10-21t103315z-1-lynxmpem9k0wp-rtroptp-4-anthropic-ipo-investors.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Avião da Airbus passa 24 horas no ar, bate recorde no Guinness e é testado para voos sem escalas",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Voo de testes realizado em julho, o modelo A350-1000ULR ligou Melbourne, na Austrália, a Toulouse, na França, sem escalas, percorrendo 23.155 quilômetros. Airbus Um avião da Airbus entrou para o Guinness World Records…",
+   "url": "https://g1.globo.com/inovacao/noticia/2026/11/09/aviao-da-airbus-24-horas.ghtml",
+   "img": "https://s2-g1.glbimg.com/xsKEZXCZjQRaOT-SKoO8yK7B068=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/I/8/l4WFakTLeGSAAirD28aw/a350-1000ulr-long-haul-flight-guinness-world-records.png",
+   "t": [],
+   "tf": [
+    "gb:DGE"
+   ],
+   "m": [
+    "gb"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Caixa muda identidade visual pela 1ª vez em quase 30 anos; veja evolução do logo desde 1861",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Novo logo da Caixa. Divulgação A Caixa Econômica Federal lançou nesta segunda-feira (9) uma nova identidade visual, a primeira grande reformulação da marca em quase 30 anos. A mudança preserva elementos tradicionais,…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/09/caixa-logo-30-anos.ghtml",
+   "img": "https://s2-g1.glbimg.com/rXpZgJ3Bws9MzANe0JI43_PMZy0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/N/6/MJvUxdT0aD5koqfk8BTg/56246da9-538b-4190-91ff-3cd1dd5cd508.png",
+   "t": [
+    "CXSE3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Traição envolvendo CEO da Nvidia rende memes nas redes sociais",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Como uma traição envolveu o CEO da Nvidia em investigação de espionagem O fundador e CEO da Nvidia, Jensen Huang, admitiu ter sido infiel à esposa em meio a suspeitas de que foi alvo de espionagem. Em uma mensagem aos…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/09/traicao-envolvendo-ceo-da-nvidia-rende-memes-nas-redes-sociais.ghtml",
+   "img": "https://s2-g1.glbimg.com/KHAYXnFNw9TMiNyASv2as4vHkqk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/n/S/TKeMkiRcKerUXLt8uFiQ/ap26312766429671.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "GM pagará R$ 1,2 bilhão após acusação de vender dados de motoristas; entenda",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Chevrolet Traverse é um SUV vendido pela General Motors nos Estados Unidos. Divulgação / GM A General Motors (GM) concordou em pagar US$ 220 milhões (cerca de R$ 1,2 bilhão) para encerrar uma investigação nos Estados…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/09/gm-pagara-r-12-bilhao-apos-acusacao-de-vender-dados-de-motoristas-entenda.ghtml",
+   "img": "https://s2-g1.glbimg.com/Pe1hNaDd26n0WdAlT5AgjMruRuQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/7/U/5sOWiKRneURIFnCuXMUA/chevrolet-traverse-2024-wallpaper.jpg",
+   "t": [],
+   "tf": [
+    "us:GM"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Quem é Alice Huang, suposta amante do CEO da Nvidia",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Como uma traição envolveu o CEO da Nvidia em investigação de espionagem A empresária chinesa Alice Huang é suspeita de trabalhar para o governo da China e coletar informações sobre Jensen Huang, presidente-executivo da…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/09/quem-e-alice-huang-empresaria-chinesa-acusada-de-espionar-ceo-da-nvidia.ghtml",
+   "img": "https://s2-g1.glbimg.com/Z7h_JLkZkdaigeZODP5iW_YMqqA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/F/T/B2YtxdReGAUu8i7SEBXQ/2026-11-09t122053z-105573755-rc2bkoaf0mkl-rtrmadp-3-nvidia-probe-ceo.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Mercado eleva estimativa de inflação para 2027 e passa a prever corte de juros só em março do ano que vem",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Os economistas do mercado financeiro elevaram a estimativa de inflação em 2027 e passaram a projetar um novo corte na taxa básica de juros da economia somente em março do próximo ano. A mudança na aposta do mercado…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/09/mercado-eleva-estimativa-de-inflacao-para-2027-e-passa-a-prever-corte-de-juros-so-em-marco-do-ano-que-vem.ghtml",
+   "img": "https://s2-g1.glbimg.com/2rIaQ2wiBqrOP0Obgn3HFFYXJug=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/V/b/A8IGA6SdAAIsLKWtdgOg/imagem-destaque-g1-dinheiro.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar recua a R$ 5,50, com projeção de inflação e discurso de Lula no radar; Ibovespa avança",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou com queda de 0,06% nesta segunda-feira (9), cotado a R$ 5,5048. Por volta das 17h, o Ibovespa, principal índice da bolsa brasileira, avançava 1,59%, aos…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/09/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/KbOg1q3fzRMd5YV3G82VDQOh1V0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/D/u/bIbO92QKm2Mwko6Uw45w/2025-08-13t150516z-1527003558-rc2e6gazlupi-rtrmadp-3-zelle-new-york.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "De lavador de pratos a bilionário: quem é o CEO da Nvidia envolvido em caso de traição e suspeita de espionagem",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "O lavador de pratos que criou a Nvidia, a empresa mais valiosa do mundo O fundador e CEO da Nvidia, Jensen Huang, admitiu ter sido infiel à esposa em meio a suspeitas de que foi alvo de espionagem. No domingo (8), a…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/09/de-lavador-de-pratos-a-bilionario-quem-e-o-ceo-da-nvidia-envolvido-em-caso-de-traicao-e-suspeita-de-espionagem.ghtml",
+   "img": "https://s2-g1.glbimg.com/M0aeKVoO72e86gpZLmk2PbeovBI=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/j/U/ngn4ZNQXuw9cT8EU7Jew/2025-05-20t111412z-1433845456-rc2kleap0sho-rtrmadp-3-taiwan-computex-nvidia.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Tesla vai devolver dinheiro a clientes do Cybertruck após anunciar fim da produção da picape",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Tesla reduz produção do Cybertruck para abrir espaço a táxis autônomos A Tesla terá que devolver o dinheiro pago antecipadamente por muitos clientes que reservaram o Cybertruck, picape elétrica da montadora. Isso porque…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/09/tesla-cybertruck-producao.ghtml",
+   "img": "https://s2-g1.glbimg.com/nzEftM-FRsqy1wr8k1qeTPIBJ8E=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/A/j/07pXSNQwyC3G4Yyc2UNQ/tesla-cybertruck.avif",
+   "t": [],
+   "tf": [
+    "us:TSLA"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ações da Nvidia despencam após investigação sobre suspeita de espionagem envolvendo CEO",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Como uma traição envolveu o CEO da Nvidia em investigação de espionagem As ações da Nvidia caíam 4,50% nesta segunda-feira (9), negociadas a US$ 178,25 (cerca de R$ 983) por volta das 12h08 (horário de Brasília), após a…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/09/acoes-da-nvidia-despencam-apos-investigacao-sobre-suspeita-de-espionagem-envolvendo-ceo.ghtml",
+   "img": "https://s2-g1.glbimg.com/syQtF8PUAIAxeZgCKgNfpQvQNOQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/t/z/zqDGJ3TaSj5GQbIxI8gQ/2026-06-01t145412z-1083488031-rc2sklabxlh9-rtrmadp-3-computex-nvidia-keynote.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Chefe ruim e falta de crescimento fazem profissional pedir demissão em 2027, diz estudo",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Imagem ilustrativa mostra trabalhador diante de um computador. Estresse crônico, assédio e sobrecarga de tarefas estão entre os riscos psicossociais relacionados ao trabalho. Reprodução/Adobe Stock. A relação com o…",
+   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/11/09/chefe-ruim-e-falta-de-crescimento-estudo.ghtml",
+   "img": "https://s2-g1.glbimg.com/Vrp7PUTPcq6PQd9_F3Qnke8KtM4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/O/C/cHJsS9QFe9qIYl2Ake0g/istock-1191636898.jpg",
+   "t": [],
+   "tf": [
+    "us:ADBE"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Traição, espionagem e investigação: entenda o caso que expõe a Nvidia e seu CEO",
+   "data": "2026-11-09",
+   "fonte": "g1 Economia",
+   "resumo": "Como uma traição envolveu o CEO da Nvidia em investigação de espionagem O fundador e CEO da Nvidia, Jensen Huang, admitiu ter sido infiel à esposa em meio a suspeitas de que foi alvo de espionagem. A empresa anunciou…",
+   "url": "https://g1.globo.com/tecnologia/ciberseguranca/noticia/2026/11/09/traicao-espionagem-investigacao-entenda-caso-expoe-nvidia-ceo-jensen-huang.ghtml",
+   "img": "https://s2-g1.glbimg.com/KHAYXnFNw9TMiNyASv2as4vHkqk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/n/S/TKeMkiRcKerUXLt8uFiQ/ap26312766429671.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "TIM fecha acordo para conectar 200 mil veículos e complexo industrial no Brasil",
+   "data": "2026-11-09",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A TIM fechou um contrato para ampliar presença no setor automotivo e passará a fornecer conectividade para toda a frota de veículos leves da BYD no Brasil, além do complexo industrial da montadora em Camaçari, na Bahia.…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/tim-fecha-acordo-para-conectar-200-mil-veiculos-e-complexo-industrial-no-brasil/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/02/2f826956-whatsapp-image-2026-02-11-at-13.48.04.webp",
+   "t": [
+    "TIMS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "EXCLUSIVO CNBC: Analista da Rayliant vê novo fator de risco para a Nvidia em meio a suspeitas envolvendo Huang",
+   "data": "2026-11-09",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "As notícias sobre os supostos vínculos de James Huang com uma agente de inteligência chinesa surgem em um momento delicado para a Nvidia e outras grandes empresas de tecnologia. O episódio adiciona um novo fator de…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/exclusivo-cnbc-analista-da-rayliant-ve-novo-fator-de-risco-para-a-nvidia-em-meio-a-suspeitas-envolvendo-huang/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/326b5fe2-videoframe_27007.webp",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Caso Jensen Huang coloca o futuro da Nvidia em risco sem um sucessor claro para o cargo de CEO",
+   "data": "2026-11-09",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A revelação do CEO da Nvidia, Jensen Huang, de que manteve um caso extraconjugal com uma suposta espiã chinesa levantou dúvidas sobre seu futuro no comando da Nvidia e sobre o que poderia acontecer caso o cofundador de…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/caso-jensen-huang-coloca-o-futuro-da-nvidia-em-risco-sem-um-sucessor-claro-para-o-renomado-ceo/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/6009743f-108353994-1787675884337-gettyimages-2266718050-nvidia_gtc.webp",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Musk confirma encerramento do Cybertruck e prevê reembolso a parte dos compradores",
+   "data": "2026-11-09",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A Tesla pretende encerrar a produção do Cybertruck em aproximadamente oito meses e devolver os depósitos de parte dos clientes que aguardam a entrega da picape elétrica. A decisão foi anunciada pelo presidente-executivo…",
+   "url": "https://timesbrasil.com.br/mundo/musk-confirma-encerramento-do-cybertruck-e-preve-reembolso-a-parte-dos-compradores/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2025/08/5e2a2baa-bf_tesla_cybertruck_divulgacao-1.webp",
+   "t": [],
+   "tf": [
+    "us:TSLA"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Mega-Sena 3083: aposta simples de Goiânia leva quase R$ 60 milhões; confira os números sorteados",
+   "data": "2026-11-08",
+   "fonte": "g1 Economia",
+   "resumo": "Como funciona a Mega-Sena? O sorteio do concurso 3083 da Mega-Sena foi realizado neste domingo (8), em São Paulo. Uma aposta simples de Goiânia levou quase R$ 60 milhões. 📱Favorite o g1 no Google e acompanhe as…",
+   "url": "https://g1.globo.com/loterias/mega-sena/noticia/2026/11/08/mega-sena-3083-confira-os-numeros-sorteados.ghtml",
+   "img": "https://s2-g1.glbimg.com/qy4fKjxagQL_B-wFUYEdO2hUGeg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2022/j/P/SWmVpCSYe2ZiGlHFWwmQ/mega.jpeg",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "'Meu medo é o governo Lula buscar atalhos e brigar com o mercado': por que professor em Cambridge defende ajuste fiscal 'suave'",
+   "data": "2026-11-08",
+   "fonte": "g1 Economia",
+   "resumo": "Por que professor de Cambridge defende ajuste fiscal 'suave' REUTERS via BBC Não há \"atalhos\" para equilibrar as contas públicas e cortar os juros no Brasil, defende o economista Tiago Cavalcanti, brasileiro professor…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/08/meu-medo-e-o-governo-lula-buscar-atalhos-e-brigar-com-o-mercado-por-que-professor-em-cambridge-defende-ajuste-fiscal-suave.ghtml",
+   "img": "https://s2-g1.glbimg.com/znsy5KN_QB0Gi_MBfH9maQe6cmg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/S/x/gjPBzlRAK1ddRBhNUpUQ/8de61660-d97a-11f1-9f96-47a2c3e0c5f6.jpg-1-.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Fórmula 1: veja 5 tecnologias que nasceram nas pistas e hoje estão até em carros populares",
+   "data": "2026-11-07",
+   "fonte": "g1 Economia",
+   "resumo": "O piloto de Fórmula 1 brasileiro Gabriel Bortoleto, da equipe Audi, em ação durante treino para o Grande Prêmio da Austrália, no dia 6 de março de 2026 Mark Peterson/Reuters A Fórmula 1 não é apenas entretenimento para…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/07/formula-1-veja-5-tecnologias-que-nasceram-nas-pistas-e-hoje-estao-ate-em-carros-populares.ghtml",
+   "img": "https://s2-g1.glbimg.com/5oUR48Z-LC3VyIbWVLHxDEl4jl0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/B/m/Smo1tCQjqoa73JjePykA/2026-03-06t031027z-1566154269-up1em3608tdvz-rtrmadp-3-motor-f1-australia.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Investidores perdem confiança no setor de IA e colocam IPO da Anthropic em risco",
+   "data": "2026-11-07",
+   "fonte": "g1 Economia",
+   "resumo": "Logo da Anthropic em ilustração feita em junho de 2026. Dado Ruvic/Reuters Potenciais investidores na oferta pública inicial de ações (IPO, na sigla em inglês) da Anthropic têm dúvidas se a startup de inteligência…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/07/investidores-perdem-confianca-no-setor-de-ia-e-colocam-ipo-da-anthropic-em-risco.ghtml",
+   "img": "https://s2-g1.glbimg.com/HDJnmOO1OoRQZUeI9QBwQazrymg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/n/7BQJxFSR6juUrrAWybuA/2026-09-18t122428z-2035353265-rc2qrla2prcd-rtrmadp-3-ai-europe-risks.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
   {
    "tema": "mercado",
    "titulo": "Dólar hoje sobe a R$ 5,51, após payroll dos EUA superar expectativas em outubro",
@@ -268,6 +779,35 @@
    "t": [
     "POSI3"
    ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe para R$ 5,51, com dados de emprego nos EUA",
+   "data": "2026-11-06",
+   "fonte": "Agência Brasil",
+   "resumo": "O dólar fechou em alta e o Ibovespa avançou nesta sexta-feira (6), em um dia marcado pela divulgação de dados do mercado de trabalho dos Estados Unidos e pela expectativa em torno da política econômica do quarto mandato…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-sobe-para-r-551-com-dados-de-emprego-nos-eua",
+   "img": "https://imagens.ebc.com.br/HC6PhNU9RZRnPT1Tu5Kjxdw5jRA=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/20/20190310_162000.jpg?itok=Jyj9cZ7G",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "PIX fora do ar? Usuários reclamam de instabilidade; Banco Central diz que problema foi resolvido",
+   "data": "2026-11-06",
+   "fonte": "g1 Economia",
+   "resumo": "Polícia mapeou valor do prejuízo após analisar transferências via PIX do suspeito Bruno Peres/Agência Brasil/Arquivo Usuários tiveram dificuldades para fazer transferências por PIX no início da noite desta sexta-feira…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/06/pix-fora-do-ar-quase-10-mil-usuarios-relatam-dificuldades-em-bancos.ghtml",
+   "img": "https://s2-g1.glbimg.com/QepxgC4d4575P51mwUrzs5QtBY4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/s/u/xYEEOsRCe41Sv9Zc7Ybg/pix-.jpg",
+   "t": [],
    "tf": [],
    "m": [
     "br"
