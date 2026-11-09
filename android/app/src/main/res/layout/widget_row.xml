@@ -24,7 +24,7 @@
                     android:textSize="11sp" android:textStyle="bold" />
             </FrameLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                <!-- 1.11: nome popular em cima (negrito; tamanho por WidgetData.nameSp, 2 linhas só se não couber) e o ticker embaixo -->
+                <!-- 1.11: nome popular em cima (negrito; 1.30: o mesmo tamanho em todas as linhas, WidgetData.nameSize; 2 linhas só se não couber) e o ticker embaixo -->
                 <TextView android:id="@+id/r_ticker" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:ellipsize="end" android:maxLines="2" android:lineSpacingMultiplier="0.9" android:textColor="@android:color/white" android:textSize="14sp" android:textStyle="bold" />
                 <TextView android:id="@+id/r_name" android:layout_width="match_parent" android:layout_height="wrap_content"

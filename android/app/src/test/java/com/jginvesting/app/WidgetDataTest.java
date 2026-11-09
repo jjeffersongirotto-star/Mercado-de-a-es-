@@ -269,19 +269,17 @@ public class WidgetDataTest {
         assertFalse(WidgetData.refreshing("<html>"));
     }
 
-    // 1.21: coluna Ação do tamanho do maior nome; nome de 2+ palavras que não cabe em 14 sp vai para 2 linhas a 12 sp
-    @Test public void colunaAcaoPeloMaiorNome() {
+    // 1.30: um tamanho de nome só para todas as linhas: 14 sp se todos cabem (1 linha, ou 2 linhas com mais de uma palavra)
+    @Test public void nomeComOMesmoTamanhoEmTodasAsLinhas() {
         WidgetData.Meas m = (s, sp, bold) -> s.length() * 0.55f * sp;
-        java.util.List<String> nm = java.util.Arrays.asList("Petrobras", "BB Seguridade", "Caixa Seguridade", "Klabin"),
-                tk = java.util.Arrays.asList("PETR3", "BBSE3", "CXSE3", "KLBN3");
-        WidgetData.Cols c = WidgetData.cols(nm, tk, 200f, m);
-        float seg = 10 * 0.55f * 12f;  // "Seguridade" a 12 sp
-        assertEquals(Math.max(9 * 0.55f * 14f, seg), c.text - 2, 1.01f);  // o maior: "Petrobras" a 14 sp
-        assertEquals(14f, c.sp[0], 1e-6); assertEquals(12f, c.sp[1], 1e-6); assertEquals(12f, c.sp[2], 1e-6); assertEquals(14f, c.sp[3], 1e-6);
-        assertEquals(200f - c.text, c.extra, 1e-3);  // a sobra vai para as outras colunas
-        WidgetData.Cols c2 = WidgetData.cols(java.util.Arrays.asList("Klabin"), java.util.Arrays.asList("KLBN3"), 200f, m);
-        assertTrue(c2.text < c.text && c2.extra > c.extra);  // muda com as empresas
-        assertEquals(40f, WidgetData.cols(nm, tk, 40f, m).text, 1e-6);  // nunca mais que o espaço
+        java.util.List<String> nm = java.util.Arrays.asList("Petrobras", "Banco do Brasil", "Microsoft", "Klabin");
+        assertEquals(14f, WidgetData.nameSize(nm, 120f, m), 1e-6);  // todos numa linha a 14 sp
+        assertEquals(13f, WidgetData.nameSize(nm, 80f, m), 1e-6);  // "Banco do" / "Brasil" em 2 linhas: todas as linhas a 13 sp
+        float sp = WidgetData.nameSize(nm, 66f, m);  // "Microsoft" não cabe a 14 sp: todas as linhas descem juntas
+        assertTrue(sp < 14f && sp >= 11f);
+        assertTrue(9 * 0.55f * sp <= 66f);
+        assertEquals(11f, WidgetData.nameSize(java.util.Arrays.asList("Eletrobrasileiras"), 40f, m), 1e-6);  // não cabe nem a 11: 11
+        assertEquals(14f, WidgetData.nameSize(java.util.Collections.emptyList(), 40f, m), 1e-6);
         List<WidgetData.Size> h = WidgetData.sizes(0, 0, 400, 400, false, WidgetData.FULL);  // uma orientação só: 6 alturas
         assertEquals(6, h.size()); assertEquals(416, h.get(0).h); assertEquals(352, h.get(h.size() - 1).h);
     }

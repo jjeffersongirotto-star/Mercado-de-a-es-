@@ -137,7 +137,7 @@ public class FavWidget extends AppWidgetProvider {
         final Context c; final int id; final String sel, nm, data, up; final List<WidgetData.Item> items;
         final java.util.Map<String, android.graphics.Bitmap> bmp = Logos.newCache();
         final int px, wDp; final WidgetData.Bands bands; final android.os.Bundle op; final android.content.res.Configuration cf;
-        final boolean land, upd; final float dens; final WidgetData.Cols cols; final UpdateLogic.Info nu;
+        final boolean land, upd; final float dens, nameSp; final UpdateLogic.Info nu;
         final int flagsImm = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         final int flagsMut = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
 
@@ -152,7 +152,7 @@ public class FavWidget extends AppWidgetProvider {
             land = cf.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
             dens = c.getResources().getDisplayMetrics().density;
             wDp = op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
-            cols = colsOf(c, items, wDp, cf.fontScale, dens);
+            nameSp = nameSpOf(c, items, wDp, cf.fontScale, dens);
             // horário = quando a última atualização terminou (dados chegaram); sem isso ainda, o horário dos dados no site
             long fat = Store.fetchedAt(c, sel);
             up = busy ? c.getString(R.string.widget_loading) : WidgetData.withQuote(fat > 0 ? WidgetData.fetched(fat, java.util.TimeZone.getDefault()) : WidgetData.updated(data), data);
@@ -206,13 +206,12 @@ public class FavWidget extends AppWidgetProvider {
                 // 1.12: N linhas inteiras na altura do widget, a última rente à borda (títulos com altura fixa para a conta fechar);
                 // 1.21: uma versão por altura possível (hv): o Android usa a maior que cabe no tamanho real
                 v.setViewLayoutHeight(R.id.w_cols, WidgetData.colsDp(cf.fontScale), android.util.TypedValue.COMPLEX_UNIT_DIP);
-                // 1.21: coluna Ação do tamanho do maior nome; a sobra vai igual para Preço, Dia, Barato/Caro e Medo e Ganância
-                for (int k = 0; k < COL_IDS.length; k++)
-                    v.setViewLayoutWidth(COL_IDS[k], colDp(c, k) + cols.extra / 4f, android.util.TypedValue.COMPLEX_UNIT_DIP);
+                // 1.30: colunas Preço, Dia, Barato/Caro e Medo e Ganância com a largura fixa do layout (dimens.xml) nos títulos e
+                // em todas as linhas; a coluna Ação fica com o resto (sem larguras calculadas, que o launcher perdia ao rolar)
                 int listPx = Math.round((hv - WidgetData.headerDp(cf.fontScale, upd)) * dens);
                 int rowPx = hv > 0 ? WidgetData.rows(listPx, dens, cf.fontScale, items.size())[1] : 0;
                 RemoteViews.RemoteCollectionItems.Builder b = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
-                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp, px, bmp, rowPx, cols, i));
+                for (int i = 0; i < items.size(); i++) b.addItem(items.get(i).t.hashCode(), row(c, items.get(i), bands, wDp, px, bmp, rowPx, nameSp));
                 v.setRemoteAdapter(R.id.w_list, b.build());
             } else {
                 Intent svc = new Intent(c, WidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
@@ -308,17 +307,12 @@ public class FavWidget extends AppWidgetProvider {
 
     /** Uma linha: logo + Ação (nome curto embaixo) | Preço | Dia | Barato/Caro | Medo e Ganância; aberta, o gráfico de 5 anos com faixas de toque. */
     static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp) {
-        return row(c, it, bands, wDp, px, bmp, 0, null, 0);
+        return row(c, it, bands, wDp, px, bmp, 0, 0f);
     }
 
-    /** Colunas Preço, Dia, Barato/Caro e Medo e Ganância (títulos e linhas) e a largura padrão de cada uma (dimens.xml). */
-    private static final int[] COL_IDS = {R.id.h_p, R.id.h_v, R.id.h_f, R.id.h_g}, ROW_COL_IDS = {R.id.r_price, R.id.r_vcol, R.id.r_fcol, R.id.r_gcol};
-    private static final int[] COL_DIM = {R.dimen.col_p, R.dimen.col_v, R.dimen.col_f, R.dimen.col_g};
-
-    static float colDp(Context c, int k) { return c.getResources().getDimension(COL_DIM[k]) / c.getResources().getDisplayMetrics().density; }
-
-    /** 1.21: largura da coluna Ação pelo maior nome, medida com a fonte de verdade (negrito, escala de fonte do aparelho). */
-    static WidgetData.Cols colsOf(Context c, List<WidgetData.Item> items, int wDp, float fontScale, float dens) {
+    /** 1.30: tamanho do nome (sp), o mesmo em todas as linhas (WidgetData.nameSize), medido com a fonte de verdade (negrito, escala
+     *  de fonte do aparelho) no espaço da coluna Ação (largura do widget − colunas fixas − logo). */
+    static float nameSpOf(Context c, List<WidgetData.Item> items, int wDp, float fontScale, float dens) {
         List<String> top = new java.util.ArrayList<>(), sub = new java.util.ArrayList<>();
         for (WidgetData.Item it : items) {
             boolean hasName = it.s != null && !it.s.isEmpty();
@@ -327,14 +321,15 @@ public class FavWidget extends AppWidgetProvider {
         android.graphics.Paint pb = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG), pr = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         pb.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); pr.setTypeface(android.graphics.Typeface.DEFAULT);
         WidgetData.Meas m = (s, sp, bold) -> { android.graphics.Paint p = bold ? pb : pr; p.setTextSize(sp * fontScale * dens); return p.measureText(s) / dens; };
-        // −6 dp: o launcher pode informar o widget um pouco mais largo do que é; a sobra fica na coluna Ação
-        return WidgetData.cols(top, sub, WidgetData.nameRoomDp(wDp, wDp < NARROW) - 6, m);
+        // −6 dp: o launcher pode informar o widget um pouco mais largo do que é
+        return WidgetData.nameSize(top, WidgetData.nameRoomDp(wDp, wDp < NARROW) - 6, m);
     }
 
-    /** rowPx > 0 (Android 12+): altura da linha (WidgetData.rows), para a lista fechar em linhas inteiras; cols (1.21): tamanho do
-     *  nome desta linha (i) e largura das outras colunas. */
+    /** rowPx > 0 (Android 12+): altura da linha (WidgetData.rows), para a lista fechar em linhas inteiras; nameSp (1.30): tamanho do
+     *  nome, o mesmo em todas as linhas (≤ 0: pelo nome desta linha). Cada linha define tudo o que muda entre linhas (o launcher
+     *  reaproveita a linha que saiu da tela para a que entra). */
     static RemoteViews row(Context c, WidgetData.Item it, WidgetData.Bands bands, int wDp, int px, java.util.Map<String, android.graphics.Bitmap> bmp, int rowPx,
-                           WidgetData.Cols cols, int idx) {
+                           float nameSp) {
         RemoteViews r = new RemoteViews(c.getPackageName(), R.layout.widget_row);
         if (rowPx > 0 && Build.VERSION.SDK_INT >= 31) r.setViewLayoutHeight(R.id.r_main, rowPx, android.util.TypedValue.COMPLEX_UNIT_PX);
         // nome popular em cima (negrito, maior que cabe) e o ticker embaixo (cinza); sem nome: só o ticker em cima
@@ -342,13 +337,14 @@ public class FavWidget extends AppWidgetProvider {
         boolean narrow = wDp < NARROW;
         String top = hasName ? it.s : it.t;
         r.setTextViewText(R.id.r_ticker, top);
-        r.setTextViewTextSize(R.id.r_ticker, android.util.TypedValue.COMPLEX_UNIT_SP, cols != null ? cols.sp[idx] : WidgetData.nameSp(top, WidgetData.nameRoomDp(wDp, narrow)));
-        if (cols != null && Build.VERSION.SDK_INT >= 31)
-            for (int k = 0; k < ROW_COL_IDS.length; k++) r.setViewLayoutWidth(ROW_COL_IDS[k], colDp(c, k) + cols.extra / 4f, android.util.TypedValue.COMPLEX_UNIT_DIP);
+        r.setTextViewTextSize(R.id.r_ticker, android.util.TypedValue.COMPLEX_UNIT_SP, nameSp > 0 ? nameSp : WidgetData.nameSp(top, WidgetData.nameRoomDp(wDp, narrow)));
         r.setTextViewText(R.id.r_name, hasName ? it.t : "");
         r.setViewVisibility(R.id.r_name, hasName ? View.VISIBLE : View.GONE);
         r.setViewVisibility(R.id.r_slot, narrow ? View.GONE : View.VISIBLE);
-        if (!narrow) {  // logo no formato original (fit-center no slot de 32dp); sem logo: círculo com as iniciais
+        if (narrow) {  // sem logo: nada da linha anterior fica no slot escondido
+            r.setImageViewResource(R.id.r_logo, android.R.color.transparent);
+            r.setViewVisibility(R.id.r_logo, View.GONE); r.setViewVisibility(R.id.r_ini, View.GONE);
+        } else {  // logo no formato original (fit-center no slot de 32dp); sem logo: círculo com as iniciais
             // logo da própria ação (arquivo da mesma resposta); ainda não baixado: iniciais e imagem limpa (linha reaproveitada
             // pelo launcher não fica com o logo de outra empresa)
             String lf = Logos.fileFor(c, it.t, it.l);  // 1.26: sem o logo novo ainda, fica o anterior
