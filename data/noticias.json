@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-11-11T21:01:09+00:00",
+ "fetched_at": "2026-11-12T21:02:35+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -14,6 +14,863 @@
   "g1 Economia"
  ],
  "itens": [
+  {
+   "tema": "mercado",
+   "titulo": "BB vê rentabilidade ainda pressionada no curto prazo, mas promete medidas",
+   "data": "2026-11-12",
+   "fonte": "InfoMoney",
+   "resumo": "Fachada Banco do Brasil (Divulgação/BB) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/11/WhatsApp-Image-2026-11-12-at-16.53.58.jpeg?fit=1024%2C768&quality=70&strip=all\" />No terceiro trimestre,…",
+   "url": "https://www.infomoney.com.br/mercados/bb-ve-rentabilidade-ainda-pressionada-no-curto-prazo-mas-promete-medidas/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/11/WhatsApp-Image-2026-11-12-at-16.53.58.jpeg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Petrobras quer subvenção para gasolina, mas enfrenta dificuldades fiscais no governo",
+   "data": "2026-11-12",
+   "fonte": "InfoMoney",
+   "resumo": "(Foto: Pedro Teixeira/Agência Brasil) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/05/petrobras-agencia-brasil.webp?fit=1024%2C614&quality=70&strip=all\" />A empresa já levou a Brasília demanda…",
+   "url": "https://www.infomoney.com.br/mercados/petrobras-quer-subvencao-para-gasolina-mas-enfrenta-dificuldades-fiscais-no-governo/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/05/petrobras-agencia-brasil.webp",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ex-presidente da Nvidia teve relacionamento com uma 2ª funcionária, dizem fontes",
+   "data": "2026-11-12",
+   "fonte": "InfoMoney",
+   "resumo": "Jensen Huang, da Nvidia, participa de evento em Cingapura em 2023. REUTERS/Edgar Su/Foto de arquivo \"…",
+   "url": "https://www.infomoney.com.br/business/ex-presidente-da-nvidia-teve-relacionamento-com-uma-2a-funcionaria-dizem-fontes/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/11/Captura-de-tela-2026-11-12-174321.png",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe 1,58% a R$ 5,65, maior valor desde junho de 2025, com pacote fiscal e IPCA",
+   "data": "2026-11-12",
+   "fonte": "InfoMoney",
+   "resumo": "Um funcionário conta cédulas de dólar americano em uma casa de câmbio em Jacarta, na Indonésia, na quarta-feira, 2 de março de 2022 (Dimas Ardian/Bloomberg) \"…",
+   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-12112026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/01/448264696.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Taxas dos DIs fecham em alta firme em meio a insatisfação com pacote fiscal",
+   "data": "2026-11-12",
+   "fonte": "InfoMoney",
+   "resumo": "(Imagem: Kamil / Unsplash) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/04/juros.png?fit=1275%2C767&quality=70&strip=all\" />Taxas dos DIs fecham em alta firme em meio a insatisfação com pacote…",
+   "url": "https://www.infomoney.com.br/mercados/taxas-dos-dis-fecham-em-alta-firme-em-meio-a-insatisfacao-com-pacote-fiscal/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/04/juros.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Justiça bloqueia imóveis e Porsche de Daniel Alves por dívida de R$ 7 milhões",
+   "data": "2026-11-12",
+   "fonte": "InfoMoney",
+   "resumo": "(Foto: Reprodução/Instagram) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2025/03/daniel-alves.png?fit=848%2C477&quality=70&strip=all\" />Ex-jogador contraiu dívida em 2021, ao rescindir um contrato…",
+   "url": "https://www.infomoney.com.br/brasil/justica-bloqueia-imoveis-e-porsche-de-daniel-alves-por-divida-de-r-7-milhoes/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/03/daniel-alves.png",
+   "t": [],
+   "tf": [
+    "de:P911",
+    "us:META"
+   ],
+   "m": [
+    "de",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Pós-Huang: a banca de apostas para a sucessão do CEO da Nvidia",
+   "data": "2026-11-12",
+   "fonte": "InfoMoney",
+   "resumo": "FILE PHOTO: Jensen Huang, CEO of Nvidia, reacts to a video at his keynote address at CES in Las Vegas, Nevada, US January 7, 2018. REUTERS/Rick Wilking/File Photo \"…",
+   "url": "https://www.infomoney.com.br/business/pos-huang-a-banca-de-apostas-para-a-sucessao-do-ceo-da-nvidia/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/11/2026-11-12T135525Z_2143939965_RC20MOADJE1W_RTRMADP_3_NVIDIA-CEO.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "BB aponta recusa de produtores em renegociar dívidas do agro",
+   "data": "2026-11-12",
+   "fonte": "Agência Brasil",
+   "resumo": "A presidenta do Banco do Brasil, Tarciana Medeiros, afirmou nesta quinta-feira (12) que parte dos médios e grandes produtores rurais inadimplentes se recusou a pagar dívidas, renegociar operações e apresentar novas…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/bb-aponta-recusa-de-produtores-em-renegociar-dividas-do-agro",
+   "img": "https://imagens.ebc.com.br/o_TmAw5rbPJhTVUTCzTGn3vB9cI=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/plantacao_de_soja_soja_agricultura1003209898_0.jpg?itok=KdEehJgg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Petrobras faz acordo para deter 100% da transportadora de etanol Logum",
+   "data": "2026-11-12",
+   "fonte": "Agência Brasil",
+   "resumo": "A Petrobras firmou um acordo para se tornar 100% dona da empresa Logum Logística, que atua no transporte, movimentação e armazenamento de etanol. A estatal já era proprietária de 30% do capital social da Logum e fechou…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/petrobras-faz-acordo-para-deter-100-da-transportadora-de-etanol-logum",
+   "img": "https://imagens.ebc.com.br/fKLGIJxxhphK7C_A8TvGRIz1VzI=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/_mg_1446_0.jpg?itok=3kB3K3zp",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Inflação perde força e fica em 0,14% em outubro; conta de luz cai",
+   "data": "2026-11-12",
+   "fonte": "Agência Brasil",
+   "resumo": "A bandeira verde na conta de luz e o custo dos transportes deram alívio ao bolso dos brasileiros em outubro e ajudaram a inflação oficial a perder força e fechar o mês de outubro em 0,14%. Em setembro, o indicador ficou…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/inflacao-perde-forca-e-fica-em-014-em-outubro-conta-de-luz-cai",
+   "img": "https://imagens.ebc.com.br/oLlnx28MN0MqbDgSEwHF5T9XCss=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/energia_eletrica_interruptor_de_luz_energia070720211248.jpg?itok=SnuOYYsW",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "INPC, inflação que corrige salários, acumula 4,49% em 12 meses",
+   "data": "2026-11-12",
+   "fonte": "Agência Brasil",
+   "resumo": "O Índice Nacional de Preços ao Consumidor (INPC) fechou o mês de outubro em 0,22%. Com isso, o acumulado de 12 meses chega a 4,49%. Em setembro, a inflação de um ano estava em 4,29%. Os dados foram divulgados nesta…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/inpc-inflacao-que-corrige-salarios-acumula-449-em-12-meses",
+   "img": "https://imagens.ebc.com.br/EiUeP5A3dgpqWkxfNEW0GqfdylA=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/10/_raf1032_1.jpg?itok=gO6u3PZx",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "OPINIÃO. Quando o trade de AI fraqueja, sempre teremos a Berkshire",
+   "data": "2026-11-12",
+   "fonte": "Brazil Journal",
+   "resumo": "Em dezembro de 1999, a Barron’s pôs Warren Buffett na capa com um título que hoje soa quase como piada: What’s Wrong, Warren? A ação classe A da Berkshire Hathaway caía 23% no ano, enquanto o S&P 500 subia 20%. A…",
+   "url": "https://braziljournal.com/opiniao-quando-o-trade-de-ai-fraqueja-sempre-teremos-a-berkshire",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asgCkonPtNjniTI94.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:BERK",
+    "us:BRK.A",
+    "us:BRK.B"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A espiral de destruição no Banco do Brasil",
+   "data": "2026-11-12",
+   "fonte": "Brazil Journal",
+   "resumo": "O Banco do Brasil apresentou um resultado que chocou o mercado, jogando os holofotes sobre a gestão das estatais no Governo Lula e criando mais um problema para o próximo mandato – como se os atuais não fossem…",
+   "url": "https://braziljournal.com/a-espiral-de-destruicao-no-banco-do-brasil",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asUZ6PBDqg2aLjsIj.png?width=800&height=420&quality=85&resize=fill",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Circuit Breaker: a disputa bilionária entre XP e BTG que transformou o mercado de investimentos",
+   "data": "2026-11-12",
+   "fonte": "NeoFeed",
+   "resumo": "A revolução do mercado financeiro brasileiro entrou em uma nova fase quando os escritórios de assessoria de investimentos deixaram de ser apenas distribuidores de produtos e passaram a valer bilhões de reais. O terceiro…",
+   "url": "https://neofeed.com.br/videos/circuit-breaker/circuit-breaker-a-disputa-bilionaria-entre-xp-e-btg-que-transformou-o-mercado-de-investimentos/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/circuit-breaker-episodio3-1.jpeg",
+   "t": [],
+   "tf": [
+    "us:XP"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Com Ferrogrão adiada, Rota Arco Norte tem desconto simbólico",
+   "data": "2026-11-12",
+   "fonte": "NeoFeed",
+   "resumo": "A Via Brasil BR-163 seguirá sob o controle da Conasa Infraestrutura, que venceu sem concorrência e com desconto de 0,01% o leilão realizado na quinta-feira, 12 de novembro, na B3. A mudança está no contrato da Rota Arco…",
+   "url": "https://neofeed.com.br/economia/com-ferrograo-adiada-rota-arco-norte-tem-desconto-simbolico/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/rota_arco_norte_pista_simples_860x484.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "China impressiona com o avanço da IA e é o centro das atenções no Web Summit Lisboa 2026",
+   "data": "2026-11-12",
+   "fonte": "NeoFeed",
+   "resumo": "Lisboa – A China foi a grande estrela da edição deste ano do Web Summit Lisboa. O país contou com uma presença massiva no número de palestrantes e também foi o grande destaque dos palcos principais, com demonstrações ao…",
+   "url": "https://neofeed.com.br/inovacao/china-impressiona-com-o-avanco-da-ia-e-e-o-centro-das-atencoes-no-web-summit-lisboa-2026/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/agibot-websummit-lisboa-2026.jpg",
+   "t": [
+    "ESTR4"
+   ],
+   "tf": [],
+   "m": [
+    "br",
+    "pt"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A “tempestade” no Banco do Brasil, com queda no lucro e ROE no chão. É o agro ou má gestão?",
+   "data": "2026-11-12",
+   "fonte": "NeoFeed",
+   "resumo": "Em seu pior resultado desde o início da atual gestão de Tarciana Medeiros, o Banco do Brasil apresentou, no terceiro trimestre deste ano, uma queda de 66,5% em seu lucro líquido, com R$ 1,27 bilhão, em comparação com o…",
+   "url": "https://neofeed.com.br/negocios/a-tempestade-no-banco-do-brasil-com-queda-no-lucro-e-roe-no-chao-e-o-agro-ou-ma-gestao/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/banco-do-brasil-tempo-nublado.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "A queda anunciada de Jensen Huang do comando da Nvidia",
+   "data": "2026-11-12",
+   "fonte": "NeoFeed",
+   "resumo": "Em meio a investigações sobre sua vida pessoal e os possíveis riscos à segurança dos Estados Unidos, Jensen Huang renunciou ao cargo de CEO da Nvidia, encerrando uma trajetória de 33 anos à frente da fabricante de chips…",
+   "url": "https://neofeed.com.br/negocios/a-queda-anunciada-de-jensen-huang-do-comando-da-nvidia/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/nvidia-ceo-jensen-huang-presents-spectrum-x-ethernet.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Motiva quer ir além dos leilões e vê mais de R$ 30 bilhões em oportunidades nas próprias rodovias",
+   "data": "2026-11-12",
+   "fonte": "NeoFeed",
+   "resumo": "A Motiva tem mais de R$ 60 bilhões em investimentos já contratados e um cenário macroeconômico desafiador pela frente. Ainda assim, a companhia liderada por Miguel Setas vê espaço para crescer sem depender de novas…",
+   "url": "https://neofeed.com.br/negocios/motiva-quer-ir-alem-dos-leiloes-e-ve-mais-de-r-30-bilhoes-em-oportunidades-nas-proprias-rodovias/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/MOTIVA-CEOOOO.jpg.jpeg",
+   "t": [
+    "MOTV3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Fleury mira mercado de R$ 9 bilhões e aposta na terceirização de exames para crescer",
+   "data": "2026-11-12",
+   "fonte": "NeoFeed",
+   "resumo": "O Grupo Fleury encontrou na terceirização de exames uma das principais avenidas de crescimento para os próximos anos. A companhia, que mais que dobrou sua receita desde 2021, está de olho em um mercado potencial…",
+   "url": "https://neofeed.com.br/videos/call-de-negocios/fleury-mira-mercado-de-r-9-bilhoes-e-aposta-na-terceirizacao-de-exames-para-crescer/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/jeane_860x484.jpg",
+   "t": [
+    "FLRY3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "‘Produtor rural não é caloteiro’, diz setor de soja após declaração da presidente do Banco do Brasil",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Produção de soja é marcada por expectativas e desafios em 2026 Divulgação/Aprosoja A Associação Brasileira dos Produtores de Soja e Milho (Aprosoja) divulgou uma nota de repúdio após a fala da presidente do Banco do…",
+   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/11/12/nota-aprosoja.ghtml",
+   "img": "https://s2-g1.glbimg.com/vKjQGJZTjQzx1fb8C6Ei_8UOwos=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/v/p/5gAojbS6CKAOxZBm1f3w/foto-e-montagem-vertical-18-.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ex-CEO da Nvidia teve relacionamento extraconjugal com uma terceira mulher, diz agência",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "CEO da Nvidia renuncia após escândalo O ex-presidente-executivo (CEO) da Nvidia Jensen Huang teve um relacionamento íntimo com uma segunda funcionária da empresa, segundo duas fontes ouvidas pela Reuters. Com a nova…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/ceo-nvidia-caso.ghtml",
+   "img": "https://s2-g1.glbimg.com/22XEKSu6f5zZG4WXle_QeY__7wo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/v/u/hWsMECTGWbgeWtTLsw8g/2026-03-17t190331z-1569419364-rc2i6kamf29y-rtrmadp-3-nvidia-gtc.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "O que são os chips H200, no centro da polêmica que levou à renúncia do CEO da Nvidia",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Os desafios de suceder Huang na Nvidia A polêmica que levou à renúncia do CEO da Nvidia, Jensen Huang, nesta quinta-feira (12) envolve um pequeno componente: o chip H200, um dos mais avançados da empresa americana e que…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/chips-h200-nvidia.ghtml",
+   "img": "https://s2-g1.glbimg.com/qzGXHWVepETrr4Gx_Bp4Ihvnp0M=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/x/H/Kj02I8SLSC2q4YOPpzug/nvidia-jensen-huang-h200.png",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Outlook fora do ar? Serviço de e-mail e IA da Microsoft apresentam instabilidade nesta quinta",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Microsoft Outlook é um sistema de software de gerenciamento de informações pessoais da Microsoft Gonzalo Fuentes/ Reuters Usuários enfrentam dificuldades para acessar alguns serviços da Microsoft no início da tarde…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/outlook-fora-do-ar.ghtml",
+   "img": "https://s2-g1.glbimg.com/p6em53stHln_Q00KrBOjE3391Hk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/5/X/j7ie9ITcWGokB0ImViYA/2023-01-25t085942z-1524107725-rc2kxy962ywx-rtrmadp-3-microsoft-outages.jpg",
+   "t": [],
+   "tf": [
+    "us:MSFT"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Crise na Nvidia: fortuna de Jensen Huang encolhe quase US$ 33 bilhões em novembro",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Como uma traição envolveu o CEO da Nvidia em investigação de espionagem O agora ex-CEO da Nvidia, Jensen Huang, perdeu US$ 32,9 bilhões (cerca de R$ 181 bilhões) em patrimônio desde 1º de novembro, segundo o ranking de…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/crise-na-nvidia-fortuna-de-jensen-huang-encolhe-em-novembro.ghtml",
+   "img": "https://s2-g1.glbimg.com/22XEKSu6f5zZG4WXle_QeY__7wo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/v/u/hWsMECTGWbgeWtTLsw8g/2026-03-17t190331z-1569419364-rc2i6kamf29y-rtrmadp-3-nvidia-gtc.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Justiça proíbe Uber de cobrar taxa para motoristas aceitarem corridas no Brasil",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Logo da Uber é visto nesta ilustração tirada em 5 de agosto de 2025. REUTERS/Dado Ruvic/Ilustração/Foto de arquivo A Justiça do Trabalho determinou a suspensão, em todo o Brasil, da cobrança do “Passe para Motoristas”,…",
+   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/11/12/justica-suspende-cobranca-de-taxa-da-uber-para-motoristas.ghtml",
+   "img": "https://s2-g1.glbimg.com/DzfM5hxcTehSZt875-AFEmqxYE0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/b/x/Q9HS9XQGCTQLBB96QuLA/2026-09-02t114002z-1782714086-rc281gaoo6aq-rtrmadp-3-uber-layoffs.jpg",
+   "t": [],
+   "tf": [
+    "us:UBER"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Congresso aprova projeto que autoriza governo a usar R$ 26 bilhões em empréstimos para pagar Bolsa Família",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "O Congresso aprovou nesta quinta-feira (12) um projeto de lei enviado pelo governo do presidente Luiz Inácio Lula da Silva (PT) que autoriza a utilização de até R$ 149,4 bilhões em operações de crédito para financiar…",
+   "url": "https://g1.globo.com/politica/noticia/2026/11/12/congresso-aprova-projeto-que-autoriza-governo-a-usar-r-26-bilhoes-em-emprestimos-para-pagar-bolsa-familia.ghtml",
+   "img": "https://s2-g1.glbimg.com/RwkbPZex1CjQZ_VprPywd9iVoak=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/f/v/ZxY2y2TAmZR7nQ6tzROQ/55647811342-7c3e36af94-k.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ataque hacker expõe CPFs de 7,6 milhões de clientes de subsidiária da Caixa Previdência; veja quais dados vazaram",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Caixa Vida e Previdência Reprodução/Instagram Um ataque cibernético à Caixa Vida e Previdência, empresa que tem a Caixa Seguridade entre seus acionistas, expôs dados pessoais de clientes e ex-clientes, incluindo nomes e…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/caixa-ataque-dados-pix.ghtml",
+   "img": "https://s2-g1.glbimg.com/C8X5p8yaiNaUdUmWsmBYgbis-wg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/U/gnUbBOQnGDd3WTg6m35A/snapgram.io-icceo349vdsa.jpg",
+   "t": [
+    "CXSE3"
+   ],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "BB: expectativa eleitoral do agronegócio por perdão de dívidas rurais ajuda a explicar tombo no resultado",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "O tombo no resultado do Banco do Brasil (BB) tem boa parte da sua explicação na promessa eleitoral para setores do agro de que a medida provisória (MP) da renegociação de dívidas rurais fosse trazer um perdão amplo e…",
+   "url": "https://g1.globo.com/economia/blog/ana-flor/post/2026/11/12/bb-inadimplencia-do-agronegocio-aumentou-com-expectativa-eleitoral-de-perdao-das-dividas-e-ajuda-a-explicar-queda-no-lucro.ghtml",
+   "img": "https://s2-g1.glbimg.com/R4ggIHKWYztueiRDHfdHnd-61f4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/y/H/lsZOTVQ469nfB0PF2iXA/montagem-horizontal-1280x720px-28-.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Petrobras anuncia compra de empresa de transporte de etanol por R$ 620 milhões",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Logo da Petrobras no Rio de Janeiro Ricardo Moraes/Reuters A Petrobras fechou um acordo para adquirir os 70% restantes da Logum Logística em uma transação de R$ 620 milhões, anunciou a estatal nesta quinta-feira (12).…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/12/petrobras-anuncia-compra-de-empresa-de-transporte-de-etanol-por-r-620-milhoes.ghtml",
+   "img": "https://s2-g1.glbimg.com/9V54EvW-XTYPVGdJhxCmUBWBz2M=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/V/9/fflVw1Q0iXb0XKJdVUhg/2026-11-12t112106z-1-lynxnpemab13b-rtroptp-4-brazil-petrobras.jpg",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Banco do Brasil diz que parte do agro deu calote à espera de novas medidas de renegociação",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Banco do Brasil Divulgação A presidente do Banco do Brasil, Tarciana Medeiros, afirmou nesta quinta-feira (12) que parte dos médios e grandes produtores rurais inadimplentes decidiu não quitar nem renegociar suas…",
+   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/11/12/banco-do-brasil-dividas-do-agro.ghtml",
+   "img": "https://s2-g1.glbimg.com/R4ggIHKWYztueiRDHfdHnd-61f4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/y/H/lsZOTVQ469nfB0PF2iXA/montagem-horizontal-1280x720px-28-.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Crise na Nvidia: veja a cronologia do caso que levou à renúncia de Jensen Huang",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "CEO da Nvidia renuncia após escândalo Suspeitas de espionagem, relacionamentos extraconjugais e preocupações com a segurança nacional dos Estados Unidos colocaram a Nvidia no centro de uma crise que culminou na renúncia…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/crise-na-nvidia-jensen-huang.ghtml",
+   "img": "https://s2-g1.glbimg.com/Z7h_JLkZkdaigeZODP5iW_YMqqA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/F/T/B2YtxdReGAUu8i7SEBXQ/2026-11-09t122053z-105573755-rc2bkoaf0mkl-rtrmadp-3-nvidia-probe-ceo.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "'Pior nível em quase 5 anos': por que as ações do Banco do Brasil derretem quase 10% na bolsa",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Banco do Brasil registra lucro de R$ 1,3 bilhão, no 3º trimestre As ações do Banco do Brasil (BBAS3) lideravam as perdas do Ibovespa nesta quinta-feira (12), após a divulgação dos resultados do terceiro trimestre, que…",
+   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/11/12/banco-do-brasil-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/R4ggIHKWYztueiRDHfdHnd-61f4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/y/H/lsZOTVQ469nfB0PF2iXA/montagem-horizontal-1280x720px-28-.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Crise na Nvidia: quem é Kimberly Powell, executiva apontada como segundo affair de Jensen Huang",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Kimberly Powell, vice-presidente da área de saúde da Nvidia, que teria se relacionado com CEO da empresa. Kimberly Powell/Reprodução O ex-presidente-executivo da Nvidia, Jensen Huang, também teria mantido um…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/quem-e-kimberly-powell-executiva-da-nvidia-acusada-de-ter-um-caso-extraconjugal-com-ex-ceo-da-empresa.ghtml",
+   "img": "https://s2-g1.glbimg.com/7MaBcuOcAgwdLw_X0jW2Cg0LNfo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/o/X/edjpaFSaSiFeH9AxIzOw/2026-11-12t140338z-1573439229-rc2dmoaqzf2u-rtrmadp-3-nvidia-ceo.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Crise na Nvidia: quem é Colette Kress, que assume presidência no lugar de Jensen Huang",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Colette Kress, nova CEO da Nvidia Reprodução/Nvidia Após a renúncia de Jensen Huang, a vice-presidente executiva e diretora financeira da Nvidia, Colette Kress, assumirá interinamente o comando da empresa, segundo…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/escandalo-na-nvidia-quem-e-colette-kress-que-assume-presidencia-no-lugar-de-jensen-huang.ghtml",
+   "img": "https://s2-g1.glbimg.com/2JlpXnOlysIypXTF6v2D0f3IL4s=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/u/s/ABSan9QPuNEVTtTbLmlw/fotojet-13-.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ações da Nvidia despencam após renúncia de Jensen Huang em meio a suspeitas de espionagem chinesa",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "CEO da Nvidia renuncia após escândalo As ações da Nvidia, gigante americana do setor de chips, operam em queda de mais de 5% nesta quinta-feira (12), cotadas a US$ 164. A empresa está listada na Nasdaq, bolsa de Nova…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/acoes-nvidia-queda-bolsa-eua.ghtml",
+   "img": "https://s2-g1.glbimg.com/5LLcpnsIN1NS9P56zaKftHajGHg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/G/A/7CI3N1St2WZkoWLwacJw/2024-06-10t115756z-1929033527-rc2v48aq5jd4-rtrmadp-3-nvidia-stock-split.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Quem é Jensen Huang, ex-CEO da Nvidia envolvido em caso de traição e suspeita de espionagem",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "CEO da Nvidia renuncia após escândalo O fundador da Nvidia, Jensen Huang, renunciou aos cargos de presidente, diretor-executivo e membro do conselho da empresa nesta quinta-feira (12). A decisão ocorreu após ele ter…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/jensen-huang-nvidia.ghtml",
+   "img": "https://s2-g1.glbimg.com/22XEKSu6f5zZG4WXle_QeY__7wo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/v/u/hWsMECTGWbgeWtTLsw8g/2026-03-17t190331z-1569419364-rc2i6kamf29y-rtrmadp-3-nvidia-gtc.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Jensen Huang deixa o comando da Nvidia após escândalo extraconjugal e de espionagem",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "CEO da Nvidia renuncia após escândalo O Conselho de Administração da Nvidia anunciou nesta quinta-feira (12) que Jensen Huang renunciou aos cargos de presidente, diretor-executivo e membro do conselho da empresa. A…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/jensen-huang-presidencia-da-nvidia.ghtml",
+   "img": "https://s2-g1.glbimg.com/UmwtseVt1OvtM_gQEooHKmRkz-c=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/y/q8VWqYTBSFepf2dmK2DA/2026-10-19t181225z-1947160221-rc2h6oa4b07j-rtrmadp-3-germany-politics-merz-nvidia.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "IPCA: inflação desacelera para 0,14% em outubro, mas segue acima do teto da meta",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "IPCA fica em 0,14% no mês de outubro O Índice Nacional de Preços ao Consumidor Amplo (IPCA), considerado a inflação oficial do país, subiu 0,14% em outubro. O resultado foi divulgado nesta quinta-feira (12) pelo…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/12/ipca-inflacao-outubro-2026.ghtml",
+   "img": "https://s2-g1.glbimg.com/E_O6Tog35qydUcrXAgWl_JSgs90=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/F/8/hRNDTJRKuYHmV2SWEsJg/globo-canal-4-20260811-2000-frame-78777.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar dispara a R$ 5,65, maior valor desde junho de 2025; Ibovespa recua com tombo do Banco do Brasil",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar subiu 1,62% nesta quinta-feira (12) e fechou cotado a R$ 5,6518, no maior patamar desde 2 de junho de 2025, quando encerrou o pregão a R$ 5,6750. A alta foi…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/12/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/en-e3pXXYmmv5grpZimBQ0X1DaM=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/R/L/9pGXOhQjWMbLFeAbXt6w/2025-01-22t173936z-1-lynxnpel0l0qj-rtroptp-4-fluxo-cambial-semanal.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Maior, mais potente e mais barato que o SW4: GWM Tank 400 pode superar a Toyota? Veja o teste",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "GWM Tank 400 tem geladeira e tomada para PlayStation 5 para peitar o Toyota SW4 Carros com jeito de jipão e forte inspiração nos modelos da Land Rover viraram moda entre as marcas chinesas. A lista inclui praticamente…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/12/maior-mais-potente-e-mais-barato-que-o-sw4-gwm-tank-400-pode-superar-a-toyota-veja-o-teste.ghtml",
+   "img": "https://s2-g1.glbimg.com/beEh7-3MiYSurmo8_ZvWrmLg-XE=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/o/Z/n6moUaQamGZSaZPpcjIA/gwm-tank-400-0255.jpg",
+   "t": [],
+   "tf": [
+    "jp:6758",
+    "jp:7203"
+   ],
+   "m": [
+    "jp"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Universidade chinesa conseguiu comprar chips da Nvidia apesar das restrições dos EUA",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Como uma traição envolveu o CEO da Nvidia em investigação de espionagem Uma universidade chinesa com fortes vínculos com o setor de defesa do país comprou chips avançados de inteligência artificial da Nvidia, apesar das…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/universidade-chinesa-conseguiu-comprar-chips-da-nvidia-apesar-das-restricoes-dos-eua.ghtml",
+   "img": "https://s2-g1.glbimg.com/5oCstid8TA4puec8mvdMWIPFaGg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/S/n/oBNu9kRNqc1mj6ibTxdg/2026-10-21t114810z-1104535212-rc2n7oa1xnk3-rtrmadp-3-germany-nvidia.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Santander aumenta oferta para comprar participação restante em sua operação no Brasil",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Mulher utiliza caixa eletrônico em uma agência do Santander em Málaga, na Espanha. Jon Nazca/Reuters O banco espanhol Santander anunciou nesta quinta-feira (12) uma melhora na proposta para comprar a participação de…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/12/santander-aumenta-oferta-para-comprar-participacao-restante-em-sua-operacao-no-brasil.ghtml",
+   "img": "https://s2-g1.glbimg.com/j04NWgIYiRfstSk74e6yyN7c4gM=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/r/y/SiR69uRACC7LzTpmwd7g/2026-10-28t072404z-1780499384-rc26d7aqlvk1-rtrmadp-3-santander-results.jpg",
+   "t": [
+    "CXSE3",
+    "SANB11"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Como suposto novo caso extraconjugal de CEO da Nvidia aumenta pressão para que ele saia do cargo",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Conselho da Nvidia se reúne para decidir futuro de CEO após novos escândalos A gigante americana de tecnologia Nvidia está avaliando nesta quinta-feira (12) se seu presidente-executivo, Jensen Huang, permanecerá na…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/como-suposto-novo-caso-extraconjugal-de-ceo-da-nvidia-aumenta-pressao-para-que-ele-saia-do-cargo.ghtml",
+   "img": "https://s2-g1.glbimg.com/UmwtseVt1OvtM_gQEooHKmRkz-c=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/y/q8VWqYTBSFepf2dmK2DA/2026-10-19t181225z-1947160221-rc2h6oa4b07j-rtrmadp-3-germany-politics-merz-nvidia.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Jensen Huang: O papel do CEO da Nvidia investigado por caso com suposta espiã na guerra tecnológica entre EUA e China",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Como uma traição envolveu o CEO da Nvidia em investigação de espionagem Jensen Huang lembra, de certa forma, o falecido Steve Jobs. Já entrevistei ambos e notei que compartilham um carisma marcante — além de uma…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/12/jensen-huang-o-papel-do-ceo-da-nvidia-investigado-por-caso-com-suposta-espia-na-guerra-tecnologica-entre-eua-e-china.ghtml",
+   "img": "https://s2-g1.glbimg.com/syQtF8PUAIAxeZgCKgNfpQvQNOQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/t/z/zqDGJ3TaSj5GQbIxI8gQ/2026-06-01t145412z-1083488031-rc2sklabxlh9-rtrmadp-3-computex-nvidia-keynote.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Americanas tem prejuízo de R$ 352 milhões no 3º trimestre",
+   "data": "2026-11-12",
+   "fonte": "g1 Economia",
+   "resumo": "Clientes fizeram fila na frente das Lojas Americanas, no Salvador Shopping Divulgação A rede varejista Americanas, que saiu da recuperação judicial em outubro, registrou prejuízo líquido de R$ 352 milhões no terceiro…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/11/prejuizo-americanas.ghtml",
+   "img": "https://s2-g1.glbimg.com/4IG-veu1XWSrheIAsU7RWbOw2_A=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/m/j/Yyd6iURFC27KBmNzNpJw/whatsapp-image-2023-11-24-at-07.30.15.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Democratas cobram explicações da Casa Branca sobre suspeita de espionagem chinesa envolvendo a Nvidia",
+   "data": "2026-11-12",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "O líder dos democratas no Senado dos Estados Unidos, Chuck Schumer, cobrou esclarecimentos do governo de Donald Trump sobre as suspeitas de espionagem chinesa relacionadas ao ex-CEO da Nvidia, Jensen Huang. O senador…",
+   "url": "https://timesbrasil.com.br/mundo/democratas-cobram-explicacoes-da-casa-branca-sobre-suspeita-de-espionagem-chinesa-envolvendo-a-nvidia/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/f2b59e28-trump-huang.webp",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Raphael Coraccini: Juro alto é a jabuticaba que tem na concentração de dinheiro e poder as condições para existir",
+   "data": "2026-11-12",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Reforço: a missão do Banco Central é de controle da inflação. E ela está controlada. Mais uma mostra veio nesta quinta-feira (12), com o IPCA abaixo do esperado. O índice registrou alta de 0,14% contra 0,25% esperado…",
+   "url": "https://timesbrasil.com.br/colunas/raphael-coraccini/raphael-coraccini-juro-alto-e-a-jabuticaba-que-tem-na-concentracao-de-dinheiro-e-poder-as-condicoes-para-existir/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/ce22eb81-image-1-e1793848202634.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Vazamento na Caixa pode abrir caminho para golpes personalizados, alerta Luiz Augusto D’Urso",
+   "data": "2026-11-12",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "O vazamento de dados pessoais de clientes e ex-clientes da Caixa Vida e Previdência pode facilitar a criação de golpes direcionados, mesmo sem o comprometimento de senhas ou informações bancárias. O alerta é de Luiz…",
+   "url": "https://timesbrasil.com.br/brasil/vazamento-na-caixa-abre-caminho-para-golpes-personalizados/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/53b26427-09a.webp",
+   "t": [
+    "CXSE3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Operação GTA: Polícia Civil mira quadrilha de furto e venda ilegal de veículos na zona leste de SP",
+   "data": "2026-11-12",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A Polícia Civil de São Paulo realiza, na manhã desta quinta-feira (12), a Operação GTA para combater uma quadrilha suspeita de furtar veículos e comercializar os automóveis ilegalmente. A ação é coordenada pelo 30º…",
+   "url": "https://timesbrasil.com.br/brasil/operacao-gta-policia-civil-mira-quadrilha-de-furto-e-venda-ilegal-de-veiculos-na-zona-leste-de-sp/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/afc25f4f-whatsapp-image-2026-02-11-at-07.22.41.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Alice Huang está ligada à Huawei, maior concorrente chinesa da Nvidia",
+   "data": "2026-11-12",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A suposta espiã chinesa Alice Huang pode ter mantido, simultaneamente, participações em empresas na China que beneficiavam a Huawei, principal concorrente da Nvidia no país, enquanto também mantinha relações comerciais…",
+   "url": "https://timesbrasil.com.br/empresas-e-negocios/alice-huang-esta-ligada-a-maior-concorrente-chinesa-da-nvidia/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/e3ba534b-@.webp",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Inflação argentina registra alta de 2,2% em outubro, aponta Indec",
+   "data": "2026-11-12",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A inflação ao consumidor na Argentina registrou alta de 2,2% em outubro, na comparação com setembro, segundo dados divulgados nesta quinta-feira (12) pelo Instituto Nacional de Estatística e Censo (Indec). O resultado…",
+   "url": "https://timesbrasil.com.br/mundo/inflacao-argentina-registra-alta-de-22-em-outubro-aponta-indec/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/10/083f81b3-nick-21.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Houthis anunciam ataques contra instalações da Saudi Aramco na Arábia Saudita",
+   "data": "2026-11-12",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "Os rebeldes Houthis, do Iêmen, anunciaram uma nova série de ataques com drones contra instalações da petrolífera Saudi Aramco, na capital saudita, Riad. O grupo classificou as ações como operações militares direcionadas…",
+   "url": "https://timesbrasil.com.br/mundo/houthis-anunciam-ataques-contra-instalacoes-da-saudi-aramco-na-arabia-saudita/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/5f0a23c9-13a.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
   {
    "tema": "mercado",
    "titulo": "CEO da Gerdau questiona OMC e cobra defesa comercial contra a China",
@@ -360,6 +1217,117 @@
    "tf": [],
    "m": [
     "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Lucro do BB cai 66,5% no 3º trimestre com inadimplência do agro",
+   "data": "2026-11-11",
+   "fonte": "Agência Brasil",
+   "resumo": "Pressionado pelo aumento da inadimplência, principalmente do agronegócio, o Banco do Brasil (BB) registrou lucro líquido ajustado de R$ 1,27 bilhão no terceiro trimestre de 2026, queda de 66,5% em relação ao mesmo…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/lucro-do-bb-cai-665-no-3o-trimestre-com-inadimplencia-do-agro",
+   "img": "https://imagens.ebc.com.br/1nlNn9uOdRUU_Ly1nLdbpUK3Tg4=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/banco-do-brasil_mcamgo_abr_280620211818-3.jpg?itok=2wwStPuz",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Petrobras amplia capacidade de 11 plataformas sem novos investimentos",
+   "data": "2026-11-11",
+   "fonte": "Agência Brasil",
+   "resumo": "A presidente da Petrobras, Magda Chambriard, destacou a eficiência operacional da companhia ao ampliar a capacidade de produção de 11 plataformas em 282 mil barris de óleo por dia. Segundo ela, os dados reforçam o…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/petrobras-amplia-capacidade-de-11-plataformas-sem-novos-investimentos",
+   "img": "https://imagens.ebc.com.br/ebi7_LJdMk3ChyFZ9sZS_Hv66FU=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/atoms/image/plataforma_de_petroleo.jpg?itok=_iUsqXbq",
+   "t": [
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar cai 0,42% e fecha a R$ 5,56 com foco em pacote fiscal",
+   "data": "2026-11-11",
+   "fonte": "Agência Brasil",
+   "resumo": "O dólar fechou em queda nesta quarta-feira (11), e a bolsa brasileira avançou, em uma sessão marcada pela repercussão do pacote de ajuste fiscal do governo e pelo desempenho positivo dos mercados internacionais. A moeda…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-cai-042-e-fecha-r-556-com-foco-em-pacote-fiscal",
+   "img": "https://imagens.ebc.com.br/rasBiqiDGctpl5-xBWwAW622HfA=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/dolar_moeda_0803221212.jpg?itok=KoFmjD94",
+   "t": [
+    "POSI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "B3 compra 40% da IDEX, uma aposta no crédito privado",
+   "data": "2026-11-11",
+   "fonte": "Brazil Journal",
+   "resumo": "A B3 está comprando até 40% da IDEX Analytics, uma empresa especializada em índices de renda fixa que está criando uma plataforma de informações sobre o mercado de crédito privado. A B3 e a Leto Asset Management – a…",
+   "url": "https://braziljournal.com/b3-compra-40-da-idex-uma-aposta-no-credito-privado",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/as92x8ZO403hGJsxp.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "CVC cresce vendas e dá primeiro lucro do ano; CEO fala em “ponto de inflexão”",
+   "data": "2026-11-11",
+   "fonte": "Brazil Journal",
+   "resumo": "Num trimestre marcado pelo aumento dos preços dos voos e o impacto negativo da Copa do Mundo e das eleições, a CVC conseguiu crescer suas reservas e reverter o prejuízo que vinha acumulando nos últimos tris – num…",
+   "url": "https://braziljournal.com/cvc-cresce-vendas-e-da-primeiro-lucro-do-ano-ceo-fala-em-ponto-de-inflexao",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asLRNxfNiuopnfeZi.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [
+    "CVCB3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Lucro do Banco do Brasil cai 66,5% no 3º trimestre, para R$ 1,27 bilhão",
+   "data": "2026-11-11",
+   "fonte": "g1 Economia",
+   "resumo": "Banco do Brasil Divulgação \"A elevação do risco de crédito no trimestre reflete, principalmente, a continuidade da dinâmica mais agravada em parte da carteira de Agronegócios e reforços pontuais realizados em algumas…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/11/banco-do-brasil-bb-resultados-3t26.ghtml",
+   "img": "https://s2-g1.glbimg.com/R4ggIHKWYztueiRDHfdHnd-61f4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/y/H/lsZOTVQ469nfB0PF2iXA/montagem-horizontal-1280x720px-28-.jpg",
+   "t": [
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "CEO da Nvidia teve outro caso extraconjugal, com executiva da empresa, diz jornal",
+   "data": "2026-11-11",
+   "fonte": "g1 Economia",
+   "resumo": "Affair, espionagem e chips: entenda a polêmica envolvendo o CEO da Nvidia O presidente-executivo da Nvidia, Jensen Huang, teria mantido outro relacionamento extraconjugal, desta vez com uma executiva da própria empresa…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/11/nvidia-novo-caso-ceo.ghtml",
+   "img": "https://s2-g1.glbimg.com/KHAYXnFNw9TMiNyASv2as4vHkqk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/n/S/TKeMkiRcKerUXLt8uFiQ/ap26312766429671.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
    ]
   },
   {
@@ -3756,953 +4724,6 @@
    "m": [
     "br",
     "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar sobe a R$ 5,44 e tem maior cotação de 2026; alta na semana é de 9,15%",
-   "data": "2026-10-30",
-   "fonte": "InfoMoney",
-   "resumo": "Dólares (Foto: Valter Campanato/Agência Brasil) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/01/dolar_moeda_0803221210.webp?fit=1170%2C700&quality=70&strip=all\" />Calculada pelo Banco Central…",
-   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-30102026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/01/dolar_moeda_0803221210.webp",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Do rali à queda histórica: como o Ibovespa caiu 9,88% no mês, maior baixa desde 2022",
-   "data": "2026-10-30",
-   "fonte": "InfoMoney",
-   "resumo": "Ações em queda (Crédito: Shutterstock) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2019/06/acoes-queda-baixa-bear.jpg?fit=900%2C572&quality=70&strip=all\" />Ibovespa saiu de máximas históricas…",
-   "url": "https://www.infomoney.com.br/mercados/do-rali-a-queda-historica-como-ibovespa-caiu-988-outubro-2026-maior-baixa-desde-2022/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2019/06/acoes-queda-baixa-bear.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa cai 18,12% na semana, maior baixa desde 2020 e 5ª maior desde o Plano Real",
-   "data": "2026-10-30",
-   "fonte": "InfoMoney",
-   "resumo": "Painéis de mercado inspirados na B3 mostram oscilações de preços e queda, em referência à volatilidade e à gestão de risco no day trade. \" data-image-caption=\" Imagem conceitual representa a volatilidade no mercado…",
-   "url": "https://www.infomoney.com.br/mercados/ibovespa-cai-pela-5a-vez-com-temor-fiscal-e-externo-queda-historica-semanal/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/09/ChatGPT-Image-14-de-set.-de-2026-19_09_19.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Meta fecha acordo em processo sobre vício em redes sociais e evita julgamento nos EUA",
-   "data": "2026-10-30",
-   "fonte": "InfoMoney",
-   "resumo": "Fachada da Corte Superior do Condado de Los Angeles, onde estava previsto o julgamento de uma ação contra a Meta relacionada ao vício de crianças e adolescentes em redes sociais, em 2 de fevereiro de 2026. Foto: Stella…",
-   "url": "https://www.infomoney.com.br/business/global/meta-fecha-acordo-em-processo-sobre-vicio-em-redes-sociais-e-evita-julgamento-nos-eua/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/10/META-SETTLEMENT.jpg",
-   "t": [],
-   "tf": [
-    "us:META"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa emenda 5ª baixa e tem pior semana desde 2020; outubro é o pior mês do ano",
-   "data": "2026-10-30",
-   "fonte": "InfoMoney",
-   "resumo": "Índices nos EUA despencam com temores sobre maiores gastos em IA The post Ibovespa emenda 5ª baixa e tem pior semana desde 2020; outubro é o pior mês do ano appeared first on InfoMoney .",
-   "url": "https://www.infomoney.com.br/mercados/ibovespa-hoje-bolsa-de-valores-ao-vivo-30102026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/08/Ibovespa-ao-vivo-7.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Acionistas da Raízen aprovam plano de recuperação extrajudicial, dizem fontes",
-   "data": "2026-10-30",
-   "fonte": "InfoMoney",
-   "resumo": "Raízen (Foto: Divulgação) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2021/08/post-64-raizen.png?fit=860%2C420&quality=70&strip=all\" />Plano de reestruturação extrajudicial da Raízen, que envolve…",
-   "url": "https://www.infomoney.com.br/business/acionistas-da-raizen-aprovam-plano-de-recuperacao-extrajudicial-dizem-fontes/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2021/08/post-64-raizen.png",
-   "t": [
-    "RAIZ4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Com muita disputa, Aneel leiloou oito lotes de transmissão de energia",
-   "data": "2026-10-30",
-   "fonte": "Agência Brasil",
-   "resumo": "A Agência Nacional de Energia Elétrica (Aneel) leiloou nesta sexta-feira (30), na sede da B3, na capital paulista, oito projetos de transmissão de energia. Foi o último leilão do ano. O certame prevê investimentos de R$…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/com-muita-disputa-aneel-leiloou-oito-lotes-de-transmissao-de-energia",
-   "img": "https://imagens.ebc.com.br/2JUqV5iFM_HtEQXUV1RlsrA4_Go=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/10/30/_int2625.jpg?itok=x2usrmxc",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Desemprego em 5,2% no 3° trimestre é o menor para o período desde 2012",
-   "data": "2026-10-30",
-   "fonte": "Agência Brasil",
-   "resumo": "A taxa de desocupação para o terceiro trimestre caiu para 5,2%, a menor já registrada para esse período desde 2012. O desemprego era de 5,4% no segundo trimestre deste ano e de 5,6% no terceiro trimestre de 2025. Os…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/desemprego-em-52-no-3deg-trimestre-e-o-menor-para-o-periodo-desde-2012",
-   "img": "https://imagens.ebc.com.br/s5ev6nz84vmzqqOcyIe5Sd-2tBE=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/coronavirus_industria_automobilistica_fabrica2005200371.jpg?itok=b95DhOUD",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Itaú vê fim do ciclo de cortes da Selic diante de cenário mais adverso",
-   "data": "2026-10-30",
-   "fonte": "NeoFeed",
-   "resumo": "O Itaú acredita que o ciclo de cortes da Selic chegou ao fim. O banco diz em relatório divulgado na sexta-feira, 30 de outubro, que espera que o Comitê de Política Monetária (Copom) mantenha a taxa básica de juros em…",
-   "url": "https://neofeed.com.br/economia/itau-ve-fim-do-ciclo-de-cortes-da-selic-diante-de-cenario-mais-adverso/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2024/05/Selic-corte-de-juros.jpg",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Em dobradinha ibérica, espanholas e EDP levam todos os lotes de transmissão de R$ 8,9 bilhões",
-   "data": "2026-10-30",
-   "fonte": "NeoFeed",
-   "resumo": "As empresas espanholas foram as principais ganhadoras do leilão de transmissão de energia realizado nesta sexta-feira, 30 de outubro, na B3, em São Paulo. Celeo, Cymi, Neoenergia e Cox arremataram sete dos oito lotes,…",
-   "url": "https://neofeed.com.br/economia/em-dobradinha-iberica-espanholas-e-edp-levam-todos-os-lotes-de-transmissao-de-r-89-bilhoes/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/linha-transmissao.jpg",
-   "t": [],
-   "tf": [
-    "pt:EDP"
-   ],
-   "m": [
-    "br",
-    "pt"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "BTG aposta em um “Pix internacional” e prevê avanço das stablecoins em até cinco anos",
-   "data": "2026-10-30",
-   "fonte": "NeoFeed",
-   "resumo": "Nova York – Depois de o Pix transformar os pagamentos no Brasil, o BTG Pactual acredita que as stablecoins podem fazer o mesmo pelas transferências internacionais. Para André Portilho, head de digital assets do BTG…",
-   "url": "https://neofeed.com.br/wealth-management/btg-aposta-em-um-pix-internacional-e-preve-avanco-das-stablecoins-em-ate-cinco-anos/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/stablecoin.jpg",
-   "t": [
-    "BPAC11"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Itaú une Rede, crédito e superapp no Itaú Pay para disputar a “última milha” do e-commerce",
-   "data": "2026-10-30",
-   "fonte": "NeoFeed",
-   "resumo": "O Itaú Unibanco decidiu recorrer a diferentes prateleiras do seu ecossistema para ampliar as compras realizadas no comércio eletrônico, de olho em estreitar os laços tanto com as plataformas do setor como com os…",
-   "url": "https://neofeed.com.br/negocios/itau-une-rede-credito-e-superapp-no-itau-pay-para-disputar-a-ultima-milha-do-e-commerce/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/e-commerce-pay.jpg",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "A disputa no balcão da farmácia: CEO da Pague Menos abre o jogo sobre o Mercado Livre",
-   "data": "2026-10-30",
-   "fonte": "NeoFeed",
-   "resumo": "Quase dois meses após o Mercado Livre anunciar que passaria a vender medicamentos com retenção de receita médica no Brasil, incluindo as canetas emagrecedoras, a guerra entre a plataforma digital e as varejistas…",
-   "url": "https://neofeed.com.br/negocios/a-disputa-no-balcao-da-farmacia-ceo-da-pague-menos-abre-o-jogo-sobre-o-mercado-livre/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/mercado-livre-farmacias.jpeg",
-   "t": [
-    "PGMN3"
-   ],
-   "tf": [
-    "us:MELI"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "CSN fecha acordo de exclusividade de R$ 12,7 bilhões com a Huaxin para a venda da CSN Cimentos",
-   "data": "2026-10-30",
-   "fonte": "NeoFeed",
-   "resumo": "Como parte do seu plano de desinvestimentos, a CSN anunciou na manhã desta sexta-feira, 30 de outubro, que celebrou um acordo de exclusividade com a chinesa Huaxin Building Materials Group para a venda da CSN Cimentos.…",
-   "url": "https://neofeed.com.br/negocios/csn-fecha-acordo-de-exclusividade-de-r-127-bilhoes-com-a-huaxin-para-a-venda-da-csn-cimentos/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2021/06/CSN-Cimento-1.jpg",
-   "t": [
-    "CSNA3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Raízen aprova plano para evitar falência e prevê injeção de até R$ 39,8 bilhões",
-   "data": "2026-10-30",
-   "fonte": "g1 Economia",
-   "resumo": "Pedido de recuperação extrajudicial da Raízen preocupa produtores de cana Os acionistas da Raízen, produtora de açúcar e etanol de cana-de-açúcar que também atua na distribuição de combustíveis, aprovaram nesta…",
-   "url": "https://g1.globo.com/economia/noticia/2026/10/30/raizen-aprova-plano-para-evitar-falencia-e-preve-injecao-de-ate-r-398-bilhoes.ghtml",
-   "img": "https://s2-g1.glbimg.com/sGVd_ajUEsHLvLXmw2qiq00teGU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/d/V/6hFQlST0iVMfWZDEN3tg/raizen-1200px-v2-1773240962.jpg",
-   "t": [
-    "RAIZ4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Meta faz acordo com adolescente em processo que alega que redes sociais causaram depressão e transtornos alimentares",
-   "data": "2026-10-30",
-   "fonte": "g1 Economia",
-   "resumo": "MPT processa Meta em R$ 50 milhões A Meta, dona do Instagram e do Facebook, fez um acordo com uma jovem que acusava as plataformas de serem projetadas para causar dependência e prejudicar a saúde mental dos usuários. 🗒️…",
-   "url": "https://g1.globo.com/tecnologia/noticia/2026/10/30/meta-faz-acordo-com-adolescente-em-processo-que-alega-que-redes-sociais-causaram-depressao-e-transtornos-alimentares.ghtml",
-   "img": "https://s2-g1.glbimg.com/9THRty0GvXseTpuZcIv00XSWOqc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/p/P/Xhf7wyQgiNXb7raZrPKQ/globo-canal-4-20261022-2000-frame-101064.jpeg",
-   "t": [],
-   "tf": [
-    "us:META"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Júri dos EUA decide a favor da Bayer em ação sobre câncer ligado a agrotóxico",
-   "data": "2026-10-30",
-   "fonte": "g1 Economia",
-   "resumo": "Herbicida Roundup a venda em Encinitas, Califórnia, EUA Reuters / Mike Blake Um júri dos Estados Unidos decidiu a favor da gigante multinacional Bayer em um processo movido por três mulheres que alegavam ter…",
-   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/10/30/juri-dos-eua-decide-a-favor-da-bayer-em-acao-sobre-cancer-ligado-a-agrotoxico.ghtml",
-   "img": "https://s2-g1.glbimg.com/BjgIzyXsGg2XoP45IiCC883sVZE=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/2/A/HQ58dUTHS5mQUHilXI9Q/reutersmike-blake-monsanto-cos-roundup-is-shown-for-sale-in-encinitas-california.jpg",
-   "t": [],
-   "tf": [
-    "de:BAYN"
-   ],
-   "m": [
-    "de",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Desemprego cai no Brasil e atinge menor taxa para o 3º trimestre em 14 anos",
-   "data": "2026-10-30",
-   "fonte": "g1 Economia",
-   "resumo": "Desemprego cai no Brasil e atinge menor taxa em 14 anos A taxa de desemprego ficou em 5,2% no terceiro trimestre de 2026, o menor nível para o período desde 2012. Os dados são da Pesquisa Nacional por Amostra de…",
-   "url": "https://g1.globo.com/economia/noticia/2026/10/30/desocupacao-fica-em-52percent-a-menor-para-um-terceiro-trimestre-desde-2012.ghtml",
-   "img": "https://s2-g1.glbimg.com/S_BB6BFboWsxtfpcXtMd9XK8Zbs=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/u/p/5BX3wqTXe0o9FxOBf5gg/remedios.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa recua 18,12% na semana e tem 5ª maior queda desde o Plano Real; dólar sobe a R$ 5,44",
-   "data": "2026-10-30",
-   "fonte": "g1 Economia",
-   "resumo": "Entenda o que faz o preço do dólar subir ou cair O Ibovespa, principal índice da bolsa brasileira, fechou em queda de 0,75% nesta sexta-feira (30), aos 167.922 pontos. Com o resultado, o índice chegou à quinta baixa…",
-   "url": "https://g1.globo.com/economia/noticia/2026/10/30/dolar-ibovespa.ghtml",
-   "img": "https://s2-g1.glbimg.com/O49d2V48Q5zIUn7fQPNfoMN5WOI=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/K/J/NvIKwCR8arhLFNMisILw/2025-01-21t204813z-1-lynxnpel0k0yk-rtroptp-4-brazil-economy.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Fiesp aponta retração da indústria no terceiro trimestre e prevê queda de 0,4% na produção em 2026",
-   "data": "2026-10-30",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "O desempenho da indústria brasileira apresentou sinais de enfraquecimento no terceiro trimestre de 2026, segundo o Levantamento de Conjuntura da Federação das Indústrias do Estado de São Paulo (Fiesp). Os resultados…",
-   "url": "https://timesbrasil.com.br/brasil/fiesp-aponta-retracao-da-industria-no-terceiro-trimestre-e-preve-queda-de-04-na-producao-em-2026/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/01/00938fb0-15.webp",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar fecha a R$ 5,44 e registra maior alta semanal desde 2008",
-   "data": "2026-10-30",
-   "fonte": "Agência Brasil",
-   "resumo": "O mercado financeiro brasileiro encerrou outubro sob forte pressão, com disparada do dólar e queda acentuada da bolsa de valores. Nesta sexta-feira (30), a moeda estadunidense avançou cerca de 1% e fechou perto de R$…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/dolar-fecha-r-544-e-registra-maior-alta-semanal-desde-2008",
-   "img": "https://imagens.ebc.com.br/qgr1uCa7n_TP2WKn5oQPmLd6V2M=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/23/2026-07-23t123806z_1_lynxmpem6m19r_rtroptp_4_usa-trump-tariffs-indonesia.jpg?itok=6u1xpzSK",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Oncoclínicas obtém apoio de credores para renegociar dívida de R$ 5,7 bilhões",
-   "data": "2026-10-30",
-   "fonte": "g1 Economia",
-   "resumo": "Grupo Oncoclínicas Divulgação A Oncoclínicas atingiu o apoio de credores que representam 61,6% das dívidas incluídas em seu plano de recuperação extrajudicial, superando o mínimo exigido por lei para dar andamento ao…",
-   "url": "https://g1.globo.com/economia/noticia/2026/10/30/oncoclinicas-obtem-apoio-de-credores-para-renegociar-divida-de-r-57-bilhoes.ghtml",
-   "img": "https://s2-g1.glbimg.com/s7ekn3_7-adtWbbxhuv6t6HGy5o=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/Y/F/KwqhWNSEALGG8dtKQulA/grupo-oncoclinicas-1-.webp",
-   "t": [
-    "ONCO3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ambev (ABEV3) amplia liderança no segmento de cervejas premium com alta de 19%",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Stella Pure Gold quase triplica, Michelob Ultra cresce mais de cinco vezes e estratégia de marcas complementares sustenta ganho de participação The post Ambev (ABEV3) amplia liderança no segmento de cervejas premium com…",
-   "url": "https://www.infomoney.com.br/business/ambev-abev3-amplia-lideranca-no-segmento-de-cervejas-premium-com-alta-de-19/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2019/06/stella-artois-1.jpg?fit=900%2C601&quality=70&strip=all",
-   "t": [
-    "ABEV3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Day Trade hoje (29): Ibovespa afunda após eleições; pode cair mais?",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Confira os pontos de suporte e resistência do mini-índice e minidólar The post Day Trade hoje (29): Ibovespa afunda após eleições; pode cair mais? appeared first on InfoMoney .",
-   "url": "https://www.infomoney.com.br/mercados/mercados-day-trade-hoje-analistas-29102026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2024/12/Daytrade-hoje.jpg?fit=1280%2C720&quality=70&strip=all",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dona do Google tem pior sessão da história e perde US$ 500 bi de valor após resultado",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Logo do Google 24 de março de 2026 REUTERS/Danielle Villasana \"…",
-   "url": "https://www.infomoney.com.br/mercados/acoes-da-alphabet-despencam-com-problemas-na-area-de-buscas-levando-a-decepcao/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/09/2026-09-08T141931Z_1_LYNXMPEM871DE_RTROPTP_4_CERAWEEK-ENERGY.jpg",
-   "t": [],
-   "tf": [
-    "us:GOGL",
-    "us:GOOG",
-    "us:GOOGL"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Wall Street cai, após resultado da Alphabet reviver temores com gastos em IA",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "A placa de Wall Street é vista na Bolsa de Valores de Nova York, no bairro de Manhattan, na cidade de Nova York, EUA, em 9 de março de 2020. REUTERS/Carlo Allegri \"…",
-   "url": "https://www.infomoney.com.br/mercados/wall-street-cai-apos-resultado-da-alphabet-reviver-temores-com-gastos-em-ia/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/2026-03-29T060934Z_964769431_RC25EKAJLMU1_RTRMADP_3_USA-MARKETS-IRAN-TRADING.jpg",
-   "t": [],
-   "tf": [
-    "us:GOOG",
-    "us:GOOGL"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa tem quarta queda seguida, com exterior, balanços e fiscal; dólar dispara",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Ibovespa ao vivo, bolsa ao vivo, bolsa de valores ao vivo, bolsa de valores em tempo real, ibovespa, ibovespa em alta, ibovespa em baixa, ibovespa hoje, bolsa hoje, bolsa de valores hoje, B3, bolsa de valores, ibovespa…",
-   "url": "https://www.infomoney.com.br/mercados/ibovespa-hoje-bolsa-de-valores-ao-vivo-29102026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/05/Ibovespa-1-9.png",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Bradesco sofre 2º rebaixamento e JPMorgan corta preço-alvo em quase 30%; BBDC4 cai",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Agência do Bradesco na avenida Paulista, em São Paulo (Foto: Nilton Fukuda/Estadão Conteúdo/AE) \" data-image-caption=\" Agência do Bradesco na avenida Paulista, em São Paulo (Foto: Nilton Fukuda/Estadão Conteúdo/AE) \"…",
-   "url": "https://www.infomoney.com.br/mercados/bradesco-bbdc4-sofre-segundo-rebaixamento-e-jpmorgan-corta-preco-alvo-em-quase-30/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2023/11/40802749.135301.jpg",
-   "t": [
-    "BBDC4"
-   ],
-   "tf": [
-    "us:JPM",
-    "us:JPMC"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Gerdau: Itaú BBA eleva recomendação de GGBR4 para compra e ações sobem quase 6%",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Foto: Divulgação \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2019/06/gerdau-1.jpg?fit=900%2C624&quality=70&strip=all\" />Segundo o banco, a combinação de fundamentos mais fortes e uma queda recente…",
-   "url": "https://www.infomoney.com.br/mercados/gerdau-ggbr4-itau-bba-eleva-recomendacao-de-acoes-para-compra-e-ativos-sobem-forte/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2019/06/gerdau-1.jpg",
-   "t": [
-    "GGBR4",
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar hoje sobe a R$ 5,38 com exterior e preocupações com novo governo Lula",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Imagem: Pixabay \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2025/08/Impacto-do-dolar-nos-investimentos.jpg?fit=1280%2C853&quality=70&strip=all\" />Investidores seguem atentos a desdobramentos…",
-   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-29102026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/08/Impacto-do-dolar-nos-investimentos.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Taxas longas sobem com mercado sensível aos desdobramentos da vitória de Lula",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "juros-selic-copom-calendario \" data-image-caption=\" Foto: Freepik \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2025/12/2148783033.jpg?fit=1000%2C563&quality=70&strip=all\" />Controle das contas…",
-   "url": "https://www.infomoney.com.br/mercados/taxas-longas-sobem-com-mercado-sensivel-aos-desdobramentos-da-vitoria-de-lula/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/12/2148783033.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dívida pública fica em 82,9% do PIB, e déficit soma R$ 5,5 bilhões",
-   "data": "2026-10-29",
-   "fonte": "Agência Brasil",
-   "resumo": "O setor público consolidado – União, estado, municípios e estatais – registrou déficit primário de R$ 5,5 bilhões em setembro, enquanto a dívida bruta permaneceu em 82,9% do Produto Interno Bruto (PIB), o equivalente a…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/divida-publica-fica-em-829-do-pib-e-deficit-soma-r-55-bilhoes",
-   "img": "https://imagens.ebc.com.br/SsEaxKB6JesLZ9lJzaH-Lv_glP0=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/10/_raf0979_1.jpg?itok=MNE0Gj8a",
-   "t": [
-    "AZZA3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Consumo nos lares acumula alta de 2,70% até setembro, diz Abras",
-   "data": "2026-10-29",
-   "fonte": "Agência Brasil",
-   "resumo": "O Consumo nos Lares Brasileiros registrou alta de 2,70% no acumulado de janeiro a setembro, segundo balanço da Associação Brasileira de Supermercados (Abras), que considera o percentual praticamente estável em relação…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/consumo-nos-lares-acumula-alta-de-270-ate-setembro-diz-abras",
-   "img": "https://imagens.ebc.com.br/83gp-6q9uAykiKQXk5TF8aBwib8=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/06/12/20231130_110010.jpg?itok=93evJOHF",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Economistas criticam usar corte de gastos para conter dívida pública",
-   "data": "2026-10-29",
-   "fonte": "Agência Brasil",
-   "resumo": "A trajetória da dívida pública brasileira, que saiu de 71,7% do Produto Interno Bruto (PIB) em 2022 para cerca de 82,9% do PIB em agosto de 2026, vem sendo apontada pelo mercado financeiro e por economistas considerados…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/economistas-criticam-usar-corte-de-gastos-para-conter-divida-publica",
-   "img": "https://imagens.ebc.com.br/SgnUFMdRtJPNTHPG5q90__2MSS4=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2025/07/11/0d4a1789.jpg?itok=9dpF2vXe",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Vale (VALE3) produz 88,4 mi de toneladas de minério de ferro no 3T, queda anual de 6%",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Minério de ferro da Vale: setor extrativista foi destaque na produção industrial do mês (Foto: Divulgação/Agência Vale) \"…",
-   "url": "https://www.infomoney.com.br/mercados/vale-vale3-produz-884-mi-de-toneladas-de-minerio-de-ferro-no-3o-tri-queda-de-6/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2019/06/vale-mina-gongo-soco.jpg",
-   "t": [
-    "VALE3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Microsoft quer levantar US$25 bi na venda de títulos dos EUA para investir em IA",
-   "data": "2026-10-29",
-   "fonte": "InfoMoney",
-   "resumo": "Fachada com o logo da Microsoft nos escritórios da empresa em Issy-les-Moulineaux, na região de Paris, França, em 21 de março de 2025. REUTERS/Gonzalo Fuentes \"…",
-   "url": "https://www.infomoney.com.br/business/microsoft-quer-levantar-us25-bi-na-venda-de-titulos-dos-eua-para-investir-em-ia/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/04/2026-04-23T162046Z_2061006196_RC2MHDA4GDBK_RTRMADP_3_MICROSOFT-MANAGEMENT-BUYOUTS.jpg",
-   "t": [],
-   "tf": [
-    "us:MSFT"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Petrobras anuncia 3ª descoberta de petróleo em poço na Foz do Amazonas",
-   "data": "2026-10-29",
-   "fonte": "Agência Brasil",
-   "resumo": "A Petrobras anunciou nesta quinta-feira (29) a terceira descoberta de petróleo no poço Morpho, no bloco FZA-M-59, localizado em águas ultraprofundas na costa do estado do Amapá, na Foz do Amazonas, em lâmina d’água de…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/petrobras-anuncia-3a-descoberta-de-petroleo-em-poco-na-foz-do-amazonas",
-   "img": "https://imagens.ebc.com.br/LbK3mTcCcYKpiBQQwMAoXy5l2JU=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/10/29/sonda_ns-42_odn-ii_foto4_divulgacao_foresea.jpg?itok=PJBgT_Xj",
-   "t": [
-    "PETR4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar sobe 0,76% e fecha a R$ 5,39 em dia de cautela",
-   "data": "2026-10-29",
-   "fonte": "Agência Brasil",
-   "resumo": "Em meio a preocupações com o cenário econômico nacional e internacional, o dólar fechou em alta de cerca de 1% nesta quinta-feira (29), aproximando-se de R$ 5,40. A bolsa caiu pouco mais de 1% e encerrou abaixo dos 170…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/dolar-sobe-076-e-fecha-r-539-em-dia-de-cautela",
-   "img": "https://imagens.ebc.com.br/ABCzDV1BNGLK1WelR64FGvUJtDs=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/dolar_moeda_0803221211.jpg?itok=9aRcSX3F",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dívida Pública sobe 0,97% em setembro e encosta em R$ 9,4 trilhões",
-   "data": "2026-10-29",
-   "fonte": "Agência Brasil",
-   "resumo": "A incidência dos juros da dívida pública fez a Dívida Pública Federal (DPF) subir em setembro. Segundo números divulgados nesta quinta-feira (29) pelo Tesouro Nacional, a DPF passou de R$ 9,293 trilhões em agosto para…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/divida-publica-sobe-097-em-setembro-e-encosta-em-r-94-trilhoes",
-   "img": "https://imagens.ebc.com.br/EI1B7gn55TsqSt3U6CcJAWI1p44=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/real_moedadinheiro_jfcrz_abr_1701220043_1.jpg?itok=Bo8u8GgD",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Gerdau surfa o boom dos data centers nos EUA; UBS BB eleva preço-alvo",
-   "data": "2026-10-29",
-   "fonte": "Brazil Journal",
-   "resumo": "Quer surfar o boom dos data centers nos Estados Unidos? Compre Gerdau.",
-   "url": "https://braziljournal.com/gerdau-surfa-o-boom-dos-data-centers-nos-eua-ubs-bb-eleva-preco-alvo",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/aseKO6unlKCHgxtOJ.jpg?width=1200&height=630&quality=85&resize=fill",
-   "t": [
-    "GGBR4"
-   ],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "DoorDash compra Instacart por US$ 17 bilhões",
-   "data": "2026-10-29",
-   "fonte": "Brazil Journal",
-   "resumo": "A DoorDash está comprando a Instacart por US$ 17 bilhões, abrindo um novo capítulo em sua estratégia de consolidação do setor de delivery. A DoorDash pagará US$ 65 por ação da Instacart, um prêmio de 26% sobre o preço…",
-   "url": "https://braziljournal.com/doordash-compra-instacart-por-us-17-bilhoes",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asDoibAuYsiT1uM9i.jpg?width=1200&height=630&quality=85&resize=fill",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Raízen fecha acordo tributário épico, extinguindo R$ 22 bi em dívidas",
-   "data": "2026-10-29",
-   "fonte": "Brazil Journal",
-   "resumo": "A Raízen anunciou um acordo com a União que vai extinguir R$ 22,4 bilhões em débitos da companhia – na maior transação tributária desde que esse tipo de acordo foi regulamentado no Brasil, seis anos atrás. Pelos termos…",
-   "url": "https://braziljournal.com/raizen-fecha-acordo-tributario-epico-extinguindo-r-22-bi-em-dividas",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/assuQ8vDl6vfvdqWg.png?width=800&height=420&quality=85&resize=fill",
-   "t": [
-    "RAIZ4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "A Bolsa caiu 16% com Lula até agora. Mas o estrago é maior do que parece",
-   "data": "2026-10-29",
-   "fonte": "Brazil Journal",
-   "resumo": "A queda de 2,68% no Ibovespa no pregão de hoje esconde uma destruição muito maior em alguns setores e ações. Casas Bahia, por exemplo, despencou 20% hoje, enquanto a Cosan perdeu 12%, a Cyrela caiu 11% e Cogna recuou…",
-   "url": "https://braziljournal.com/a-bolsa-caiu-16-com-lula-ate-agora-mas-o-estrago-e-maior-do-que-parece",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asi5NAeTP2t75yrHD.png?width=800&height=420&quality=85&resize=fill",
-   "t": [
-    "BHIA3",
-    "COGN3",
-    "CSAN3",
-    "CYRE3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Nem petróleo, nem juros: por que a inteligência artificial virou o verdadeiro motor da economia global",
-   "data": "2026-10-29",
-   "fonte": "NeoFeed",
-   "resumo": "As previsões de um 2026 de desaceleração da economia global em razão da crise do petróleo, com o fechamento do Estreito de Ormuz, acabaram sendo sobrepostas pelo boom de investimentos das empresas de tecnologia em…",
-   "url": "https://neofeed.com.br/economia/nem-petroleo-nem-juros-por-que-a-inteligencia-artificial-virou-o-verdadeiro-motor-da-economia-global/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/relogio-engrenagem-dinheiro.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "As armas da Clear para quem faz day trade",
-   "data": "2026-10-29",
-   "fonte": "NeoFeed",
-   "resumo": "﻿ Uma notícia sobre juros, um novo indicador econômico ou uma mudança no cenário político pode alterar, em poucos minutos, o rumo dos preços na Bolsa. Para quem compra e vende ativos no mesmo pregão, acompanhar esses…",
-   "url": "https://neofeed.com.br/brand-stories/apresentado-por-clear/as-armas-da-clear-para-quem-faz-day-trade/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/casa-clear.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "“Modo IA” de buscas no Google provoca queda de receita e gera perda bilionária na Alphabet",
-   "data": "2026-10-29",
-   "fonte": "NeoFeed",
-   "resumo": "A Alphabet, dona do Google, está sofrendo os efeitos da inteligência artificial no seu buscador. Na Nasdaq, as ações da companhia registravam queda de 11,5% por volta de 11h30 (horário local) de quinta-feira, 29 de…",
-   "url": "https://neofeed.com.br/negocios/modo-ia-de-buscas-no-google-provoca-queda-de-receita-e-gera-perda-bilionaria-na-alphabet/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2023/07/alphabet-google.jpg",
-   "t": [],
-   "tf": [
-    "us:GOGL",
-    "us:GOOG",
-    "us:GOOGL"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Crédito mais arriscado, oportunidade maior: o dilema da Creditas para 2027",
-   "data": "2026-10-29",
-   "fonte": "NeoFeed",
-   "resumo": "O cenário de crédito no Brasil deve ficar mais desafiador em 2027, com juros elevados, famílias pressionadas pelo endividamento e pouco espaço para expansão das concessões. Para a Creditas, porém, esse quadro é como uma…",
-   "url": "https://neofeed.com.br/startups/credito-mais-arriscado-oportunidade-maior-o-dilema-da-creditas-para-2027/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/creditas.jpeg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Petrobras encontra petróleo pela 3ª vez no mesmo poço na costa do Amapá",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Petrobras anuncia descoberta de petróleo em águas ultra profundas na Costa do Amapá A Petrobras encontrou petróleo em uma terceira área do poço Morpho, localizado na bacia da Foz do Amazonas, no litoral do Amapá, em uma…",
-   "url": "https://g1.globo.com/economia/noticia/2026/10/29/petrobras-conclui-perfuracao-com-mais-uma-descoberta-de-petroleo-em-aguas-ultra-profundas-do-amapa.ghtml",
-   "img": "https://s2-g1.glbimg.com/Gznbkj04W9VZY7I0AbT5m7CyVlY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/L/P9PQopRfABvNpBBEiOIg/75523909-906.jpg",
-   "t": [
-    "PETR4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Google vai colocar anúncios nas respostas da inteligência artificial no Brasil ainda em 2026",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Alphabet, dona do Google, vai liberar uso de inteligência artificial para pesquisas que tenham fins militares Reprodução/TV Globo O Google planeja expandir a exibição de anúncios em seu Modo IA para o Brasil, o México e…",
-   "url": "https://g1.globo.com/tecnologia/noticia/2026/10/29/google-vai-colocar-anuncios-nas-respostas-da-inteligencia-artificial-no-brasil-ainda-em-2026.ghtml",
-   "img": "https://s2-g1.glbimg.com/BxZusOghdvRrfE50J2h0Pw9gBLQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/5/B/EYa70ES4yHRUGzJlyhxQ/globo-canal-5-20250205-1654-frame-407305.jpeg",
-   "t": [],
-   "tf": [
-    "us:GOGL",
-    "us:GOOG",
-    "us:GOOGL"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Contas públicas têm déficit de R$ 5,5 bilhões em setembro; dívida soma 82,9% do PIB, maior nível em cinco anos e meio",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "As contas do setor público consolidado apresentaram um déficit primário de R$ 5,5 bilhões em setembro, informou o Banco Central (BC) nesta quinta-feira (29). 🔎 O déficit primário ocorre quando as receitas com tributos e…",
-   "url": "https://g1.globo.com/economia/noticia/2026/10/29/contas-publicas-tem-deficit-de-r-55-bilhoes-em-setembro-divida-segue-em-829percent-do-pib-maior-nivel-desde-2021.ghtml",
-   "img": "https://s2-g1.glbimg.com/NEQ5QEmQq3hq1aMUuCI-32mEg_Y=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2021/L/m/xJ33noQUurvxa9pzqgig/dinheiro-4.jpeg",
-   "t": [
-    "AZZA3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Governo Trump aponta plano de espionagem chinês contra CEO da Nvidia, diz jornal",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Jensen Huang, CEO da Nvidia, durante conferência da empresa em 17 de março de 2026 Reuters/Carlos Barria O governo dos Estados Unidos suspeita que uma executiva chinesa do setor de tecnologia tenha atuado como agente de…",
-   "url": "https://g1.globo.com/tecnologia/ciberseguranca/noticia/2026/10/29/governo-trump-aponta-plano-de-espionagem-chines-contra-ceo-da-nvidia-diz-jornal.ghtml",
-   "img": "https://s2-g1.glbimg.com/22XEKSu6f5zZG4WXle_QeY__7wo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/v/u/hWsMECTGWbgeWtTLsw8g/2026-03-17t190331z-1569419364-rc2i6kamf29y-rtrmadp-3-nvidia-gtc.jpg",
-   "t": [],
-   "tf": [
-    "us:NVDA",
-    "us:NVDC"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "MPT processa Meta em R$ 50 milhões e quer remoção imediata de conteúdos de assédio eleitoral",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Ministério Público Eleitoral afirma que Meta não cumpriu medidas para tratamento igualitário às campanhas presidenciais Jornal Nacional/ Reprodução O Ministério Público do Trabalho (MPT) entrou nesta quinta-feira (29)…",
-   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/10/29/mpt-processa-meta-em-r-50-milhoes-e-quer-remocao-imediata-de-conteudos-de-assedio-eleitoral.ghtml",
-   "img": "https://s2-g1.glbimg.com/9THRty0GvXseTpuZcIv00XSWOqc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/p/P/Xhf7wyQgiNXb7raZrPKQ/globo-canal-4-20261022-2000-frame-101064.jpeg",
-   "t": [],
-   "tf": [
-    "us:META"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Volkswagen tem prejuízo de US$ 6,5 bilhões, o maior em mais de 10 anos, em meio à crise no setor e à concorrência chinesa",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Divulgação Volks Divulgação Volks A Volkswagen registrou prejuízo operacional de US$ 6,59 bilhões no terceiro trimestre de 2026, o pior resultado em mais de uma década. A montadora enfrenta dificuldades em mercados…",
-   "url": "https://g1.globo.com/carros/noticia/2026/10/29/volkswagen-prejuizo-10-anos.ghtml",
-   "img": "https://s2-g1.glbimg.com/qQSZPe_gs16P1ZzjvKfIjdM6yeM=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2020/B/4/GBU0AgSR6PBdBAtHAv3Q/capa-materia-nivos-suv.jpg",
-   "t": [],
-   "tf": [
-    "de:VOW",
-    "de:VOW3"
-   ],
-   "m": [
-    "de"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa cai pelo 4º dia, e queda na semana passa de 17%; dólar sobe e fecha a R$ 5,38",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou em alta de 0,89% nesta quinta-feira (29), cotado a R$ 5,3874. Na máxima do dia, chegou a R$ 5,4285. Já o Ibovespa, principal índice da bolsa brasileira,…",
-   "url": "https://g1.globo.com/economia/noticia/2026/10/29/dolar-ibovespa.ghtml",
-   "img": "https://s2-g1.glbimg.com/qJ7O_5T6hSs6HEsS6HwA-Vl1Otk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/2/s/iveHFATICeDrK8diFnLw/pexels-john-guccione-wwwadvergroupcom-3564390.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Vazamento expõe dados de mais de 40 mil funcionários da segurança dos EUA",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Oficial do ICE, o Serviço de Imigração e Algândega dos EUA AP Photo/Julia Demaree Nikhinson Dados de mais de 40 mil funcionários do Departamento de Segurança Interna dos Estados Unidos (DHS) foram divulgados na…",
-   "url": "https://g1.globo.com/tecnologia/ciberseguranca/noticia/2026/10/29/vazamento-expoe-dados-de-mais-de-40-mil-funcionarios-da-seguranca-dos-eua.ghtml",
-   "img": "https://s2-g1.glbimg.com/FSmgfSvI8FuaJC9f-dZkAQTTvzY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/9/9/ScMZBNRTSIQsFO0yXoMg/ice.jpg",
-   "t": [],
-   "tf": [
-    "us:ICE"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Eleições nos EUA: carne bovina vira símbolo de inflação e guerra cultural na disputa pelo Congresso",
-   "data": "2026-10-29",
-   "fonte": "g1 Economia",
-   "resumo": "Eleições legislativas nos EUA podem redefinir o raio de ação da presidência de Donald Trump “Escolher outra proteína? Eu prefiro escolher outro senador.” A frase, dita por um homem enquanto preparava hambúrgueres em uma…",
-   "url": "https://g1.globo.com/economia/agronegocios/noticia/2026/10/29/eleicoes-nos-eua-carne-bovina-vira-simbolo-de-inflacao-e-guerra-cultural-na-disputa-pelo-congresso.ghtml",
-   "img": "https://s2-g1.glbimg.com/qRwUS7Brx5s_jjQZdZPTLOXgKxk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/0/B/vPoYX6QTCSmJhpQg2pMw/globo-canal-4-20260827-2000-frame-77847.jpeg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ibovespa cai 2,68%, e dólar fecha em leve baixa a R$ 5,34",
-   "data": "2026-10-28",
-   "fonte": "Agência Brasil",
-   "resumo": "O mercado financeiro brasileiro teve mais um dia de forte pressão sobre as ações nesta quarta-feira (28). O Ibovespa caiu 2,68%, aos 171.006,10 pontos, no terceiro pregão consecutivo de perdas, enquanto o dólar encerrou…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/ibovespa-cai-268-e-dolar-fecha-em-leve-baixa-r-534",
-   "img": "https://imagens.ebc.com.br/qKGaRkOSgKY92Sv-dTm3L4d-IYM=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2021-10-06t120841z_1_lynxmpeh950lf_rtroptp_4_dolar-abre.jpg?itok=VWlxDSS-",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "CNI reduz previsão de crescimento do PIB para 1,6% em 2026",
-   "data": "2026-10-28",
-   "fonte": "Agência Brasil",
-   "resumo": "A Confederação Nacional da Indústria (CNI) reduziu de 2% para 1,6% a projeção de crescimento da economia brasileira em 2026. Segundo o Informe Conjuntural do terceiro trimestre, divulgado nesta quarta-feira (28), a…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/cni-reduz-previsao-de-crescimento-do-pib-para-16-em-2026",
-   "img": "https://imagens.ebc.com.br/oKCsjrcZTtCEAq0ImtGcid21rrk=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2022-05-03t150541z_1_lynxnpei420m7_rtroptp_4_health-coronavirus-brazil-autos.jpg?itok=rbsSJiDw",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Prepare o bolso e o caixa: vem aí o IVA de (pelo menos) 30%",
-   "data": "2026-10-28",
-   "fonte": "Brazil Journal",
-   "resumo": "O contribuinte brasileiro é, antes de tudo, um forte. O novo imposto sobre valor agregado, que será dividido na CBS (de alçada federal) e no IBS (de alçada estadual e municipal), deverá ficar próximo de 30%.",
-   "url": "https://braziljournal.com/prepare-o-bolso-e-o-caixa-vem-ai-o-iva-de-pelo-menos-30",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asm2QZvgJH22Uns8W.jpg?width=1200&height=630&quality=85&resize=fill",
-   "t": [
-    "CXSE3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Lucro do Santander cai 28% e fica abaixo do consenso; ROE vai a 11,9%",
-   "data": "2026-10-28",
-   "fonte": "Brazil Journal",
-   "resumo": "O mercado já esperava um resultado mais fraco do Santander Brasil no terceiro tri, mas a piora surpreendeu. O lucro líquido caiu 4% no tri a tri e 28% na comparação anual, para R$ 2,9 bilhões, 7% abaixo do consenso. O…",
-   "url": "https://braziljournal.com/lucro-do-santander-cai-28-e-fica-abaixo-do-consenso-roe-vai-a-11-9",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asdArj60PI60mFmXc.jpg?width=1200&height=630&quality=85&resize=fill",
-   "t": [
-    "SANB11"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Luiz Barsi: conheça a história e a estratégia do Rei dos Dividendos",
-   "data": "2026-09-02",
-   "fonte": "investidor10.com.br",
-   "resumo": "Luiz Barsi Filho é economista, investidor reconhecido por construir seu patrimônio com a compra de ações e o reinvestimento de dividendos ao longo de décadas. Conhecido como o “Rei dos Dividendos”, ...",
-   "url": "https://investidor10.com.br/conteudo/luiz-barsi-o-maior-investidor-individual-do-brasil-110500/",
-   "img": "https://investidor10.com.br/storage/news/6a973c59e11a5.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
    ]
   },
   {
