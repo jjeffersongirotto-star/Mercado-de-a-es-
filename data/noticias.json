@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-11-13T20:55:01+00:00",
+ "fetched_at": "2026-11-20T21:01:12+00:00",
  "temas": {
   "mercado": "Mercado"
  },
@@ -14,6 +14,1056 @@
   "g1 Economia"
  ],
  "itens": [
+  {
+   "tema": "mercado",
+   "titulo": "Índice de ADRs brasileiros acelera perdas na reta final e cai mais de 2%",
+   "data": "2026-11-20",
+   "fonte": "InfoMoney",
+   "resumo": "Painel eletrônico mostra cotações de ações na B3, em São Paulo \" data-image-caption=\" Painel eletrônico mostra cotações de ações na B3, em São Paulo 05/08/2024 REUTERS/Carla Carniel \"…",
+   "url": "https://www.infomoney.com.br/mercados/indice-de-adrs-brasileiros-feriado-dia-consciencia-negra-20112026/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2024/09/Captura-de-tela-2024-09-06-100616.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ações da Nvidia desabam 13% após notícia sobre investigação da SEC sobre companhia",
+   "data": "2026-11-20",
+   "fonte": "InfoMoney",
+   "resumo": "Ilustração do logotipo da Nvidia feita em 25 de agosto de 2025. REUTERS/Dado Ruvic \"…",
+   "url": "https://www.infomoney.com.br/mercados/acoes-da-nvidia-desabam-noticia-sobre-investigacao-da-sec-sobre-companhia/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/08/2025-08-28T093244Z_1_LYNXMPEL7R0DO_RTROPTP_4_NVIDIA-RESULTS.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nasdaq cai 5% com sell-off de ações de IA; S&P500 e Dow Jones têm “correção”",
+   "data": "2026-11-20",
+   "fonte": "InfoMoney",
+   "resumo": "Placa da Wall Street é vista do lado de fora da Bolsa de Valores de Nova York (NYSE), no distrito de Manhattan, em Nova York, Estados Unidos, em 2 de outubro de 2020. REUTERS/Carlo Allegri/Foto de arquivo \"…",
+   "url": "https://www.infomoney.com.br/mercados/nasdaq-registra-queda-seguindo-baixa-de-acoes-da-anthropic/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/10/2026-10-26T100021Z_1199777547_RC2G8OARKJXV_RTRMADP_3_USA-FED-REGULATION.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Messi, Lewandowski, Griezmann: quanto ganham os jogadores com maiores salários da MLS",
+   "data": "2026-11-20",
+   "fonte": "InfoMoney",
+   "resumo": "19 de julho de 2025; Harrison, New Jersey, EUA; O atacante do Inter Miami CF, Lionel Messi (10), reage durante o segundo tempo contra o New York Red Bulls no Sports Illustrated Stadium. Crédito obrigatório: Vincent…",
+   "url": "https://www.infomoney.com.br/esportes/messi-lewandowski-griezmann-quanto-ganham-os-jogadores-com-maiores-salarios-da-mls/",
+   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/07/2025-07-20T022050Z_2054104763_MT1USATODAY26672378_RTRMADP_3_MLS-INTER-MIAMI-CF-AT-NEW-YORK-RED-BULLS.jpg",
+   "t": [],
+   "tf": [
+    "us:INBR"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ações da Nvidia têm pior sequência de quedas na bolsa desde 2008",
+   "data": "2026-11-20",
+   "fonte": "g1 Economia",
+   "resumo": "Chips da Nvidia são usados ​​para criar e executar aplicações de IA Annegret Hilse/REUTERS Com uma queda que supera 7% nesta sexta-feira (20) na Nasdaq, as ações da fabricante de chips Nvidia encaminham a sétima semana…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/20/acoes-da-nvidia-tem-pior-sequencia-de-quedas-na-bolsa-desde-2008.ghtml",
+   "img": "https://s2-g1.glbimg.com/i6hHWdNgJJrJkJrYgnYG_Ucb4Ho=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/A/i/H5rl3AQ3ucdgHiYNEvEg/fotojet-7-.png",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Após falhas que afetaram Microsoft e suspenderam voos, Trump demite diretor de segurança cibernética",
+   "data": "2026-11-20",
+   "fonte": "g1 Economia",
+   "resumo": "Diretor Nacional de Cibernética dos EUA, Sean Cairncross, conversa com o presidente dos EUA, Donald Trump REUTERS/Jonathan Ernst/File Photo O diretor nacional de segurança cibernética da Casa Branca, Sean Cairncross,…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/20/apos-falhas-que-afetaram-microsoft-e-suspenderam-voos-trump-demite-diretor-de-seguranca-cibernetica.ghtml",
+   "img": "https://s2-g1.glbimg.com/j-yO42fldgOGMSjlsMPxOG5xjBk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/w/8/OJyC8WTyK0fYRMEy0Swg/2026-11-20t013901z-1346040644-rc28zlasqa4l-rtrmadp-3-usa-trump-cyberdirector.jpg",
+   "t": [],
+   "tf": [
+    "us:MSFT"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic x OpenAI: como a rivalidade entre os CEOs virou símbolo da corrida pelo domínio da IA",
+   "data": "2026-11-20",
+   "fonte": "g1 Economia",
+   "resumo": "Sam Altman, CEO da Open AI, e Dario Amodei, CEO da Anthropic Reuters/Manuel Orbegozo; Reuters/Bhawika Chhabra A estreia da Anthropic, dona do assistente Claude, na bolsa de valores na quinta-feira (19) marcou um novo…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/20/anthropic-x-openai-como-a-rivalidade-entre-os-ceos-virou-simbolo-da-corrida-pelo-dominio-da-ia.ghtml",
+   "img": "https://s2-g1.glbimg.com/dKLkR3KCX_lmkPcZMdSKeX_jYqE=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/3/v/ThBTPOQR2AzeSz0q6HUA/sam-altman-dario-amodei.png",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Trump volta a defender Jensen Huang e pede seu retorno ao comando da Nvidia após crise envolvendo suspeitas de espionagem",
+   "data": "2026-11-20",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "O presidente dos Estados Unidos, Donald Trump, defendeu nesta sexta-feira (20) que Jensen Huang tenha uma segunda chance para retornar ao comando da Nvidia, mas afirmou que gostaria de ver o executivo fazer um pedido de…",
+   "url": "https://timesbrasil.com.br/mundo/trump-pede-segunda-chance-para-jensen-huang-na-nvidia/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/84c8e769-13.webp",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Jensen Huang teria usado humilhações e ameaças para pressionar funcionários da Nvidia, diz jornal",
+   "data": "2026-11-20",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "A gestão de Jensen Huang na Nvidia é marcada por relatos de humilhações públicas, ameaças e ataques pessoais contra funcionários, segundo reportagem do The New York Times. O executivo teria adotado uma postura de…",
+   "url": "https://timesbrasil.com.br/mundo/jensen-huang-teria-usado-humilhacoes-e-ameacas-para-pressionar-funcionarios-da-nvidia-diz-jornal/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/dedf66f3-huang-nvidia.webp",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Trump reage a suspeita de bomba radioativa iraniana em Washington: “Não vamos permitir isso”",
+   "data": "2026-11-20",
+   "fonte": "Times Brasil (CNBC)",
+   "resumo": "O presidente dos Estados Unidos, Donald Trump, foi questionado nesta sexta-feira (20), durante entrevista coletiva na Casa Branca, sobre relatos de que o Irã poderia preparar uma bomba radioativa, conhecida como “bomba…",
+   "url": "https://timesbrasil.com.br/mundo/trump-sobre-suposta-bomba-iraniana-nao-vamos-permitir/",
+   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/7895780f-08a.webp",
+   "t": [
+    "VAMO3"
+   ],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar supera R$ 5,93 e fecha no maior valor desde abril de 2025",
+   "data": "2026-11-19",
+   "fonte": "Agência Brasil",
+   "resumo": "Em mais um dia de turbulência no mercado financeiro, o dólar avançou pela sexta sessão consecutiva e superou R$ 5,93 nesta quinta-feira (19). A alta ocorreu mesmo após o Banco Central vender US$ 1 bilhão para tentar…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-supera-r-593-e-fecha-no-maior-valor-desde-abril-de-2025",
+   "img": "https://imagens.ebc.com.br/qgr1uCa7n_TP2WKn5oQPmLd6V2M=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/07/23/2026-07-23t123806z_1_lynxmpem6m19r_rtroptp_4_usa-trump-tariffs-indonesia.jpg?itok=6u1xpzSK",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Cybersecurity ou morte",
+   "data": "2026-11-19",
+   "fonte": "Brazil Journal",
+   "resumo": "Os preocupantes apagões tecnológicos dos últimos dias, que afetaram desde a Microsoft até a National Security Agency dos EUA (NSA), reforçaram a tese de que o mundo nunca precisou tanto de cybersecurity como agora – mas…",
+   "url": "https://braziljournal.com/cybersecurity-ou-morte",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asPW6LhXmYdSThMJ7.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:MSFT"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "CEO da Panvel faz alerta sobre uso de canetas emagrecedoras: “Um certo exagero”",
+   "data": "2026-11-19",
+   "fonte": "NeoFeed",
+   "resumo": "﻿ O avanço das canetas emagrecedoras trouxe novas possibilidades para o tratamento da obesidade. Mas, para Júlio Mottin, CEO do Grupo Panvel, uma das maiores redes de farmácias do Sul do Brasil, existe um certo exagero…",
+   "url": "https://neofeed.com.br/bravamente/ceo-da-panvel-faz-alerta-sobre-uso-de-canetas-emagrecedoras-um-certo-exagero/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/nurleee.jpg",
+   "t": [
+    "PNVL3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "O Plano Moretti encerra o Lula 3. E acende o alerta do mercado para o Lula 4",
+   "data": "2026-11-19",
+   "fonte": "NeoFeed",
+   "resumo": "As tarefas a serem executadas pelo presidente Luiz Inácio Lula da Silva estão se acumulando, condição que desfavorece a construção de um cenário econômico mais positivo para o início de 2027 que deverá ser carente de…",
+   "url": "https://neofeed.com.br/experts/o-plano-moretti-encerra-o-lula-3-e-acende-o-alerta-do-mercado-para-o-lula-4/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/lula-nota-real.jpg",
+   "t": [
+    "POSI3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Na “cola” da SpaceX, Blue Origin, de Jeff Bezos, entra na órbita do projeto de IA espacial do Google",
+   "data": "2026-11-19",
+   "fonte": "NeoFeed",
+   "resumo": "No dia em que a Anthropic confirmou o maior IPO da história, com uma captação de US$ 107 bilhões – superando a abertura de capital da SpaceX -, a inteligência artificial (IA) está novamente nas alturas. Desta vez,…",
+   "url": "https://neofeed.com.br/inovacao/na-cola-da-spacex-blue-origin-de-jeff-bezos-entra-na-orbita-do-projeto-de-ia-espacial-do-google/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/blue-origin.jpg",
+   "t": [],
+   "tf": [
+    "us:GOGL",
+    "us:GOOG",
+    "us:GOOGL",
+    "us:SPCX"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic passa no teste do IPO e ações disparam na estreia na Nasdaq",
+   "data": "2026-11-19",
+   "fonte": "NeoFeed",
+   "resumo": "Quem ficou de fora do maior IPO da história, aproveitou a estreia da Anthropic para investir no papel. As ações da dona do Claude dispararam 17,07% no pregão nesta quinta-feira, 19 de novembro, cotadas a US$ 97,17. Na…",
+   "url": "https://neofeed.com.br/negocios/anthropic-passa-no-teste-do-ipo-e-acoes-disparam-na-estreia-na-nasdaq/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/ipo-anthropic.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Na Anthropic, IPO de US$ 1,5 trilhão vai colocar US$ 100 milhões (ou mais) no bolso de 600 funcionários",
+   "data": "2026-11-19",
+   "fonte": "NeoFeed",
+   "resumo": "A abertura de capital da Anthropic promete produzir uma nova geração de milionários no Vale do Silício. Além dos sete fundadores da companhia de inteligência artificial, milhares de funcionários atuais e antigos devem…",
+   "url": "https://neofeed.com.br/negocios/na-anthropic-ipo-de-us-15-trilhao-vai-colocar-us-100-milhoes-ou-mais-no-bolso-de-600-funcionarios/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/Anthropic-1.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Saem IPOs, entram M&As: a visão do BofA para as empresas brasileiras em 2027",
+   "data": "2026-11-19",
+   "fonte": "NeoFeed",
+   "resumo": "A deterioração das condições de mercado, tanto no Brasil quanto no exterior, está levando empresas brasileiras a reconsiderar seus planos de captação por meio de ofertas de ações e buscar alternativas para levantar…",
+   "url": "https://neofeed.com.br/negocios/saem-ipos-entram-mas-a-visao-do-bofa-para-as-empresas-brasileiras-em-2027/",
+   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/mercado-capitais.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Governo Trump liberou quase 900 mil chips avançados de IA para empresas chinesas, diz comitê dos EUA",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "O Presidente dos EUA, Donald Trump, entrega a Medalha Nacional da Ciência ao CEO da Nvidia, Jensen Huang, durante a cúpula \"Uma Nova Era de Ouro\" no Instituto da Paz dos EUA, renomeado Instituto da Paz Donald J. Trump…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/19/governo-trump-liberou-quase-900-mil-chips-avancados-de-ia-para-empresas-chinesas-diz-comite-dos-eua.ghtml",
+   "img": "https://s2-g1.glbimg.com/Z-cbLatnS8lSwzWylBrlrFSf2mw=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/r/C/Z4xEAjQzyajPrdrpseUA/2026-11-19t152917z-1568396902-rc27znahvx7h-rtrmadp-3-usa-trump-nvidia.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Mercado de câmbio trava após fala de Lula sobre escolha de ministros e BC intervém com leilão de dólar",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Mercado de câmbio trava após Lula sobre escolha de ministros e BC intervém Mesmo com a aprovação do ajuste fiscal pelo Senado Federal, o mercado cambial segue pressionado nesta quinta-feira (19) por causa de declarações…",
+   "url": "https://g1.globo.com/politica/blog/valdo-cruz/post/2026/11/19/mercado-de-cambio-trava-apos-fala-de-lula-sobre-escolha-de-ministros-e-bc-intervem-com-leilao-de-dolar.ghtml",
+   "img": "https://s2-g1.glbimg.com/cdKPdcgRIVe1Ivu7MS-0-MAWZV4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/v/T/S3eoxkTjmcBdiTsnIZuQ/55662305561-8b8b204ca0-o.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Trump comprou até US$ 265 mil em ações da Nvidia enquanto governo avaliava regras para chips",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Escândalo de espionagem envolvendo a Nvidia chega ao alto escalão do governo Trump O presidente dos Estados Unidos, Donald Trump, comprou até US$ 265 mil (R$ 1,57 milhão) em ações da Nvidia em setembro e vendeu até US$…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/trump-acoes-nvidia.ghtml",
+   "img": "https://s2-g1.glbimg.com/Z-cbLatnS8lSwzWylBrlrFSf2mw=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/r/C/Z4xEAjQzyajPrdrpseUA/2026-11-19t152917z-1568396902-rc27znahvx7h-rtrmadp-3-usa-trump-nvidia.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Visa, Mastercard e JPMorgan dizem que fornecedores foram alvo de ataque cibernético",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Visa e Mastercard dizem que ataque cibernético não afetou clientes. REUTERS / Dado Ruvic O JPMorgan Chase, maior banco dos Estados Unidos, informou nesta quinta-feira (19) que empresas que prestam serviços à instituição…",
+   "url": "https://g1.globo.com/tecnologia/ciberseguranca/noticia/2026/11/19/instituicoes-financeiras-ataque-cibernetico.ghtml",
+   "img": "https://s2-g1.glbimg.com/gbaGTTlkDBpRdwOoBWMh71eYUew=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/h/B/76KAYWT3SB2VBfcCAhCA/2026-11-16t191120z-1557206292-rc26fja9sj2a-rtrmadp-3-visa-mastercard-settlement.jpg",
+   "t": [],
+   "tf": [
+    "us:JPM",
+    "us:JPMC",
+    "us:MA",
+    "us:MSCD",
+    "us:V",
+    "us:VISA"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic entra para grupo das empresas mais valiosas do mundo; veja ranking",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Anthropic estreia na bolsa avaliada em US$ 1,5 trilhão f A Anthropic, criadora do chatbot de inteligência artificial (IA) Claude, alcançou a sexta posição entre as empresas mais valiosas do mundo nesta quinta-feira…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/anthropic-valor-de-mercado.ghtml",
+   "img": "https://s2-g1.glbimg.com/O2Mu9N0qYTqO89y4O2p9lAw5V5k=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/U/v/JS0qVyQSWevDYq3ARmkg/2026-11-19t120048z-1-lynxnpemai1a5-rtroptp-4-anthropic-ipo.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ações da Anthropic fecham a US$ 97, alta de 17%; valor de mercado chega a US$ 1,75 trilhão",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Anthropic estreia na bolsa avaliada em US$ 1,5 trilhão As ações da Anthropic, empresa americana que desenvolve o assistente de inteligência artificial Claude, estrearam nesta quinta-feira (19) na Nasdaq, sob o código…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/acoes-anthropic-nasdaq.ghtml",
+   "img": "https://s2-g1.glbimg.com/GNigwcFa_gnopDG814rzyR-83G4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/N/d/sa40YcQ5eOuCNFghgRng/2026-11-19t144136z-1767366352-rc21roa36f76-rtrmadp-3-anthropic-ipo-debut.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic: fortunas de fundadores disparam e somam R$ 817,5 bilhões com estreia na bolsa; veja ranking",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Dario Amodei, CEO da Anthropic Reuters/Carlos Barria Os sete cofundadores da Anthropic, criadora do chatbot de inteligência artificial (IA) Claude, viram suas fortunas crescerem 40,2% e atingirem, juntas, US$ 139,5…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/anthropic-fortunas-de-fundadores-disparam-apos-estreia-na-bolsa-veja-ranking.ghtml",
+   "img": "https://s2-g1.glbimg.com/cpaeMMXe8qaL5qG9ACgbw8ZP6UU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/F/m/QBCSxYTdK2BsD7upDcFQ/dario-amodei.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic estreia na Nasdaq com IPO recorde de US$ 81 bilhões e testa apetite de investidores por IA",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Anthropic estreia na bolsa avaliada em US$ 1,5 trilhão A Anthropic, empresa americana responsável pelo desenvolvimento do chatbot Claude, estreou na bolsa Nasdaq nesta quinta-feira (19) com uma oferta pública inicial de…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/anthropic-estreia-na-nasdaq-investidores.ghtml",
+   "img": "https://s2-g1.glbimg.com/MchCpBi5IB-K9jfm28M-pFJbqYw=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/I/t/HujFzARimKKZATWam5GQ/2026-11-19t151417z-1636203947-rc21road8kpz-rtrmadp-3-anthropic-ipo-debut.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "IPO da Anthropic pode criar 2.800 milionários entre funcionários e ex-funcionários",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "CEO da Anthropic Dario Amodei, Presidente e cofundadora da Anthropic Daniela Amodei, Cofundador e Diretor Científico da Anthropic Jared Kaplan, Cofundador e Chefe de Benefícios Públicos da Anthropic Jack Clark comemoram…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/ipo-da-anthropic-pode-criar-2800-milionarios-entre-funcionarios-e-ex-funcionarios.ghtml",
+   "img": "https://s2-g1.glbimg.com/GNigwcFa_gnopDG814rzyR-83G4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/N/d/sa40YcQ5eOuCNFghgRng/2026-11-19t144136z-1767366352-rc21roa36f76-rtrmadp-3-anthropic-ipo-debut.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "WhatsApp libera agendamento de mensagens para mais pessoas; veja como funciona",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "WhatsApp libera agendamento de mensagens para mais pessoas Brett Jordan/Unsplash/Reprodução/Redes sociais O WhatsApp está liberando para alguns usuários no Brasil um recurso que permite escolher o dia e a hora em que…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/19/whatsapp-libera-agendamento-de-mensagens-para-mais-pessoas-veja-como-funciona.ghtml",
+   "img": "https://s2-g1.glbimg.com/tFkpa4IVPFsvyiG1SplbCCV1M94=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/z/F/nbFjJPR4OzROGcTuh9vg/fotojet-25-.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic estreia na bolsa nesta quinta; saiba quanto custa investir na criadora do Claude pelo Brasil",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Anthropic estreia na bolsa avaliada em US$ 1,5 trilhão A Anthropic, criadora do chatbot de inteligência artificial (IA) Claude, estreia nesta quinta-feira (19) na Nasdaq, bolsa americana que reúne algumas das maiores…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/anthropic-estreia-bolsa-como-investir-brasil.ghtml",
+   "img": "https://s2-g1.glbimg.com/HDJnmOO1OoRQZUeI9QBwQazrymg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/n/7BQJxFSR6juUrrAWybuA/2026-09-18t122428z-2035353265-rc2qrla2prcd-rtrmadp-3-ai-europe-risks.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Com bônus de até R$ 133 mil, GM abre inscrições para plano de demissão voluntária em São José dos Campos; veja prazo e critérios",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Com bônus de até R$ 133 mil, GM abre inscrições para plano de demissão voluntária em São José dos Campos; veja prazo e critérios Roosevelt Cassio A General Motors (GM) abriu as inscrições para o Plano de Demissão…",
+   "url": "https://g1.globo.com/sp/vale-do-paraiba-regiao/noticia/2026/11/19/com-bonus-de-ate-r-133-mil-gm-abre-inscricoes-para-plano-de-demissao-voluntaria-em-sao-jose-dos-campos-veja-prazo-e-criterios.ghtml",
+   "img": "https://s2-g1.glbimg.com/f3OAo4TAaKKJiCUp7YahBDBWEuY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/H/d/Hz5BkwQ5mLKHMEdgQ13g/texto-do-seu-paragrafo-2026-11-19t101129.705.png",
+   "t": [],
+   "tf": [
+    "us:GM"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar fecha a R$ 5,93 e tem sexta alta seguida, mesmo após BC vender US$ 1 bilhão; Ibovespa cai",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair % O dólar subiu 1,15% nesta quinta-feira (19), véspera de feriado no Brasil, e fechou cotado a R$ 5,9344. Foi a sexta alta consecutiva da moeda americana e o maior valor…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/7z3DAgvH4eVYNyIJ4pNqeu_ZLjI=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/T/i/SpKwaaRDu5ZVrRwsCXdA/fundo-de-notas-de-dolares-1-.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Recorde da Anthropic em estreia na bolsa de valores conseguirá impedir o estouro da bolha da IA?",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Por que tanta gente está falando do Claude? Conheça a IA mais perigosa do mundo Foi em novembro de 2020 que, em algum lugar de São Francisco, nos Estados Unidos, uma mulher chamada Daniela Amodei telefonou para uma…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/19/recorde-da-anthropic-em-estreia-na-bolsa-de-valores-conseguira-impedir-o-estouro-da-bolha-da-ia.ghtml",
+   "img": "https://s2-g1.glbimg.com/2d_HnG-L56ei4XECbrCsau9sdzY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/u/v/Xcv6FzQwm10l1AMYGcpg/claude.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic, dona do Claude, estreia na bolsa avaliada em US$ 1,5 trilhão; conheça a empresa",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Ilustração mostra o logotipo da Anthropic e um teclado. Dado Ruvic/ Reuters A Anthropic, startup de inteligência artificial responsável pelo Claude, deve estrear nesta quinta-feira (19) na Nasdaq, bolsa americana que…",
+   "url": "https://g1.globo.com/inovacao/noticia/2026/11/19/anthropic-dona-do-claude-estreia-na-bolsa-conheca-a-empresa.ghtml",
+   "img": "https://s2-g1.glbimg.com/UcVhOySkJPocqCnkuDXnSNBr_s4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/4/J/2e8p4bTzWPvsIs1cnb9w/2026-10-21t103315z-1-lynxmpem9k0wp-rtroptp-4-anthropic-ipo-investors.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "De ruptura com a OpenAI a gigante da bolsa: veja 5 fatos importantes sobre a Anthropic",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Anthropic Reuters A Anthropic, startup americana criadora do assistente de inteligência artificial Claude, estreia na bolsa de valores dos Estados Unidos nesta quinta-feira (19). A empresa arrecadou US$ 81,3 bilhões (R$…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/19/de-ruptura-com-a-openai-a-gigante-da-bolsa-veja-5-fatos-importantes-sobre-a-anthropic.ghtml",
+   "img": "https://s2-g1.glbimg.com/eEN6vhMRCSOwCfe4ADREMhd_Aec=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/n/F/sadFfXSUuMRiXnUbwZ5A/2026-06-30t235818z-1842503695-rc2unla3osw3-rtrmadp-3-usa-anthropic-fable.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Maior IPO da história: como a Anthropic superou a SpaceX em estreia bilionária na bolsa",
+   "data": "2026-11-19",
+   "fonte": "g1 Economia",
+   "resumo": "Por que tanta gente está falando do Claude? Conheça a IA mais perigosa do mundo A Anthropic faz nesta quinta-feira (19) a maior estreia de uma empresa na bolsa de valores da história. A criadora do Claude movimentou US$…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/19/maior-ipo-da-historia-como-a-anthropic-superou-a-spacex.ghtml",
+   "img": "https://s2-g1.glbimg.com/HDJnmOO1OoRQZUeI9QBwQazrymg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/n/7BQJxFSR6juUrrAWybuA/2026-09-18t122428z-2035353265-rc2qrla2prcd-rtrmadp-3-ai-europe-risks.jpg",
+   "t": [],
+   "tf": [
+    "us:SPCX"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe para R$ 5,87 com expectativa sobre votação de ajuste fiscal",
+   "data": "2026-11-18",
+   "fonte": "Agência Brasil",
+   "resumo": "O mercado financeiro brasileiro teve mais um dia de perdas nesta quarta-feira (18). O dólar subiu pela quinta sessão consecutiva e atingiu a maior cotação em 19 meses, fechando próximo de R$ 5,87. Na bolsa, o Ibovespa…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-sobe-para-r-587-com-expectativa-sobre-votacao-de-ajuste-fiscal",
+   "img": "https://imagens.ebc.com.br/ABCzDV1BNGLK1WelR64FGvUJtDs=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/dolar_moeda_0803221211.jpg?itok=9aRcSX3F",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Número de desempregados há dois anos ou mais é o menor já registrado",
+   "data": "2026-11-18",
+   "fonte": "Agência Brasil",
+   "resumo": "O número de trabalhadores que procuram emprego há pelo menos dois anos foi o menor em 14 anos no terceiro trimestre de 2026. O dado foi divulgado nesta quarta-feira (18) pelo Instituto Brasileiro de Geografia e…",
+   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/numero-de-desempregados-ha-dois-anos-ou-mais-e-o-menor-ja-registrado",
+   "img": "https://imagens.ebc.com.br/za_Jb2cGMUue4iPl9AlTZfSPpyc=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/carteira-de-trabalho-digital_mcamgo_abr_240620211818-6.jpg?itok=EWG1Ra5a",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Desenvolve SP vai financiar câmeras 3.0 da Gabriel",
+   "data": "2026-11-18",
+   "fonte": "Brazil Journal",
+   "resumo": "A Gabriel – a startup de câmeras de segurança com inteligência artificial – acaba de levantar uma dívida com a Desenvolve SP para desenvolver a próxima geração de sua tecnologia, um hardware capaz de identificar ações…",
+   "url": "https://braziljournal.com/desenvolve-sp-vai-financiar-cameras-30-da-gabriel",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/as2VimZYPd6TmSx9m.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Anthropic, o maior IPO da história",
+   "data": "2026-11-18",
+   "fonte": "Brazil Journal",
+   "resumo": "Quatro anos depois que o ChatGPT deu início ao boom da inteligência artificial, a Anthropic deve concluir amanhã o maior IPO da história, levantando mais de US$ 64 bilhões e captando outros US$ 26 bilhões em um private…",
+   "url": "https://braziljournal.com/anthropic-o-maior-ipo-da-historia",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asYcdB5QnTMMoXVtt.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "OPINIÃO. Lula, herdeiro de si mesmo",
+   "data": "2026-11-18",
+   "fonte": "Brazil Journal",
+   "resumo": "Lula vai começar o próximo mandato com uma herança que conhece bem: a de seu próprio governo. Vem cobrança da esquerda, da direita, do Congresso, dos governadores, da imprensa, de Washington e do caixa do supermercado.…",
+   "url": "https://braziljournal.com/opiniao-lula-herdeiro-de-si-mesmo",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asM7HGTMy2nRXXKoa.png?width=800&height=420&quality=85&resize=fill",
+   "t": [
+    "CXSE3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "99 é alvo de ação por cobrar de motoristas para liberar corridas sem taxas; MPT pede R$ 100 milhões",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Motorista de aplicativo Maksim Goncharenok/Pexels O Ministério Público do Trabalho (MPT) entrou na Justiça contra a 99 Tecnologia para pedir a suspensão imediata do programa Taxa Zero, a devolução dos valores pagos por…",
+   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/11/18/99-acao-mpt-taxa-zero.ghtml",
+   "img": "https://s2-g1.glbimg.com/hyyrlZHUvRAqCnEBuSRuDveBqdc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/b/W/hCDNTCTfGzYSA4oBs8IA/appp.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Banco do Brasil alerta clientes sobre vazamento de dados pessoais; veja o que foi exposto",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "O Banco do Brasil (BB) soma R$ 1,64 bilhão em valores relacionados à renegociação de dívidas rurais em Mato Grosso Reprodução O Banco do Brasil informou nesta quarta-feira (18) que identificou, em 12 de novembro, um…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/18/banco-do-brasil-dados.ghtml",
+   "img": "https://s2-g1.glbimg.com/OtzJd_W8aiGxMfru67Szx17k27w=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/S/h/3jafnBSJy4wmF0Boe3Mg/enem-11-.png",
+   "t": [
+    "AZZA3",
+    "BBAS3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Toyota confirma chegada da picape Tacoma híbrida ao Brasil; modelo será fabricado na Argentina",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Toyota Tacoma feita na Argentina será vendida no Brasil Reprodução/Toyota Durante a inauguração da fábrica da Toyota em Sorocaba (SP), nesta quarta-feira (18), o presidente da montadora no Brasil, Evandro Maggio,…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/18/toyota-tacoma-feita-na-argentina-sera-vendida-no-brasil.ghtml",
+   "img": "https://s2-g1.glbimg.com/2uxHltfz2PBRi0zWYZ6PHBwnAMs=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/d/K/kumcqJRbmTmrzqB4BpXQ/toyota-tacoma-2024.jpg",
+   "t": [],
+   "tf": [
+    "jp:7203"
+   ],
+   "m": [
+    "br",
+    "jp"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "IPO da Anthropic: veja como investir na criadora do Claude por meio de BDRs no Brasil",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Logo da Anthropic em ilustração feita em junho de 2026. Dado Ruvic/Reuters A Anthropic, criadora do chatbot de inteligência artificial (IA) Claude, tem estreia prevista para esta quinta-feira (19) na Nasdaq, bolsa…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/18/anthropic-ipo-bolsa-como-investir-bdrs-brasil.ghtml",
+   "img": "https://s2-g1.glbimg.com/HDJnmOO1OoRQZUeI9QBwQazrymg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/n/7BQJxFSR6juUrrAWybuA/2026-09-18t122428z-2035353265-rc2qrla2prcd-rtrmadp-3-ai-europe-risks.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Vazamento de documentos expõe relações do Deutsche Bank com Epstein, Trump e oligarcas russos",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Vazamento de documentos expõe relações do Deutsche Bank com Epstein, Trump e oligarcas russos REUTERS/Yves Herman Uma investigação jornalística baseada em milhões de documentos vazados revelou, nesta terça-feira (17),…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/18/vazamento-de-documentos-expoe-relacoes-do-deutsche-bank-com-epstein-trump-e-oligarcas-russos.ghtml",
+   "img": "https://s2-g1.glbimg.com/Az6GrdXs-mRxgIj1lqXNrWX99rc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/I/T/lK1ZY2QZeXmlXXOs7qwQ/2026-11-18t160857z-1080681046-rc2a0y9l10p9-rtrmadp-3-deutsche-bank-media.jpg",
+   "t": [],
+   "tf": [
+    "de:DBK"
+   ],
+   "m": [
+    "de",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Toyota apresenta a Corolla Deck, nova picape híbrida flex que chega em 2027",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Toyota Corolla Deck. Divulgação / Toyota A Toyota anunciou nesta quarta-feira (18) a Corolla Deck, uma picape híbrida flex da família Corolla que será vendida exclusivamente em 23 países da América Latina. A produção…",
+   "url": "https://g1.globo.com/carros/noticia/2026/11/18/toyota-mostra-novo-produto.ghtml",
+   "img": "https://s2-g1.glbimg.com/20bR3GYHLLlnoiZ5-ioOioOy0Oc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/L/A/5WwxRqSkG4AAZQzda8nQ/corolla-deck.jpg",
+   "t": [],
+   "tf": [
+    "jp:7203"
+   ],
+   "m": [
+    "jp"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Um ano depois, fraude do Banco Master deixou prejuízo de R$ 76 bilhões",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Fachada do Banco Master no Itaim Bibi, na Zona Sul de São Paulo, no dia 19 de novembro de 2025 Rovena Rosa/Agência Brasil Na tarde de 18 de novembro de 2025, o Banco Central anunciou a decretação da liquidação…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/18/um-ano-depois-fraude-do-banco-master-deixou-prejuizo-de-r-76-bilhoes.ghtml",
+   "img": "https://s2-g1.glbimg.com/BRR9ORRvLATEv00m6mZIKXChf8Y=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/L/B/8HwobsQGmFfkAmrv1NCA/0g0a6467.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Rede D'Or vende SulAmérica Investimentos para a BlackRock por R$ 850 milhões",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Rede D'Or acerta incorporação da Sul América Divulgação A Rede D'Or anunciou nesta quarta-feira (18) um acordo para vender a SulAmérica Investimentos à BlackRock Brasil, subsidiária da gestora americana BlackRock, em…",
+   "url": "https://g1.globo.com/economia/negocios/noticia/2026/11/18/rede-dor-sulamerica-investimentos.ghtml",
+   "img": "https://s2-g1.glbimg.com/sH0QUKP2m1McB8qD5EaiTkzh6ME=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2022/w/o/BOlztDTIub8IsFAAjESQ/dor-sulamerica.jpg",
+   "t": [
+    "RDOR3"
+   ],
+   "tf": [
+    "us:BLK"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar dispara a R$ 5,86, maior valor desde abril de 2025; Ibovespa cai com impasse no ajuste fiscal",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar voltou a ganhar força nesta quarta-feira (18) e fechou em alta de 1,46%, a R$ 5,8667, o maior valor de fechamento desde 15 de abril de 2025. Durante o pregão, a…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/18/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/qJ7O_5T6hSs6HEsS6HwA-Vl1Otk=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/2/s/iveHFATICeDrK8diFnLw/pexels-john-guccione-wwwadvergroupcom-3564390.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Desemprego cai em 8 estados brasileiros no 3º trimestre de 2026, diz IBGE",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Carteira de Trabalho Digital Gil Leonardi/ImprensaMG A taxa de desemprego caiu em oito estados brasileiros no terceiro trimestre de 2026, segundo a Pesquisa Nacional por Amostra de Domicílios (PNAD) Contínua Trimestral,…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/18/desemprego-estados-pnad.ghtml",
+   "img": "https://s2-g1.glbimg.com/sHdJIKSjEH41JmWvRXcR_K8rhuQ=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/N/G/AuICD5Smiju7zH4vkGQA/gil-leonardi-imprensamg-img-3025.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nvidia interrompe envio de chips Hopper para a China em meio à crise por espionagem",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "EUA anunciam restrição a exportações de chips da Nvidia para cinco países, Brasil aparece na lista A americana Nvidia, abalada por um escândalo envolvendo suspeitas de espionagem, anunciou na terça-feira (18) que deixou…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/18/nvidia-interrompe-envio-de-chips-hopper-para-a-china-em-meio-a-crise-por-espionagem.ghtml",
+   "img": "https://s2-g1.glbimg.com/5LLcpnsIN1NS9P56zaKftHajGHg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/G/A/7CI3N1St2WZkoWLwacJw/2024-06-10t115756z-1929033527-rc2v48aq5jd4-rtrmadp-3-nvidia-stock-split.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nvidia descarta volta de Jensen Huang ao comando e promete acelerar busca por novo CEO",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "Ex-CEO da Nvidia se pronuncia pela primeira vez após deixar o cargo: 'Cometi erros graves' O presidente do conselho da Nvidia, Harvey Jones, abriu uma teleconferência com investidores na terça-feira (18) afirmando que a…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/18/nvidia-descarta-volta-de-jensen-huang-ao-comando-da-empresa-e-promete-acelerar-busca-por-novo-ceo.ghtml",
+   "img": "https://s2-g1.glbimg.com/rHF_Bdpdb4waqfHR3MLd2uqsHYw=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/h/N/Kq4kJaS4as3eUtr14TYQ/2024-03-01t192533z-1884582843-rc2yd5abdqpd-rtrmadp-3-usa-stocks-nvidia.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Correios, Banco do Brasil e Petrobras: a saúde financeira das estatais - O Assunto #1848",
+   "data": "2026-11-18",
+   "fonte": "g1 Economia",
+   "resumo": "O mais recente balanço dos Correios indica que a estatal registrou o 16º trimestre seguido com as contas no vermelho – apenas entre janeiro e setembro deste ano, o prejuízo chegou a R$ 7,5 bilhões. O último resultado do…",
+   "url": "https://g1.globo.com/podcast/o-assunto/noticia/2026/11/18/correios-banco-do-brasil-e-petrobras-a-saude-financeira-das-estatais-o-assunto-1848.ghtml",
+   "img": "https://s2-g1.glbimg.com/M4qbi4UMQr4-piqDgVb6GA6U8yI=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/t/r/pnERlmQ5ilkJ00KRlsSA/globo-canal-4-20261116-2000-frame-69724.jpeg",
+   "t": [
+    "BBAS3",
+    "PETR4"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nvidia dobra lucro para US$ 65,3 bilhões em primeiro balanço após saída de Jensen Huang",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Jensen Huang, durante conferência da Nvidia em 17 de março de 2026, e GPU H200, uma das mais avançadas da empresa Reuters/Carlos Barria; Divulgação A fabricante de chips Nvidia afirmou nesta terça-feira (17) que…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/17/balanco-nvidia.ghtml",
+   "img": "https://s2-g1.glbimg.com/qzGXHWVepETrr4Gx_Bp4Ihvnp0M=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/x/H/Kj02I8SLSC2q4YOPpzug/nvidia-jensen-huang-h200.png",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "STJ suspende decisão que impedia cobrança de taxa da Uber para motoristas em todo o país",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Motorista de aplicativo Maksim Goncharenok/Pexels O ministro Raul Araújo, do Superior Tribunal de Justiça (STJ), suspendeu provisoriamente os efeitos da decisão da 9ª Vara do Trabalho de Salvador (BA) que havia…",
+   "url": "https://g1.globo.com/trabalho-e-carreira/noticia/2026/11/17/stj-cobranca-taxa-uber-motoristas.ghtml",
+   "img": "https://s2-g1.glbimg.com/hyyrlZHUvRAqCnEBuSRuDveBqdc=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/b/W/hCDNTCTfGzYSA4oBs8IA/appp.jpg",
+   "t": [],
+   "tf": [
+    "us:UBER"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Durigan diz que pacote fiscal é só o 'primeiro passo' e defende ajuste gradual e 'sem negacionismo' para baixar juros",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Dario Durigan Washington Costa/MF O ministro da Fazenda, Dario Durigan, afirmou nesta terça-feira (17) que o pacote de ajuste fiscal em análise no Congresso é apenas o primeiro passo de um processo mais amplo, que será…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/17/ministro-da-fazenda-que-pacote-e-so-o-primeiro-passo-e-prega-ajuste-gradual-sem-negacionismo-para-baixar-juro.ghtml",
+   "img": "https://s2-g1.glbimg.com/ChUmYO_MvMRlZI6N3oI7nA6AFCE=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/G/x/D8DofCRniIHB6Nti0XIg/55371248682-dc417a1a3e-k.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Durigan diz que reforma tributária pode ter 'pequeno impacto' na inflação e defende reduzir tributos sobre a folha de pagamento",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Dario Durigan em audiência Pública no Senado Federal Washington Costa/MF O ministro da Fazenda, Dario Durigan, admitiu nesta terça-feira (17) que a reforma tributária sobre o consumo, que começa a entrar em vigor em…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/17/durigan-diz-que-reforma-tributaria-pode-ter-pequeno-impacto-na-inflacao-e-quer-reduzir-tributo-sobre-a-folha-de-pagamentos.ghtml",
+   "img": "https://s2-g1.glbimg.com/NwNwp-06-GThayMi0Cw38wYUmSo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/j/s/9Mj42oTMOYRcc1QFcuqA/55658916069-99a05f3670-k.jpg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ex-CEO da Nvidia pede desculpas por erros e diz que aceitaria voltar ao comando: 'Assumo meus erros'",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "O fundador e CEO da Nvidia, Jensen Huang, conversa com jornalistas antes de uma reunião com o Comitê Bancário do Senado dos Estados Unidos, no Capitólio, em Washington, em 3 de dezembro de 2025. Evelyn Hockstein /…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/17/ex-ceo-nvidia-diz-que-aceitaria-voltar-ao-cargo.ghtml",
+   "img": "https://s2-g1.glbimg.com/wuCETnzCjI8xqKnODHXExn59ZHY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/r/y/AKyyQtSWWAwR15BRaQVQ/2026-11-17t133647z-729720750-rc2u8iabn4ek-rtrmadp-3-global-markets-1-.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Até onde o dólar pode subir? Por que o real é a moeda que mais perdeu valor desde a reeleição de Lula",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Notas de Dólar x Real BCC O real brasileiro foi a moeda, entre as 20 mais usadas no comércio exterior, que mais se desvalorizou no mundo nas últimas semanas — tendo perdido quase 14% do seu valor frente ao dólar…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/17/ate-onde-o-dolar-pode-subir-por-que-o-real-e-a-moeda-que-mais-perdeu-valor-desde-a-reeleicao-de-lula.ghtml",
+   "img": "https://s2-g1.glbimg.com/Un8Rer1LHFh-rTTehg3Uhyi7Ix8=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/Z/0/A7etPNSASJ3hKAwAxVog/c1bafd90-e27e-11f1-bd1e-f9c53347c5a6.jpg.webp",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Meta lança app de compra e venda de produtos usados no Brasil para concorrer com Enjoei",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Meta lança app de compra e venda de produtos usados no Brasil para concorrer com Enjoei Divulgação/Meta A Meta, dona do Instagram, do WhatsApp e do Facebook, lançou nesta terça-feira (17) um aplicativo de compra e venda…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/17/meta-lanca-app-de-compra-e-venda-de-produtos-usados-no-brasil-para-concorrer-com-enjoei.ghtml",
+   "img": "https://s2-g1.glbimg.com/l2u6-uvgtmJ7MtczMolqFYiKlGo=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/x/t/pK7itZTFCJIIt32aKI8A/fotojet-22-.jpg",
+   "t": [],
+   "tf": [
+    "us:META"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Ajuste fiscal: governo quer concluir análise de projeto no Congresso nesta terça; Motta diz que Câmara está disposta a votar",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Hugo Motta: Estamos preocupados com a alta do dólar O ministro das Relações Institucionais, José Guimarães, afirmou nesta terça-feira (17) que o governo tem um acordo com o presidente da Câmara dos Deputados, Hugo Motta…",
+   "url": "https://g1.globo.com/politica/noticia/2026/11/17/governo-quer-aprovar-ajuste-fiscal-no-senado-e-na-camara-ainda-nesta-terca-diz-ministro.ghtml",
+   "img": "https://s2-g1.glbimg.com/ZjQrUaya5lOpaD6vx4lvqpIrPEY=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2023/V/k/cyryOLS7iYajogwWg5KA/pgm-globonews-limpo-ao-vivo-20230704-0859-frame-141242.jpeg",
+   "t": [],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Nvidia cria comitê para supervisionar segurança nacional e controles de exportação",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Chips da Nvidia são usados ​​para criar e executar aplicações de IA Annegret Hilse/REUTERS A Nvidia anunciou nesta terça-feira (17) a criação de um comitê vinculado ao conselho de administração para supervisionar as…",
+   "url": "https://g1.globo.com/tecnologia/noticia/2026/11/17/nvidia-cria-comite-para-supervisionar-seguranca-nacional-e-controles-de-exportacao.ghtml",
+   "img": "https://s2-g1.glbimg.com/bS0hhjaTtzOHE0h3jzZ2aLSg4RA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/O/4/dlQql4QjmR5blmRPfQJg/79894324-906.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Dólar sobe e fecha a R$ 5,78 com ajuste fiscal no Brasil e balanço da Nvidia no radar; Ibovespa avança",
+   "data": "2026-11-17",
+   "fonte": "g1 Economia",
+   "resumo": "Bolsa sobe de olho em conversa sobre novo governo O dólar fechou em alta de 0,10% nesta terça-feira (17), cotado a R$ 5,7824, maior nível desde abril de 2025. Na máxima do dia, alcançou R$ 5,8123. O Ibovespa, principal…",
+   "url": "https://g1.globo.com/economia/noticia/2026/11/17/dolar-ibovespa.ghtml",
+   "img": "https://s2-g1.glbimg.com/XNe-iZGShwcfxKKIu_dUZJjCMZA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/A/W/pNqFkwSSG90RoeSZ80Pg/drf20241217001.jpg",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "O que Pedro Zinner vai fazer na Ultrapar",
+   "data": "2026-11-16",
+   "fonte": "Brazil Journal",
+   "resumo": "O Grupo Ultra contratou Pedro Zinner, o ex-CEO da Eneva e da Stone, para atuar como senior advisor, apoiando a dona da Ipiranga e da Ultragaz na avaliação de potenciais aquisições. “O Zinner é um grande talento, e…",
+   "url": "https://braziljournal.com/o-que-pedro-zinner-vai-fazer-na-ultrapar",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asER0CP6l5oLDJ0E3.png?width=800&height=420&quality=85&resize=fill",
+   "t": [
+    "ENEV3",
+    "UGPA3"
+   ],
+   "tf": [
+    "us:STNE"
+   ],
+   "m": [
+    "br",
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Na XP, despesa sobe e ‘new money’ desacelera; CEO vê negócio “cada vez mais acíclico”",
+   "data": "2026-11-16",
+   "fonte": "Brazil Journal",
+   "resumo": "A XP reportou um terceiro tri praticamente em linha com as expectativas, com a receita e o lucro crescendo na comparação anual mesmo num cenário de turbulência nos mercados internacionais e locais. A captação líquida,…",
+   "url": "https://braziljournal.com/na-xp-despesa-sobe-e-new-money-desacelera-ceo-ve-negocio-cada-vez-mais-aciclico",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asIHID4YHMigCMVKI.png?width=800&height=420&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:XP"
+   ],
+   "m": [
+    "us"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Não é um tesouraço. É um tributaço",
+   "data": "2026-11-16",
+   "fonte": "Brazil Journal",
+   "resumo": "O PLP do ajuste fiscal, concebido pela equipe econômica e aprovado a toque de caixa pelo Senado na semana passada, foi recebido como um passo correto – embora insuficiente – para a redução do déficit público. A parte do…",
+   "url": "https://braziljournal.com/nao-e-um-tesouraco-e-um-tributaco",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asjNaHGXuOXWIBS49.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [
+    "CXSE3"
+   ],
+   "tf": [],
+   "m": [
+    "br"
+   ]
+  },
+  {
+   "tema": "mercado",
+   "titulo": "Um oásis na crise da Nvidia? O S&P ‘equal-weight’",
+   "data": "2026-11-16",
+   "fonte": "Brazil Journal",
+   "resumo": "A derrocada da ação da Nvidia, depois do escândalo envolvendo seu fundador e CEO Jensen Huang, machucou muita gente – mas os fundos equal-weight se provaram uma ilha de tranquilidade, disse o Wall Street Journal . Do…",
+   "url": "https://braziljournal.com/um-oasis-na-crise-da-nvidia-o-s-and-p-equal-weight",
+   "img": "https://codex-braziljournal.codexcdn.net/assets/asS7U0lbQYy4dFcpF.jpg?width=1200&height=630&quality=85&resize=fill",
+   "t": [],
+   "tf": [
+    "us:NVDA",
+    "us:NVDC"
+   ],
+   "m": [
+    "us"
+   ]
+  },
   {
    "tema": "mercado",
    "titulo": "Dólar a R$ 6? O que esperar após moeda atingir máxima em 18 meses",
@@ -3690,1055 +4740,15 @@
   },
   {
    "tema": "mercado",
-   "titulo": "Falta de engenheiros ameaça expansão de ferrovias, alerta Nathalie Zanata, da Motiva Trilhos",
-   "data": "2026-11-05",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "A expansão da infraestrutura metroferroviária brasileira pode esbarrar na falta de profissionais qualificados, alertou Nathalie Zanata, gerente de pessoas da Motiva Trilhos, em entrevista nesta quinta-feira (5) ao Times…",
-   "url": "https://timesbrasil.com.br/empresas-e-negocios/falta-de-engenheiros-ameaca-expansao-de-ferrovias/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/72cd7c3d-10a.webp",
-   "t": [
-    "MOTV3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "EXCLUSIVO: Irregularidades fazem fintech cearense Mêntore Bank perder o maior programa de crédito do Brasil",
-   "data": "2026-11-05",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "Uma planilha de custos que não fechou tirou o Mêntore Bank da disputa pelo Crediamigo, o maior programa de microcrédito do Brasil, em um pregão de R$ 2 bilhões realizado pelo Banco do Nordeste (BNB). A fintech, cujo…",
-   "url": "https://timesbrasil.com.br/empresas-e-negocios/exclusivo-irregularidades-fazem-mentore-bank-fintech-cearense-perder-maior-programa-de-credito-do-brasil/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/a6a8daf6-mentore-bank-e1793910065599.webp",
-   "t": [
-    "BNBR3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "‘Bolsa Mounjaro’: Justiça suspende programa de medicamento para obesidade em cidade de SP",
-   "data": "2026-11-05",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "A Justiça de São Paulo determinou a interrupção imediata do programa municipal de combate à obesidade de Urupês, no interior do Estado, conhecido popularmente como “Bolsa Mounjaro”. A decisão liminar foi concedida após…",
-   "url": "https://timesbrasil.com.br/brasil/bolsa-mounjaro-justica-suspende-programa-de-medicamento-para-obesidade-em-cidade-de-sp/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/02/8191d697-mounjaro.webp",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar volta a aproximar-se de R$ 5,49 em dia de instabilidade global",
-   "data": "2026-11-05",
-   "fonte": "Agência Brasil",
-   "resumo": "O dólar fechou em alta e a bolsa encerrou em queda nesta quinta-feira (5), em um pregão marcado pelo aumento da aversão ao risco nos mercados internacionais. A pressão veio principalmente de Wall Street, com fortes…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-volta-aproximar-se-de-r-549-em-dia-de-instabilidade-global",
-   "img": "https://imagens.ebc.com.br/puCwIlqITk33Us9_iK6fqhXhOFM=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/atoms/image/dolares.jpg?itok=ipUA3SFB",
-   "t": [],
-   "tf": [],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Panvel cresce no digital com canetas emagrecedoras mais baratas e chega a R$ 1,7 bilhão de receita",
-   "data": "2026-11-05",
-   "fonte": "NeoFeed",
-   "resumo": "A varejista farmacêutica gaúcha Panvel viu no crescimento de seus canais digitais o principal pilar de sustentação para o avanço em suas linhas financeiras no terceiro trimestre deste ano. No período, a companhia…",
-   "url": "https://neofeed.com.br/negocios/panvel-cresce-no-digital-com-canetas-emagrecedoras-mais-baratas-e-chega-a-r-17-bilhao-de-receita/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/rede-varejista-gaucha-Panvel.jpg",
-   "t": [
-    "PNVL3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Com aporte de R$ 1 bilhão, Iguatemi e Catuaí trazem Four Seasons de volta a SP",
-   "data": "2026-11-05",
-   "fonte": "NeoFeed",
-   "resumo": "Em dezembro de 2025, o NeoFeed noticiou com exclusividade que os grupos Iguatemi e Catuaí estavam em negociação para trazer o Four Seasons, uma das principais marcas globais de hotéis de luxo, de volta ao Brasil. Agora,…",
-   "url": "https://neofeed.com.br/negocios/com-aporte-de-r-1-bilhao-iguatemi-e-catuai-trazem-four-seasons-de-volta-a-sp/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/bruno-khouri-pedro-jereissati.jpg",
-   "t": [
-    "IGTI11"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Wegovy em comprimido chega ao Brasil e acende alerta para Hypera, diz Goldman Sachs",
-   "data": "2026-11-04",
-   "fonte": "InfoMoney",
-   "resumo": "Caixas do medicamento Wegovy, da Novo Nordisk, em farmácia de Londres – 08/03/2024 (Foto: REUTERS/Hollie Adams) \"…",
-   "url": "https://www.infomoney.com.br/mercados/wegovy-em-comprimido-chega-ao-brasil-e-acende-alerta-para-hypera-diz-goldman-sachs/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/05/2025-05-02T201527Z_1_LYNXMPEL410X7_RTROPTP_4_USA-HEALTH-OBESITY.jpg",
-   "t": [
-    "HYPE3"
-   ],
-   "tf": [
-    "us:GS"
-   ],
-   "m": [
-    "br",
-    "gb",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar hoje cai a R$ 5,45, em dia positivo para ativos do Brasil após eleição nos EUA",
-   "data": "2026-11-04",
-   "fonte": "InfoMoney",
-   "resumo": "Um funcionário conta cédulas de dólar americano em uma casa de câmbio em Jacarta, na Indonésia, na quarta-feira, 2 de março de 2022 (Dimas Ardian/Bloomberg) \"…",
-   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-04112026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/01/448264696.jpg",
-   "t": [
-    "POSI3"
-   ],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Taxas dos DIs recuam com exterior e à espera do Copom",
-   "data": "2026-11-04",
-   "fonte": "InfoMoney",
-   "resumo": "(Imagem: Kamil / Unsplash) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/04/juros.png?fit=1275%2C767&quality=70&strip=all\" />Perspectiva de menores incertezas na condução da ​política americana…",
-   "url": "https://www.infomoney.com.br/mercados/taxas-dos-dis-recuam-com-exterior-e-a-espera-do-copom/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/04/juros.png",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Juros altos frustram criação de vagas formais em setembro; bets “tombam” o comércio",
-   "data": "2026-11-04",
-   "fonte": "InfoMoney",
-   "resumo": "Carteira de Trabalho Digital \" data-image-caption=\" (Marcelo Camargo / Agência Brasil) \"…",
-   "url": "https://www.infomoney.com.br/economia/caged-setembro-vagas-juros-altos-comercio/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2021/12/carteira-de-trabalho-digital_mcamgo_abr_240620211818-2-1.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Esquenta Black Friday XP reúne ofertas e benefícios para clientes XP e Rico",
-   "data": "2026-11-04",
-   "fonte": "InfoMoney",
-   "resumo": "Black Friday XP 2026 \" data-image-caption=\" Black Friday XP 2026 \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2026/11/Banner-BlackXP-com-curvas-douradas.png?fit=1280%2C720&quality=70&strip=all\"…",
-   "url": "https://www.infomoney.com.br/consumo/esquenta-black-friday-xp-reune-ofertas-e-beneficios-para-clientes-xp-e-rico/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/11/Banner-BlackXP-com-curvas-douradas.png",
-   "t": [],
-   "tf": [
-    "us:XP"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Copom decide nesta quarta-feira se corta ou mantém a Taxa Selic",
-   "data": "2026-11-04",
-   "fonte": "Agência Brasil",
-   "resumo": "O Comitê de Política Monetária (Copom) do Banco Central (BC) faz nesta quarta-feira (4) a penúltima reunião do ano. Mesmo com a alta recente do dólar, os analistas de mercado acreditam na sexta redução seguida de juros.…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/copom-decide-nesta-quarta-feira-se-corta-ou-mantem-taxa-selic",
-   "img": "https://imagens.ebc.com.br/15adY8ZKr12NpZ2PrRKtRipWPqI=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/banco_central_mcajr_abr_0104222280_0.jpg?itok=cZ5GbjQe",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "CVS anuncia spinoff de drogarias. Ação desaba 12%",
-   "data": "2026-11-04",
-   "fonte": "Brazil Journal",
-   "resumo": "A CVS anunciou hoje que vai desmembrar sua rede de drogarias em uma nova empresa listada, sob o argumento de que as duas companhias resultantes funcionarão melhor separadamente. O mercado detestou a ideia.",
-   "url": "https://braziljournal.com/cvs-anuncia-spinoff-de-drogarias-acao-desaba-12",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asMN31QwrmeXtvuFG.jpg?width=1200&height=630&quality=85&resize=fill",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Itaú se afasta de concorrentes com ROE de 23,6% e carteira saudável",
-   "data": "2026-11-04",
-   "fonte": "Brazil Journal",
-   "resumo": "O Itaú ampliou ainda mais o gap em relação aos concorrentes com o resultado do terceiro trimestre reportado agora à noite. A carteira de crédito cresceu de forma saudável apesar da piora macro, o ROE caiu mas segue…",
-   "url": "https://braziljournal.com/itau-se-afasta-de-concorrentes-com-roe-de-23-6-e-carteira-saudavel",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asN7bC5ZGwdm6nHur.png?width=800&height=420&quality=85&resize=fill",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "André Street, o maior VC pessoa física do Brasil",
-   "data": "2026-11-04",
-   "fonte": "Brazil Journal",
-   "resumo": "Ao longo dos últimos 15 anos, André Street ficou mais conhecido como o fundador da Stone, a empresa que ajudou a quebrar o duopólio Cielo-Rede no mercado de maquininhas. Mas em paralelo à construção da companhia, Street…",
-   "url": "https://braziljournal.com/andre-street-o-maior-vc-pessoa-fisica-do-brasil",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asccZOGfoGKZWUExE.png?width=800&height=420&quality=85&resize=fill",
-   "t": [],
-   "tf": [
-    "us:STNE"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "A vida após o ataque hacker: BMP refaz gestão e prepara novo negócio",
-   "data": "2026-11-04",
-   "fonte": "NeoFeed",
-   "resumo": "A BMP esteve no centro do maior ataque hacker contra o sistema financeiro nacional e sofreu um prejuízo de mais de R$ 540 milhões em junho de 2025. O evento exigiu que a empresa de infraestrutura financeira acelerasse…",
-   "url": "https://neofeed.com.br/negocios/a-vida-apos-o-ataque-hacker-bmp-refaz-gestao-e-prepara-novo-negocio/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/infraestrutura-seguranca.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Maluhy, do Itaú, pede previsibilidade fiscal a Lula e defende volta do grau de investimento",
-   "data": "2026-11-04",
-   "fonte": "NeoFeed",
-   "resumo": "Em meio às incertezas sobre os rumos da política econômica após a reeleição do presidente Luiz Inácio Lula da Silva, o Itaú Unibanco defende que o governo dê sinais claros sobre sua agenda fiscal e trabalhe para…",
-   "url": "https://neofeed.com.br/negocios/maluhy-do-itau-pede-previsibilidade-fiscal-a-lula-e-defende-volta-do-grau-de-investimento/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/milton-maluhy-itau.jpg",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "“Não acredito em juízo fiscal para o Lula 4”, diz CEO da Multiplan",
-   "data": "2026-11-04",
-   "fonte": "NeoFeed",
-   "resumo": "Poucas horas após o resultado do segundo turno, com a vitória de Luiz Inácio Lula da Silva (PT) sobre Flávio Bolsonaro (PL), o mercado entrou em uma espiral de tensão, com queda na maior parte das ações, que gerou o…",
-   "url": "https://neofeed.com.br/negocios/nao-acredito-em-juizo-fiscal-para-o-lula-4-diz-ceo-da-multiplan/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2025/06/eduardo-peres-CEO-Multiplan.webp",
-   "t": [
-    "MULT3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Aeris pede recuperação extrajudicial para reestruturar R$ 1,5 bilhão em dívidas",
-   "data": "2026-11-04",
-   "fonte": "NeoFeed",
-   "resumo": "A Aeris, fabricante cearense de pás eólicas, entrou com pedido de recuperação extrajudicial (RE) na terça-feira, 3 de novembro, na 3ª Vara de Falências e Recuperações Judiciais de São Paulo para reestruturar R$ 1,52…",
-   "url": "https://neofeed.com.br/negocios/aeris-pede-recuperacao-extrajudicial-para-reestruturar-r-15-bilhao-em-dividas/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2022/08/aeris.png",
-   "t": [
-    "AERI3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Papamóvel de Leão XIV no Peru é uma Chevrolet S10 adaptada; veja o que mudou na picape",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Chevrolet S10 como papamóvel divulgação/Chevrolet Uma Chevrolet S10 foi transformada em papamóvel para transportar o papa Leão XIV durante sua visita ao Peru, entre 11 e 17 de novembro. O modelo reúne detalhes da versão…",
-   "url": "https://g1.globo.com/carros/noticia/2026/11/04/papamovel-leao-xiv-peru.ghtml",
-   "img": "https://s2-g1.glbimg.com/NfDocMEaVKNTp8SLFB9mazuT3H0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/f/d/OCTAzUQHalrignIdShgg/projetodevdeo31-ezgif.com-optimize.gif",
-   "t": [],
-   "tf": [
-    "us:GM"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Carro voador da Embraer: Eve fecha acordo para vender até 12 aeronaves para empresa que vai operar no Sul do Brasil",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Carros voadores da Embraer: Eve fecha acordo para vender até 12 aeronaves para empresa do Sul do Brasil Divulgação A Eve Air Mobility, empresa ligada à Embraer, fechou um acordo para fornecer até 12 carros voadores…",
-   "url": "https://g1.globo.com/sp/vale-do-paraiba-regiao/noticia/2026/11/04/carro-voador-da-embraer-eve-fecha-acordo-para-vender-ate-12-aeronaves-para-empresa-que-vai-operar-no-sul-do-brasil.ghtml",
-   "img": "https://s2-g1.glbimg.com/Upc9q6lGb20aFcqLVeEzddupgFA=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/L/3/KDUqaZR3CCKRXsizupHg/texto-do-seu-paragrafo-2026-11-04t095833.442.png",
-   "t": [
-    "EMBJ3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Aeris Energy pede recuperação extrajudicial para renegociar R$ 1,5 bilhão em dívidas",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Aeris, empresa brasileira fabricante de pás eólicas Divulgação A Aeris, fabricante brasileira de pás utilizadas em turbinas eólicas, entrou com um pedido de recuperação extrajudicial para renegociar cerca de R$ 1,52…",
-   "url": "https://g1.globo.com/economia/negocios/noticia/2026/11/04/aeris-energy-recuperacao-extrajudicial.ghtml",
-   "img": "https://s2-g1.glbimg.com/1bwX6rlJrr2ia6xTKCz34H3cOT0=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/N/E/PE32CARCS8dhxA4FYyiw/money-aeris-22jun21-divulgacao-.jpg",
-   "t": [
-    "AERI3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar cai e fecha a R$ 5,45 após vitória democrata no Congresso dos EUA; Ibovespa sobe",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou em queda de 0,64% nesta quarta-feira (4), cotado a R$ 5,4518. Já o Ibovespa, principal índice da bolsa brasileira, tinha alta de 1,08% na reta final do…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/04/dolar-ibovespa.ghtml",
-   "img": "https://s2-g1.glbimg.com/flrGTzCGA7rcqIkU-pbLKhRAjM8=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2024/H/q/DVW4KVTAm4HtV81KBWKg/pexels-karolina-grabowska-4386431.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Midterms nos EUA: vitória democrata ameaça planos de Trump e pode afetar dólar e juros no Brasil",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Democratas conquistam controle do Congresso nos Estados Unidos A vitória do Partido Democrata nas eleições de meio de mandato dos Estados Unidos, realizadas na terça-feira (3), pode mudar os rumos da política econômica…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/04/midterms-nos-eua-vitoria-democrata-ameaca-planos-de-trump-e-pode-afetar-dolar-e-juros-no-brasil.ghtml",
-   "img": "https://s2-g1.glbimg.com/1-B3_OzIhDAOho2006H8AJOaV9U=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/0/0/BBon1hQYCBaRv5dmEACw/2026-10-24t224431z-105027597-rc2w9oazeoor-rtrmadp-3-usa-trump.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Calendário de novembro 2026: veja datas de pagamento do INSS, Bolsa Família, pé-de-meia e mais",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Calendário de novembro 2026 Governo Federal O mês de novembro de 2026 já começou, e com ele chegam os pagamentos de programas e benefícios como INSS, Pé-de-Meia e Bolsa Família, entre outros. Alguns dos depósitos…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/04/calendario-de-novembro-2026.ghtml",
-   "img": "https://s2-g1.glbimg.com/XUvFJzQpL-5DDzmr_UUnmUoLEPs=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/1/V/uuDUIHTWuOviwDiUerHQ/185648-salvador-dispensa-visita-domiciliar-para-atualizacao-do-cadastro-unico-de-quem-mora-sozinho-3.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Com mercado dividido após reeleição de Lula, BC decide nesta quarta entre novo corte ou manutenção da taxa de juros",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "O Comitê de Política Monetária (Copom) do Banco Central se reúne nesta quarta-feira (16) para definir o patamar da taxa básica de juros da economia brasileira, atualmente em 13,75% após cinco cortes seguidos. 🕝A decisão…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/04/com-mercado-dividido-apos-reeleicao-de-lula-bc-decide-nesta-quarta-entre-novo-corte-ou-manutencao-da-taxa-de-juros.ghtml",
-   "img": "https://s2-g1.glbimg.com/fwFB8-hQOTFpOo3u2HxFfm0AKFw=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/z/T/Bt61UOQ7WYpnlzGMj07Q/globo-canal-4-20260327-2000-frame-98859.jpeg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Selic: por que o Banco Central pode parar de cortar juros após a reeleição de Lula?",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Copom reduz taxa de juros, e o FED mantém Jornal Nacional/ Reprodução O Banco Central chega à reunião do Comitê de Política Monetária (Copom) nesta quarta-feira (4) diante de um cenário mais complicado para decidir o…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/04/selic-por-que-o-banco-central-pode-parar-de-cortar-juros-apos-a-reeleicao-de-lula.ghtml",
-   "img": "https://s2-g1.glbimg.com/-A7pgTgjRSkyK4Q_u1rOIbAk5L4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/m/N/CqiB4MRnqkRVIYzBQGig/globo-canal-4-20260429-2000-frame-24226.jpeg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Uber prevê mais de 2 mil carros sem motorista na plataforma em 2027",
-   "data": "2026-11-04",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "A Uber pretende ampliar a presença de veículos que circulam sem motorista em seu aplicativo e superar a marca de 2 mil unidades em 2027. A projeção foi apresentada nesta quarta-feira (4), junto com os resultados do…",
-   "url": "https://timesbrasil.com.br/empresas-e-negocios/uber-preve-mais-de-2-mil-carros-sem-motorista-em-2027/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/02/7342feb3-uber.webp",
-   "t": [],
-   "tf": [
-    "us:UBER"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "TCU adia para 11 de novembro debate sobre política de preços da Petrobras",
-   "data": "2026-11-04",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "O Tribunal de Contas da União (TCU) adiou novamente a discussão sobre a política de preços da Petrobras, que estava prevista para esta quarta-feira (4). A expectativa é que o processo volte à pauta do plenário da Corte…",
-   "url": "https://timesbrasil.com.br/brasil/tcu-adia-para-11-de-novembro-debate-sobre-politica-de-precos-da-petrobras/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/09/695ed706-petrobras_1761150529715-e1789004546639.webp",
-   "t": [
-    "PETR4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Itaú BBA monta mesa de crédito privado e contrata executivo da Genial",
-   "data": "2026-11-04",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "A expansão do crédito privado levou a corretora do Itaú BBA a preparar uma estrutura especializada no atendimento a investidores institucionais. A iniciativa acompanha o crescimento do mercado de títulos de dívida de…",
-   "url": "https://timesbrasil.com.br/empresas-e-negocios/bancos-fintechs/itau-bba-contrata-executivo-da-genial/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/3d602aee-07a.webp",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Messi mantém liderança nas vendas de camisas da MLS pela quarta temporada consecutiva",
-   "data": "2026-11-04",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "A camisa de Lionel Messi continua sendo a mais procurada pelos torcedores da Major League Soccer (MLS). Pelo quarto ano seguido, o atacante argentino do Inter Miami terminou na primeira colocação do levantamento de…",
-   "url": "https://timesbrasil.com.br/esportes/messi-mantem-lideranca-nas-vendas-de-camisas-da-mls-pela-quarta-temporada-consecutiva/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/614d9c22-inter_miami_messi.jpg.webp",
-   "t": [],
-   "tf": [
-    "us:INBR"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Oracle AI Experience Brasil: IA resolve 97% dos atendimentos a gestantes em projeto com a Unimed, diz Vinícius Reis, CTO da StaryaAI",
-   "data": "2026-11-04",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "Um agente de inteligência artificial já consegue resolver 97% das interações de triagem de gestantes em um projeto desenvolvido pela StaryaAI com a Seguros Unimed, segundo Vinícius Reis, fundador e CTO da empresa. O…",
-   "url": "https://timesbrasil.com.br/empresas-e-negocios/tecnologia-e-inovacao/ai-resolve-97-dos-atendimentos-a-gestantes-na-unimed/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/7a02226e-04a.webp",
-   "t": [],
-   "tf": [
-    "us:ORCL"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Caged: saldo líquido de emprego formal é positivo em 121.305 vagas em setembro",
-   "data": "2026-11-04",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "O Brasil criou 121.305 empregos com carteira assinada em setembro, segundo dados do Novo Cadastro Geral de Empregados e Desempregados (Caged) divulgados nesta quarta-feira (4) pelo Ministério do Trabalho e Emprego. O…",
-   "url": "https://timesbrasil.com.br/brasil/caged-saldo-liquido-de-emprego-formal-e-positivo-em-121-305-vagas-em-setembro/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2025/01/be2f30b8-pexels-kateryna-babaieva-1423213-2760241-scaled.jpg",
-   "t": [
-    "POSI3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Pague Menos decepciona na receita, mas compensa no EBITDA e lucro",
-   "data": "2026-11-04",
-   "fonte": "Brazil Journal",
-   "resumo": "A Pague Menos reportou um terceiro tri com desaceleração na receita, que veio abaixo do consenso, mas com ganhos importantes de rentabilidade – que levaram à maior margem de lucro da história da companhia para o…",
-   "url": "https://braziljournal.com/pague-menos-decepciona-na-receita-mas-compensa-no-ebitda-e-lucro",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asXuGVefq3YoitSPN.png?width=800&height=420&quality=85&resize=fill",
-   "t": [
-    "PGMN3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "A aprovação do Cade para um M&A no setor de óleo e gás que desagradou a Petrobras",
-   "data": "2026-11-04",
-   "fonte": "NeoFeed",
-   "resumo": "Brasília – Com grande resistência da Petrobras, o Conselho Administrativo de Defesa Econômica (Cade) aprovou, com restrições, a fusão da italiana Saipem com a britânica Subsea7. A operação formou uma gigante global, com…",
-   "url": "https://neofeed.com.br/negocios/a-aprovacao-do-cade-para-um-ma-no-setor-de-oleo-e-gas-que-desagradou-a-petrobras/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/Subsea7.jpg",
-   "t": [
-    "PETR4"
-   ],
-   "tf": [],
-   "m": [
-    "br",
-    "gb"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "O GPA encolheu e o prejuízo subiu. Mas a margem salvou o trimestre",
-   "data": "2026-11-04",
-   "fonte": "NeoFeed",
-   "resumo": "Com a homologação da recuperação extrajudicial (RE), o GPA passou a concentrar as energias na retomada das operações. Mas a retomada vai demorar mais tempo. A varejista divulgou na quarta-feira, 4 de novembro, que a…",
-   "url": "https://neofeed.com.br/negocios/o-gpa-encolheu-e-o-prejuizo-subiu-mas-a-margem-salvou-o-trimestre/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/03/gpa.jpg",
-   "t": [
-    "PCAR3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Na primeira decisão pós-eleição, Banco Central ajusta a direção da taxa Selic",
-   "data": "2026-11-04",
-   "fonte": "NeoFeed",
-   "resumo": "“Prudente”, “anticlímax” e “dentro do esperado” foram algumas das expressões usadas pelos economistas ouvidos pelo NeoFeed para descrever a penúltima decisão da taxa básica de juros do ano no Brasil. Na quarta-feira, 4…",
-   "url": "https://neofeed.com.br/economia/na-primeira-decisao-pos-eleicao-banco-central-ajusta-a-direcao-da-taxa-selic/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/ajuste-ativos.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Brasil amplia distância e segue com o maior juro real do mundo após Copom manter Selic; veja ranking",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Copom mantém taxa básica de juros da economia em 13,75% ao ano O Brasil ampliou a distância para o segundo colocado e segue com o maior juro real do mundo após o Comitê de Política Monetária (Copom) do Banco Central…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/04/ranking-juro-real-novembro.ghtml",
-   "img": "https://s2-g1.glbimg.com/GK6lw7tr8M3TWoHrHmrLkDh58vg=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2022/s/K/eBdJ5MRCOs4XjL8VpiOA/48002099586-2939bac18b-k.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Copom mantém taxa básica de juros da economia em 13,75% ao ano",
-   "data": "2026-11-04",
-   "fonte": "g1 Economia",
-   "resumo": "Copom mantém taxa básica de juros da economia em 13,75% ao ano O Comitê de Política Monetária (Copom) do Banco Central (BC) decidiu, nesta quarta-feira (4), manter a taxa básica de juros da economia em 13,75% ao ano. A…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/04/copom-mantem-taxa-basica-de-juros-da-economia-em-1375percent-ao-ano.ghtml",
-   "img": "https://s2-g1.glbimg.com/be4usyjPCD19kJSybeRYxMXNpVU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/U/W/6Y4qERTSOg1kq30qJphA/261104-grafico-selic-a-trajetoria-da-taxa-basica.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Nathalia Arcuri e Luiz Barsi Neto são confirmados no 11º Fórum Negócios Experience em Natal - Portal 98 FM Natal",
-   "data": "2026-11-03",
-   "fonte": "98fmnatal.com.br",
-   "resumo": "Nathalia Arcuri, fundadora do canal de finanças Me Poupe!, e Luiz Barsi Neto, sócio-fundador da Barsi Investimentos, estão entre os nomes confirmados na programação do 11º Fórum Negócios Experience. O evento será…",
-   "url": "https://98fmnatal.com.br/ultimas/nathalia-arcuri-e-luiz-barsi-neto-sao-confirmados-no-11o-forum-negocios-experience-em-natal/411531/",
-   "img": "https://s3.jvmtecnologia.com.br/98fmnatal/wp-content/uploads/2026/11/Texto-do-seu-paragrafo-900-x-600-px-17.png",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Fórum Negócios Experience confirma Nathalia Arcuri e Luiz Barsi Neto em Natal",
-   "data": "2026-11-03",
-   "fonte": "pontanegranews.com.br",
-   "resumo": "Fórum Negócios Experience confirma Nathalia Arcuri e Luiz Barsi Neto na edição de 2026, que será realizada em novembro, em Natal.",
-   "url": "https://pontanegranews.com.br/2026/11/03/forum-negocios-experience-2026-nathalia-arcuri-luiz-barsi/",
-   "img": "https://pontanegranews.com.br/wp-content/uploads/2026/11/WhatsApp-Image-2026-11-03-at-16.09.37.jpeg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "PETR4: Por que ações da Petrobras caem mais de 3% nesta terça?",
-   "data": "2026-11-03",
-   "fonte": "InfoMoney",
-   "resumo": "Sede da Petrobras, no Rio de Janeiro 22/02/2021 REUTERS/Ricardo Moraes \"…",
-   "url": "https://www.infomoney.com.br/mercados/petr4-por-que-acoes-da-petrobras-caem-nesta-terca/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/03/2026-03-19T211424Z_1_LYNXMPEM2I1DP_RTROPTP_4_PETROBRAS-BRAZIL.jpg",
-   "t": [
-    "PETR4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar hoje sobe a R$ 5,48 com preocupações sobre agenda econômica do governo Lula",
-   "data": "2026-11-03",
-   "fonte": "InfoMoney",
-   "resumo": "Notas de dólar -20/12/2025 (Foto: Majid Asgaripour/WANA – Agência de Notícias da Ásia Ocidental – via REUTERS) \"…",
-   "url": "https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-03112026/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/04/2026-04-23T223943Z_1_LYNXMPEM3M1IY_RTROPTP_4_IRAN-ECONOMY.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Exportadoras e defensivas resistem à turbulência; papéis de maior risco lideram queda",
-   "data": "2026-11-03",
-   "fonte": "InfoMoney",
-   "resumo": "(Shutterstock) \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2019/06/dolar-mercado-acoes-1.jpg?fit=900%2C675&quality=70&strip=all\" />Com piora do cenário fiscal e aumento da aversão ao risco após a…",
-   "url": "https://www.infomoney.com.br/mercados/exportadoras-e-defensivas-resistem-a-turbulencia-papeis-de-maior-risco-lideram-queda/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2019/06/dolar-mercado-acoes-1.jpg?fit=900%2C675&quality=70&strip=all",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Ero Copper amplia produção de cobre no Brasil e reduz dívida no 3º trimestre",
-   "data": "2026-11-03",
-   "fonte": "InfoMoney",
-   "resumo": "Amostras de cobre em destaque e uma operação minerária ao fundo (Imagem gerada digitalmente/Radar Mineração) \"…",
-   "url": "https://www.infomoney.com.br/mercados/ero-copper-amplia-producao-de-cobre-no-brasil-e-reduz-divida-no-3o-trimestre/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2026/11/radar9.png",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "JPMorgan rebaixa Vamos para neutro e destaca preferência por Rumo e Motiva",
-   "data": "2026-11-03",
-   "fonte": "InfoMoney",
-   "resumo": "Rodovia Fernão Dias – Foto: Divulgação/Ministério dos Transportes \" data-large-file=\"https://www.infomoney.com.br/wp-content/uploads/2025/12/fbc8c5b8-ffbd-4957-9e91-8a18877cd6c5.jpeg?fit=768%2C432&quality=70&strip=all\"…",
-   "url": "https://www.infomoney.com.br/mercados/jpmorgan-rebaixa-vamos-para-neutro-e-destaca-preferencia-por-rumo-e-motiva/",
-   "img": "https://www.infomoney.com.br/wp-content/uploads/2025/12/fbc8c5b8-ffbd-4957-9e91-8a18877cd6c5.jpeg",
-   "t": [
-    "MOTV3",
-    "VAMO3"
-   ],
-   "tf": [
-    "us:JPM",
-    "us:JPMC"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Mega da Virada: Caixa anuncia que prêmio deve superar R$ 1 bilhão",
-   "data": "2026-11-03",
-   "fonte": "Agência Brasil",
-   "resumo": "A Caixa anunciou que o prêmio da Mega da Virada deste ano deve superar o valor de R$ 1 bilhão. As apostas para o concurso especial 3100 estão disponíveis a partir desta terça (3) e poderão ser feitas até as 22h do dia…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/mega-da-virada-caixa-anuncia-que-premio-deve-superar-r-1-bilhao",
-   "img": "https://imagens.ebc.com.br/rx1ddD2PVz51_Q5NNGKKVNvRKvw=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/05/23/mega-sena-30-anos-mc_abr_23052026-5.jpg?itok=PykUKlZX",
-   "t": [
-    "CXSE3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Acessos a site e aplicativo do Banco do Brasil são normalizados",
-   "data": "2026-11-03",
-   "fonte": "Agência Brasil",
-   "resumo": "O Banco do Brasil informou que retornou à normalidade o acesso dos clientes ao site e aplicativo no início da tarde desta terça-feira (3). “Os canais digitais já operam normalmente e todos os serviços estão à disposição…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/acessos-site-e-aplicativo-do-banco-do-brasil-sao-normalizados",
-   "img": "https://imagens.ebc.com.br/h6MpDxBKDdNAiy18TbCT23kzAiw=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/11/03/_raf7145-2.jpg?itok=feBp6l9v",
+   "titulo": "Luiz Barsi faz alerta sobre Banco do Brasil; veja os prós e contras de investir em BBAS3",
+   "data": "2026-09-01",
+   "fonte": "msn.com",
+   "resumo": "Ação negocia abaixo do valor patrimonial, mas problemas no agro e alta da inadimplência entre pessoas físicas aumentam a cautela dos analistas ...",
+   "url": "https://www.msn.com/pt-br/dinheiro/other/luiz-barsi-faz-alerta-sobre-banco-do-brasil-veja-os-pr%C3%B3s-e-contras-de-investir-em-bbas3/ar-AA2bl2zK",
+   "img": null,
    "t": [
     "BBAS3"
    ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Site e aplicativo do Banco do Brasil apresentam instabilidade",
-   "data": "2026-11-03",
-   "fonte": "Agência Brasil",
-   "resumo": "Os canais digitais do Banco do Brasil , como o site e aplicativo de celular, apresentaram instabilidade na manhã desta terça-feira (3). Clientes do banco utilizaram as redes sociais para relatar dificuldade no acesso.…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/site-e-aplicativo-do-banco-do-brasil-apresentam-instabilidade",
-   "img": "https://imagens.ebc.com.br/0lagSvg2xQ8Nzv9zcs4jv3qsVK8=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2026/11/03/_raf7128-1.jpg?itok=IK9VnNqI",
-   "t": [
-    "BBAS3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Mercado eleva projeção para inflação, juros e dólar em 2026",
-   "data": "2026-11-03",
-   "fonte": "Agência Brasil",
-   "resumo": "O mercado financeiro elevou as projeções para a taxa básica de juros (Selic), a inflação e o dólar neste ano e reduziu, pela terceira semana consecutiva, a estimativa de crescimento da economia. Os dados constam do…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/mercado-eleva-projecao-para-inflacao-juros-e-dolar-em-2026",
-   "img": "https://imagens.ebc.com.br/rh3FdXkONRDZSPInMfK1xTUB-50=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/economia_1609210411_0.jpg?itok=LzZxjE74",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Leilão de transmissão mantém deságios – mas alguns elevam cautela",
-   "data": "2026-11-03",
-   "fonte": "Brazil Journal",
-   "resumo": "O leilão de concessões de transmissão de energia realizado sexta-feira na B3 parecia ocorrer quase num mundo paralelo ao caos que reinou no mercado financeiro desde as eleições. Apesar da implosão da Bolsa e do salto…",
-   "url": "https://braziljournal.com/leilao-de-transmissao-mantem-desagios-mas-alguns-elevam-cautela",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/asU72HTQySJoDw12B.jpg?width=1200&height=630&quality=85&resize=fill",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Omni faz rodada para dobrar seu seguro de medicamentos",
-   "data": "2026-11-03",
-   "fonte": "Brazil Journal",
-   "resumo": "A Omni – que criou um seguro de medicamentos que já é usado pela Azul, Light, MetLife e Spoleto – acaba de fechar uma rodada que vai financiar um plano agressivo de expansão: dobrar sua base de vidas até o final do ano…",
-   "url": "https://braziljournal.com/omni-faz-rodada-para-dobrar-seu-seguro-de-medicamentos",
-   "img": "https://codex-braziljournal.codexcdn.net/assets/aszRiechLVTDEoOVt.jpg?width=1200&height=630&quality=85&resize=fill",
-   "t": [
-    "AZUL3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Sem picadinha: startup chinesa aposta em “caneta emagrecedora eletrônica”",
-   "data": "2026-11-03",
-   "fonte": "NeoFeed",
-   "resumo": "Sob o impulso de empresas como a dinamarquesa Novo Nordisk e, posteriormente, a americana Eli Lilly, os medicamentos à base de GLP-1 – as conhecidas “canetas emagrecedoras” – tornaram-se um fenômeno no tratamento à…",
-   "url": "https://neofeed.com.br/inovacao/sem-picadinha-startup-chinesa-aposta-em-caneta-emagrecedora-eletronica/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/brainco.jpg",
-   "t": [],
-   "tf": [
-    "us:LLY"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Buser escolhe “novo piloto” para comandar o ônibus",
-   "data": "2026-11-03",
-   "fonte": "NeoFeed",
-   "resumo": "A Buser, conhecida como a “Uber dos ônibus”, está anunciando Marcelo Vasconcellos como novo CEO. Ele substitui Marcelo Abritta, com quem fundou a startup e que seguirá no board da startup. Agora, a frente da companhia,…",
-   "url": "https://neofeed.com.br/startups/buser-escolhe-novo-piloto-para-comandar-o-onibus/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/10/marcello-vasconcellos-ceo-buser1.jpg",
-   "t": [],
-   "tf": [
-    "us:UBER"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "De neutra a compra: hedge cambial “natural” blinda a tese da WEG",
-   "data": "2026-11-03",
-   "fonte": "NeoFeed",
-   "resumo": "O cenário de maior aversão ao risco e de incertezas sobre os rumos da economia brasileira fez a WEG voltar ao radar dos analistas da XP Investimentos. A combinação de proteção cambial, presença global e perspectivas de…",
-   "url": "https://neofeed.com.br/negocios/de-neutra-a-compra-hedge-cambial-natural-blinda-a-tese-da-weg/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2023/09/weg-2-2.webp",
-   "t": [
-    "WEGE3"
-   ],
-   "tf": [
-    "us:XP"
-   ],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Toyota, GM, VW e mais fábricas pedem banimento permanente de carros chineses nos Estados Unidos",
-   "data": "2026-11-03",
-   "fonte": "g1 Economia",
-   "resumo": "Fábrica da Toyota no Texas, Estados Unidos. Divulgação / Toyota Uma associação que representa General Motors, Volkswagen, Toyota e outras grandes montadoras pediu ao Congresso dos Estados Unidos que aprove ainda neste…",
-   "url": "https://g1.globo.com/carros/noticia/2026/11/03/montadoras-pedem-banimento-permanente-de-carros-chineses-nos-estados-unidos.ghtml",
-   "img": "https://s2-g1.glbimg.com/pIph7afefDlNBl9PNoqlnabMH2M=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/q/3/Ozo0AwQIueOi1ur635bw/toyota-texas-final-vehicle-check.jpg",
-   "t": [],
-   "tf": [
-    "de:VOW",
-    "de:VOW3",
-    "jp:7203",
-    "us:GM"
-   ],
-   "m": [
-    "de",
-    "jp",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Disney planeja milhares de demissões e cobra redução de 20% nos custos",
-   "data": "2026-11-03",
-   "fonte": "g1 Economia",
-   "resumo": "Disney corta empregos em meio à crise REUTERS/Dado Ruvic/Illustration/File Photo A Disney pediu a gestores que reduzam em 20% os custos sob sua responsabilidade e avalia demitir milhares de funcionários, segundo…",
-   "url": "https://g1.globo.com/economia/negocios/noticia/2026/11/03/disney-planeja-milhares-de-demissoes-e-cobra-reducao-de-20percent-nos-custos.ghtml",
-   "img": "https://s2-g1.glbimg.com/hugB0nbCeOgxURyYD4pqlJ7gj6Q=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/V/p/pFcG8ASaAZARcWAfruYA/2026-04-09t003229z-596821154-rc281gabapjq-rtrmadp-3-disney-layoffs.jpg",
-   "t": [],
-   "tf": [
-    "us:DIS",
-    "us:DISB"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Diante da piora nas expectativas do mercado, Durigan fala em melhorar contas públicas sem recorrer a 'narrativa fácil'",
-   "data": "2026-11-03",
-   "fonte": "g1 Economia",
-   "resumo": "Com a piora das expectativas do mercado financeiro, após a reeleição do presidente Luiz Inácio Lula da Silva (PT), o ministro da Fazenda, Dario Durigan, disse ter compromisso com a melhora da trajetória das contas…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/03/diante-de-forte-deterioracao-das-expectativas-do-mercado-durigan-promete-melhorar-contas-publicas-sem-recorrer-a-narrativa-facil.ghtml",
-   "img": "https://s2-g1.glbimg.com/ppm1HTAMp3YCt8xS6-7zbYx0nRU=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/7/t/4sBFwdQoa22AJ8iWwfLA/55615784085-00c6cb3c26-k.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Honda City 2027 muda pouco e não baixa preços para enfrentar os chineses; veja o teste",
-   "data": "2026-11-03",
-   "fonte": "g1 Economia",
-   "resumo": "Honda City muda pouco para agradar clientes fiéis A Honda apresentou a linha 2027 do City sem reduzir os preços para enfrentar a concorrência dos carros chineses. As versões custam entre R$ 117 mil e R$ 156 mil. A…",
-   "url": "https://g1.globo.com/carros/noticia/2026/11/03/honda-city-2027-muda-pouco-e-nao-baixa-precos-para-enfrentar-os-chineses-veja-o-teste.ghtml",
-   "img": "https://s2-g1.glbimg.com/w9YnH_gL4QPSY0bXClIbo7RgMI4=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/s/v/pnRFB9QxS1ENQfxazbbQ/mva-1548.jpg",
-   "t": [
-    "CCTY3"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar sobe a R$ 5,48 com eleições nos EUA e juros no radar; Ibovespa cai aos 165 mil pontos",
-   "data": "2026-11-03",
-   "fonte": "g1 Economia",
-   "resumo": "Entenda o que faz o preço do dólar subir ou cair O dólar fechou em alta nesta terça-feira (3), com um avanço de 0,79%, cotado a R$ 5,4871. Na máxima do dia, chegou a R$ 5,5151. Já o Ibovespa, principal índice da bolsa…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/03/dolar-ibovespa.ghtml",
-   "img": "https://s2-g1.glbimg.com/WWDRGDMxGNQZCy9ypuF1ackcQ90=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/a/S/u3TO0vRgyBsplTZYCmeA/2025-02-04t203004z-2-lynxmpel130tf-rtroptp-4-usa-trump-migration-colombia.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Após reeleição de Lula, mercado financeiro vê inflação mais alta e piora previsão para taxa de juros e dólar",
-   "data": "2026-11-03",
-   "fonte": "g1 Economia",
-   "resumo": "Após a reeleição do presidente Luiz Inácio Lula da Silva (PT) em 25 de outubro, os economistas do mercado financeiro realizaram fortes ajustes em suas expectativas para a inflação, taxa de juros e para o crescimento da…",
-   "url": "https://g1.globo.com/economia/noticia/2026/11/03/apos-reeleicao-de-lula-mercado-financeiro-ve-inflacao-mais-alta-e-piora-previsao-para-taxa-de-juros.ghtml",
-   "img": "https://s2-g1.glbimg.com/2rIaQ2wiBqrOP0Obgn3HFFYXJug=/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2026/V/b/A8IGA6SdAAIsLKWtdgOg/imagem-destaque-g1-dinheiro.png",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Focus prevê último corte da Selic em novembro e pausa até junho de 2027",
-   "data": "2026-11-03",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "A expectativa predominante dos economistas para a taxa básica de juros passou a indicar um último corte da Selic em 2026, de 0,25 ponto percentual, na reunião do Comitê de Política Monetária (Copom) desta quarta-feira…",
-   "url": "https://timesbrasil.com.br/brasil/economia-brasileira/focus-preve-corte-da-selic-e-pausa-ate-junho-de-2027/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/ab83f2e7-bolsas_financas_dinheiro-17.webp",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "CrowdStrike lança mecanismo de desligamento de IA que, segundo a empresa, pode interromper agentes internos fora de controle",
-   "data": "2026-11-03",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "A CrowdStrike aposta que tem uma solução para os casos de inteligência artificial (IA) fora de controle. A empresa de cibersegurança lançou nesta terça-feira um mecanismo de desligamento de IA, projetado para permitir…",
-   "url": "https://timesbrasil.com.br/mundo/crowdstrike-lanca-mecanismo-de-desligamento-de-ia-que-segundo-a-empresa-pode-interromper-agentes-internos-fora-de-controle/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/cc4895fa-108216195-17612465932025-10-23t184722z_216618365_rc2shhavt0i3_rtrmadp_0_crowdstrike-hldg-ceo.webp",
-   "t": [],
-   "tf": [
-    "us:CRWD"
-   ],
-   "m": [
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Fux arquiva ação contra rejeição de Jorge Messias ao STF pelo Senado",
-   "data": "2026-11-03",
-   "fonte": "Times Brasil (CNBC)",
-   "resumo": "O ministro Luiz Fux, do Supremo Tribunal Federal (STF), arquivou nesta terça-feira (3) uma ação que pretendia invalidar a rejeição, pelo Senado, da indicação de Jorge Messias para a Corte. A iniciativa havia sido…",
-   "url": "https://timesbrasil.com.br/brasil/fux-arquiva-acao-contra-rejeicao-de-messias-ao-stf/",
-   "img": "https://storage.googleapis.com/bucket.timesbrasil.com.br/sites/2026/11/392bf6bc-05a.webp",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Dólar sobe 0,74% e aproxima-se de R$ 5,50 em dia de cautela fiscal",
-   "data": "2026-11-03",
-   "fonte": "Agência Brasil",
-   "resumo": "O mercado financeiro brasileiro encerrou esta terça-feira (3) em queda, com o dólar em alta e a bolsa de valores ampliando as perdas após a reeleição do presidente Luiz Inácio Lula da Silva. A moeda norte-americana…",
-   "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-11/dolar-sobe-074-e-aproxima-se-de-r-550-em-dia-de-cautela-fiscal",
-   "img": "https://imagens.ebc.com.br/rasBiqiDGctpl5-xBWwAW622HfA=/1600x800/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/dolar_moeda_0803221212.jpg?itok=KoFmjD94",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br",
-    "us"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Itaú entrega balanço “como sempre”: lucro de R$ 12,6 bilhões e inadimplência sob controle",
-   "data": "2026-11-03",
-   "fonte": "NeoFeed",
-   "resumo": "O Itaú Unibanco entregou mais um resultado previsível em seu balanço do terceiro trimestre, divulgado no início da noite de terça-feira, 3 de novembro, com lucro dentro das expectativas e qualidade da carteira…",
-   "url": "https://neofeed.com.br/negocios/itau-entrega-balanco-como-sempre-lucro-de-r-126-bilhoes-e-inadimplencia-sob-controle/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2026/11/itau-agencia.jpg",
-   "t": [
-    "ITUB4"
-   ],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "André Lara Resende: muito barulho por nada?",
-   "data": "2026-11-03",
-   "fonte": "NeoFeed",
-   "resumo": "Brasília – Após os ruídos causados por uma proposta de reforma monetária e fiscal do economista André Lara Resende, que sugeriu reduzir a taxa básica de juros de maneira mais rápida, o governo federal correu para pôr…",
-   "url": "https://neofeed.com.br/poder/andre-lara-resende-muito-barulho-por-nada/",
-   "img": "https://neofeed.com.br/wp-content/uploads/2022/10/AndreLaraOGloboVale.jpg",
-   "t": [],
-   "tf": [],
-   "m": [
-    "br"
-   ]
-  },
-  {
-   "tema": "mercado",
-   "titulo": "Luiz Barsi: conheça a história e a estratégia do Rei dos Dividendos",
-   "data": "2026-09-02",
-   "fonte": "investidor10.com.br",
-   "resumo": "Luiz Barsi Filho é economista, investidor reconhecido por construir seu patrimônio com a compra de ações e o reinvestimento de dividendos ao longo de décadas. Conhecido como o “Rei dos Dividendos”, ...",
-   "url": "https://investidor10.com.br/conteudo/luiz-barsi-o-maior-investidor-individual-do-brasil-110500/",
-   "img": "https://investidor10.com.br/storage/news/6a973c59e11a5.jpg",
-   "t": [],
    "tf": [],
    "m": [
     "br"
